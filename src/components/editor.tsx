@@ -135,11 +135,24 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   const handlePlacedCharmDragStart = (e: DragEvent<HTMLDivElement>, placedCharm: PlacedCharm) => {
     setDraggedItem({ type: 'placed-charm', id: placedCharm.id });
     setSelectedCharmId(null);
-
-    // Set a transparent drag image, but keep rotation
+  
+    // To make the drag image respect the rotation, we have to create a custom one.
+    // We clone the node, style it, add it to the body, then quickly remove it.
     const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
-    dragImage.style.transform = `rotate(${placedCharm.rotation}deg)`;
-    e.dataTransfer.setDragImage(dragImage, 20, 20); // x, y offset to center
+    
+    // Reset any styles that might interfere with the drag image.
+    dragImage.style.position = 'absolute';
+    dragImage.style.top = '-9999px'; // Position it off-screen
+    dragImage.style.left = '-9999px';
+    document.body.appendChild(dragImage);
+    
+    // The key part: set the drag image to our styled clone.
+    e.dataTransfer.setDragImage(dragImage, 20, 20); // x, y offset to center of a 40x40 charm
+
+    // Hide the original element *after* creating the drag image
+    setTimeout(() => {
+        document.body.removeChild(dragImage);
+    }, 0);
   };
   
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
@@ -354,7 +367,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                 className={cn(
                   "absolute group cursor-grab",
                   selectedCharmId === placed.id ? "cursor-grabbing z-10" : "cursor-grab",
-                  draggedItem && draggedItem.type === 'placed-charm' && draggedItem.id === placed.id && "opacity-0"
+                  draggedItem && draggedItem.type === 'placed-charm' && draggedItem.id === placed.id && "opacity-50"
                 )}
                 style={{
                   left: `${placed.position.x}px`,
