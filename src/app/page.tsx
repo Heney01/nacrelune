@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -35,56 +36,9 @@ export default function Home() {
       setSelectedType(null);
     }
   };
-
-  const renderStep = () => {
-    switch (step) {
-      case 'type-selection':
-        return (
-          <section className="text-center">
-            <h2 className="text-3xl font-headline tracking-tight mb-4">Begin Your Creation</h2>
-            <p className="text-muted-foreground mb-12 max-w-2xl mx-auto">Choose a jewelry type to start designing. Each piece is a canvas for your story, waiting to be adorned with charms that speak to you.</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {JEWELRY_TYPES.map((type) => (
-                <Card key={type.id} className="cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-transform duration-300" onClick={() => handleTypeSelect(type)}>
-                  <CardContent className="p-6 flex flex-col items-center gap-4">
-                    <type.icon className="w-16 h-16 text-primary" />
-                    <h3 className="text-xl font-headline">{type.name}</h3>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </section>
-        );
-      case 'model-selection':
-        if (!selectedType) return null;
-        return (
-          <section>
-            <h2 className="text-3xl font-headline tracking-tight mb-4 text-center">Select a Model</h2>
-            <p className="text-muted-foreground mb-12 max-w-2xl mx-auto text-center">Select a beautiful {selectedType.name.toLowerCase()} model as the foundation for your custom design.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-              {selectedType.models.map((model) => (
-                <Card key={model.id} className="cursor-pointer hover:shadow-lg overflow-hidden group" onClick={() => handleModelSelect(model)}>
-                  <div className="overflow-hidden">
-                    <Image src={model.imageUrl} alt={model.name} width={400} height={400} className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300" data-ai-hint="jewelry" />
-                  </div>
-                  <CardContent className="p-6">
-                    <h3 className="text-lg font-headline">{model.name}</h3>
-                    <p className="text-sm text-muted-foreground">{model.description}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </section>
-        );
-      case 'editor':
-        if (!selectedModel || !selectedType) return null;
-        return <Editor model={selectedModel} jewelryType={selectedType} />;
-    }
-  };
-
-  return (
-    <div className="min-h-screen flex flex-col">
-      <header className="p-4 border-b">
+  
+  const Header = () => (
+     <header className="p-4 border-b">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2">
             <NacreluneLogo className="h-8 w-auto text-foreground" />
@@ -98,11 +52,71 @@ export default function Home() {
           )}
         </div>
       </header>
-      <main className="flex-grow p-4 md:p-8">
-        <div className="container mx-auto">
-          {renderStep()}
-        </div>
-      </main>
+  );
+
+  const renderStep = () => {
+    switch (step) {
+      case 'type-selection':
+        return (
+          <>
+            <Header />
+            <main className="flex-grow p-4 md:p-8">
+              <div className="container mx-auto">
+                <section className="text-center">
+                  <h2 className="text-3xl font-headline tracking-tight mb-4">Begin Your Creation</h2>
+                  <p className="text-muted-foreground mb-12 max-w-2xl mx-auto">Choose a jewelry type to start designing. Each piece is a canvas for your story, waiting to be adorned with charms that speak to you.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {JEWELRY_TYPES.map((type) => (
+                      <Card key={type.id} className="cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-transform duration-300" onClick={() => handleTypeSelect(type)}>
+                        <CardContent className="p-6 flex flex-col items-center gap-4">
+                          <type.icon className="w-16 h-16 text-primary" />
+                          <h3 className="text-xl font-headline">{type.name}</h3>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </section>
+              </div>
+            </main>
+          </>
+        );
+      case 'model-selection':
+        if (!selectedType) return null;
+        return (
+          <>
+            <Header />
+            <main className="flex-grow p-4 md:p-8">
+              <div className="container mx-auto">
+                <section>
+                  <h2 className="text-3xl font-headline tracking-tight mb-4 text-center">Select a Model</h2>
+                  <p className="text-muted-foreground mb-12 max-w-2xl mx-auto text-center">Select a beautiful {selectedType.name.toLowerCase()} model as the foundation for your custom design.</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                    {selectedType.models.map((model) => (
+                      <Card key={model.id} className="cursor-pointer hover:shadow-lg overflow-hidden group" onClick={() => handleModelSelect(model)}>
+                        <div className="overflow-hidden">
+                          <Image src={model.imageUrl} alt={model.name} width={400} height={400} className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300" data-ai-hint="jewelry" />
+                        </div>
+                        <CardContent className="p-6">
+                          <h3 className="text-lg font-headline">{model.name}</h3>
+                          <p className="text-sm text-muted-foreground">{model.description}</p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </section>
+              </div>
+            </main>
+          </>
+        );
+      case 'editor':
+        if (!selectedModel || !selectedType) return null;
+        return <Editor model={selectedModel} jewelryType={selectedType} onBack={handleBack} />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      {renderStep()}
       <footer className="p-4 border-t mt-auto">
         <div className="container mx-auto text-center text-muted-foreground text-sm">
           &copy; {new Date().getFullYear()} Nacrelune. All rights reserved.
