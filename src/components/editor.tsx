@@ -29,7 +29,7 @@ interface EditorProps {
 export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [draggedCharm, setDraggedCharm] = useState<{charm: Charm, offset: {x: number, y: number}} | null>(null);
+  const [draggedCharm, setDraggedCharm] = useState<{charm: Charm, offset: {x: number, y: number}, source: 'list' | string } | null>(null);
   const [selectedCharmId, setSelectedCharmId] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   
@@ -143,7 +143,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   };
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>, charm: Charm) => {
-    setDraggedCharm({ charm, offset: { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY } });
+    setDraggedCharm({ charm, offset: { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY }, source: 'list' });
     setSelectedCharmId(null);
   
     const dragImage = e.currentTarget.querySelector('img')?.cloneNode(true) as HTMLElement;
@@ -158,9 +158,8 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
      setDraggedCharm({
       charm: placedCharm.charm,
       offset: { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY },
+      source: placedCharm.id
     });
-    // Remove the charm being dragged from the list to avoid duplicates on drop
-    setPlacedCharms(prev => prev.filter(pc => pc.id !== placedCharm.id));
     setSelectedCharmId(null);
   
      const dragImage = e.currentTarget.querySelector('img')?.cloneNode(true) as HTMLElement;
@@ -180,13 +179,18 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     const x = (e.clientX - canvasRect.left - pan.x) / scale - draggedCharm.offset.x;
     const y = (e.clientY - canvasRect.top - pan.y) / scale - draggedCharm.offset.y;
   
-    const newCharm: PlacedCharm = {
-      id: `${draggedCharm.charm.id}-${Date.now()}`,
-      charm: draggedCharm.charm,
-      position: { x, y },
-      rotation: 0,
-    };
-    setPlacedCharms((prev) => [...prev, newCharm]);
+    if (draggedCharm.source === 'list') {
+       const newCharm: PlacedCharm = {
+        id: `${draggedCharm.charm.id}-${Date.now()}`,
+        charm: draggedCharm.charm,
+        position: { x, y },
+        rotation: 0,
+      };
+      setPlacedCharms((prev) => [...prev, newCharm]);
+    } else {
+        setPlacedCharms(prev => prev.map(pc => pc.id === draggedCharm.source ? { ...pc, position: { x, y } } : pc));
+    }
+
     setDraggedCharm(null);
   };
   
@@ -243,6 +247,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     }
     setIsPanning(true);
     setStartPanPoint({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+    document.body.style.cursor = 'grabbing';
   };
   
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -255,10 +260,12 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   
   const handleCanvasMouseUp = () => {
     setIsPanning(false);
+     document.body.style.cursor = 'default';
   };
 
   const handleCanvasMouseLeave = () => {
     setIsPanning(false);
+    document.body.style.cursor = 'default';
   };
 
   const resetZoomAndPan = () => {
@@ -280,239 +287,236 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
 
   return (
     <>
-    <header className="p-4 border-b">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <NacreluneLogo className="h-8 w-auto text-foreground" />
-          </div>
-          <Button variant="ghost" onClick={onBack}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-          </Button>
-        </div>
-      </header>
-    <main className="flex-grow p-4 md:p-8">
-     <div className="container mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
-        {/* Charms Panel */}
-        <Card className="lg:col-span-3 flex flex-col">
-          <CardHeader>
-            <CardTitle className="font-headline text-xl">Charms</CardTitle>
-          </CardHeader>
-          <div className="px-4 pb-4">
-              <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                      placeholder="Search charms..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9"
-                  />
-              </div>
-          </div>
-          <Separator />
-          <CardContent className="p-0 flex-grow">
-            <ScrollArea className="h-[calc(100vh-320px)]">
-              {isLoadingCharms ? (
-                 <div className="flex justify-center items-center h-full p-8">
-                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                 </div>
-              ) : (
-              <Accordion type="multiple" defaultValue={charmCategories.map(c => c.id)} className="p-4">
-                {charmCategories.map(category => (
-                  charmsByCategory[category.id] && charmsByCategory[category.id].length > 0 && (
-                    <AccordionItem value={category.id} key={category.id}>
-                      <AccordionTrigger className="text-base font-headline">{category.name}</AccordionTrigger>
-                      <AccordionContent>
-                        <div className="grid grid-cols-3 gap-4 pt-2">
-                          {charmsByCategory[category.id].map((charm) => (
-                             <Dialog key={charm.id}>
-                                <div
-                                  draggable
-                                  onDragStart={(e) => handleDragStart(e, charm)}
-                                  onDragEnd={handleDragEnd}
-                                  onClick={() => addCharmToCanvas(charm)}
-                                  className="relative group p-2 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer active:cursor-grabbing"
-                                  title={charm.name}
-                                >
-                                    <Image src={charm.imageUrl} alt={charm.name} width={48} height={48} data-ai-hint="jewelry charm" />
-                                    <p className="text-xs text-center mt-1 truncate">{charm.name}</p>
-                                  <DialogTrigger asChild>
-                                      <Button variant="secondary" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                                          <ZoomIn className="h-4 w-4" />
-                                      </Button>
-                                  </DialogTrigger>
-                                </div>
-                                <DialogContent className="max-w-md">
-                                  <DialogHeader>
-                                    <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
-                                    <DialogDescription className="text-base">{charm.description}</DialogDescription>
-                                  </DialogHeader>
-                                  <div className="mt-4 flex justify-center">
-                                      <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
-                                  </div>
-                                  <div className="mt-6 flex justify-end">
-                                      <Button onClick={() => addCharmToCanvas(charm)}>Add to Design</Button>
-                                  </div>
-                                </DialogContent>
-                              </Dialog>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  )
-                ))}
-              </Accordion>
-              )}
-            </ScrollArea>
-          </CardContent>
-        </Card>
-
-        {/* Editor Canvas */}
-        <div className="lg:col-span-6 flex flex-col gap-4">
-           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-             <h2 className="text-2xl font-headline tracking-tight">Customize Your {model.name}</h2>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={clearAllCharms} disabled={placedCharms.length === 0}>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Clear All
-                </Button>
-                 <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button>
-                      <ShoppingCart className="mr-2 h-4 w-4" />
-                      Purchase
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Complete Your Masterpiece?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This is a prototype. In a real application, the next steps would involve finalizing your design, proceeding to checkout for payment, and entering shipping details for delivery.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogAction>Continue Designing</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-           </div>
-          <div
-            ref={canvasRef}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onWheel={handleCanvasWheel}
-            onMouseDown={handleCanvasMouseDown}
-            onMouseMove={handleCanvasMouseMove}
-            onMouseUp={handleCanvasMouseUp}
-            onMouseLeave={handleCanvasMouseLeave}
-            className="relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden"
-          >
-            <div
-                className="absolute top-0 left-0 w-full h-full pointer-events-none"
-                style={{
-                    transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
-                    transformOrigin: '0 0',
-                }}
-            >
-                <Image src={model.editorImageUrl} alt={model.name} layout="fill" objectFit="contain" className="pointer-events-none" data-ai-hint="jewelry model" />
+      <header className="p-4 border-b">
+          <div className="container mx-auto flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <NacreluneLogo className="h-8 w-auto text-foreground" />
             </div>
-            <div className="absolute top-0 left-0 w-full h-full" style={{ perspective: '1000px' }}>
-                <div
-                    style={{
-                        transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
-                        transformOrigin: '0 0',
-                        width: '100%',
-                        height: '100%',
-                    }}
-                >
-                    {placedCharms.map((placed) => (
-                    <div
-                        key={placed.id}
-                        draggable
-                        onDragStart={(e) => handlePlacedCharmDragStart(e, placed)}
-                        onDragEnd={handleDragEnd}
-                        onWheel={(e) => handlePlacedCharmRotation(e, placed.id)}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        className="absolute group charm-on-canvas cursor-grab"
-                        style={{
-                        left: `${placed.position.x}px`,
-                        top: `${placed.position.y}px`,
-                        transform: `rotate(${placed.rotation}deg)`,
-                        animation: placed.animation,
-                        }}
-                    >
-                        <Image
-                        src={placed.charm.imageUrl}
-                        alt={placed.charm.name}
-                        width={40}
-                        height={40}
-                        className="pointer-events-none rounded-full"
-                        data-ai-hint="jewelry charm"
-                        />
-                        <button onClick={() => removeCharm(placed.id)} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <X size={14} />
-                        </button>
-                    </div>
-                    ))}
+            <Button variant="ghost" onClick={onBack}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+            </Button>
+          </div>
+        </header>
+      <main className="flex-grow p-4 md:p-8">
+      <div className="container mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+          {/* Charms Panel */}
+          <Card className="lg:col-span-3 flex flex-col">
+            <CardHeader>
+              <CardTitle className="font-headline text-xl">Charms</CardTitle>
+            </CardHeader>
+            <div className="px-4 pb-4">
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search charms..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-9"
+                    />
                 </div>
             </div>
-             <div className="absolute bottom-2 right-2 flex gap-2">
-                <Button variant="outline" size="icon" onClick={() => setScale(s => s * 1.2)}><ZoomIn /></Button>
-                <Button variant="outline" size="icon" onClick={() => setScale(s => s / 1.2)}><ZoomOut/></Button>
-                <Button variant="outline" size="icon" onClick={resetZoomAndPan}><Move /></Button>
-            </div>
-          </div>
-          <Card>
-              <CardHeader>
-                  <CardTitle className="font-headline text-lg">Added Charms ({placedCharms.length})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                  {placedCharms.length === 0 ? (
-                      <p className="text-muted-foreground text-sm">Drag or click charms to add them to your jewelry.</p>
-                  ) : (
-                      <ScrollArea className="h-24">
-                          <ul className="space-y-2">
-                              {placedCharms.map(pc => (
-                                  <li key={pc.id} 
-                                      className={cn("flex items-center justify-between text-sm p-1 rounded-md cursor-pointer",
-                                        selectedCharmId === pc.id ? 'bg-muted' : 'hover:bg-muted/50'
-                                      )}
-                                       onClick={() => handleCharmListClick(pc.id)}
-                                       onMouseDown={(e) => e.stopPropagation()}
+            <Separator />
+            <CardContent className="p-0 flex-grow">
+              <ScrollArea className="h-[calc(100vh-320px)]">
+                {isLoadingCharms ? (
+                  <div className="flex justify-center items-center h-full p-8">
+                      <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                  </div>
+                ) : (
+                <Accordion type="multiple" defaultValue={charmCategories.map(c => c.id)} className="p-4">
+                  {charmCategories.map(category => (
+                    charmsByCategory[category.id] && charmsByCategory[category.id].length > 0 && (
+                      <AccordionItem value={category.id} key={category.id}>
+                        <AccordionTrigger className="text-base font-headline">{category.name}</AccordionTrigger>
+                        <AccordionContent>
+                          <div className="grid grid-cols-3 gap-4 pt-2">
+                            {charmsByCategory[category.id].map((charm) => (
+                              <Dialog key={charm.id}>
+                                  <div
+                                    draggable
+                                    onDragStart={(e) => handleDragStart(e, charm)}
+                                    onDragEnd={handleDragEnd}
+                                    onClick={() => addCharmToCanvas(charm)}
+                                    className="relative group p-2 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer active:cursor-grabbing"
+                                    title={charm.name}
                                   >
-                                      <div className="flex items-center gap-2">
-                                          <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={24} height={24} className="rounded-sm" data-ai-hint="jewelry charm" />
-                                          <span>{pc.charm.name}</span>
-                                      </div>
-                                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); removeCharm(pc.id); }}>
-                                          <X className="h-4 w-4" />
-                                      </Button>
-                                  </li>
-                              ))}
-                          </ul>
-                      </ScrollArea>
-                  )}
-              </CardContent>
+                                      <Image src={charm.imageUrl} alt={charm.name} width={48} height={48} data-ai-hint="jewelry charm" />
+                                      <p className="text-xs text-center mt-1 truncate">{charm.name}</p>
+                                    <DialogTrigger asChild>
+                                        <Button variant="secondary" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                            <ZoomIn className="h-4 w-4" />
+                                        </Button>
+                                    </DialogTrigger>
+                                  </div>
+                                  <DialogContent className="max-w-md">
+                                    <DialogHeader>
+                                      <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
+                                      <DialogDescription className="text-base">{charm.description}</DialogDescription>
+                                    </DialogHeader>
+                                    <div className="mt-4 flex justify-center">
+                                        <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
+                                    </div>
+                                    <div className="mt-6 flex justify-end">
+                                        <Button onClick={() => addCharmToCanvas(charm)}>Add to Design</Button>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    )
+                  ))}
+                </Accordion>
+                )}
+              </ScrollArea>
+            </CardContent>
           </Card>
-        </div>
 
-        {/* AI Suggestions Panel */}
-        <div className="lg:col-span-3">
-          <SuggestionSidebar 
-            jewelryType={jewelryType.id} 
-            modelDescription={model.name || ''} 
-            onAddCharm={addCharmToCanvas} 
-            charms={charms}
-          />
+          {/* Editor Canvas */}
+          <div className="lg:col-span-6 flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <h2 className="text-2xl font-headline tracking-tight">Customize Your {model.name}</h2>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={clearAllCharms} disabled={placedCharms.length === 0}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Clear All
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button>
+                        <ShoppingCart className="mr-2 h-4 w-4" />
+                        Purchase
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Complete Your Masterpiece?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This is a prototype. In a real application, the next steps would involve finalizing your design, proceeding to checkout for payment, and entering shipping details for delivery.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogAction>Continue Designing</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+            </div>
+            <div
+              ref={canvasRef}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onWheel={handleCanvasWheel}
+              onMouseDown={handleCanvasMouseDown}
+              onMouseMove={handleCanvasMouseMove}
+              onMouseUp={handleCanvasMouseUp}
+              onMouseLeave={handleCanvasMouseLeave}
+              className="relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden cursor-grab active:cursor-grabbing"
+            >
+              <div
+                  className="absolute top-0 left-0 w-full h-full pointer-events-none"
+                  style={{
+                      transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
+                      transformOrigin: '0 0',
+                  }}
+              >
+                  <Image src={model.editorImageUrl} alt={model.name} layout="fill" objectFit="contain" className="pointer-events-none" data-ai-hint="jewelry model" />
+              </div>
+              <div className="absolute top-0 left-0 w-full h-full" style={{ perspective: '1000px' }}>
+                  <div
+                      style={{
+                          transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
+                          transformOrigin: '0 0',
+                          width: '100%',
+                          height: '100%',
+                      }}
+                  >
+                      {placedCharms.map((placed) => (
+                      <div
+                          key={placed.id}
+                          draggable
+                          onDragStart={(e) => handlePlacedCharmDragStart(e, placed)}
+                          onDragEnd={handleDragEnd}
+                          onWheel={(e) => handlePlacedCharmRotation(e, placed.id)}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          className="absolute group charm-on-canvas cursor-grab active:cursor-grabbing"
+                          style={{
+                          left: `${placed.position.x}px`,
+                          top: `${placed.position.y}px`,
+                          transform: `rotate(${placed.rotation}deg)`,
+                          animation: placed.animation,
+                          }}
+                      >
+                          <Image
+                          src={placed.charm.imageUrl}
+                          alt={placed.charm.name}
+                          width={40}
+                          height={40}
+                          className="pointer-events-none rounded-full"
+                          data-ai-hint="jewelry charm"
+                          />
+                          <button onClick={() => removeCharm(placed.id)} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <X size={14} />
+                          </button>
+                      </div>
+                      ))}
+                  </div>
+              </div>
+              <div className="absolute bottom-2 right-2 flex gap-2">
+                  <Button variant="outline" size="icon" onClick={() => setScale(s => s * 1.2)}><ZoomIn /></Button>
+                  <Button variant="outline" size="icon" onClick={() => setScale(s => s / 1.2)}><ZoomOut/></Button>
+                  <Button variant="outline" size="icon" onClick={resetZoomAndPan}><Move /></Button>
+              </div>
+            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline text-lg">Added Charms ({placedCharms.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {placedCharms.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">Drag or click charms to add them to your jewelry.</p>
+                    ) : (
+                        <ScrollArea className="h-24">
+                            <ul className="space-y-2">
+                                {placedCharms.map(pc => (
+                                    <li key={pc.id} 
+                                        className={cn("flex items-center justify-between text-sm p-1 rounded-md cursor-pointer",
+                                          selectedCharmId === pc.id ? 'bg-muted' : 'hover:bg-muted/50'
+                                        )}
+                                        onClick={() => handleCharmListClick(pc.id)}
+                                        onMouseDown={(e) => e.stopPropagation()}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={24} height={24} className="rounded-sm" data-ai-hint="jewelry charm" />
+                                            <span>{pc.charm.name}</span>
+                                        </div>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); removeCharm(pc.id); }}>
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </ScrollArea>
+                    )}
+                </CardContent>
+            </Card>
+          </div>
+
+          {/* AI Suggestions Panel */}
+          <div className="lg:col-span-3">
+            <SuggestionSidebar 
+              jewelryType={jewelryType.id} 
+              modelDescription={model.name || ''} 
+              onAddCharm={addCharmToCanvas} 
+              charms={charms}
+            />
+          </div>
         </div>
-      </div>
-      </div>
-    </main>
+        </div>
+      </main>
     </>
   );
 }
-
-
-    
