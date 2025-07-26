@@ -18,6 +18,7 @@ import { NacreluneLogo } from './icons';
 import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 
 interface EditorProps {
   model: JewelryModel;
@@ -138,8 +139,24 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   };
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>, charm: Charm) => {
-    setDraggedItem({ type: 'new-charm', id: charm.id, offsetX: 20, offsetY: 20 });
+    const targetRect = e.currentTarget.getBoundingClientRect();
+    const offsetX = e.clientX - targetRect.left;
+    const offsetY = e.clientY - targetRect.top;
+    setDraggedItem({ type: 'new-charm', id: charm.id, offsetX: offsetX, offsetY: offsetY });
     setSelectedCharmId(null);
+  
+    const dragImage = e.currentTarget.querySelector('img')?.cloneNode(true) as HTMLElement;
+    if (dragImage) {
+        dragImage.style.position = 'absolute';
+        dragImage.style.top = '-9999px';
+        dragImage.style.left = '-9999px';
+        dragImage.style.transform = `rotate(0deg)`; // Reset rotation for the drag image if needed
+        document.body.appendChild(dragImage);
+        e.dataTransfer.setDragImage(dragImage, offsetX, offsetY);
+        setTimeout(() => {
+            document.body.removeChild(dragImage);
+        }, 0);
+    }
   };
 
   const handlePlacedCharmDragStart = (e: DragEvent<HTMLDivElement>, placedCharm: PlacedCharm) => {
@@ -150,18 +167,22 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     setDraggedItem({ type: 'placed-charm', id: placedCharm.id, offsetX, offsetY });
     setSelectedCharmId(null);
   
-    const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
-    dragImage.style.position = 'absolute';
-    dragImage.style.top = '-9999px';
-    dragImage.style.left = '-9999px';
-    document.body.appendChild(dragImage);
-    
-    e.dataTransfer.setDragImage(dragImage, e.clientX - targetRect.left, e.clientY - targetRect.top); 
-
-    setTimeout(() => {
-        document.body.removeChild(dragImage);
-        (e.target as HTMLElement).style.opacity = '0.5';
-    }, 0);
+    const dragImage = e.currentTarget.querySelector('img')?.cloneNode(true) as HTMLElement;
+      if(dragImage) {
+        dragImage.style.position = 'absolute';
+        dragImage.style.top = '-9999px';
+        dragImage.style.left = '-9999px';
+        dragImage.style.transform = `rotate(${placedCharm.rotation}deg)`;
+        document.body.appendChild(dragImage);
+        e.dataTransfer.setDragImage(dragImage, e.clientX - targetRect.left, e.clientY - targetRect.top);
+        
+        setTimeout(() => {
+            if(document.body.contains(dragImage)) {
+                document.body.removeChild(dragImage);
+            }
+            (e.target as HTMLElement).style.opacity = '0.5';
+        }, 0);
+    }
   };
   
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
@@ -178,7 +199,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
       const newCharm: PlacedCharm = {
         id: `${charm.id}-${Date.now()}`,
         charm,
-        position: { x: x - draggedItem.offsetX, y: y - draggedItem.offsetY }, // Use offset
+        position: { x: x - draggedItem.offsetX / scale , y: y - draggedItem.offsetY / scale },
         rotation: 0,
       };
       setPlacedCharms((prev) => [...prev, newCharm]);
@@ -186,7 +207,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
       setPlacedCharms(prev => 
         prev.map(pc => 
           pc.id === draggedItem.id 
-            ? { ...pc, position: { x: x - draggedItem.offsetX, y: y - draggedItem.offsetY } } // Use offset
+            ? { ...pc, position: { x: x - draggedItem.offsetX, y: y - draggedItem.offsetY } }
             : pc
         )
       );
@@ -320,18 +341,40 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                       <AccordionContent>
                         <div className="grid grid-cols-3 gap-4 pt-2">
                           {charmsByCategory[category.id].map((charm) => (
-                            <div
-                              key={charm.id}
-                              draggable
-                              onDragStart={(e) => handleDragStart(e, charm)}
-                              onDragEnd={(e) => handleDragEnd(e)}
-                              onClick={() => addCharmToCanvas(charm)}
-                              className="p-2 border rounded-md flex flex-col items-center justify-center cursor-pointer active:cursor-grabbing bg-card hover:bg-muted transition-colors aspect-square"
-                              title={charm.name}
-                            >
-                              <Image src={charm.imageUrl} alt={charm.name} width={48} height={48} data-ai-hint="jewelry charm" />
-                              <p className="text-xs text-center mt-1 truncate">{charm.name}</p>
-                            </div>
+                             <Dialog key={charm.id}>
+                                <div
+                                  className="relative group p-2 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square"
+                                  title={charm.name}
+                                >
+                                  <div 
+                                    draggable
+                                    onDragStart={(e) => handleDragStart(e, charm)}
+                                    onDragEnd={(e) => handleDragEnd(e)}
+                                    onClick={() => addCharmToCanvas(charm)}
+                                    className="w-full h-full flex flex-col items-center justify-center cursor-pointer active:cursor-grabbing"
+                                  >
+                                    <Image src={charm.imageUrl} alt={charm.name} width={48} height={48} data-ai-hint="jewelry charm" />
+                                    <p className="text-xs text-center mt-1 truncate">{charm.name}</p>
+                                  </div>
+                                  <DialogTrigger asChild>
+                                      <Button variant="secondary" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                          <ZoomIn className="h-4 w-4" />
+                                      </Button>
+                                  </DialogTrigger>
+                                </div>
+                                <DialogContent className="max-w-md">
+                                  <DialogHeader>
+                                    <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
+                                    <DialogDescription className="text-base">{charm.description}</DialogDescription>
+                                  </DialogHeader>
+                                  <div className="mt-4 flex justify-center">
+                                      <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
+                                  </div>
+                                  <div className="mt-6 flex justify-end">
+                                      <Button onClick={() => addCharmToCanvas(charm)}>Add to Design</Button>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
                           ))}
                         </div>
                       </AccordionContent>
@@ -494,5 +537,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     </>
   );
 }
+
+    
 
     
