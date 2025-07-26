@@ -249,44 +249,47 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     let pixelY = (e.clientY - canvasRect.top - pan.y) / scale;
     let rotation = 0;
 
+    // Adjust for the cursor offset within the dragged item
+    const charmPixelX = pixelX - (draggedItem.type === 'new-charm' ? draggedItem.offsetX / scale : draggedItem.offsetX);
+    const charmPixelY = pixelY - (draggedItem.type === 'new-charm' ? draggedItem.offsetY / scale : draggedItem.offsetY);
+
     if (model.snapPath) {
-        const snapped = getClosestPointOnPath(pixelX, pixelY);
+        const snapped = getClosestPointOnPath(charmPixelX, charmPixelY);
         if (snapped) {
             pixelX = snapped.point.x;
             pixelY = snapped.point.y;
             rotation = snapped.rotation;
+        } else {
+            pixelX = charmPixelX;
+            pixelY = charmPixelY;
         }
+    } else {
+        pixelX = charmPixelX;
+        pixelY = charmPixelY;
     }
-
 
     if (draggedItem.type === 'new-charm') {
       const charm = charms.find((c) => c.id === draggedItem.id);
       if (!charm) return;
       
-      const charmPixelX = model.snapPath ? pixelX : (pixelX - draggedItem.offsetX / scale);
-      const charmPixelY = model.snapPath ? pixelY : (pixelY - draggedItem.offsetY / scale);
-      
       const newCharm: PlacedCharm = {
         id: `${charm.id}-${Date.now()}`,
         charm,
         position: { 
-            x: charmPixelX / canvasWidth, 
-            y: charmPixelY / canvasHeight
+            x: pixelX / canvasWidth, 
+            y: pixelY / canvasHeight
         },
         rotation: rotation,
       };
       setPlacedCharms((prev) => [...prev, newCharm]);
     } else if (draggedItem.type === 'placed-charm') {
-       const charmPixelX = model.snapPath ? pixelX : (pixelX - draggedItem.offsetX);
-       const charmPixelY = model.snapPath ? pixelY : (pixelY - draggedItem.offsetY);
-
       setPlacedCharms(prev => 
         prev.map(pc => 
           pc.id === draggedItem.id 
             ? { ...pc, 
                 position: { 
-                    x: charmPixelX / canvasWidth, 
-                    y: charmPixelY / canvasHeight 
+                    x: pixelX / canvasWidth, 
+                    y: pixelY / canvasHeight 
                 },
                 rotation: rotation
               }
