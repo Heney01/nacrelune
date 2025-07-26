@@ -19,6 +19,7 @@ export interface JewelryType {
   id: 'necklace' | 'bracelet' | 'earrings';
   name: string;
   icon: React.ComponentType<{ className?: string }>;
+  description: string;
   models: JewelryModel[];
 }
 

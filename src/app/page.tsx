@@ -59,12 +59,30 @@ export default function Home() {
         setModels(fetchedModels);
       } else {
         // For other types, we can implement similar logic or use static data
-        setModels(type.models);
+        const modelsWithUrls = await Promise.all(type.models.map(async (model) => {
+            const displayImageUrl = await getUrl(model.displayImageUrl);
+            const editorImageUrl = await getUrl(model.editorImageUrl);
+            return {
+                ...model,
+                displayImageUrl,
+                editorImageUrl,
+            }
+        }));
+        setModels(modelsWithUrls);
       }
     } catch (error) {
       console.error("Error fetching models: ", error);
       // Fallback to static data in case of error
-      setModels(type.models);
+       const modelsWithUrls = await Promise.all(type.models.map(async (model) => {
+            const displayImageUrl = await getUrl(model.displayImageUrl);
+            const editorImageUrl = await getUrl(model.editorImageUrl);
+            return {
+                ...model,
+                displayImageUrl,
+                editorImageUrl,
+            }
+        }));
+        setModels(modelsWithUrls);
     } finally {
       setIsLoadingModels(false);
     }
@@ -92,7 +110,6 @@ export default function Home() {
           <>
             <div className="flex items-center gap-2 p-4">
               <NacreluneLogo className="h-8 w-auto text-foreground" />
-              <h1 className="text-2xl font-headline tracking-tight">Nacrelune</h1>
             </div>
             <main className="flex-grow p-4 md:p-8">
               <div className="container mx-auto">
@@ -103,8 +120,11 @@ export default function Home() {
                     {JEWELRY_TYPES.map((type) => (
                       <Card key={type.id} className="cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-transform duration-300" onClick={() => handleTypeSelect(type)}>
                         <CardContent className="p-6 flex flex-col items-center gap-4">
-                          <type.icon className="w-16 h-16 text-primary" />
+                          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                             <type.icon className="w-8 h-8 text-primary" />
+                          </div>
                           <h3 className="text-xl font-headline">{type.name}</h3>
+                          <p className="text-sm text-muted-foreground">{type.description}</p>
                         </CardContent>
                       </Card>
                     ))}
@@ -144,22 +164,20 @@ export default function Home() {
                         <Card key={model.id} className="overflow-hidden group flex flex-col">
                            <div className="overflow-hidden relative cursor-pointer" onClick={() => handleModelSelect(model)}>
                             <Image src={model.displayImageUrl} alt={model.name} width={400} height={400} className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300" data-ai-hint="jewelry" />
-                          </div>
-                          <CardContent className="p-4 flex-grow flex flex-col">
-                            <h3 className="text-lg font-headline flex-grow">{model.name}</h3>
-                            <div className="flex justify-between items-center mt-4">
-                               <Button variant="outline" size="sm" className="w-full" onClick={() => handleModelSelect(model)}>Select</Button>
-                               <Dialog>
+                             <Dialog>
                                 <DialogTrigger asChild>
-                                    <Button variant="ghost" size="icon">
+                                    <Button variant="secondary" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                                         <ZoomIn className="h-5 w-5" />
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent className="max-w-3xl">
                                     <Image src={model.displayImageUrl} alt={model.name} width={800} height={800} className="w-full h-auto object-contain rounded-lg" />
                                 </DialogContent>
-                               </Dialog>
-                            </div>
+                            </Dialog>
+                          </div>
+                          <CardContent className="p-4 flex-grow flex flex-col justify-between">
+                            <h3 className="text-lg font-headline flex-grow">{model.name}</h3>
+                             <Button variant="outline" size="sm" className="w-full mt-4" onClick={() => handleModelSelect(model)}>Select</Button>
                           </CardContent>
                         </Card>
                       ))}
@@ -177,9 +195,9 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-stone-50">
       {renderStep()}
-      <footer className="p-4 border-t mt-auto">
+      <footer className="p-4 border-t mt-auto bg-white">
         <div className="container mx-auto text-center text-muted-foreground text-sm">
           &copy; {new Date().getFullYear()} Nacrelune. All rights reserved.
         </div>

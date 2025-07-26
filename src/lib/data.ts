@@ -20,6 +20,7 @@ export const JEWELRY_TYPES: JewelryType[] = [
     id: 'necklace',
     name: 'Necklaces',
     icon: Gem,
+    description: "Graceful chains and pendants.",
     models: [
       {
         id: 'necklace-1',
@@ -45,6 +46,7 @@ export const JEWELRY_TYPES: JewelryType[] = [
     id: 'bracelet',
     name: 'Bracelets',
     icon: HandMetal,
+    description: "Elegant wristwear for any occasion.",
     models: [
       {
         id: 'bracelet-1',
@@ -70,6 +72,7 @@ export const JEWELRY_TYPES: JewelryType[] = [
     id: 'earrings',
     name: 'Earrings',
     icon: Ear,
+    description: "Stylish earrings to complete your look.",
     models: [
       {
         id: 'earrings-1',
