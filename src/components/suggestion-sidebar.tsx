@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Badge } from './ui/badge';
 import Image from 'next/image';
 import { Charm } from '@/lib/types';
+import { useTranslations } from 'next-intl';
 
 interface SuggestionSidebarProps {
   jewelryType: string;
@@ -23,6 +24,7 @@ interface SuggestionSidebarProps {
 }
 
 export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm, charms }: SuggestionSidebarProps) {
+  const t = useTranslations('Editor');
   const [preferences, setPreferences] = useState('');
   const [suggestions, setSuggestions] = useState<SuggestCharmPlacementOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,7 +45,7 @@ export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm, c
       });
       setSuggestions(result);
     } catch (err) {
-      setError('An error occurred while generating suggestions. Please try again.');
+      setError(t('error_generating_suggestions'));
     } finally {
       setIsLoading(false);
     }
@@ -61,26 +63,26 @@ export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm, c
       <CardHeader>
         <CardTitle className="font-headline text-xl flex items-center gap-2">
           <WandSparkles className="text-primary" />
-          AI Suggestions
+          {t('ai_suggestions_title')}
         </CardTitle>
         <CardDescription>
-          Let our AI help you find the perfect placement for your charms.
+          {t('ai_suggestions_description')}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col gap-4">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="preferences" className="font-bold">Your Preferences (Optional)</Label>
+            <Label htmlFor="preferences" className="font-bold">{t('preferences_label')}</Label>
             <Textarea
               id="preferences"
-              placeholder="e.g., 'I like asymmetrical designs' or 'a minimalist look'"
+              placeholder={t('preferences_placeholder')}
               value={preferences}
               onChange={(e) => setPreferences(e.target.value)}
               className="mt-2"
             />
           </div>
           <Button type="submit" className="w-full" disabled={isLoading || charms.length === 0}>
-            {isLoading ? 'Generating...' : <> <Sparkles className="mr-2 h-4 w-4" /> Generate Ideas</>}
+            {isLoading ? t('generating_button') : <> <Sparkles className="mr-2 h-4 w-4" /> {t('generate_ideas_button')}</>}
           </Button>
         </form>
         <div className="flex-grow mt-4">
@@ -113,7 +115,7 @@ export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm, c
                           <CardTitle className="text-base font-headline">{suggestion.charm}</CardTitle>
                           <p className="text-sm text-muted-foreground">{suggestion.placementDescription}</p>
                         </div>
-                        {suggestion.shouldIntegrate && <Badge variant="secondary">Recommended</Badge>}
+                        {suggestion.shouldIntegrate && <Badge variant="secondary">{t('recommended_badge')}</Badge>}
                     </CardHeader>
                   </Card>
                  )
@@ -123,7 +125,7 @@ export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm, c
            {!isLoading && !suggestions && !error && (
             <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-full p-4 border border-dashed rounded-lg">
                 <Lightbulb className="w-10 h-10 mb-4" />
-                <p>Your creative suggestions will appear here.</p>
+                <p>{t('suggestions_placeholder_title')}</p>
             </div>
            )}
         </div>
@@ -131,5 +133,3 @@ export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm, c
     </Card>
   );
 }
-
-    

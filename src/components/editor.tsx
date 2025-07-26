@@ -19,6 +19,7 @@ import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { useTranslations } from 'next-intl';
 
 interface EditorProps {
   model: JewelryModel;
@@ -27,6 +28,7 @@ interface EditorProps {
 }
 
 export default function Editor({ model, jewelryType, onBack }: EditorProps) {
+  const t = useTranslations('Editor');
   const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [draggedCharm, setDraggedCharm] = useState<{charm: Charm, offset: {x: number, y: number}, source: 'list' | string } | null>(null);
@@ -126,11 +128,9 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     if (!canvasRef.current) return;
     const canvasRect = canvasRef.current.getBoundingClientRect();
 
-    // Place in the center of the viewport
     const x = (canvasRect.width / 2 - pan.x) / scale;
     const y = (canvasRect.height / 2 - pan.y) / scale;
     
-    // Convert to percentage
     const xPercent = (x / canvasRect.width) * 100;
     const yPercent = (y / canvasRect.height) * 100;
 
@@ -152,7 +152,6 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   };
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>, charm: Charm) => {
-    // Calculate offset in pixels, not as a percentage of the small charm preview
     const rect = e.currentTarget.getBoundingClientRect();
     const offsetX = e.clientX - rect.left;
     const offsetY = e.clientY - rect.top;
@@ -162,7 +161,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   
     const dragImage = e.currentTarget.querySelector('img')?.cloneNode(true) as HTMLElement;
     if (dragImage) {
-        dragImage.style.width = "40px"; // Match canvas charm size
+        dragImage.style.width = "40px";
         dragImage.style.height = "40px";
         document.body.appendChild(dragImage);
         e.dataTransfer.setDragImage(dragImage, offsetX, offsetY);
@@ -171,10 +170,9 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   };
 
   const handlePlacedCharmDragStart = (e: DragEvent<HTMLDivElement>, placedCharm: PlacedCharm) => {
-     // Calculate offset in pixels relative to the dragged charm on the canvas, factoring in scale
     const rect = e.currentTarget.getBoundingClientRect();
-    const offsetX = (e.clientX - rect.left);
-    const offsetY = (e.clientY - rect.top);
+    const offsetX = (e.clientX - rect.left) / scale;
+    const offsetY = (e.clientY - rect.top) / scale;
 
     setDraggedCharm({
       charm: placedCharm.charm,
@@ -187,7 +185,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
       if(dragImage) {
         dragImage.style.transform = `rotate(${placedCharm.rotation}deg)`;
         document.body.appendChild(dragImage);
-        e.dataTransfer.setDragImage(dragImage, offsetX, offsetY);
+        e.dataTransfer.setDragImage(dragImage, offsetX * scale, offsetY * scale);
         setTimeout(() => document.body.removeChild(dragImage), 0);
     }
   };
@@ -198,18 +196,13 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   
     const canvasRect = canvasRef.current.getBoundingClientRect();
 
-    // Calculate the drop position in pixels relative to the unscaled canvas
-    // Account for the initial drag offset to place the charm correctly under the cursor
-    const dropX_px = (e.clientX - canvasRect.left - pan.x - draggedCharm.offset.x) / scale;
-    const dropY_px = (e.clientY - canvasRect.top - pan.y - draggedCharm.offset.y) / scale;
+    const dropX_px = (e.clientX - canvasRect.left - pan.x) / scale - draggedCharm.offset.x;
+    const dropY_px = (e.clientY - canvasRect.top - pan.y) / scale - draggedCharm.offset.y;
 
-    // This is the top-left corner. We need to center it.
-    const charmWidth = 40; // The width of the charm on canvas
+    const charmWidth = 40;
     const centeredDropX_px = dropX_px + (charmWidth / 2);
     const centeredDropY_px = dropY_px + (charmWidth / 2);
 
-
-    // Convert pixel position to percentage relative to canvas dimensions
     const xPercent = (centeredDropX_px / canvasRect.width) * 100;
     const yPercent = (centeredDropY_px / canvasRect.height) * 100;
     
@@ -301,7 +294,6 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     setIsPanning(false);
   };
 
-
   const resetZoomAndPan = () => {
     setScale(1);
     setPan({ x: 0, y: 0 });
@@ -316,7 +308,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
       setPlacedCharms(prev => prev.map(pc =>
         pc.id === charmId ? { ...pc, animation: undefined } : pc
       ));
-    }, 500); // Duration of the animation
+    }, 500);
   };
 
   return (
@@ -328,7 +320,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
             </div>
             <Button variant="ghost" onClick={onBack}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
+                {t.rich('HomePage.back_button')}
             </Button>
           </div>
         </header>
@@ -338,13 +330,13 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
           {/* Charms Panel */}
           <Card className="lg:col-span-3 flex flex-col">
             <CardHeader>
-              <CardTitle className="font-headline text-xl">Charms</CardTitle>
+              <CardTitle className="font-headline text-xl">{t('charms_title')}</CardTitle>
             </CardHeader>
             <div className="px-4 pb-4">
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Search charms..."
+                        placeholder={t('search_placeholder')}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-9"
@@ -393,7 +385,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                                         <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
                                     </div>
                                     <div className="mt-6 flex justify-end">
-                                        <Button onClick={() => addCharmToCanvas(charm)}>Add to Design</Button>
+                                        <Button onClick={() => addCharmToCanvas(charm)}>{t('add_to_design_button')}</Button>
                                     </div>
                                   </DialogContent>
                                 </Dialog>
@@ -412,28 +404,28 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
           {/* Editor Canvas */}
           <div className="lg:col-span-6 flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-              <h2 className="text-2xl font-headline tracking-tight">Customize Your {model.name}</h2>
+              <h2 className="text-2xl font-headline tracking-tight">{t('customize_title', {modelName: model.name})}</h2>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={clearAllCharms} disabled={placedCharms.length === 0}>
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Clear All
+                    {t('clear_all_button')}
                   </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button>
                         <ShoppingCart className="mr-2 h-4 w-4" />
-                        Purchase
+                        {t('purchase_button')}
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Complete Your Masterpiece?</AlertDialogTitle>
+                        <AlertDialogTitle>{t('purchase_dialog_title')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This is a prototype. In a real application, the next steps would involve finalizing your design, proceeding to checkout for payment, and entering shipping details for delivery.
+                          {t('purchase_dialog_description')}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogAction>Continue Designing</AlertDialogAction>
+                        <AlertDialogAction>{t('purchase_dialog_action')}</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
@@ -507,11 +499,11 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
             </div>
             <Card>
                 <CardHeader>
-                    <CardTitle className="font-headline text-lg">Added Charms ({placedCharms.length})</CardTitle>
+                    <CardTitle className="font-headline text-lg">{t('added_charms_title', {count: placedCharms.length})}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     {placedCharms.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">Drag or click charms to add them to your jewelry.</p>
+                        <p className="text-muted-foreground text-sm">{t('added_charms_placeholder')}</p>
                     ) : (
                         <ScrollArea className="h-24">
                             <ul className="space-y-2">

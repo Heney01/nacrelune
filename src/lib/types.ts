@@ -19,6 +19,7 @@ export interface JewelryModel {
   name: string;
   displayImageUrl: string;
   editorImageUrl: string;
+  snapPath?: string;
 }
 
 export interface JewelryType {
@@ -32,9 +33,7 @@ export interface JewelryType {
 export interface PlacedCharm {
   id: string;
   charm: Charm;
-  position: { x: number; y: number };
+  position: { x: number; y: number }; // As a percentage
   rotation: number;
   animation?: string;
 }
-
-    

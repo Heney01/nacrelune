@@ -1,0 +1,41 @@
+{
+  "HomePage": {
+    "title": "Commencez Votre Création",
+    "subtitle": "Choisissez un type de bijou pour commencer à concevoir. Chaque pièce est une toile pour votre histoire, attendant d'être ornée de breloques qui vous parlent.",
+    "jewelry_types": {
+      "necklace": "Colliers",
+      "necklace_description": "Chaînes et pendentifs gracieux.",
+      "bracelet": "Bracelets",
+      "bracelet_description": "Un bijou de poignet élégant pour toute occasion.",
+      "earrings": "Boucles d'oreilles",
+      "earrings_description": "Des boucles d'oreilles stylées pour compléter votre look."
+    },
+    "model_selection_title": "Sélectionnez un Modèle",
+    "model_selection_subtitle": "Sélectionnez un magnifique modèle de {jewelryTypeName} comme base pour votre création personnalisée.",
+    "back_button": "Retour",
+    "select_button": "Sélectionner",
+    "footer_text": "© {year} Nacrelune. Tous droits réservés."
+  },
+  "Editor": {
+    "charms_title": "Breloques",
+    "search_placeholder": "Rechercher des breloques...",
+    "add_to_design_button": "Ajouter à la création",
+    "customize_title": "Personnalisez votre {modelName}",
+    "clear_all_button": "Tout effacer",
+    "purchase_button": "Acheter",
+    "purchase_dialog_title": "Terminer votre chef-d'œuvre ?",
+    "purchase_dialog_description": "Ceci est un prototype. Dans une application réelle, les prochaines étapes consisteraient à finaliser votre design, à passer à la caisse pour le paiement et à saisir les détails d'expédition pour la livraison.",
+    "purchase_dialog_action": "Continuer la création",
+    "added_charms_title": "Breloques ajoutées ({count})",
+    "added_charms_placeholder": "Faites glisser ou cliquez sur les breloques pour les ajouter à votre bijou.",
+    "ai_suggestions_title": "Suggestions de l'IA",
+    "ai_suggestions_description": "Laissez notre IA vous aider à trouver l'emplacement parfait pour vos breloques.",
+    "preferences_label": "Vos préférences (Facultatif)",
+    "preferences_placeholder": "ex: 'J'aime les designs asymétriques' ou 'un look minimaliste'",
+    "generate_ideas_button": "Générer des idées",
+    "generating_button": "Génération...",
+    "error_generating_suggestions": "Une erreur est survenue lors de la génération des suggestions. Veuillez réessayer.",
+    "suggestions_placeholder_title": "Vos suggestions créatives apparaîtront ici.",
+    "recommended_badge": "Recommandé"
+  }
+}
