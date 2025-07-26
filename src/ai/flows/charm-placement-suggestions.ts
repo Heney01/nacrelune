@@ -61,6 +61,8 @@ const prompt = ai.definePrompt({
   tools: [shouldIntegrateCharmTool],
   prompt: `You are a jewelry design assistant. Your task is to suggest charm placements based on the provided information.
 
+IMPORTANT: You MUST strictly adhere to the user's preferences. If the user expresses a negative constraint (e.g., "I hate...", "no red", "I don't like..."), you MUST NOT suggest any charm that violates this constraint. This is a strict rule.
+
 Jewelry Type: {{{jewelryType}}}
 Model Name: {{{modelDescription}}}
 Available Charms: {{#each charmOptions}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
