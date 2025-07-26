@@ -13,13 +13,15 @@ import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Badge } from './ui/badge';
 import Image from 'next/image';
+import { Charm } from '@/lib/types';
 
 interface SuggestionSidebarProps {
   jewelryType: string;
   modelDescription: string;
+  onAddCharm: (charm: Charm) => void;
 }
 
-export function SuggestionSidebar({ jewelryType, modelDescription }: SuggestionSidebarProps) {
+export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm }: SuggestionSidebarProps) {
   const [preferences, setPreferences] = useState('');
   const [suggestions, setSuggestions] = useState<SuggestCharmPlacementOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,6 +45,13 @@ export function SuggestionSidebar({ jewelryType, modelDescription }: SuggestionS
       setError('An error occurred while generating suggestions. Please try again.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSuggestionClick = (charmName: string) => {
+    const charm = CHARMS.find(c => c.name === charmName);
+    if (charm) {
+      onAddCharm(charm);
     }
   };
 
@@ -92,7 +101,11 @@ export function SuggestionSidebar({ jewelryType, modelDescription }: SuggestionS
               {suggestions.suggestions.map((suggestion, index) => {
                  const charm = CHARMS.find(c => c.name === suggestion.charm);
                  return(
-                  <Card key={index} className={suggestion.shouldIntegrate ? 'border-primary' : ''}>
+                  <Card 
+                    key={index} 
+                    className={`cursor-pointer hover:shadow-md transition-shadow ${suggestion.shouldIntegrate ? 'border-primary' : ''}`}
+                    onClick={() => handleSuggestionClick(suggestion.charm)}
+                  >
                     <CardHeader className="flex flex-row items-start gap-4 space-y-0 p-4">
                         {charm && <Image src={charm.imageUrl} alt={charm.name} width={40} height={40} className="border rounded-md p-1" data-ai-hint="jewelry charm" />}
                         <div className="flex-1">

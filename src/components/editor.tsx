@@ -46,6 +46,18 @@ export default function Editor({ model, jewelryType }: EditorProps) {
     }, {} as Record<CharmCategory, Charm[]>);
   }, [filteredCharms]);
 
+  const addCharmToCanvas = (charm: Charm) => {
+    if (!canvasRef.current) return;
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    const newCharm: PlacedCharm = {
+      id: `${charm.id}-${Date.now()}`,
+      charm,
+      position: { x: canvasRect.width / 2 - 20, y: canvasRect.height / 2 - 20 },
+      rotation: 0,
+    };
+    setPlacedCharms((prev) => [...prev, newCharm]);
+  };
+
   const handleDragStart = (e: DragEvent<HTMLDivElement>, charm: Charm) => {
     setDraggedItem({ type: 'new-charm', id: charm.id });
     setSelectedCharmId(null);
@@ -179,7 +191,8 @@ export default function Editor({ model, jewelryType }: EditorProps) {
                             draggable
                             onDragStart={(e) => handleDragStart(e, charm)}
                             onDragEnd={handleDragEnd}
-                            className="p-2 border rounded-md flex flex-col items-center justify-center cursor-grab active:cursor-grabbing bg-card hover:bg-muted transition-colors aspect-square"
+                            onClick={() => addCharmToCanvas(charm)}
+                            className="p-2 border rounded-md flex flex-col items-center justify-center cursor-pointer active:cursor-grabbing bg-card hover:bg-muted transition-colors aspect-square"
                             title={charm.name}
                           >
                             <Image src={charm.imageUrl} alt={charm.name} width={48} height={48} data-ai-hint="jewelry charm" />
@@ -271,7 +284,7 @@ export default function Editor({ model, jewelryType }: EditorProps) {
             </CardHeader>
             <CardContent>
                 {placedCharms.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">Drag charms onto your jewelry to add them.</p>
+                    <p className="text-muted-foreground text-sm">Drag or click charms to add them to your jewelry.</p>
                 ) : (
                     <ScrollArea className="h-24">
                         <ul className="space-y-2">
@@ -300,7 +313,7 @@ export default function Editor({ model, jewelryType }: EditorProps) {
 
       {/* AI Suggestions Panel */}
       <div className="lg:col-span-3">
-        <SuggestionSidebar jewelryType={jewelryType.id} modelDescription={model.description} />
+        <SuggestionSidebar jewelryType={jewelryType.id} modelDescription={model.description} onAddCharm={addCharmToCanvas} />
       </div>
     </div>
   );
