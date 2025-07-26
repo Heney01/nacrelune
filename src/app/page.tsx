@@ -6,13 +6,14 @@ import type { JewelryModel, JewelryType, PlacedCharm } from '@/lib/types';
 import { JEWELRY_TYPES } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, ZoomIn } from 'lucide-react';
 import Image from 'next/image';
 import Editor from '@/components/editor';
 import { NacreluneLogo } from '@/components/icons';
 import { db, storage } from '@/lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { ref, getDownloadURL } from "firebase/storage";
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 
 type Step = 'type-selection' | 'model-selection' | 'editor';
 
@@ -140,12 +141,25 @@ export default function Home() {
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                       {models.map((model) => (
-                        <Card key={model.id} className="cursor-pointer hover:shadow-lg overflow-hidden group" onClick={() => handleModelSelect(model)}>
-                          <div className="overflow-hidden">
+                        <Card key={model.id} className="overflow-hidden group flex flex-col">
+                           <div className="overflow-hidden relative cursor-pointer" onClick={() => handleModelSelect(model)}>
                             <Image src={model.displayImageUrl} alt={model.name} width={400} height={400} className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300" data-ai-hint="jewelry" />
                           </div>
-                          <CardContent className="p-6">
-                            <h3 className="text-lg font-headline">{model.name}</h3>
+                          <CardContent className="p-4 flex-grow flex flex-col">
+                            <h3 className="text-lg font-headline flex-grow">{model.name}</h3>
+                            <div className="flex justify-between items-center mt-4">
+                               <Button variant="outline" size="sm" className="w-full" onClick={() => handleModelSelect(model)}>Select</Button>
+                               <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                        <ZoomIn className="h-5 w-5" />
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-3xl">
+                                    <Image src={model.displayImageUrl} alt={model.name} width={800} height={800} className="w-full h-auto object-contain rounded-lg" />
+                                </DialogContent>
+                               </Dialog>
+                            </div>
                           </CardContent>
                         </Card>
                       ))}
