@@ -331,7 +331,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
 
         {/* AI Suggestions Panel */}
         <div className="lg:col-span-3">
-          <SuggestionSidebar jewelryType={jewelryType.id} modelDescription={model.description} onAddCharm={addCharmToCanvas} />
+          <SuggestionSidebar jewelryType={jewelryType.id} modelDescription={model.description || ''} onAddCharm={addCharmToCanvas} />
         </div>
       </div>
       </div>

@@ -1,15 +1,17 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { JewelryModel, JewelryType, PlacedCharm } from '@/lib/types';
 import { JEWELRY_TYPES } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import Editor from '@/components/editor';
 import { NacreluneLogo } from '@/components/icons';
+import { db } from '@/lib/firebase';
+import { collection, getDocs } from 'firebase/firestore';
 
 type Step = 'type-selection' | 'model-selection' | 'editor';
 
@@ -17,10 +19,31 @@ export default function Home() {
   const [step, setStep] = useState<Step>('type-selection');
   const [selectedType, setSelectedType] = useState<JewelryType | null>(null);
   const [selectedModel, setSelectedModel] = useState<JewelryModel | null>(null);
+  const [models, setModels] = useState<JewelryModel[]>([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
 
-  const handleTypeSelect = (type: JewelryType) => {
+  const handleTypeSelect = async (type: JewelryType) => {
     setSelectedType(type);
     setStep('model-selection');
+    setIsLoadingModels(true);
+    try {
+      if (type.id === 'necklace') {
+        const querySnapshot = await getDocs(collection(db, "necklace"));
+        const fetchedModels = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as JewelryModel));
+        setModels(fetchedModels);
+      } else {
+        setModels(type.models);
+      }
+    } catch (error) {
+      console.error("Error fetching models: ", error);
+      // Fallback to static data in case of error
+      setModels(type.models);
+    } finally {
+      setIsLoadingModels(false);
+    }
   };
 
   const handleModelSelect = (model: JewelryModel) => {
@@ -34,6 +57,7 @@ export default function Home() {
     } else if (step === 'model-selection') {
       setStep('type-selection');
       setSelectedType(null);
+      setModels([]);
     }
   };
   
@@ -42,7 +66,6 @@ export default function Home() {
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2">
             <NacreluneLogo className="h-8 w-auto text-foreground" />
-            <h1 className="text-2xl font-headline tracking-tight">Nacrelune</h1>
           </div>
           {step !== 'type-selection' && (
             <Button variant="ghost" onClick={handleBack}>
@@ -59,7 +82,10 @@ export default function Home() {
       case 'type-selection':
         return (
           <>
-            <Header />
+            <div className="flex items-center gap-2 p-4">
+              <NacreluneLogo className="h-8 w-auto text-foreground" />
+              <h1 className="text-2xl font-headline tracking-tight">Nacrelune</h1>
+            </div>
             <main className="flex-grow p-4 md:p-8">
               <div className="container mx-auto">
                 <section className="text-center">
@@ -90,19 +116,25 @@ export default function Home() {
                 <section>
                   <h2 className="text-3xl font-headline tracking-tight mb-4 text-center">Select a Model</h2>
                   <p className="text-muted-foreground mb-12 max-w-2xl mx-auto text-center">Select a beautiful {selectedType.name.toLowerCase()} model as the foundation for your custom design.</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                    {selectedType.models.map((model) => (
-                      <Card key={model.id} className="cursor-pointer hover:shadow-lg overflow-hidden group" onClick={() => handleModelSelect(model)}>
-                        <div className="overflow-hidden">
-                          <Image src={model.imageUrl} alt={model.name} width={400} height={400} className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300" data-ai-hint="jewelry" />
-                        </div>
-                        <CardContent className="p-6">
-                          <h3 className="text-lg font-headline">{model.name}</h3>
-                          <p className="text-sm text-muted-foreground">{model.description}</p>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+                  {isLoadingModels ? (
+                    <div className="flex justify-center items-center h-64">
+                      <Loader2 className="h-16 w-16 animate-spin text-primary" />
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                      {models.map((model) => (
+                        <Card key={model.id} className="cursor-pointer hover:shadow-lg overflow-hidden group" onClick={() => handleModelSelect(model)}>
+                          <div className="overflow-hidden">
+                            <Image src={model.imageUrl} alt={model.name} width={400} height={400} className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300" data-ai-hint="jewelry" />
+                          </div>
+                          <CardContent className="p-6">
+                            <h3 className="text-lg font-headline">{model.name}</h3>
+                            <p className="text-sm text-muted-foreground">{model.description}</p>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
                 </section>
               </div>
             </main>

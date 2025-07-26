@@ -11,7 +11,7 @@ export interface Charm {
 export interface JewelryModel {
   id: string;
   name: string;
-  description: string;
+  description?: string; // Made optional
   imageUrl: string;
 }
 
