@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useRef, DragEvent, WheelEvent, useEffect } from 'react';
 import Image from 'next/image';
-import { JewelryModel, PlacedCharm, Charm, JewelryType, CharmCollection } from '@/lib/types';
+import { JewelryModel, PlacedCharm, Charm, JewelryType, CharmCategory } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -33,7 +33,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   
   const [charms, setCharms] = useState<Charm[]>([]);
-  const [charmCollections, setCharmCollections] = useState<CharmCollection[]>([]);
+  const [charmCategories, setCharmCategories] = useState<CharmCategory[]>([]);
   const [isLoadingCharms, setIsLoadingCharms] = useState(true);
 
   const getUrl = async (path: string) => {
@@ -53,9 +53,9 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     const fetchCharmsData = async () => {
       setIsLoadingCharms(true);
       try {
-        // Fetch charm collections
-        const collectionsSnapshot = await getDocs(collection(db, "charmCollection"));
-        const fetchedCollections = await Promise.all(collectionsSnapshot.docs.map(async (doc) => {
+        // Fetch charm categories
+        const categoriesSnapshot = await getDocs(collection(db, "charmCategories"));
+        const fetchedCategories = await Promise.all(categoriesSnapshot.docs.map(async (doc) => {
           const data = doc.data();
           const imageUrl = data.imageUrl ? await getUrl(data.imageUrl) : undefined;
           return {
@@ -63,22 +63,22 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
             name: data.name,
             description: data.description,
             imageUrl: imageUrl,
-          } as CharmCollection;
+          } as CharmCategory;
         }));
-        setCharmCollections(fetchedCollections);
+        setCharmCategories(fetchedCategories);
 
         // Fetch charms
         const charmsSnapshot = await getDocs(collection(db, "charms"));
         const fetchedCharms = await Promise.all(charmsSnapshot.docs.map(async (doc) => {
           const data = doc.data();
           const imageUrl = await getUrl(data.imageUrl);
-          const collectionRef = data.collection as DocumentReference;
+          const categoryRef = data.category as DocumentReference;
           return {
             id: doc.id,
             name: data.name,
             imageUrl: imageUrl,
             description: data.description,
-            collectionId: collectionRef.id,
+            categoryId: categoryRef.id,
           } as Charm;
         }));
         setCharms(fetchedCharms);
@@ -104,13 +104,13 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     );
   }, [searchTerm, charms]);
 
-  const charmsByCollection = useMemo(() => {
+  const charmsByCategory = useMemo(() => {
     return filteredCharms.reduce((acc, charm) => {
-      const collectionId = charm.collectionId;
-      if (!acc[collectionId]) {
-        acc[collectionId] = [];
+      const categoryId = charm.categoryId;
+      if (!acc[categoryId]) {
+        acc[categoryId] = [];
       }
-      acc[collectionId].push(charm);
+      acc[categoryId].push(charm);
       return acc;
     }, {} as Record<string, Charm[]>);
   }, [filteredCharms]);
@@ -269,14 +269,14 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                     <Loader2 className="h-12 w-12 animate-spin text-primary" />
                  </div>
               ) : (
-              <Accordion type="multiple" defaultValue={charmCollections.map(c => c.id)} className="p-4">
-                {charmCollections.map(collection => (
-                  charmsByCollection[collection.id] && charmsByCollection[collection.id].length > 0 && (
-                    <AccordionItem value={collection.id} key={collection.id}>
-                      <AccordionTrigger className="text-base font-headline">{collection.name}</AccordionTrigger>
+              <Accordion type="multiple" defaultValue={charmCategories.map(c => c.id)} className="p-4">
+                {charmCategories.map(category => (
+                  charmsByCategory[category.id] && charmsByCategory[category.id].length > 0 && (
+                    <AccordionItem value={category.id} key={category.id}>
+                      <AccordionTrigger className="text-base font-headline">{category.name}</AccordionTrigger>
                       <AccordionContent>
                         <div className="grid grid-cols-3 gap-4 pt-2">
-                          {charmsByCollection[collection.id].map((charm) => (
+                          {charmsByCategory[category.id].map((charm) => (
                             <div
                               key={charm.id}
                               draggable

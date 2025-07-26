@@ -1,5 +1,5 @@
 
-export interface CharmCollection {
+export interface CharmCategory {
   id: string;
   name: string;
   description: string;
@@ -11,7 +11,7 @@ export interface Charm {
   name: string;
   imageUrl: string;
   description: string;
-  collectionId: string;
+  categoryId: string;
 }
 
 export interface JewelryModel {
