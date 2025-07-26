@@ -54,7 +54,6 @@ export default function Home() {
             name: data.name,
             displayImageUrl: displayImageUrl,
             editorImageUrl: editorImageUrl,
-            snapPath: data.snapPath,
           } as JewelryModel;
         })
       );
@@ -152,13 +151,12 @@ export default function Home() {
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                       {models.map((model) => (
-                        <Card key={model.id} className="overflow-hidden group flex flex-col">
-                          <div onClick={() => handleModelSelect(model)}>
-                            <div className="overflow-hidden relative">
-                              <Image src={model.displayImageUrl} alt={model.name} width={400} height={400} className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer" data-ai-hint="jewelry" />
+                        <Card key={model.id} className="overflow-hidden group flex flex-col" onClick={() => handleModelSelect(model)}>
+                          <div className="overflow-hidden relative">
+                              <Image src={model.displayImageUrl} alt={model.name} width={400} height={400} className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300" data-ai-hint="jewelry" />
                                <Dialog>
                                 <DialogTrigger asChild>
-                                    <Button variant="secondary" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                    <Button variant="secondary" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <ZoomIn className="h-5 w-5" />
                                     </Button>
                                 </DialogTrigger>
@@ -167,11 +165,10 @@ export default function Home() {
                                 </DialogContent>
                               </Dialog>
                             </div>
-                            <CardContent className="p-4 flex-grow flex flex-col justify-between">
+                           <CardContent className="p-4 flex-grow flex flex-col justify-between">
                               <h3 className="text-lg font-headline flex-grow">{model.name}</h3>
                                <Button variant="outline" size="sm" className="w-full mt-4">Select</Button>
-                            </CardContent>
-                          </div>
+                           </CardContent>
                         </Card>
                       ))}
                     </div>

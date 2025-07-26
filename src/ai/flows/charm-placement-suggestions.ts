@@ -66,13 +66,9 @@ Model Name: {{{modelDescription}}}
 Available Charms: {{#each charmOptions}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
 User Preferences: {{{userPreferences}}}
 
-Carefully review the user's preferences. If the user expresses a dislike for something (e.g., "I hate lemons," "no stars"), you MUST NOT suggest any charms related to that preference. Your suggestions should strictly adhere to the user's stated likes and dislikes.
+Suggest placements for a few of the available charms. For each suggestion, provide a brief description of where the charm should be placed. Use the shouldIntegrateCharm tool to determine if the charm suggestion should be integrated into the design.
 
-Suggest placements for a few of the available charms that align with the user's preferences. For each suggestion, consider the overall aesthetic and provide a brief description of where the charm should be placed and why.
-
-Use the shouldIntegrateCharm tool to determine if the charm suggestion should be integrated into the design.
-
-Output your suggestions in JSON format.`, 
+Output your suggestions in JSON format.`,
 });
 
 const suggestCharmPlacementFlow = ai.defineFlow(
@@ -110,5 +106,3 @@ const suggestCharmPlacementFlow = ai.defineFlow(
     };
   }
 );
-
-    

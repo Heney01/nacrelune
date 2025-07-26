@@ -19,7 +19,6 @@ export interface JewelryModel {
   name: string;
   displayImageUrl: string;
   editorImageUrl: string;
-  snapPath?: string; // SVG path string for charm snapping
 }
 
 export interface JewelryType {
@@ -33,7 +32,6 @@ export interface JewelryType {
 export interface PlacedCharm {
   id: string;
   charm: Charm;
-  // Position is stored as a ratio of the canvas size (0 to 1)
-  position: { x: number; y: number }; 
+  position: { x: number; y: number };
   rotation: number;
 }

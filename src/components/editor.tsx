@@ -29,10 +29,9 @@ interface EditorProps {
 export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [draggedItem, setDraggedItem] = useState<{type: 'new-charm' | 'placed-charm', id: string, offsetX: number, offsetY: number} | null>(null);
+  const [draggedCharm, setDraggedCharm] = useState<Charm | null>(null);
   const [selectedCharmId, setSelectedCharmId] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
-  const snapPathRef = useRef<SVGPathElement>(null);
   
   const [charms, setCharms] = useState<Charm[]>([]);
   const [charmCategories, setCharmCategories] = useState<CharmCategory[]>([]);
@@ -43,9 +42,6 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [startPanPoint, setStartPanPoint] = useState({ x: 0, y: 0 });
-  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
-  const [highlightedCharmId, setHighlightedCharmId] = useState<string | null>(null);
-
 
   const getUrl = async (path: string) => {
     if (path && !path.startsWith('http')) {
@@ -105,22 +101,6 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     fetchCharmsData();
   }, []);
 
-  useEffect(() => {
-    const handleResize = () => {
-      if (canvasRef.current) {
-        setCanvasSize({
-          width: canvasRef.current.clientWidth,
-          height: canvasRef.current.clientHeight,
-        });
-      }
-    };
-    
-    handleResize(); // Initial size
-    window.addEventListener('resize', handleResize);
-    
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
 
   const filteredCharms = useMemo(() => {
     if (!searchTerm) {
@@ -142,46 +122,15 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     }, {} as Record<string, Charm[]>);
   }, [filteredCharms]);
 
-  const getClosestPointOnPath = (x: number, y: number): { point: DOMPoint; rotation: number } | null => {
-    const path = snapPathRef.current;
-    if (!path) return null;
-
-    const pathLength = path.getTotalLength();
-    let minDistance = Infinity;
-    let bestPoint = null;
-    let bestRotation = 0;
-
-    for (let i = 0; i < pathLength; i++) {
-        const p1 = path.getPointAtLength(i);
-        const p2 = path.getPointAtLength(i + 1);
-        const distance = Math.hypot(p1.x - x, p1.y - y);
-
-        if (distance < minDistance) {
-            minDistance = distance;
-            bestPoint = p1;
-            const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
-            bestRotation = angle + 90; // Normal to the curve
-        }
-    }
-
-    return bestPoint ? { point: bestPoint, rotation: bestRotation } : null;
-};
-
   const addCharmToCanvas = (charm: Charm) => {
     if (!canvasRef.current) return;
-    const { width: canvasWidth, height: canvasHeight } = canvasSize;
-    if(canvasWidth === 0 || canvasHeight === 0) return;
-
-    // Calculate position in pixels first
-    const pixelX = (canvasWidth / 2 - pan.x) / scale - 20;
-    const pixelY = (canvasHeight / 2 - pan.y) / scale - 20;
-
+    const canvasRect = canvasRef.current.getBoundingClientRect();
     const newCharm: PlacedCharm = {
       id: `${charm.id}-${Date.now()}`,
       charm,
-       position: {
-        x: pixelX / canvasWidth,
-        y: pixelY / canvasHeight,
+      position: {
+        x: (canvasRect.width / 2 - pan.x) / scale - 20,
+        y: (canvasRect.height / 2 - pan.y) / scale - 20,
       },
       rotation: 0,
     };
@@ -189,123 +138,58 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   };
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>, charm: Charm) => {
-    const targetRect = e.currentTarget.getBoundingClientRect();
-    const offsetX = e.clientX - targetRect.left;
-    const offsetY = e.clientY - targetRect.top;
-    setDraggedItem({ type: 'new-charm', id: charm.id, offsetX: offsetX, offsetY: offsetY });
+    setDraggedCharm(charm);
     setSelectedCharmId(null);
   
+    // Use a clone for the drag image to avoid styling issues with the original element
     const dragImage = e.currentTarget.querySelector('img')?.cloneNode(true) as HTMLElement;
     if (dragImage) {
-        dragImage.style.position = 'absolute';
-        dragImage.style.top = '-9999px';
-        dragImage.style.left = '-9999px';
-        dragImage.style.transform = `rotate(0deg)`; // Reset rotation for the drag image if needed
         document.body.appendChild(dragImage);
-        e.dataTransfer.setDragImage(dragImage, offsetX, offsetY);
-        setTimeout(() => {
-             if(document.body.contains(dragImage)) {
-                document.body.removeChild(dragImage);
-            }
-        }, 0);
+        e.dataTransfer.setDragImage(dragImage, e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+        setTimeout(() => document.body.removeChild(dragImage), 0);
     }
   };
 
   const handlePlacedCharmDragStart = (e: DragEvent<HTMLDivElement>, placedCharm: PlacedCharm) => {
-    const targetRect = e.currentTarget.getBoundingClientRect();
-    const offsetX = (e.clientX - targetRect.left) / scale;
-    const offsetY = (e.clientY - targetRect.top) / scale;
-    
-    setDraggedItem({ type: 'placed-charm', id: placedCharm.id, offsetX, offsetY });
+    setDraggedCharm(placedCharm.charm);
+    // Remove the charm being dragged from the list to avoid duplicates on drop
+    setPlacedCharms(prev => prev.filter(pc => pc.id !== placedCharm.id));
     setSelectedCharmId(null);
   
-    const dragImage = e.currentTarget.querySelector('img')?.cloneNode(true) as HTMLElement;
+     const dragImage = e.currentTarget.querySelector('img')?.cloneNode(true) as HTMLElement;
       if(dragImage) {
-        dragImage.style.position = 'absolute';
-        dragImage.style.top = '-9999px';
-        dragImage.style.left = '-9999px';
         dragImage.style.transform = `rotate(${placedCharm.rotation}deg)`;
         document.body.appendChild(dragImage);
-        e.dataTransfer.setDragImage(dragImage, e.clientX - targetRect.left, e.clientY - targetRect.top);
-        
-        setTimeout(() => {
-            if(document.body.contains(dragImage)) {
-                document.body.removeChild(dragImage);
-            }
-        }, 0);
+        e.dataTransfer.setDragImage(dragImage, e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+        setTimeout(() => document.body.removeChild(dragImage), 0);
     }
   };
   
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    if (!draggedItem || !canvasRef.current) return;
-    
-    const { width: canvasWidth, height: canvasHeight } = canvasSize;
-    if(canvasWidth === 0 || canvasHeight === 0) return;
-
+    if (!draggedCharm || !canvasRef.current) return;
+  
     const canvasRect = canvasRef.current.getBoundingClientRect();
-    
-    let pixelX = (e.clientX - canvasRect.left - pan.x) / scale;
-    let pixelY = (e.clientY - canvasRect.top - pan.y) / scale;
-    let rotation = 0;
-
-    // Adjust for the cursor offset within the dragged item
-    const charmPixelX = pixelX - (draggedItem.type === 'new-charm' ? draggedItem.offsetX / scale : draggedItem.offsetX);
-    const charmPixelY = pixelY - (draggedItem.type === 'new-charm' ? draggedItem.offsetY / scale : draggedItem.offsetY);
-
-    if (model.snapPath) {
-        const snapped = getClosestPointOnPath(charmPixelX, charmPixelY);
-        if (snapped) {
-            pixelX = snapped.point.x;
-            pixelY = snapped.point.y;
-            rotation = snapped.rotation;
-        } else {
-            pixelX = charmPixelX;
-            pixelY = charmPixelY;
-        }
-    } else {
-        pixelX = charmPixelX;
-        pixelY = charmPixelY;
-    }
-
-    if (draggedItem.type === 'new-charm') {
-      const charm = charms.find((c) => c.id === draggedItem.id);
-      if (!charm) return;
-      
-      const newCharm: PlacedCharm = {
-        id: `${charm.id}-${Date.now()}`,
-        charm,
-        position: { 
-            x: pixelX / canvasWidth, 
-            y: pixelY / canvasHeight
-        },
-        rotation: rotation,
-      };
-      setPlacedCharms((prev) => [...prev, newCharm]);
-    } else if (draggedItem.type === 'placed-charm') {
-      setPlacedCharms(prev => 
-        prev.map(pc => 
-          pc.id === draggedItem.id 
-            ? { ...pc, 
-                position: { 
-                    x: pixelX / canvasWidth, 
-                    y: pixelY / canvasHeight 
-                },
-                rotation: rotation
-              }
-            : pc
-        )
-      );
-    }
-    setDraggedItem(null);
+    // Adjust for pan and zoom
+    const x = (e.clientX - canvasRect.left - pan.x) / scale - e.nativeEvent.offsetX;
+    const y = (e.clientY - canvasRect.top - pan.y) / scale - e.nativeEvent.offsetY;
+  
+    const newCharm: PlacedCharm = {
+      id: `${draggedCharm.id}-${Date.now()}`,
+      charm: draggedCharm,
+      position: { x, y },
+      rotation: 0, // Initial rotation
+    };
+    setPlacedCharms((prev) => [...prev, newCharm]);
+    setDraggedCharm(null);
   };
   
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
   };
   
-  const handleDragEnd = (e: DragEvent<HTMLDivElement>) => {
-    setDraggedItem(null);
+  const handleDragEnd = () => {
+    setDraggedCharm(null);
   };
 
   const removeCharm = (id: string) => {
@@ -317,7 +201,6 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   };
 
   const handlePlacedCharmRotation = (e: WheelEvent<HTMLDivElement>, charmId: string) => {
-    if (model.snapPath) return; // Disable manual rotation when snapping
     e.preventDefault();
     e.stopPropagation();
     setPlacedCharms(prev =>
@@ -378,13 +261,6 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     setPan({ x: 0, y: 0 });
   };
   
-  const handleCharmListClick = (charmId: string) => {
-    setHighlightedCharmId(charmId);
-    setTimeout(() => {
-      setHighlightedCharmId(null);
-    }, 1000); // Duration of the animation
-  };
-
   return (
     <>
     <header className="p-4 border-b">
@@ -435,19 +311,15 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                           {charmsByCategory[category.id].map((charm) => (
                              <Dialog key={charm.id}>
                                 <div
-                                  className="relative group p-2 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square"
+                                  draggable
+                                  onDragStart={(e) => handleDragStart(e, charm)}
+                                  onDragEnd={handleDragEnd}
+                                  onClick={() => addCharmToCanvas(charm)}
+                                  className="relative group p-2 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer active:cursor-grabbing"
                                   title={charm.name}
                                 >
-                                  <div 
-                                    draggable
-                                    onDragStart={(e) => handleDragStart(e, charm)}
-                                    onDragEnd={(e) => handleDragEnd(e)}
-                                    onClick={() => addCharmToCanvas(charm)}
-                                    className="w-full h-full flex flex-col items-center justify-center cursor-pointer active:cursor-grabbing"
-                                  >
                                     <Image src={charm.imageUrl} alt={charm.name} width={48} height={48} data-ai-hint="jewelry charm" />
                                     <p className="text-xs text-center mt-1 truncate">{charm.name}</p>
-                                  </div>
                                   <DialogTrigger asChild>
                                       <Button variant="secondary" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                                           <ZoomIn className="h-4 w-4" />
@@ -518,7 +390,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
             onMouseMove={handleCanvasMouseMove}
             onMouseUp={handleCanvasMouseUp}
             onMouseLeave={handleCanvasMouseLeave}
-            className="relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden shadow-inner"
+            className="relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden shadow-inner cursor-grab active:cursor-grabbing"
           >
             <div
                 className="absolute top-0 left-0 w-full h-full pointer-events-none"
@@ -528,19 +400,6 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                 }}
             >
                 <Image src={model.editorImageUrl} alt={model.name} layout="fill" objectFit="contain" className="pointer-events-none" data-ai-hint="jewelry model" />
-                 {model.snapPath && (
-                    <svg width="100%" height="100%" className="absolute top-0 left-0 pointer-events-none">
-                        <path
-                            ref={snapPathRef}
-                            d={model.snapPath}
-                            fill="none"
-                            stroke="rgba(255, 0, 0, 0.5)" // Red for debugging
-                            strokeWidth="2"
-                            strokeDasharray="5,5"
-                            vectorEffect="non-scaling-stroke"
-                        />
-                    </svg>
-                )}
             </div>
             <div className="absolute top-0 left-0 w-full h-full" style={{ perspective: '1000px' }}>
                 <div
@@ -556,20 +415,17 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                         key={placed.id}
                         draggable
                         onDragStart={(e) => handlePlacedCharmDragStart(e, placed)}
-                        onDragEnd={(e) => handleDragEnd(e)}
+                        onDragEnd={handleDragEnd}
                         onWheel={(e) => handlePlacedCharmRotation(e, placed.id)}
                         onMouseDown={(e) => e.stopPropagation()}
                         className={cn(
                         "absolute group charm-on-canvas",
-                        selectedCharmId === placed.id ? "cursor-grabbing z-10" : "cursor-grab",
-                        highlightedCharmId === placed.id ? 'animate-breathe' : ''
+                        selectedCharmId === placed.id ? "cursor-grabbing z-10" : "cursor-grab"
                         )}
                         style={{
-                        left: `${placed.position.x * canvasSize.width}px`,
-                        top: `${placed.position.y * canvasSize.height}px`,
-                        transform: `rotate(${placed.rotation}deg) translate(-50%, -50%)`,
-                        transformOrigin: 'center center',
-                        opacity: (draggedItem && draggedItem.type === 'placed-charm' && draggedItem.id === placed.id) ? '0' : '1',
+                        left: `${placed.position.x}px`,
+                        top: `${placed.position.y}px`,
+                        transform: `rotate(${placed.rotation}deg)`,
                         }}
                     >
                         <Image
@@ -605,11 +461,11 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                           <ul className="space-y-2">
                               {placedCharms.map(pc => (
                                   <li key={pc.id} 
-                                      className={cn("flex items-center justify-between text-sm p-1 rounded-md cursor-pointer",
+                                      className={cn("flex items-center justify-between text-sm p-1 rounded-md",
                                         selectedCharmId === pc.id ? 'bg-muted' : 'hover:bg-muted/50'
                                       )}
+                                       onClick={() => setSelectedCharmId(pc.id)}
                                        onMouseDown={(e) => e.stopPropagation()}
-                                       onClick={() => handleCharmListClick(pc.id)}
                                   >
                                       <div className="flex items-center gap-2">
                                           <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={24} height={24} className="rounded-sm" data-ai-hint="jewelry charm" />
