@@ -26,4 +26,5 @@ export interface PlacedCharm {
   id: string;
   charm: Charm;
   position: { x: number; y: number };
+  rotation: number;
 }

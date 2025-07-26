@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef, DragEvent } from 'react';
+import React, { useState, useMemo, useRef, DragEvent, WheelEvent, useEffect } from 'react';
 import Image from 'next/image';
 import { JewelryModel, PlacedCharm, Charm, JewelryType, CharmCategory } from '@/lib/types';
 import { CHARMS, CHARM_CATEGORIES } from '@/lib/data';
@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { SuggestionSidebar } from './suggestion-sidebar';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 import { ShoppingCart, Trash2, X, Search } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface EditorProps {
   model: JewelryModel;
@@ -23,6 +24,7 @@ export default function Editor({ model, jewelryType }: EditorProps) {
   const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [draggedItem, setDraggedItem] = useState<{type: 'new-charm' | 'placed-charm', id: string} | null>(null);
+  const [selectedCharmId, setSelectedCharmId] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const filteredCharms = useMemo(() => {
@@ -46,10 +48,12 @@ export default function Editor({ model, jewelryType }: EditorProps) {
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>, charm: Charm) => {
     setDraggedItem({ type: 'new-charm', id: charm.id });
+    setSelectedCharmId(null);
   };
 
   const handlePlacedCharmDragStart = (e: DragEvent<HTMLDivElement>, placedCharmId: string) => {
     setDraggedItem({ type: 'placed-charm', id: placedCharmId });
+    setSelectedCharmId(null);
   };
   
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
@@ -67,6 +71,7 @@ export default function Editor({ model, jewelryType }: EditorProps) {
         id: `${charm.id}-${Date.now()}`,
         charm,
         position: { x: x - 20, y: y - 20 }, // Center the charm on the cursor
+        rotation: 0,
       };
       setPlacedCharms((prev) => [...prev, newCharm]);
     } else if (draggedItem.type === 'placed-charm') {
@@ -89,12 +94,55 @@ export default function Editor({ model, jewelryType }: EditorProps) {
     setDraggedItem(null);
   };
 
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!selectedCharmId || !canvasRef.current) return;
+
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - canvasRect.left;
+    const y = e.clientY - canvasRect.top;
+
+    setPlacedCharms(prev =>
+      prev.map(pc =>
+        pc.id === selectedCharmId
+          ? { ...pc, position: { x: x - 20, y: y - 20 } }
+          : pc
+      )
+    );
+  };
+
+  const handleMouseUp = () => {
+    setSelectedCharmId(null);
+  };
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (selectedCharmId && canvas) {
+      canvas.addEventListener('mousemove', handleMouseMove);
+      canvas.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        canvas.removeEventListener('mousemove', handleMouseMove);
+        canvas.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [selectedCharmId]);
+
   const removeCharm = (id: string) => {
     setPlacedCharms(placedCharms.filter(c => c.id !== id));
   };
   
   const clearAllCharms = () => {
     setPlacedCharms([]);
+  };
+
+  const handleCharmRotation = (e: WheelEvent<HTMLDivElement>, charmId: string) => {
+    e.preventDefault();
+    setPlacedCharms(prev =>
+      prev.map(pc =>
+        pc.id === charmId
+          ? { ...pc, rotation: (pc.rotation + e.deltaY * 0.1) % 360 }
+          : pc
+      )
+    );
   };
 
   return (
@@ -191,8 +239,17 @@ export default function Editor({ model, jewelryType }: EditorProps) {
               draggable
               onDragStart={(e) => handlePlacedCharmDragStart(e, placed.id)}
               onDragEnd={handleDragEnd}
-              className="absolute group cursor-grab active:cursor-grabbing"
-              style={{ left: `${placed.position.x}px`, top: `${placed.position.y}px` }}
+              onWheel={(e) => handleCharmRotation(e, placed.id)}
+              className={cn(
+                "absolute group cursor-grab",
+                selectedCharmId === placed.id ? "cursor-grabbing z-10" : "cursor-grab",
+                draggedItem && draggedItem.type === 'placed-charm' && draggedItem.id === placed.id && "opacity-50"
+              )}
+              style={{
+                left: `${placed.position.x}px`,
+                top: `${placed.position.y}px`,
+                transform: `rotate(${placed.rotation}deg)`,
+              }}
             >
               <Image
                 src={placed.charm.imageUrl}
@@ -219,12 +276,17 @@ export default function Editor({ model, jewelryType }: EditorProps) {
                     <ScrollArea className="h-24">
                         <ul className="space-y-2">
                             {placedCharms.map(pc => (
-                                <li key={pc.id} className="flex items-center justify-between text-sm">
+                                <li key={pc.id} 
+                                    className={cn("flex items-center justify-between text-sm p-1 rounded-md cursor-pointer",
+                                      selectedCharmId === pc.id ? 'bg-muted' : 'hover:bg-muted/50'
+                                    )}
+                                    onMouseDown={() => setSelectedCharmId(pc.id)}
+                                >
                                     <div className="flex items-center gap-2">
                                         <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={24} height={24} className="rounded-sm" data-ai-hint="jewelry charm" />
                                         <span>{pc.charm.name}</span>
                                     </div>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeCharm(pc.id)}>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); removeCharm(pc.id); }}>
                                         <X className="h-4 w-4" />
                                     </Button>
                                 </li>
