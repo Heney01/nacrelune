@@ -276,7 +276,6 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     }
     setIsPanning(true);
     setStartPanPoint({ x: e.clientX - pan.x, y: e.clientY - pan.y });
-    (e.currentTarget as HTMLElement).style.cursor = 'grabbing';
   };
   
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -289,12 +288,10 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   
   const handleCanvasMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
     setIsPanning(false);
-    (e.currentTarget as HTMLElement).style.cursor = 'grab';
   };
 
   const handleCanvasMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
     setIsPanning(false);
-    (e.currentTarget as HTMLElement).style.cursor = 'grab';
   };
 
 
@@ -444,7 +441,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
               onMouseMove={handleCanvasMouseMove}
               onMouseUp={handleCanvasMouseUp}
               onMouseLeave={handleCanvasMouseLeave}
-              className="relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden cursor-grab"
+              className="relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden"
             >
               <div
                   className="absolute top-0 left-0 w-full h-full pointer-events-none"
