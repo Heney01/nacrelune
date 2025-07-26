@@ -225,20 +225,23 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
 
   const handleCanvasWheel = (e: WheelEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const zoomSensitivity = 0.1;
-    const newScale = scale * (1 - e.deltaY * zoomSensitivity * 0.1);
+    if (!canvasRef.current) return;
+
+    const zoomSensitivity = 0.001;
+    const newScale = scale - e.deltaY * zoomSensitivity;
     const clampedScale = Math.min(Math.max(0.2, newScale), 5); // Clamp scale between 0.2x and 5x
 
-    const canvasRect = canvasRef.current!.getBoundingClientRect();
+    const canvasRect = canvasRef.current.getBoundingClientRect();
     const mouseX = e.clientX - canvasRect.left;
     const mouseY = e.clientY - canvasRect.top;
     
+    // Adjust pan to keep the point under the mouse stationary
     const newPanX = mouseX - (mouseX - pan.x) * (clampedScale / scale);
     const newPanY = mouseY - (mouseY - pan.y) * (clampedScale / scale);
 
     setScale(clampedScale);
     setPan({ x: newPanX, y: newPanY });
-  };
+};
 
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest('.charm-on-canvas')) {
