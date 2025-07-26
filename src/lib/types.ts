@@ -1,4 +1,5 @@
-export type CharmCategory = 'Celestial' | 'Nature' | 'Symbols' | 'Love';
+
+export type CharmCategory = string;
 
 export interface Charm {
   id: string;
@@ -29,3 +30,5 @@ export interface PlacedCharm {
   position: { x: number; y: number };
   rotation: number;
 }
+
+    

@@ -80,6 +80,9 @@ const suggestCharmPlacementFlow = ai.defineFlow(
     outputSchema: SuggestCharmPlacementOutputSchema,
   },
   async input => {
+     if (input.charmOptions.length === 0) {
+      return { suggestions: [] };
+    }
     const {output} = await prompt(input);
     if (!output) {
       throw new Error('No output from prompt');
@@ -105,3 +108,5 @@ const suggestCharmPlacementFlow = ai.defineFlow(
     };
   }
 );
+
+    

@@ -8,7 +8,6 @@ import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { getCharmSuggestions } from '@/app/actions';
 import type { SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
-import { CHARMS } from '@/lib/data';
 import { Lightbulb, Sparkles, WandSparkles } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
@@ -20,9 +19,10 @@ interface SuggestionSidebarProps {
   jewelryType: string;
   modelDescription: string;
   onAddCharm: (charm: Charm) => void;
+  charms: Charm[];
 }
 
-export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm }: SuggestionSidebarProps) {
+export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm, charms }: SuggestionSidebarProps) {
   const [preferences, setPreferences] = useState('');
   const [suggestions, setSuggestions] = useState<SuggestCharmPlacementOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -38,7 +38,7 @@ export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm }:
       const result = await getCharmSuggestions({
         jewelryType,
         modelDescription,
-        charmOptions: CHARMS.map(c => c.name),
+        charmOptions: charms.map(c => c.name),
         userPreferences: preferences,
       });
       setSuggestions(result);
@@ -50,7 +50,7 @@ export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm }:
   };
 
   const handleSuggestionClick = (charmName: string) => {
-    const charm = CHARMS.find(c => c.name === charmName);
+    const charm = charms.find(c => c.name === charmName);
     if (charm) {
       onAddCharm(charm);
     }
@@ -60,7 +60,7 @@ export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm }:
     <Card className="h-full flex flex-col">
       <CardHeader>
         <CardTitle className="font-headline text-xl flex items-center gap-2">
-          <WandSparkles className="text-accent" />
+          <WandSparkles className="text-primary" />
           AI Suggestions
         </CardTitle>
         <CardDescription>
@@ -79,7 +79,7 @@ export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm }:
               className="mt-2"
             />
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full" disabled={isLoading || charms.length === 0}>
             {isLoading ? 'Generating...' : <> <Sparkles className="mr-2 h-4 w-4" /> Generate Ideas</>}
           </Button>
         </form>
@@ -100,7 +100,7 @@ export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm }:
           {suggestions && (
              <div className="space-y-4">
               {suggestions.suggestions.map((suggestion, index) => {
-                 const charm = CHARMS.find(c => c.name === suggestion.charm);
+                 const charm = charms.find(c => c.name === suggestion.charm);
                  return(
                   <Card 
                     key={index} 
@@ -131,3 +131,5 @@ export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm }:
     </Card>
   );
 }
+
+    

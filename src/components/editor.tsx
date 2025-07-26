@@ -4,7 +4,6 @@
 import React, { useState, useMemo, useRef, DragEvent, WheelEvent, useEffect } from 'react';
 import Image from 'next/image';
 import { JewelryModel, PlacedCharm, Charm, JewelryType, CharmCategory } from '@/lib/types';
-import { CHARMS, CHARM_CATEGORIES } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -13,9 +12,12 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Separator } from '@/components/ui/separator';
 import { SuggestionSidebar } from './suggestion-sidebar';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
-import { ShoppingCart, Trash2, X, Search, ArrowLeft } from 'lucide-react';
+import { ShoppingCart, Trash2, X, Search, ArrowLeft, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NacreluneLogo } from './icons';
+import { db, storage } from '@/lib/firebase';
+import { collection, getDocs } from 'firebase/firestore';
+import { ref, getDownloadURL } from 'firebase/storage';
 
 interface EditorProps {
   model: JewelryModel;
@@ -29,22 +31,73 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   const [draggedItem, setDraggedItem] = useState<{type: 'new-charm' | 'placed-charm', id: string} | null>(null);
   const [selectedCharmId, setSelectedCharmId] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  
+  const [charms, setCharms] = useState<Charm[]>([]);
+  const [charmCategories, setCharmCategories] = useState<CharmCategory[]>([]);
+  const [isLoadingCharms, setIsLoadingCharms] = useState(true);
+
+  const getUrl = async (path: string) => {
+    if (path && !path.startsWith('http')) {
+      try {
+        const storageRef = ref(storage, path);
+        return await getDownloadURL(storageRef);
+      } catch (error) {
+        console.error("Error getting download URL: ", error);
+        return 'https://placehold.co/100x100.png'; // Fallback
+      }
+    }
+    return path || 'https://placehold.co/100x100.png';
+  }
+
+  useEffect(() => {
+    const fetchCharms = async () => {
+      setIsLoadingCharms(true);
+      try {
+        const querySnapshot = await getDocs(collection(db, "charms"));
+        const fetchedCharms = await Promise.all(querySnapshot.docs.map(async (doc) => {
+          const data = doc.data();
+          const imageUrl = await getUrl(data.imageUrl);
+          return {
+            id: doc.id,
+            name: data.name,
+            imageUrl: imageUrl,
+            description: data.description,
+            category: data.category,
+          } as Charm;
+        }));
+        setCharms(fetchedCharms);
+        
+        const categories = Array.from(new Set(fetchedCharms.map(c => c.category)));
+        setCharmCategories(categories);
+
+      } catch (error) {
+        console.error("Error fetching charms: ", error);
+        // Handle error state in UI if necessary
+      } finally {
+        setIsLoadingCharms(false);
+      }
+    };
+
+    fetchCharms();
+  }, []);
+
 
   const filteredCharms = useMemo(() => {
     if (!searchTerm) {
-      return CHARMS;
+      return charms;
     }
-    return CHARMS.filter(charm =>
+    return charms.filter(charm =>
       charm.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [searchTerm]);
+  }, [searchTerm, charms]);
 
   const charmsByCategory = useMemo(() => {
     return filteredCharms.reduce((acc, charm) => {
-      if (!acc[charm.category]) {
-        acc[charm.category] = [];
+      const category = charm.category;
+      if (!acc[category]) {
+        acc[category] = [];
       }
-      acc[charm.category].push(charm);
+      acc[category].push(charm);
       return acc;
     }, {} as Record<CharmCategory, Charm[]>);
   }, [filteredCharms]);
@@ -80,7 +133,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     const y = e.clientY - canvasRect.top;
 
     if (draggedItem.type === 'new-charm') {
-      const charm = CHARMS.find((c) => c.id === draggedItem.id);
+      const charm = charms.find((c) => c.id === draggedItem.id);
       if (!charm) return;
       const newCharm: PlacedCharm = {
         id: `${charm.id}-${Date.now()}`,
@@ -132,14 +185,17 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (selectedCharmId && canvas) {
-      canvas.addEventListener('mousemove', handleMouseMove);
-      canvas.addEventListener('mouseup', handleMouseUp);
+      const currentHandleMouseMove = (e: globalThis.MouseEvent) => handleMouseMove(e);
+      const currentHandleMouseUp = () => handleMouseUp();
+      
+      canvas.addEventListener('mousemove', currentHandleMouseMove);
+      canvas.addEventListener('mouseup', currentHandleMouseUp);
       return () => {
-        canvas.removeEventListener('mousemove', handleMouseMove);
-        canvas.removeEventListener('mouseup', handleMouseUp);
+        canvas.removeEventListener('mousemove', currentHandleMouseMove);
+        canvas.removeEventListener('mouseup', currentHandleMouseUp);
       };
     }
-  }, [selectedCharmId]);
+  }, [selectedCharmId, handleMouseMove, handleMouseUp]);
 
   const removeCharm = (id: string) => {
     setPlacedCharms(placedCharms.filter(c => c.id !== id));
@@ -166,7 +222,6 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2">
             <NacreluneLogo className="h-8 w-auto text-foreground" />
-            <h1 className="text-2xl font-headline tracking-tight">Nacrelune</h1>
           </div>
           <Button variant="ghost" onClick={onBack}>
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -196,8 +251,13 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
           <Separator />
           <CardContent className="p-0 flex-grow">
             <ScrollArea className="h-[calc(100vh-320px)]">
-              <Accordion type="multiple" defaultValue={CHARM_CATEGORIES} className="p-4">
-                {CHARM_CATEGORIES.map(category => (
+              {isLoadingCharms ? (
+                 <div className="flex justify-center items-center h-full p-8">
+                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                 </div>
+              ) : (
+              <Accordion type="multiple" defaultValue={charmCategories} className="p-4">
+                {charmCategories.map(category => (
                   charmsByCategory[category] && charmsByCategory[category].length > 0 && (
                     <AccordionItem value={category} key={category}>
                       <AccordionTrigger className="text-base font-headline">{category}</AccordionTrigger>
@@ -223,6 +283,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                   )
                 ))}
               </Accordion>
+              )}
             </ScrollArea>
           </CardContent>
         </Card>
@@ -271,6 +332,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                 onDragStart={(e) => handlePlacedCharmDragStart(e, placed.id)}
                 onDragEnd={handleDragEnd}
                 onWheel={(e) => handleCharmRotation(e, placed.id)}
+                onMouseDown={() => setSelectedCharmId(placed.id)}
                 className={cn(
                   "absolute group cursor-grab",
                   selectedCharmId === placed.id ? "cursor-grabbing z-10" : "cursor-grab",
@@ -331,7 +393,12 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
 
         {/* AI Suggestions Panel */}
         <div className="lg:col-span-3">
-          <SuggestionSidebar jewelryType={jewelryType.id} modelDescription={model.name || ''} onAddCharm={addCharmToCanvas} />
+          <SuggestionSidebar 
+            jewelryType={jewelryType.id} 
+            modelDescription={model.name || ''} 
+            onAddCharm={addCharmToCanvas} 
+            charms={charms}
+          />
         </div>
       </div>
       </div>
@@ -339,3 +406,5 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     </>
   );
 }
+
+    
