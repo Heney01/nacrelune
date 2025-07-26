@@ -171,10 +171,10 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   };
 
   const handlePlacedCharmDragStart = (e: DragEvent<HTMLDivElement>, placedCharm: PlacedCharm) => {
-     // Calculate offset in pixels relative to the dragged charm on the canvas
+     // Calculate offset in pixels relative to the dragged charm on the canvas, factoring in scale
     const rect = e.currentTarget.getBoundingClientRect();
-    const offsetX = e.clientX - rect.left;
-    const offsetY = e.clientY - rect.top;
+    const offsetX = (e.clientX - rect.left);
+    const offsetY = (e.clientY - rect.top);
 
     setDraggedCharm({
       charm: placedCharm.charm,
@@ -200,12 +200,18 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
 
     // Calculate the drop position in pixels relative to the unscaled canvas
     // Account for the initial drag offset to place the charm correctly under the cursor
-    const dropX_px = (e.clientX - canvasRect.left - pan.x) / scale - (draggedCharm.offset.x / scale);
-    const dropY_px = (e.clientY - canvasRect.top - pan.y) / scale - (draggedCharm.offset.y / scale);
+    const dropX_px = (e.clientX - canvasRect.left - pan.x - draggedCharm.offset.x) / scale;
+    const dropY_px = (e.clientY - canvasRect.top - pan.y - draggedCharm.offset.y) / scale;
+
+    // This is the top-left corner. We need to center it.
+    const charmWidth = 40; // The width of the charm on canvas
+    const centeredDropX_px = dropX_px + (charmWidth / 2);
+    const centeredDropY_px = dropY_px + (charmWidth / 2);
+
 
     // Convert pixel position to percentage relative to canvas dimensions
-    const xPercent = (dropX_px / canvasRect.width) * 100;
-    const yPercent = (dropY_px / canvasRect.height) * 100;
+    const xPercent = (centeredDropX_px / canvasRect.width) * 100;
+    const yPercent = (centeredDropY_px / canvasRect.height) * 100;
     
     const newPosition = { x: xPercent, y: yPercent };
 
@@ -548,5 +554,3 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     </>
   );
 }
-
-    
