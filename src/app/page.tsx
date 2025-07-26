@@ -42,9 +42,9 @@ export default function Home() {
     setStep('model-selection');
     setIsLoadingModels(true);
     try {
-      if (type.id === 'necklace') {
-        const querySnapshot = await getDocs(collection(db, "necklace"));
-        const fetchedModels = await Promise.all(querySnapshot.docs.map(async (doc) => {
+      const querySnapshot = await getDocs(collection(db, type.id));
+      const fetchedModels = await Promise.all(
+        querySnapshot.docs.map(async (doc) => {
           const data = doc.data();
           const displayImageUrl = await getUrl(data.displayImageUrl);
           const editorImageUrl = await getUrl(data.editorImageUrl);
@@ -55,34 +55,24 @@ export default function Home() {
             displayImageUrl: displayImageUrl,
             editorImageUrl: editorImageUrl,
           } as JewelryModel;
-        }));
-        setModels(fetchedModels);
-      } else {
-        // For other types, we can implement similar logic or use static data
-        const modelsWithUrls = await Promise.all(type.models.map(async (model) => {
-            const displayImageUrl = await getUrl(model.displayImageUrl);
-            const editorImageUrl = await getUrl(model.editorImageUrl);
-            return {
-                ...model,
-                displayImageUrl,
-                editorImageUrl,
-            }
-        }));
-        setModels(modelsWithUrls);
-      }
+        })
+      );
+      setModels(fetchedModels);
     } catch (error) {
-      console.error("Error fetching models: ", error);
-      // Fallback to static data in case of error
-       const modelsWithUrls = await Promise.all(type.models.map(async (model) => {
-            const displayImageUrl = await getUrl(model.displayImageUrl);
-            const editorImageUrl = await getUrl(model.editorImageUrl);
-            return {
-                ...model,
-                displayImageUrl,
-                editorImageUrl,
-            }
-        }));
-        setModels(modelsWithUrls);
+      console.error("Error fetching models from Firestore: ", error);
+      // Fallback to static data in case of an error
+      const modelsWithUrls = await Promise.all(
+        type.models.map(async (model) => {
+          const displayImageUrl = await getUrl(model.displayImageUrl);
+          const editorImageUrl = await getUrl(model.editorImageUrl);
+          return {
+            ...model,
+            displayImageUrl,
+            editorImageUrl,
+          };
+        })
+      );
+      setModels(modelsWithUrls);
     } finally {
       setIsLoadingModels(false);
     }
@@ -161,25 +151,25 @@ export default function Home() {
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                       {models.map((model) => (
-                         <Dialog key={model.id}>
-                          <Card className="overflow-hidden group flex flex-col">
+                        <Card key={model.id} className="overflow-hidden group flex flex-col" onClick={() => handleModelSelect(model)}>
+                          <Dialog>
                             <div className="overflow-hidden relative">
-                              <Image src={model.displayImageUrl} alt={model.name} width={400} height={400} className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer" onClick={() => handleModelSelect(model)} data-ai-hint="jewelry" />
+                              <Image src={model.displayImageUrl} alt={model.name} width={400} height={400} className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer" data-ai-hint="jewelry" />
                               <DialogTrigger asChild>
-                                  <Button variant="secondary" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Button variant="secondary" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                                       <ZoomIn className="h-5 w-5" />
                                   </Button>
                               </DialogTrigger>
                             </div>
                             <CardContent className="p-4 flex-grow flex flex-col justify-between">
                               <h3 className="text-lg font-headline flex-grow">{model.name}</h3>
-                               <Button variant="outline" size="sm" className="w-full mt-4" onClick={() => handleModelSelect(model)}>Select</Button>
+                               <Button variant="outline" size="sm" className="w-full mt-4">Select</Button>
                             </CardContent>
                              <DialogContent className="max-w-3xl">
                                   <Image src={model.displayImageUrl} alt={model.name} width={800} height={800} className="w-full h-auto object-contain rounded-lg" />
                               </DialogContent>
-                          </Card>
-                        </Dialog>
+                          </Dialog>
+                        </Card>
                       ))}
                     </div>
                   )}
