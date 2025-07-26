@@ -125,12 +125,21 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   const addCharmToCanvas = (charm: Charm) => {
     if (!canvasRef.current) return;
     const canvasRect = canvasRef.current.getBoundingClientRect();
+
+    // Place in the center of the viewport
+    const x = (canvasRect.width / 2 - pan.x) / scale;
+    const y = (canvasRect.height / 2 - pan.y) / scale;
+    
+    // Convert to percentage
+    const xPercent = (x / canvasRect.width) * 100;
+    const yPercent = (y / canvasRect.height) * 100;
+
     const newCharm: PlacedCharm = {
       id: `${charm.id}-${Date.now()}`,
       charm,
       position: {
-        x: (canvasRect.width / 2 - pan.x) / scale - 20,
-        y: (canvasRect.height / 2 - pan.y) / scale - 20,
+        x: xPercent,
+        y: yPercent,
       },
       rotation: 0,
       animation: 'breathe 0.5s ease-out'
@@ -143,21 +152,33 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   };
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>, charm: Charm) => {
-    setDraggedCharm({ charm, offset: { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY }, source: 'list' });
+    // Calculate offset in pixels, not as a percentage of the small charm preview
+    const rect = e.currentTarget.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+
+    setDraggedCharm({ charm, offset: { x: offsetX, y: offsetY }, source: 'list' });
     setSelectedCharmId(null);
   
     const dragImage = e.currentTarget.querySelector('img')?.cloneNode(true) as HTMLElement;
     if (dragImage) {
+        dragImage.style.width = "40px"; // Match canvas charm size
+        dragImage.style.height = "40px";
         document.body.appendChild(dragImage);
-        e.dataTransfer.setDragImage(dragImage, e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+        e.dataTransfer.setDragImage(dragImage, offsetX, offsetY);
         setTimeout(() => document.body.removeChild(dragImage), 0);
     }
   };
 
   const handlePlacedCharmDragStart = (e: DragEvent<HTMLDivElement>, placedCharm: PlacedCharm) => {
-     setDraggedCharm({
+     // Calculate offset in pixels relative to the dragged charm on the canvas
+    const rect = e.currentTarget.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+
+    setDraggedCharm({
       charm: placedCharm.charm,
-      offset: { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY },
+      offset: { x: offsetX, y: offsetY },
       source: placedCharm.id
     });
     setSelectedCharmId(null);
@@ -166,7 +187,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
       if(dragImage) {
         dragImage.style.transform = `rotate(${placedCharm.rotation}deg)`;
         document.body.appendChild(dragImage);
-        e.dataTransfer.setDragImage(dragImage, e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+        e.dataTransfer.setDragImage(dragImage, offsetX, offsetY);
         setTimeout(() => document.body.removeChild(dragImage), 0);
     }
   };
@@ -176,19 +197,27 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     if (!draggedCharm || !canvasRef.current) return;
   
     const canvasRect = canvasRef.current.getBoundingClientRect();
-    const x = (e.clientX - canvasRect.left - pan.x) / scale - draggedCharm.offset.x;
-    const y = (e.clientY - canvasRect.top - pan.y) / scale - draggedCharm.offset.y;
-  
+
+    // Calculate the drop position in pixels relative to the unscaled canvas
+    const dropX_px = (e.clientX - canvasRect.left - pan.x) / scale - draggedCharm.offset.x;
+    const dropY_px = (e.clientY - canvasRect.top - pan.y) / scale - draggedCharm.offset.y;
+
+    // Convert pixel position to percentage relative to canvas dimensions
+    const xPercent = (dropX_px / canvasRect.width) * 100;
+    const yPercent = (dropY_px / canvasRect.height) * 100;
+    
+    const newPosition = { x: xPercent, y: yPercent };
+
     if (draggedCharm.source === 'list') {
        const newCharm: PlacedCharm = {
         id: `${draggedCharm.charm.id}-${Date.now()}`,
         charm: draggedCharm.charm,
-        position: { x, y },
+        position: newPosition,
         rotation: 0,
       };
       setPlacedCharms((prev) => [...prev, newCharm]);
     } else {
-        setPlacedCharms(prev => prev.map(pc => pc.id === draggedCharm.source ? { ...pc, position: { x, y } } : pc));
+        setPlacedCharms(prev => prev.map(pc => pc.id === draggedCharm.source ? { ...pc, position: newPosition } : pc));
     }
 
     setDraggedCharm(null);
@@ -247,7 +276,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     }
     setIsPanning(true);
     setStartPanPoint({ x: e.clientX - pan.x, y: e.clientY - pan.y });
-    document.body.style.cursor = 'grabbing';
+    (e.currentTarget as HTMLElement).style.cursor = 'grabbing';
   };
   
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -258,15 +287,16 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     });
   };
   
-  const handleCanvasMouseUp = () => {
+  const handleCanvasMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
     setIsPanning(false);
-     document.body.style.cursor = 'default';
+    (e.currentTarget as HTMLElement).style.cursor = 'grab';
   };
 
-  const handleCanvasMouseLeave = () => {
+  const handleCanvasMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
     setIsPanning(false);
-    document.body.style.cursor = 'default';
+    (e.currentTarget as HTMLElement).style.cursor = 'grab';
   };
+
 
   const resetZoomAndPan = () => {
     setScale(1);
@@ -414,7 +444,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
               onMouseMove={handleCanvasMouseMove}
               onMouseUp={handleCanvasMouseUp}
               onMouseLeave={handleCanvasMouseLeave}
-              className="relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden cursor-grab active:cursor-grabbing"
+              className="relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden cursor-grab"
             >
               <div
                   className="absolute top-0 left-0 w-full h-full pointer-events-none"
@@ -444,9 +474,9 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                           onMouseDown={(e) => e.stopPropagation()}
                           className="absolute group charm-on-canvas cursor-grab active:cursor-grabbing"
                           style={{
-                          left: `${placed.position.x}px`,
-                          top: `${placed.position.y}px`,
-                          transform: `rotate(${placed.rotation}deg)`,
+                          left: `${placed.position.x}%`,
+                          top: `${placed.position.y}%`,
+                          transform: `translate(-50%, -50%) rotate(${placed.rotation}deg)`,
                           animation: placed.animation,
                           }}
                       >
