@@ -10,8 +10,9 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import Editor from '@/components/editor';
 import { NacreluneLogo } from '@/components/icons';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
+import { ref, getDownloadURL } from "firebase/storage";
 
 type Step = 'type-selection' | 'model-selection' | 'editor';
 
@@ -29,12 +30,29 @@ export default function Home() {
     try {
       if (type.id === 'necklace') {
         const querySnapshot = await getDocs(collection(db, "necklace"));
-        const fetchedModels = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as JewelryModel));
+        const fetchedModels = await Promise.all(querySnapshot.docs.map(async (doc) => {
+          const data = doc.data();
+          let imageUrl = data.imageUrl || 'https://placehold.co/800x800.png';
+          // If imageUrl is a path in storage, get the download URL
+          if (imageUrl && !imageUrl.startsWith('http')) {
+            try {
+              const storageRef = ref(storage, imageUrl);
+              imageUrl = await getDownloadURL(storageRef);
+            } catch (error) {
+              console.error("Error getting download URL: ", error);
+              // Fallback to a placeholder if the image can't be fetched
+              imageUrl = 'https://placehold.co/800x800.png';
+            }
+          }
+          return {
+            id: doc.id,
+            name: data.name,
+            imageUrl: imageUrl
+          } as JewelryModel;
+        }));
         setModels(fetchedModels);
       } else {
+        // For other types, we can implement similar logic or use static data
         setModels(type.models);
       }
     } catch (error) {
