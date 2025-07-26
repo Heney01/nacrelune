@@ -42,14 +42,8 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [startPanPoint, setStartPanPoint] = useState({ x: 0, y: 0 });
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
-  const getCanvasDimensions = () => {
-    if (!canvasRef.current) return { width: 0, height: 0 };
-    return {
-      width: canvasRef.current.clientWidth,
-      height: canvasRef.current.clientHeight,
-    };
-  };
 
   const getUrl = async (path: string) => {
     if (path && !path.startsWith('http')) {
@@ -109,6 +103,22 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     fetchCharmsData();
   }, []);
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (canvasRef.current) {
+        setCanvasSize({
+          width: canvasRef.current.clientWidth,
+          height: canvasRef.current.clientHeight,
+        });
+      }
+    };
+    
+    handleResize(); // Initial size
+    window.addEventListener('resize', handleResize);
+    
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
 
   const filteredCharms = useMemo(() => {
     if (!searchTerm) {
@@ -132,7 +142,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
 
   const addCharmToCanvas = (charm: Charm) => {
     if (!canvasRef.current) return;
-    const { width: canvasWidth, height: canvasHeight } = getCanvasDimensions();
+    const { width: canvasWidth, height: canvasHeight } = canvasSize;
     if(canvasWidth === 0 || canvasHeight === 0) return;
 
     // Calculate position in pixels first
@@ -203,7 +213,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     e.preventDefault();
     if (!draggedItem || !canvasRef.current) return;
     
-    const { width: canvasWidth, height: canvasHeight } = getCanvasDimensions();
+    const { width: canvasWidth, height: canvasHeight } = canvasSize;
     if(canvasWidth === 0 || canvasHeight === 0) return;
 
     const canvasRect = canvasRef.current.getBoundingClientRect();
@@ -316,7 +326,6 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     setPan({ x: 0, y: 0 });
   };
   
-  const canvasDimensions = getCanvasDimensions();
 
   return (
     <>
@@ -487,8 +496,8 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                         selectedCharmId === placed.id ? "cursor-grabbing z-10" : "cursor-grab"
                         )}
                         style={{
-                        left: `${placed.position.x * canvasDimensions.width}px`,
-                        top: `${placed.position.y * canvasDimensions.height}px`,
+                        left: `${placed.position.x * canvasSize.width}px`,
+                        top: `${placed.position.y * canvasSize.height}px`,
                         transform: `rotate(${placed.rotation}deg)`,
                         opacity: (draggedItem && draggedItem.type === 'placed-charm' && draggedItem.id === placed.id) ? '0' : '1',
                         }}
@@ -562,3 +571,4 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     </>
   );
 }
+
