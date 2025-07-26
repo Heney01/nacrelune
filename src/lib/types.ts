@@ -34,4 +34,7 @@ export interface PlacedCharm {
   charm: Charm;
   position: { x: number; y: number };
   rotation: number;
+  animation?: string;
 }
+
+    
