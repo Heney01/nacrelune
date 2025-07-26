@@ -1,16 +1,18 @@
 "use client";
 
-import React, { useState, useRef, DragEvent } from 'react';
+import React, { useState, useMemo, useRef, DragEvent } from 'react';
 import Image from 'next/image';
-import { JewelryModel, PlacedCharm, Charm, JewelryType } from '@/lib/types';
-import { CHARMS } from '@/lib/data';
+import { JewelryModel, PlacedCharm, Charm, JewelryType, CharmCategory } from '@/lib/types';
+import { CHARMS, CHARM_CATEGORIES } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
 import { SuggestionSidebar } from './suggestion-sidebar';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
-import { ShoppingCart, Trash2, X } from 'lucide-react';
+import { ShoppingCart, Trash2, X, Search } from 'lucide-react';
 
 interface EditorProps {
   model: JewelryModel;
@@ -19,7 +21,27 @@ interface EditorProps {
 
 export default function Editor({ model, jewelryType }: EditorProps) {
   const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  const filteredCharms = useMemo(() => {
+    if (!searchTerm) {
+      return CHARMS;
+    }
+    return CHARMS.filter(charm =>
+      charm.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [searchTerm]);
+
+  const charmsByCategory = useMemo(() => {
+    return filteredCharms.reduce((acc, charm) => {
+      if (!acc[charm.category]) {
+        acc[charm.category] = [];
+      }
+      acc[charm.category].push(charm);
+      return acc;
+    }, {} as Record<CharmCategory, Charm[]>);
+  }, [filteredCharms]);
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>, charm: Charm) => {
     e.dataTransfer.setData('charmId', charm.id);
@@ -58,34 +80,56 @@ export default function Editor({ model, jewelryType }: EditorProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
       {/* Charms Panel */}
-      <Card className="lg:col-span-3">
+      <Card className="lg:col-span-3 flex flex-col">
         <CardHeader>
           <CardTitle className="font-headline text-xl">Charms</CardTitle>
         </CardHeader>
-        <Separator />
-        <CardContent className="p-4">
-          <ScrollArea className="h-[calc(100vh-250px)]">
-            <div className="grid grid-cols-3 gap-4">
-              {CHARMS.map((charm) => (
-                <div
-                  key={charm.id}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, charm)}
-                  className="p-2 border rounded-md flex flex-col items-center justify-center cursor-grab active:cursor-grabbing bg-card hover:bg-muted transition-colors aspect-square"
-                  title={charm.name}
-                >
-                  <Image src={charm.imageUrl} alt={charm.name} width={48} height={48} data-ai-hint="jewelry charm" />
-                  <p className="text-xs text-center mt-1 truncate">{charm.name}</p>
-                </div>
-              ))}
+        <div className="px-4 pb-4">
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                    placeholder="Search charms..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                />
             </div>
+        </div>
+        <Separator />
+        <CardContent className="p-0 flex-grow">
+          <ScrollArea className="h-[calc(100vh-320px)]">
+            <Accordion type="multiple" defaultValue={CHARM_CATEGORIES} className="p-4">
+              {CHARM_CATEGORIES.map(category => (
+                charmsByCategory[category] && charmsByCategory[category].length > 0 && (
+                  <AccordionItem value={category} key={category}>
+                    <AccordionTrigger className="text-base font-headline">{category}</AccordionTrigger>
+                    <AccordionContent>
+                      <div className="grid grid-cols-3 gap-4 pt-2">
+                        {charmsByCategory[category].map((charm) => (
+                          <div
+                            key={charm.id}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, charm)}
+                            className="p-2 border rounded-md flex flex-col items-center justify-center cursor-grab active:cursor-grabbing bg-card hover:bg-muted transition-colors aspect-square"
+                            title={charm.name}
+                          >
+                            <Image src={charm.imageUrl} alt={charm.name} width={48} height={48} data-ai-hint="jewelry charm" />
+                            <p className="text-xs text-center mt-1 truncate">{charm.name}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                )
+              ))}
+            </Accordion>
           </ScrollArea>
         </CardContent>
       </Card>
 
       {/* Editor Canvas */}
       <div className="lg:col-span-6 flex flex-col gap-4">
-         <div className="flex justify-between items-center">
+         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
            <h2 className="text-2xl font-headline tracking-tight">Customize Your {model.name}</h2>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={clearAllCharms} disabled={placedCharms.length === 0}>

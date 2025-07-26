@@ -1,8 +1,11 @@
+export type CharmCategory = 'Celestial' | 'Nature' | 'Symbols' | 'Love';
+
 export interface Charm {
   id: string;
   name: string;
   imageUrl: string;
   description: string;
+  category: CharmCategory;
 }
 
 export interface JewelryModel {
