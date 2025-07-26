@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useRef, DragEvent, WheelEvent, useEffect } from 'react';
 import Image from 'next/image';
-import { JewelryModel, PlacedCharm, Charm, JewelryType, CharmCategory } from '@/lib/types';
+import { JewelryModel, PlacedCharm, Charm, JewelryType, CharmCollection } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -16,7 +16,7 @@ import { ShoppingCart, Trash2, X, Search, ArrowLeft, Loader2 } from 'lucide-reac
 import { cn } from '@/lib/utils';
 import { NacreluneLogo } from './icons';
 import { db, storage } from '@/lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 
 interface EditorProps {
@@ -33,7 +33,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   
   const [charms, setCharms] = useState<Charm[]>([]);
-  const [charmCategories, setCharmCategories] = useState<CharmCategory[]>([]);
+  const [charmCollections, setCharmCollections] = useState<CharmCollection[]>([]);
   const [isLoadingCharms, setIsLoadingCharms] = useState(true);
 
   const getUrl = async (path: string) => {
@@ -50,35 +50,48 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   }
 
   useEffect(() => {
-    const fetchCharms = async () => {
+    const fetchCharmsData = async () => {
       setIsLoadingCharms(true);
       try {
-        const querySnapshot = await getDocs(collection(db, "charms"));
-        const fetchedCharms = await Promise.all(querySnapshot.docs.map(async (doc) => {
+        // Fetch charm collections
+        const collectionsSnapshot = await getDocs(collection(db, "charmCollection"));
+        const fetchedCollections = await Promise.all(collectionsSnapshot.docs.map(async (doc) => {
+          const data = doc.data();
+          const imageUrl = data.imageUrl ? await getUrl(data.imageUrl) : undefined;
+          return {
+            id: doc.id,
+            name: data.name,
+            description: data.description,
+            imageUrl: imageUrl,
+          } as CharmCollection;
+        }));
+        setCharmCollections(fetchedCollections);
+
+        // Fetch charms
+        const charmsSnapshot = await getDocs(collection(db, "charms"));
+        const fetchedCharms = await Promise.all(charmsSnapshot.docs.map(async (doc) => {
           const data = doc.data();
           const imageUrl = await getUrl(data.imageUrl);
+          const collectionRef = data.collection as DocumentReference;
           return {
             id: doc.id,
             name: data.name,
             imageUrl: imageUrl,
             description: data.description,
-            category: data.category,
+            collectionId: collectionRef.id,
           } as Charm;
         }));
         setCharms(fetchedCharms);
-        
-        const categories = Array.from(new Set(fetchedCharms.map(c => c.category)));
-        setCharmCategories(categories);
 
       } catch (error) {
-        console.error("Error fetching charms: ", error);
+        console.error("Error fetching charms data: ", error);
         // Handle error state in UI if necessary
       } finally {
         setIsLoadingCharms(false);
       }
     };
 
-    fetchCharms();
+    fetchCharmsData();
   }, []);
 
 
@@ -91,15 +104,15 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     );
   }, [searchTerm, charms]);
 
-  const charmsByCategory = useMemo(() => {
+  const charmsByCollection = useMemo(() => {
     return filteredCharms.reduce((acc, charm) => {
-      const category = charm.category;
-      if (!acc[category]) {
-        acc[category] = [];
+      const collectionId = charm.collectionId;
+      if (!acc[collectionId]) {
+        acc[collectionId] = [];
       }
-      acc[category].push(charm);
+      acc[collectionId].push(charm);
       return acc;
-    }, {} as Record<CharmCategory, Charm[]>);
+    }, {} as Record<string, Charm[]>);
   }, [filteredCharms]);
 
   const addCharmToCanvas = (charm: Charm) => {
@@ -256,14 +269,14 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                     <Loader2 className="h-12 w-12 animate-spin text-primary" />
                  </div>
               ) : (
-              <Accordion type="multiple" defaultValue={charmCategories} className="p-4">
-                {charmCategories.map(category => (
-                  charmsByCategory[category] && charmsByCategory[category].length > 0 && (
-                    <AccordionItem value={category} key={category}>
-                      <AccordionTrigger className="text-base font-headline">{category}</AccordionTrigger>
+              <Accordion type="multiple" defaultValue={charmCollections.map(c => c.id)} className="p-4">
+                {charmCollections.map(collection => (
+                  charmsByCollection[collection.id] && charmsByCollection[collection.id].length > 0 && (
+                    <AccordionItem value={collection.id} key={collection.id}>
+                      <AccordionTrigger className="text-base font-headline">{collection.name}</AccordionTrigger>
                       <AccordionContent>
                         <div className="grid grid-cols-3 gap-4 pt-2">
-                          {charmsByCategory[category].map((charm) => (
+                          {charmsByCollection[collection.id].map((charm) => (
                             <div
                               key={charm.id}
                               draggable
@@ -406,5 +419,3 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     </>
   );
 }
-
-    

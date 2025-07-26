@@ -1,12 +1,17 @@
 
-export type CharmCategory = string;
+export interface CharmCollection {
+  id: string;
+  name: string;
+  description: string;
+  imageUrl?: string;
+}
 
 export interface Charm {
   id: string;
   name: string;
   imageUrl: string;
   description: string;
-  category: CharmCategory;
+  collectionId: string;
 }
 
 export interface JewelryModel {
@@ -30,5 +35,3 @@ export interface PlacedCharm {
   position: { x: number; y: number };
   rotation: number;
 }
-
-    
