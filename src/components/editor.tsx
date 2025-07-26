@@ -43,6 +43,13 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   const [isPanning, setIsPanning] = useState(false);
   const [startPanPoint, setStartPanPoint] = useState({ x: 0, y: 0 });
 
+  const getCanvasDimensions = () => {
+    if (!canvasRef.current) return { width: 0, height: 0 };
+    return {
+      width: canvasRef.current.clientWidth,
+      height: canvasRef.current.clientHeight,
+    };
+  };
 
   const getUrl = async (path: string) => {
     if (path && !path.startsWith('http')) {
@@ -125,13 +132,19 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
 
   const addCharmToCanvas = (charm: Charm) => {
     if (!canvasRef.current) return;
-    const canvasRect = canvasRef.current.getBoundingClientRect();
+    const { width: canvasWidth, height: canvasHeight } = getCanvasDimensions();
+    if(canvasWidth === 0 || canvasHeight === 0) return;
+
+    // Calculate position in pixels first
+    const pixelX = (canvasWidth / 2 - pan.x) / scale - 20;
+    const pixelY = (canvasHeight / 2 - pan.y) / scale - 20;
+
     const newCharm: PlacedCharm = {
       id: `${charm.id}-${Date.now()}`,
       charm,
        position: {
-        x: (canvasRect.width / 2 - pan.x) / scale - 20,
-        y: (canvasRect.height / 2 - pan.y) / scale - 20,
+        x: pixelX / canvasWidth,
+        y: pixelY / canvasHeight,
       },
       rotation: 0,
     };
@@ -154,7 +167,9 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
         document.body.appendChild(dragImage);
         e.dataTransfer.setDragImage(dragImage, offsetX, offsetY);
         setTimeout(() => {
-            document.body.removeChild(dragImage);
+             if(document.body.contains(dragImage)) {
+                document.body.removeChild(dragImage);
+            }
         }, 0);
     }
   };
@@ -180,7 +195,6 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
             if(document.body.contains(dragImage)) {
                 document.body.removeChild(dragImage);
             }
-            (e.target as HTMLElement).style.opacity = '0.5';
         }, 0);
     }
   };
@@ -188,10 +202,13 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (!draggedItem || !canvasRef.current) return;
+    
+    const { width: canvasWidth, height: canvasHeight } = getCanvasDimensions();
+    if(canvasWidth === 0 || canvasHeight === 0) return;
 
     const canvasRect = canvasRef.current.getBoundingClientRect();
-    const x = (e.clientX - canvasRect.left - pan.x) / scale;
-    const y = (e.clientY - canvasRect.top - pan.y) / scale;
+    const pixelX = (e.clientX - canvasRect.left - pan.x) / scale;
+    const pixelY = (e.clientY - canvasRect.top - pan.y) / scale;
 
     if (draggedItem.type === 'new-charm') {
       const charm = charms.find((c) => c.id === draggedItem.id);
@@ -199,7 +216,10 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
       const newCharm: PlacedCharm = {
         id: `${charm.id}-${Date.now()}`,
         charm,
-        position: { x: x - draggedItem.offsetX / scale , y: y - draggedItem.offsetY / scale },
+        position: { 
+            x: (pixelX - draggedItem.offsetX / scale) / canvasWidth, 
+            y: (pixelY - draggedItem.offsetY / scale) / canvasHeight
+        },
         rotation: 0,
       };
       setPlacedCharms((prev) => [...prev, newCharm]);
@@ -207,7 +227,11 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
       setPlacedCharms(prev => 
         prev.map(pc => 
           pc.id === draggedItem.id 
-            ? { ...pc, position: { x: x - draggedItem.offsetX, y: y - draggedItem.offsetY } }
+            ? { ...pc, position: { 
+                x: (pixelX - draggedItem.offsetX) / canvasWidth, 
+                y: (pixelY - draggedItem.offsetY) / canvasHeight 
+              } 
+            }
             : pc
         )
       );
@@ -220,7 +244,6 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   };
   
   const handleDragEnd = (e: DragEvent<HTMLDivElement>) => {
-    (e.target as HTMLElement).style.opacity = '1';
     setDraggedItem(null);
   };
 
@@ -292,6 +315,8 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     setScale(1);
     setPan({ x: 0, y: 0 });
   };
+  
+  const canvasDimensions = getCanvasDimensions();
 
   return (
     <>
@@ -462,10 +487,10 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                         selectedCharmId === placed.id ? "cursor-grabbing z-10" : "cursor-grab"
                         )}
                         style={{
-                        left: `${placed.position.x}px`,
-                        top: `${placed.position.y}px`,
+                        left: `${placed.position.x * canvasDimensions.width}px`,
+                        top: `${placed.position.y * canvasDimensions.height}px`,
                         transform: `rotate(${placed.rotation}deg)`,
-                        opacity: (draggedItem && draggedItem.type === 'placed-charm' && draggedItem.id === placed.id) ? '0.5' : '1',
+                        opacity: (draggedItem && draggedItem.type === 'placed-charm' && draggedItem.id === placed.id) ? '0' : '1',
                         }}
                     >
                         <Image
@@ -537,7 +562,3 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     </>
   );
 }
-
-    
-
-    

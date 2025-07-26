@@ -32,6 +32,7 @@ export interface JewelryType {
 export interface PlacedCharm {
   id: string;
   charm: Charm;
-  position: { x: number; y: number };
+  // Position is stored as a ratio of the canvas size (0 to 1)
+  position: { x: number; y: number }; 
   rotation: number;
 }
