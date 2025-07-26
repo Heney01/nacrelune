@@ -19,6 +19,7 @@ export interface JewelryModel {
   name: string;
   displayImageUrl: string;
   editorImageUrl: string;
+  snapPath?: string; // SVG path string for charm snapping
 }
 
 export interface JewelryType {

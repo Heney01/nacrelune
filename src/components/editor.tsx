@@ -32,6 +32,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   const [draggedItem, setDraggedItem] = useState<{type: 'new-charm' | 'placed-charm', id: string, offsetX: number, offsetY: number} | null>(null);
   const [selectedCharmId, setSelectedCharmId] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const snapPathRef = useRef<SVGPathElement>(null);
   
   const [charms, setCharms] = useState<Charm[]>([]);
   const [charmCategories, setCharmCategories] = useState<CharmCategory[]>([]);
@@ -141,6 +142,31 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     }, {} as Record<string, Charm[]>);
   }, [filteredCharms]);
 
+  const getClosestPointOnPath = (x: number, y: number): { point: DOMPoint; rotation: number } | null => {
+    const path = snapPathRef.current;
+    if (!path) return null;
+
+    const pathLength = path.getTotalLength();
+    let minDistance = Infinity;
+    let bestPoint = null;
+    let bestRotation = 0;
+
+    for (let i = 0; i < pathLength; i++) {
+        const p1 = path.getPointAtLength(i);
+        const p2 = path.getPointAtLength(i + 1);
+        const distance = Math.hypot(p1.x - x, p1.y - y);
+
+        if (distance < minDistance) {
+            minDistance = distance;
+            bestPoint = p1;
+            const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
+            bestRotation = angle + 90; // Normal to the curve
+        }
+    }
+
+    return bestPoint ? { point: bestPoint, rotation: bestRotation } : null;
+};
+
   const addCharmToCanvas = (charm: Charm) => {
     if (!canvasRef.current) return;
     const { width: canvasWidth, height: canvasHeight } = canvasSize;
@@ -218,31 +244,52 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     if(canvasWidth === 0 || canvasHeight === 0) return;
 
     const canvasRect = canvasRef.current.getBoundingClientRect();
-    const pixelX = (e.clientX - canvasRect.left - pan.x) / scale;
-    const pixelY = (e.clientY - canvasRect.top - pan.y) / scale;
+    
+    let pixelX = (e.clientX - canvasRect.left - pan.x) / scale;
+    let pixelY = (e.clientY - canvasRect.top - pan.y) / scale;
+    let rotation = 0;
+
+    if (model.snapPath) {
+        const snapped = getClosestPointOnPath(pixelX, pixelY);
+        if (snapped) {
+            pixelX = snapped.point.x;
+            pixelY = snapped.point.y;
+            rotation = snapped.rotation;
+        }
+    }
+
 
     if (draggedItem.type === 'new-charm') {
       const charm = charms.find((c) => c.id === draggedItem.id);
       if (!charm) return;
+      
+      const charmPixelX = model.snapPath ? pixelX : (pixelX - draggedItem.offsetX / scale);
+      const charmPixelY = model.snapPath ? pixelY : (pixelY - draggedItem.offsetY / scale);
+      
       const newCharm: PlacedCharm = {
         id: `${charm.id}-${Date.now()}`,
         charm,
         position: { 
-            x: (pixelX - draggedItem.offsetX / scale) / canvasWidth, 
-            y: (pixelY - draggedItem.offsetY / scale) / canvasHeight
+            x: charmPixelX / canvasWidth, 
+            y: charmPixelY / canvasHeight
         },
-        rotation: 0,
+        rotation: rotation,
       };
       setPlacedCharms((prev) => [...prev, newCharm]);
     } else if (draggedItem.type === 'placed-charm') {
+       const charmPixelX = model.snapPath ? pixelX : (pixelX - draggedItem.offsetX);
+       const charmPixelY = model.snapPath ? pixelY : (pixelY - draggedItem.offsetY);
+
       setPlacedCharms(prev => 
         prev.map(pc => 
           pc.id === draggedItem.id 
-            ? { ...pc, position: { 
-                x: (pixelX - draggedItem.offsetX) / canvasWidth, 
-                y: (pixelY - draggedItem.offsetY) / canvasHeight 
-              } 
-            }
+            ? { ...pc, 
+                position: { 
+                    x: charmPixelX / canvasWidth, 
+                    y: charmPixelY / canvasHeight 
+                },
+                rotation: rotation
+              }
             : pc
         )
       );
@@ -267,6 +314,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   };
 
   const handlePlacedCharmRotation = (e: WheelEvent<HTMLDivElement>, charmId: string) => {
+    if (model.snapPath) return; // Disable manual rotation when snapping
     e.preventDefault();
     e.stopPropagation();
     setPlacedCharms(prev =>
@@ -477,6 +525,19 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                 }}
             >
                 <Image src={model.editorImageUrl} alt={model.name} layout="fill" objectFit="contain" className="pointer-events-none" data-ai-hint="jewelry model" />
+                 {model.snapPath && (
+                    <svg width="100%" height="100%" className="absolute top-0 left-0 pointer-events-none">
+                        <path
+                            ref={snapPathRef}
+                            d={model.snapPath}
+                            fill="none"
+                            stroke="rgba(255, 0, 0, 0.5)" // Red for debugging
+                            strokeWidth="2"
+                            strokeDasharray="5,5"
+                            vectorEffect="non-scaling-stroke"
+                        />
+                    </svg>
+                )}
             </div>
             <div className="absolute top-0 left-0 w-full h-full" style={{ perspective: '1000px' }}>
                 <div
@@ -503,7 +564,8 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                         style={{
                         left: `${placed.position.x * canvasSize.width}px`,
                         top: `${placed.position.y * canvasSize.height}px`,
-                        transform: `rotate(${placed.rotation}deg)`,
+                        transform: `rotate(${placed.rotation}deg) translate(-50%, -50%)`,
+                        transformOrigin: 'center center',
                         opacity: (draggedItem && draggedItem.type === 'placed-charm' && draggedItem.id === placed.id) ? '0' : '1',
                         }}
                     >
