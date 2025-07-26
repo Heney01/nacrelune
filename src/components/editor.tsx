@@ -462,7 +462,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
             onMouseLeave={handleCanvasMouseLeave}
             className={cn(
                 "relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden shadow-inner",
-                isPanning ? "cursor-grabbing" : "cursor-grab"
+                isPanning ? "cursor-grabbing" : "cursor-move"
             )}
           >
             <div
@@ -572,3 +572,4 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   );
 }
 
+    
