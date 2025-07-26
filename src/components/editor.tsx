@@ -22,6 +22,7 @@ interface EditorProps {
 export default function Editor({ model, jewelryType }: EditorProps) {
   const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [draggedItem, setDraggedItem] = useState<{type: 'new-charm' | 'placed-charm', id: string} | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const filteredCharms = useMemo(() => {
@@ -44,29 +45,48 @@ export default function Editor({ model, jewelryType }: EditorProps) {
   }, [filteredCharms]);
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>, charm: Charm) => {
-    e.dataTransfer.setData('charmId', charm.id);
+    setDraggedItem({ type: 'new-charm', id: charm.id });
   };
 
+  const handlePlacedCharmDragStart = (e: DragEvent<HTMLDivElement>, placedCharmId: string) => {
+    setDraggedItem({ type: 'placed-charm', id: placedCharmId });
+  };
+  
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const charmId = e.dataTransfer.getData('charmId');
-    const charm = CHARMS.find((c) => c.id === charmId);
-    if (!charm || !canvasRef.current) return;
+    if (!draggedItem || !canvasRef.current) return;
 
     const canvasRect = canvasRef.current.getBoundingClientRect();
     const x = e.clientX - canvasRect.left;
     const y = e.clientY - canvasRect.top;
 
-    const newCharm: PlacedCharm = {
-      id: `${charmId}-${Date.now()}`,
-      charm,
-      position: { x: x - 20, y: y - 20 }, // Center the charm on the cursor
-    };
-    setPlacedCharms((prev) => [...prev, newCharm]);
+    if (draggedItem.type === 'new-charm') {
+      const charm = CHARMS.find((c) => c.id === draggedItem.id);
+      if (!charm) return;
+      const newCharm: PlacedCharm = {
+        id: `${charm.id}-${Date.now()}`,
+        charm,
+        position: { x: x - 20, y: y - 20 }, // Center the charm on the cursor
+      };
+      setPlacedCharms((prev) => [...prev, newCharm]);
+    } else if (draggedItem.type === 'placed-charm') {
+      setPlacedCharms(prev => 
+        prev.map(pc => 
+          pc.id === draggedItem.id 
+            ? { ...pc, position: { x: x - 20, y: y - 20 } }
+            : pc
+        )
+      );
+    }
+    setDraggedItem(null);
   };
   
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+  };
+  
+  const handleDragEnd = () => {
+    setDraggedItem(null);
   };
 
   const removeCharm = (id: string) => {
@@ -110,6 +130,7 @@ export default function Editor({ model, jewelryType }: EditorProps) {
                             key={charm.id}
                             draggable
                             onDragStart={(e) => handleDragStart(e, charm)}
+                            onDragEnd={handleDragEnd}
                             className="p-2 border rounded-md flex flex-col items-center justify-center cursor-grab active:cursor-grabbing bg-card hover:bg-muted transition-colors aspect-square"
                             title={charm.name}
                           >
@@ -167,7 +188,10 @@ export default function Editor({ model, jewelryType }: EditorProps) {
           {placedCharms.map((placed) => (
             <div
               key={placed.id}
-              className="absolute group"
+              draggable
+              onDragStart={(e) => handlePlacedCharmDragStart(e, placed.id)}
+              onDragEnd={handleDragEnd}
+              className="absolute group cursor-grab active:cursor-grabbing"
               style={{ left: `${placed.position.x}px`, top: `${placed.position.y}px` }}
             >
               <Image
@@ -175,7 +199,7 @@ export default function Editor({ model, jewelryType }: EditorProps) {
                 alt={placed.charm.name}
                 width={40}
                 height={40}
-                className="cursor-pointer"
+                className="pointer-events-none"
                 data-ai-hint="jewelry charm"
               />
               <button onClick={() => removeCharm(placed.id)} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -184,6 +208,32 @@ export default function Editor({ model, jewelryType }: EditorProps) {
             </div>
           ))}
         </div>
+        <Card>
+            <CardHeader>
+                <CardTitle className="font-headline text-lg">Added Charms ({placedCharms.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+                {placedCharms.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">Drag charms onto your jewelry to add them.</p>
+                ) : (
+                    <ScrollArea className="h-24">
+                        <ul className="space-y-2">
+                            {placedCharms.map(pc => (
+                                <li key={pc.id} className="flex items-center justify-between text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={24} height={24} className="rounded-sm" data-ai-hint="jewelry charm" />
+                                        <span>{pc.charm.name}</span>
+                                    </div>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeCharm(pc.id)}>
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </li>
+                            ))}
+                        </ul>
+                    </ScrollArea>
+                )}
+            </CardContent>
+        </Card>
       </div>
 
       {/* AI Suggestions Panel */}
