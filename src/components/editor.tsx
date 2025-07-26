@@ -199,8 +199,9 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     const canvasRect = canvasRef.current.getBoundingClientRect();
 
     // Calculate the drop position in pixels relative to the unscaled canvas
-    const dropX_px = (e.clientX - canvasRect.left - pan.x) / scale - draggedCharm.offset.x;
-    const dropY_px = (e.clientY - canvasRect.top - pan.y) / scale - draggedCharm.offset.y;
+    // Account for the initial drag offset to place the charm correctly under the cursor
+    const dropX_px = (e.clientX - canvasRect.left - pan.x) / scale - (draggedCharm.offset.x / scale);
+    const dropY_px = (e.clientY - canvasRect.top - pan.y) / scale - (draggedCharm.offset.y / scale);
 
     // Convert pixel position to percentage relative to canvas dimensions
     const xPercent = (dropX_px / canvasRect.width) * 100;
@@ -366,7 +367,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                                     onDragStart={(e) => handleDragStart(e, charm)}
                                     onDragEnd={handleDragEnd}
                                     onClick={() => addCharmToCanvas(charm)}
-                                    className="relative group p-2 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer active:cursor-grabbing"
+                                    className="relative group p-2 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer"
                                     title={charm.name}
                                   >
                                       <Image src={charm.imageUrl} alt={charm.name} width={48} height={48} data-ai-hint="jewelry charm" />
@@ -469,7 +470,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                           onDragEnd={handleDragEnd}
                           onWheel={(e) => handlePlacedCharmRotation(e, placed.id)}
                           onMouseDown={(e) => e.stopPropagation()}
-                          className="absolute group charm-on-canvas cursor-grab active:cursor-grabbing"
+                          className="absolute group charm-on-canvas"
                           style={{
                           left: `${placed.position.x}%`,
                           top: `${placed.position.y}%`,
@@ -547,3 +548,5 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     </>
   );
 }
+
+    
