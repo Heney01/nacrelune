@@ -263,7 +263,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
             onDragOver={handleDragOver}
             className="relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden shadow-inner"
           >
-            <Image src={model.imageUrl} alt={model.name} layout="fill" objectFit="contain" className="pointer-events-none" data-ai-hint="jewelry model" />
+            <Image src={model.editorImageUrl} alt={model.name} layout="fill" objectFit="contain" className="pointer-events-none" data-ai-hint="jewelry model" />
             {placedCharms.map((placed) => (
               <div
                 key={placed.id}
@@ -331,7 +331,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
 
         {/* AI Suggestions Panel */}
         <div className="lg:col-span-3">
-          <SuggestionSidebar jewelryType={jewelryType.id} modelDescription={model.description || ''} onAddCharm={addCharmToCanvas} />
+          <SuggestionSidebar jewelryType={jewelryType.id} modelDescription={model.name || ''} onAddCharm={addCharmToCanvas} />
         </div>
       </div>
       </div>

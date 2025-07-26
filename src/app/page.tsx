@@ -23,6 +23,19 @@ export default function Home() {
   const [models, setModels] = useState<JewelryModel[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
 
+  const getUrl = async (path: string) => {
+    if (path && !path.startsWith('http')) {
+      try {
+        const storageRef = ref(storage, path);
+        return await getDownloadURL(storageRef);
+      } catch (error) {
+        console.error("Error getting download URL: ", error);
+        return 'https://placehold.co/800x800.png'; // Fallback
+      }
+    }
+    return path || 'https://placehold.co/800x800.png';
+  }
+
   const handleTypeSelect = async (type: JewelryType) => {
     setSelectedType(type);
     setStep('model-selection');
@@ -32,22 +45,14 @@ export default function Home() {
         const querySnapshot = await getDocs(collection(db, "necklace"));
         const fetchedModels = await Promise.all(querySnapshot.docs.map(async (doc) => {
           const data = doc.data();
-          let imageUrl = data.imageUrl || 'https://placehold.co/800x800.png';
-          // If imageUrl is a path in storage, get the download URL
-          if (imageUrl && !imageUrl.startsWith('http')) {
-            try {
-              const storageRef = ref(storage, imageUrl);
-              imageUrl = await getDownloadURL(storageRef);
-            } catch (error) {
-              console.error("Error getting download URL: ", error);
-              // Fallback to a placeholder if the image can't be fetched
-              imageUrl = 'https://placehold.co/800x800.png';
-            }
-          }
+          const displayImageUrl = await getUrl(data.displayImageUrl);
+          const editorImageUrl = await getUrl(data.editorImageUrl);
+          
           return {
             id: doc.id,
             name: data.name,
-            imageUrl: imageUrl
+            displayImageUrl: displayImageUrl,
+            editorImageUrl: editorImageUrl,
           } as JewelryModel;
         }));
         setModels(fetchedModels);
@@ -79,22 +84,6 @@ export default function Home() {
     }
   };
   
-  const Header = () => (
-     <header className="p-4 border-b">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <NacreluneLogo className="h-8 w-auto text-foreground" />
-          </div>
-          {step !== 'type-selection' && (
-            <Button variant="ghost" onClick={handleBack}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Button>
-          )}
-        </div>
-      </header>
-  );
-
   const renderStep = () => {
     switch (step) {
       case 'type-selection':
@@ -128,7 +117,17 @@ export default function Home() {
         if (!selectedType) return null;
         return (
           <>
-            <Header />
+             <header className="p-4 border-b">
+                <div className="container mx-auto flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <NacreluneLogo className="h-8 w-auto text-foreground" />
+                  </div>
+                  <Button variant="ghost" onClick={handleBack}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back
+                  </Button>
+                </div>
+              </header>
             <main className="flex-grow p-4 md:p-8">
               <div className="container mx-auto">
                 <section>
@@ -143,11 +142,10 @@ export default function Home() {
                       {models.map((model) => (
                         <Card key={model.id} className="cursor-pointer hover:shadow-lg overflow-hidden group" onClick={() => handleModelSelect(model)}>
                           <div className="overflow-hidden">
-                            <Image src={model.imageUrl} alt={model.name} width={400} height={400} className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300" data-ai-hint="jewelry" />
+                            <Image src={model.displayImageUrl} alt={model.name} width={400} height={400} className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300" data-ai-hint="jewelry" />
                           </div>
                           <CardContent className="p-6">
                             <h3 className="text-lg font-headline">{model.name}</h3>
-                            <p className="text-sm text-muted-foreground">{model.description}</p>
                           </CardContent>
                         </Card>
                       ))}

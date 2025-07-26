@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -58,10 +59,10 @@ const prompt = ai.definePrompt({
   input: {schema: SuggestCharmPlacementInputSchema},
   output: {schema: SuggestCharmPlacementOutputSchema},
   tools: [shouldIntegrateCharmTool],
-  prompt: `You are a jewelry design assistant. Given the type of jewelry, the model description, and available charms, suggest some charm placements.
+  prompt: `You are a jewelry design assistant. Given the type of jewelry, the model name, and available charms, suggest some charm placements.
 
 Jewelry Type: {{{jewelryType}}}
-Model Description: {{{modelDescription}}}
+Model Name: {{{modelDescription}}}
 Available Charms: {{#each charmOptions}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
 User Preferences: {{{userPreferences}}}
 
