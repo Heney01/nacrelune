@@ -28,7 +28,7 @@ interface EditorProps {
 export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [draggedItem, setDraggedItem] = useState<{type: 'new-charm' | 'placed-charm', id: string} | null>(null);
+  const [draggedItem, setDraggedItem] = useState<{type: 'new-charm' | 'placed-charm', id: string, offsetX: number, offsetY: number} | null>(null);
   const [selectedCharmId, setSelectedCharmId] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   
@@ -128,12 +128,16 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   };
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>, charm: Charm) => {
-    setDraggedItem({ type: 'new-charm', id: charm.id });
+    setDraggedItem({ type: 'new-charm', id: charm.id, offsetX: 20, offsetY: 20 });
     setSelectedCharmId(null);
   };
 
   const handlePlacedCharmDragStart = (e: DragEvent<HTMLDivElement>, placedCharm: PlacedCharm) => {
-    setDraggedItem({ type: 'placed-charm', id: placedCharm.id });
+    const targetRect = e.currentTarget.getBoundingClientRect();
+    const offsetX = e.clientX - targetRect.left;
+    const offsetY = e.clientY - targetRect.top;
+    
+    setDraggedItem({ type: 'placed-charm', id: placedCharm.id, offsetX, offsetY });
     setSelectedCharmId(null);
   
     // To make the drag image respect the rotation, we have to create a custom one.
@@ -146,12 +150,12 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     dragImage.style.left = '-9999px';
     document.body.appendChild(dragImage);
     
-    // The key part: set the drag image to our styled clone.
-    e.dataTransfer.setDragImage(dragImage, 20, 20); // x, y offset to center of a 40x40 charm
+    // The key part: set the drag image to our styled clone with the calculated offset.
+    e.dataTransfer.setDragImage(dragImage, offsetX, offsetY); 
 
-    // Hide the original element *after* creating the drag image
     setTimeout(() => {
         document.body.removeChild(dragImage);
+        (e.target as HTMLElement).style.opacity = '0.5';
     }, 0);
   };
   
@@ -169,7 +173,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
       const newCharm: PlacedCharm = {
         id: `${charm.id}-${Date.now()}`,
         charm,
-        position: { x: x - 20, y: y - 20 }, // Center the charm on the cursor
+        position: { x: x - draggedItem.offsetX, y: y - draggedItem.offsetY }, // Use offset
         rotation: 0,
       };
       setPlacedCharms((prev) => [...prev, newCharm]);
@@ -177,7 +181,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
       setPlacedCharms(prev => 
         prev.map(pc => 
           pc.id === draggedItem.id 
-            ? { ...pc, position: { x: x - 20, y: y - 20 } }
+            ? { ...pc, position: { x: x - draggedItem.offsetX, y: y - draggedItem.offsetY } } // Use offset
             : pc
         )
       );
@@ -189,7 +193,8 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     e.preventDefault();
   };
   
-  const handleDragEnd = () => {
+  const handleDragEnd = (e: DragEvent<HTMLDivElement>) => {
+    (e.target as HTMLElement).style.opacity = '1';
     setDraggedItem(null);
   };
 
@@ -299,7 +304,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                               key={charm.id}
                               draggable
                               onDragStart={(e) => handleDragStart(e, charm)}
-                              onDragEnd={handleDragEnd}
+                              onDragEnd={(e) => handleDragEnd(e)}
                               onClick={() => addCharmToCanvas(charm)}
                               className="p-2 border rounded-md flex flex-col items-center justify-center cursor-pointer active:cursor-grabbing bg-card hover:bg-muted transition-colors aspect-square"
                               title={charm.name}
@@ -361,18 +366,18 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                 key={placed.id}
                 draggable
                 onDragStart={(e) => handlePlacedCharmDragStart(e, placed)}
-                onDragEnd={handleDragEnd}
+                onDragEnd={(e) => handleDragEnd(e)}
                 onWheel={(e) => handleCharmRotation(e, placed.id)}
                 onMouseDown={() => setSelectedCharmId(placed.id)}
                 className={cn(
                   "absolute group cursor-grab",
-                  selectedCharmId === placed.id ? "cursor-grabbing z-10" : "cursor-grab",
-                  draggedItem && draggedItem.type === 'placed-charm' && draggedItem.id === placed.id && "opacity-50"
+                  selectedCharmId === placed.id ? "cursor-grabbing z-10" : "cursor-grab"
                 )}
                 style={{
                   left: `${placed.position.x}px`,
                   top: `${placed.position.y}px`,
                   transform: `rotate(${placed.rotation}deg)`,
+                  opacity: (draggedItem && draggedItem.type === 'placed-charm' && draggedItem.id === placed.id) ? '0.5' : '1',
                 }}
               >
                 <Image
