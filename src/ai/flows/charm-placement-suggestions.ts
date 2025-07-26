@@ -59,14 +59,16 @@ const prompt = ai.definePrompt({
   input: {schema: SuggestCharmPlacementInputSchema},
   output: {schema: SuggestCharmPlacementOutputSchema},
   tools: [shouldIntegrateCharmTool],
-  prompt: `You are a jewelry design assistant. Given the type of jewelry, the model name, and available charms, suggest some charm placements.
+  prompt: `You are a jewelry design assistant. Your task is to suggest charm placements based on the provided information.
 
 Jewelry Type: {{{jewelryType}}}
 Model Name: {{{modelDescription}}}
 Available Charms: {{#each charmOptions}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
 User Preferences: {{{userPreferences}}}
 
-Suggest placements for a few of the charms. For each suggestion, consider the overall aesthetic and provide a brief description of where the charm should be placed and why.
+Carefully review the user's preferences. If the user expresses a dislike for something (e.g., "I hate lemons," "no stars"), you MUST NOT suggest any charms related to that preference. Your suggestions should strictly adhere to the user's stated likes and dislikes.
+
+Suggest placements for a few of the available charms that align with the user's preferences. For each suggestion, consider the overall aesthetic and provide a brief description of where the charm should be placed and why.
 
 Use the shouldIntegrateCharm tool to determine if the charm suggestion should be integrated into the design.
 
