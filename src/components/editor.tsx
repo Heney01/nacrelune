@@ -43,6 +43,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   const [isPanning, setIsPanning] = useState(false);
   const [startPanPoint, setStartPanPoint] = useState({ x: 0, y: 0 });
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const [highlightedCharmId, setHighlightedCharmId] = useState<string | null>(null);
 
 
   const getUrl = async (path: string) => {
@@ -326,6 +327,12 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
     setPan({ x: 0, y: 0 });
   };
   
+  const handleCharmListClick = (charmId: string) => {
+    setHighlightedCharmId(charmId);
+    setTimeout(() => {
+      setHighlightedCharmId(null);
+    }, 1000); // Duration of the animation
+  };
 
   return (
     <>
@@ -460,10 +467,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
             onMouseMove={handleCanvasMouseMove}
             onMouseUp={handleCanvasMouseUp}
             onMouseLeave={handleCanvasMouseLeave}
-            className={cn(
-                "relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden shadow-inner",
-                isPanning && "cursor-grabbing"
-            )}
+            className="relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden shadow-inner"
           >
             <div
                 className="absolute top-0 left-0 w-full h-full pointer-events-none"
@@ -493,7 +497,8 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                         onMouseDown={(e) => e.stopPropagation()}
                         className={cn(
                         "absolute group charm-on-canvas",
-                        selectedCharmId === placed.id ? "cursor-grabbing z-10" : "cursor-grab"
+                        selectedCharmId === placed.id ? "cursor-grabbing z-10" : "cursor-grab",
+                        highlightedCharmId === placed.id ? 'animate-breathe' : ''
                         )}
                         style={{
                         left: `${placed.position.x * canvasSize.width}px`,
@@ -507,7 +512,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                         alt={placed.charm.name}
                         width={40}
                         height={40}
-                        className="pointer-events-none"
+                        className="pointer-events-none rounded-full"
                         data-ai-hint="jewelry charm"
                         />
                         <button onClick={() => removeCharm(placed.id)} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -539,6 +544,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
                                         selectedCharmId === pc.id ? 'bg-muted' : 'hover:bg-muted/50'
                                       )}
                                        onMouseDown={(e) => e.stopPropagation()}
+                                       onClick={() => handleCharmListClick(pc.id)}
                                   >
                                       <div className="flex items-center gap-2">
                                           <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={24} height={24} className="rounded-sm" data-ai-hint="jewelry charm" />
