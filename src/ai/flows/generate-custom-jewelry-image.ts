@@ -51,30 +51,35 @@ export async function generateCustomJewelryImage(input: GenerateCustomJewelryIma
 }
 
 const generatePrompt = (modelName: string, modelImageUri: string, charmsWithUris: {name: string, imageUrl: string, position: {x: number, y: number}}[]) => {
-    let promptText = `You are a professional jewelry photographer. Your task is to generate a realistic, high-quality image of a custom piece of jewelry.
+    const promptParts: any[] = [
+        {
+            text: `You are a professional jewelry photographer. Your task is to generate a realistic, high-quality image of a custom piece of jewelry being worn on a person's neck.
 
-Base Jewelry Model: ${modelName}
-The base image for the model is provided as the first media input.
+The base jewelry model is "${modelName}". The image for this base model is provided first.
+`,
+        },
+        { media: { url: modelImageUri } },
+        {
+            text: `
+The following charms have been added to the jewelry. You MUST place each charm on the model according to its specified position. The (x, y) coordinates are percentages of the base model image's dimensions, starting from the top-left corner. You must use these coordinates as precise anchor points.
 
-The following charms have been added to the jewelry. You MUST place them on the model according to their specified positions. The (x, y) coordinates are percentages of the base model image's dimensions, starting from the top-left corner. You must use these coordinates as precise anchor points. The charms are provided with their names and images. The charm images are provided as subsequent media inputs, in the same order as they are listed below.
-
-Charms:
-`;
+Each charm is provided with its name, its position, and its corresponding image.
+`
+        }
+    ];
 
     if (charmsWithUris.length === 0) {
-        promptText += "- No charms added. Just create a beautiful shot of the base model.";
+        promptParts.push({text: "\n- No charms added. Just create a beautiful shot of the base model."});
     } else {
-        charmsWithUris.forEach((charm, index) => {
-            promptText += `- Charm #${index + 1}: "${charm.name}", Position: (x: ${charm.position.x.toFixed(2)}%, y: ${charm.position.y.toFixed(2)}%)\n`;
+        charmsWithUris.forEach((charm) => {
+            promptParts.push({text: `\n- Charm: "${charm.name}", Position: (x: ${charm.position.x.toFixed(2)}%, y: ${charm.position.y.toFixed(2)}%)`});
+            promptParts.push({media: {url: charm.imageUrl}});
         });
     }
 
-    promptText += `
-Generate a single, coherent, photorealistic image of the final piece of jewelry being worn on a person's neck. The photo should be a close-up, focusing on the jewelry against the skin and collarbone. The lighting should be professional and highlight the details of the jewelry. The final image should look like a product photo from a luxury brand's website.`;
-
-    const promptParts: any[] = [{ text: promptText }, { media: { url: modelImageUri } }];
-    charmsWithUris.forEach(charm => {
-        promptParts.push({ media: { url: charm.imageUrl } });
+    promptParts.push({
+        text: `
+Generate a single, coherent, photorealistic image of the final piece of jewelry. The photo should be a close-up, focusing on the jewelry against the skin and collarbone. The lighting should be professional and highlight the details of the jewelry. The final image should look like a product photo from a luxury brand's website.`
     });
 
     return promptParts;
