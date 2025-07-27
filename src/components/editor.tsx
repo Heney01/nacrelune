@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useRef, WheelEvent, useCallback } from 'react';
+import React, { useState, useMemo, useRef, WheelEvent, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import { JewelryModel, PlacedCharm, Charm, JewelryType, CharmCategory } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -593,3 +593,5 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     </>
   );
 }
+
+    
