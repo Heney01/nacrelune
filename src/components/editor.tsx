@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { ShoppingCart, Trash2, X, Search, ArrowLeft, Loader2, ZoomIn, ZoomOut, Move } from 'lucide-react';
+import { Trash2, X, Search, ArrowLeft, Loader2, ZoomIn, ZoomOut, Move } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NacreluneLogo } from './icons';
 import { db, storage } from '@/lib/firebase';
@@ -19,6 +19,7 @@ import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { useTranslations, useRichTranslations } from '@/hooks/use-translations';
+import { PurchaseDialog } from './purchase-dialog';
 
 interface EditorProps {
   model: JewelryModel;
@@ -411,10 +412,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                     <Trash2 className="mr-2 h-4 w-4" />
                     {t('clear_all_button')}
                   </Button>
-                  <Button>
-                    <ShoppingCart className="mr-2 h-4 w-4" />
-                    {t('purchase_button')}
-                  </Button>
+                  <PurchaseDialog model={model} placedCharms={placedCharms} locale={locale} />
                 </div>
             </div>
             <div

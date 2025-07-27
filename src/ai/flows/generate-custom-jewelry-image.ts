@@ -25,7 +25,7 @@ async function toDataURI(url: string): Promise<string> {
 
 const CharmInputSchema = z.object({
   name: z.string().describe('The name of the charm.'),
-  imageUrl: z.string(), 
+  imageUrl: z.string(),
   position: z.object({ x: z.number(), y: z.number() }),
 });
 
@@ -53,23 +53,20 @@ const generateCustomJewelryImageFlow = ai.defineFlow(
     outputSchema: GenerateCustomJewelryImageOutputSchema,
   },
   async (input) => {
-    // 1. Convert all images to data URIs in parallel
-    const [modelImageUri, ...charmImageUris] = await Promise.all([
-      toDataURI(input.modelImage),
-      ...input.charms.map(c => toDataURI(c.imageUrl))
-    ]);
+    // 1. Convert model image to data URI
+    const modelImageUri = await toDataURI(input.modelImage);
 
     // 2. Construct the prompt
-    let textPrompt = `Generate a single, coherent, photorealistic image of a custom piece of jewelry being worn on a person's neck.
+    const charmDescriptions = input.charms.map(c => `- ${c.name}`).join('\n');
+    const textPrompt = `Generate a single, coherent, photorealistic image of a custom piece of jewelry being worn on a person's neck.
 The base jewelry model is a "${input.modelName}". I have provided an image of it for reference.
-It should be adorned with the charms I have also provided as images. Integrate them aesthetically onto the base model.
-DO NOT invent or add any charms or elements that are not in the provided images.
-The final image should look like a professional, close-up product photo from a luxury brand's website, focusing on the jewelry against the skin. The lighting should be soft and flattering.`;
+It should be aesthetically adorned with the following charms:
+${charmDescriptions}
+DO NOT invent or add any other charms or elements. The final image should look like a professional, close-up product photo from a luxury brand's website, focusing on the jewelry against the skin. The lighting should be soft and flattering.`;
 
     const promptParts: (string | { media: { url: string; }; } | { text: string; })[] = [
       { text: textPrompt },
       { media: { url: modelImageUri } },
-      ...charmImageUris.map(url => ({ media: { url } }))
     ];
     
     // 3. Call the generation model
