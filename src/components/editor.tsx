@@ -160,15 +160,14 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     }, 500);
   };
   
-  const handleCharmDragStart = (e: React.DragEvent<HTMLDivElement>, placedCharm: PlacedCharm) => {
-    e.dataTransfer.setData('application/json', JSON.stringify(placedCharm));
-    e.dataTransfer.effectAllowed = 'move';
-    const img = document.createElement('img');
-    img.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
+    // This is for desktop drag and drop from the list, which we disabled.
+    // Let's hide the default drag image.
+    const img = new Image();
+    img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
     e.dataTransfer.setDragImage(img, 0, 0);
-    setDraggedCharm(placedCharm);
-    setSelectedCharmId(null);
   };
+  
 
   const handlePlacedCharmMouseDown = (e: React.MouseEvent<HTMLDivElement>, placedCharm: PlacedCharm) => {
     if (e.button !== 0) return;
@@ -267,9 +266,9 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     
     const canvasElement = canvasRef.current;
     if (canvasElement) {
-        // We add the listener to the element directly to control passive option
         const touchMoveHandler = (e: globalThis.TouchEvent) => {
             if(draggedCharm || isPanning || e.touches.length === 2) {
+                // This preventDefault is crucial for stopping page scroll on mobile
                 e.preventDefault();
             }
             if (draggedCharm) {
@@ -368,10 +367,10 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
 
   const handleCanvasTouchStart = (e: TouchEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest('.charm-on-canvas') || draggedCharm) return;
-    e.preventDefault(); // Prevent scroll
+    e.preventDefault(); 
     
     if (e.touches.length === 2) {
-      setIsPanning(false); // Stop panning when pinch starts
+      setIsPanning(false); 
       initialPinchDistance.current = getDistance(e.touches);
       scaleStartRef.current = scale;
     } else if (e.touches.length === 1) {
@@ -383,7 +382,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
 
   const handleCanvasTouchMove = (e: TouchEvent<HTMLDivElement>) => {
     if (draggedCharm) return;
-    e.preventDefault(); // Prevent scroll
+    e.preventDefault();
 
     if (e.touches.length === 2 && initialPinchDistance.current && canvasRef.current) {
       const newDist = getDistance(e.touches);
@@ -433,6 +432,43 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         pc.id === charmId ? { ...pc, animation: undefined } : pc
       ));
     }, 500);
+  };
+  
+
+  const DraggablePlacedCharm = ({ placed }: { placed: PlacedCharm }) => {
+    const isBeingDragged = draggedCharm?.id === placed.id;
+    return (
+      <div
+        onMouseDown={(e) => handlePlacedCharmMouseDown(e, placed)}
+        onTouchStart={(e) => handlePlacedCharmTouchStart(e, placed)}
+        onWheel={(e) => handlePlacedCharmRotation(e, placed.id)}
+        className={cn(
+          "absolute group charm-on-canvas cursor-grab",
+          isBeingDragged && "opacity-50"
+        )}
+        style={{
+        left: `${placed.position.x}%`,
+        top: `${placed.position.y}%`,
+        transform: `translate(-50%, -50%) rotate(${placed.rotation}deg)`,
+        animation: placed.animation,
+        width: 40,
+        height: 40,
+        visibility: isBeingDragged ? 'hidden' : 'visible'
+        }}
+    >
+        <Image
+        src={placed.charm.imageUrl}
+        alt={placed.charm.name}
+        width={40}
+        height={40}
+        className="pointer-events-none rounded-full"
+        data-ai-hint="jewelry charm"
+        />
+        <button onClick={() => removeCharm(placed.id)} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <X size={14} />
+        </button>
+      </div>
+    );
   };
 
   return (
@@ -485,6 +521,8 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                             {charmsByCategory[category.id].map((charm) => (
                               <Dialog key={charm.id}>
                                   <div
+                                    draggable
+                                    onDragStart={handleDragStart}
                                     onClick={() => addCharmToCanvas(charm)}
                                     className="relative group p-2 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer"
                                     title={charm.name}
@@ -565,37 +603,27 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                       }}
                   >
                       {placedCharms.map((placed) => (
-                      <div
-                          key={placed.id}
-                          draggable
-                          onDragStart={(e) => handleCharmDragStart(e, placed)}
-                          onMouseDown={(e) => handlePlacedCharmMouseDown(e, placed)}
-                          onTouchStart={(e) => handlePlacedCharmTouchStart(e, placed)}
-                          onWheel={(e) => handlePlacedCharmRotation(e, placed.id)}
-                          className={cn(
-                            "absolute group charm-on-canvas cursor-grab",
-                            draggedCharm?.id === placed.id && "opacity-50"
-                          )}
-                          style={{
-                          left: `${placed.position.x}%`,
-                          top: `${placed.position.y}%`,
-                          transform: `translate(-50%, -50%) rotate(${placed.rotation}deg)`,
-                          animation: placed.animation,
-                          }}
-                      >
-                          <Image
-                          src={placed.charm.imageUrl}
-                          alt={placed.charm.name}
-                          width={40}
-                          height={40}
-                          className="pointer-events-none rounded-full"
-                          data-ai-hint="jewelry charm"
-                          />
-                          <button onClick={() => removeCharm(placed.id)} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <X size={14} />
-                          </button>
-                      </div>
+                        <DraggablePlacedCharm key={placed.id} placed={placed} />
                       ))}
+                      {draggedCharm && (
+                        <div
+                          className="absolute pointer-events-none"
+                          style={{
+                            left: `${draggedCharm.position.x}%`,
+                            top: `${draggedCharm.position.y}%`,
+                            transform: `translate(-50%, -50%) rotate(${draggedCharm.rotation}deg) scale(${scale})`,
+                            transformOrigin: 'center center',
+                          }}
+                        >
+                          <Image
+                            src={draggedCharm.charm.imageUrl}
+                            alt={draggedCharm.charm.name}
+                            width={40}
+                            height={40}
+                            className="rounded-full"
+                          />
+                        </div>
+                      )}
                   </div>
               </div>
               <div className="absolute bottom-2 right-2 flex gap-2">
@@ -654,3 +682,4 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     </>
   );
 }
+
