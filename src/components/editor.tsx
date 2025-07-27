@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useRef, WheelEvent, useCallback } from 'react';
+import React, { useState, useMemo, useRef, WheelEvent, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import { JewelryModel, PlacedCharm, Charm, JewelryType, CharmCategory } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,16 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/co
 import { useIsMobile } from '@/hooks/use-mobile';
 
 
-const PlacedCharmComponent = React.memo(({ placed, isSelected, scale, onDragStart, onDelete, onRotate }: PlacedCharmComponentProps) => {
+interface PlacedCharmComponentProps {
+    placed: PlacedCharm;
+    isSelected: boolean;
+    scale: number;
+    onDragStart: (e: React.MouseEvent | React.TouchEvent, charmId: string) => void;
+    onDelete: (charmId: string) => void;
+    onRotate: (e: WheelEvent, charmId: string) => void;
+}
+  
+const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDelete, onRotate }: PlacedCharmComponentProps) => {
     const charmRef = useRef<HTMLDivElement>(null);
 
     const handleDelete = (e: React.MouseEvent | React.TouchEvent) => {
@@ -97,17 +106,6 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, scale, onDragStar
 });
 PlacedCharmComponent.displayName = 'PlacedCharmComponent';
 
-
-interface PlacedCharmComponentProps {
-    placed: PlacedCharm;
-    isSelected: boolean;
-    scale: number;
-    onDragStart: (e: React.MouseEvent | React.TouchEvent, charmId: string) => void;
-    onDelete: (charmId: string) => void;
-    onRotate: (e: WheelEvent, charmId: string) => void;
-}
-  
-
 interface EditorProps {
   model: JewelryModel;
   jewelryType: Omit<JewelryType, 'models'>;
@@ -163,7 +161,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     return path || 'https://placehold.co/100x100.png';
   }
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchCharmsData = async () => {
       setIsLoadingCharms(true);
       try {
@@ -273,8 +271,8 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
 
 
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent, charmId: string) => {
-    e.stopPropagation();
     if ('preventDefault' in e) e.preventDefault();
+    e.stopPropagation();
 
     interactionState.isDragging = true;
     interactionState.isPanning = false;
@@ -286,7 +284,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   }, [interactionState]);
 
 
-    React.useEffect(() => {
+    useEffect(() => {
       const canvas = canvasRef.current;
       if (!canvas) return;
   
@@ -611,6 +609,9 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="bottom" className="h-[80%] p-0">
+                    <SheetHeader className="p-4 border-b">
+                        <SheetTitle>{t('charms_title')}</SheetTitle>
+                    </SheetHeader>
                    <CharmsPanel />
                 </SheetContent>
             </Sheet>
@@ -622,6 +623,9 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="bottom" className="h-[80%] p-0">
+                   <SheetHeader className="p-4 border-b">
+                        <SheetTitle>{t('ai_suggestions_title')}</SheetTitle>
+                    </SheetHeader>
                     <SuggestionsPanel />
                 </SheetContent>
             </Sheet>
@@ -630,4 +634,3 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     </>
   );
 }
-
