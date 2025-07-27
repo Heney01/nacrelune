@@ -25,8 +25,6 @@ async function toDataURI(url: string): Promise<string> {
 
 const CharmInputSchema = z.object({
   name: z.string().describe('The name of the charm.'),
-  // The following fields are not used by the new prompt, 
-  // but we keep them for potential future use and to avoid breaking the client-side call.
   imageUrl: z.string(), 
   position: z.object({ x: z.number(), y: z.number() }),
 });
@@ -55,24 +53,31 @@ const generateCustomJewelryImageFlow = ai.defineFlow(
     outputSchema: GenerateCustomJewelryImageOutputSchema,
   },
   async (input) => {
-    const modelImageUri = await toDataURI(input.modelImage);
+    // 1. Convert all images to data URIs in parallel
+    const [modelImageUri, ...charmImageUris] = await Promise.all([
+      toDataURI(input.modelImage),
+      ...input.charms.map(c => toDataURI(c.imageUrl))
+    ]);
 
-    const charmNames = input.charms.map(c => c.name).join(', ');
-
+    // 2. Construct the prompt
     let textPrompt = `Generate a single, coherent, photorealistic image of a custom piece of jewelry being worn on a person's neck.
-The base jewelry model is a "${input.modelName}".
-It is adorned with the following charms: ${charmNames || 'no charms'}.
-The photo should be a close-up, focusing on the jewelry against the skin and collarbone. The lighting should be professional and highlight the details of the jewelry. The final image should look like a product photo from a luxury brand's website.
-Refer to the provided image for the style of the base jewelry model.`;
+The base jewelry model is a "${input.modelName}". I have provided an image of it for reference.
+It should be adorned with the charms I have also provided as images. Integrate them aesthetically onto the base model.
+DO NOT invent or add any charms or elements that are not in the provided images.
+The final image should look like a professional, close-up product photo from a luxury brand's website, focusing on the jewelry against the skin. The lighting should be soft and flattering.`;
 
+    const promptParts: (string | { media: { url: string; }; } | { text: string; })[] = [
+      { text: textPrompt },
+      { media: { url: modelImageUri } },
+      ...charmImageUris.map(url => ({ media: { url } }))
+    ];
+    
+    // 3. Call the generation model
     const { media } = await ai.generate({
       model: 'googleai/gemini-2.0-flash-preview-image-generation',
-      prompt: [
-        { media: { url: modelImageUri } },
-        { text: textPrompt },
-      ],
+      prompt: promptParts,
       config: {
-        responseModalities: ['TEXT', 'IMAGE'],
+        responseModalities: ['IMAGE'],
       },
     });
     
