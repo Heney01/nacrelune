@@ -47,6 +47,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const startPanPoint = useRef({ x: 0, y: 0 });
+  const dragStartPoint = useRef({ x: 0, y: 0 }); // Dedicated ref for charm dragging
   const initialPinchDistance = useRef<number | null>(null);
   const scaleStartRef = useRef(1);
 
@@ -192,7 +193,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     setIsDragging(true);
 
     if ('touches' in e) {
-      startPanPoint.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      dragStartPoint.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }
   };
 
@@ -210,17 +211,40 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     };
   
     const handleTouchMove = (e: globalThis.TouchEvent) => {
-      if (e.touches.length > 1) { // Pinch-to-zoom
-        setIsDragging(false);
-        return;
-      }
-      
       if (isDragging && e.touches.length === 1) {
-          const touch = e.touches[0];
-          const movementX = touch.clientX - startPanPoint.current.x;
-          const movementY = touch.clientY - startPanPoint.current.y;
-          updateCharmPosition(movementX, movementY);
-          startPanPoint.current = { x: touch.clientX, y: touch.clientY };
+        const touch = e.touches[0];
+        const movementX = touch.clientX - dragStartPoint.current.x;
+        const movementY = touch.clientY - dragStartPoint.current.y;
+        updateCharmPosition(movementX, movementY);
+        dragStartPoint.current = { x: touch.clientX, y: touch.clientY };
+      } else if (isPanning && e.touches.length === 1) {
+        const touch = e.touches[0];
+        setPan({
+          x: pan.x + touch.clientX - startPanPoint.current.x,
+          y: pan.y + touch.clientY - startPanPoint.current.y,
+        });
+        startPanPoint.current = { x: touch.clientX, y: touch.clientY };
+      } else if (e.touches.length > 1) { // Pinch-to-zoom logic
+        setIsDragging(false); // Stop charm drag if multiple fingers
+        if (initialPinchDistance.current && canvasRef.current) {
+            const newDist = getDistance(e.touches);
+            const scaleFactor = newDist / initialPinchDistance.current;
+            const newScale = Math.min(Math.max(0.2, scaleStartRef.current * scaleFactor), 5);
+            
+            const canvasRect = canvasRef.current.getBoundingClientRect();
+            const t1 = e.touches[0];
+            const t2 = e.touches[1];
+            const midPoint = {
+                x: (t1.clientX + t2.clientX) / 2 - canvasRect.left,
+                y: (t1.clientY + t2.clientY) / 2 - canvasRect.top
+            };
+
+            const newPanX = midPoint.x - (midPoint.x - pan.x) * (newScale / scale);
+            const newPanY = midPoint.y - (midPoint.y - pan.y) * (newScale / scale);
+
+            setScale(newScale);
+            setPan({ x: newPanX, y: newPanY });
+        }
       }
     };
   
@@ -231,7 +255,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     };
   
     window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('touchmove', handleTouchMove);
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
     window.addEventListener('mouseup', handleInteractionEnd);
     window.addEventListener('touchend', handleInteractionEnd);
   
@@ -241,7 +265,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
       window.removeEventListener('mouseup', handleInteractionEnd);
       window.removeEventListener('touchend', handleInteractionEnd);
     };
-  }, [isDragging, isPanning, updateCharmPosition]);
+  }, [isDragging, isPanning, updateCharmPosition, scale, pan]);
 
 
   const removeCharm = (id: string) => {
@@ -308,6 +332,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     if ((e.target as HTMLElement).closest('.charm-on-canvas')) return;
     
     if (e.touches.length > 1) {
+      e.preventDefault();
       initialPinchDistance.current = getDistance(e.touches);
       scaleStartRef.current = scale;
       setIsPanning(false);
@@ -316,37 +341,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         startPanPoint.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         setIsPanning(true);
         setSelectedPlacedCharmId(null);
-    }
-  };
-
-  const handleCanvasTouchMove = (e: TouchEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-    if (e.touches.length === 2 && initialPinchDistance.current && canvasRef.current) {
-      setIsPanning(false);
-      const newDist = getDistance(e.touches);
-      const scaleFactor = newDist / initialPinchDistance.current;
-      const newScale = Math.min(Math.max(0.2, scaleStartRef.current * scaleFactor), 5);
-      
-      const canvasRect = canvasRef.current.getBoundingClientRect();
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
-      const midPoint = {
-          x: (t1.clientX + t2.clientX) / 2 - canvasRect.left,
-          y: (t1.clientY + t2.clientY) / 2 - canvasRect.top
-      };
-
-      const newPanX = midPoint.x - (midPoint.x - pan.x) * (newScale / scale);
-      const newPanY = midPoint.y - (midPoint.y - pan.y) * (newScale / scale);
-
-      setScale(newScale);
-      setPan({ x: newPanX, y: newPanY });
-    } else if (e.touches.length === 1 && isPanning) {
-        const touch = e.touches[0];
-        setPan({
-            x: pan.x + touch.clientX - startPanPoint.current.x,
-            y: pan.y + touch.clientY - startPanPoint.current.y,
-        });
-        startPanPoint.current = { x: touch.clientX, y: touch.clientY };
     }
   };
 
@@ -536,7 +530,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
               onMouseUp={handleCanvasMouseUp}
               onMouseLeave={handleCanvasMouseUp}
               onTouchStart={handleCanvasTouchStart}
-              onTouchMove={handleCanvasTouchMove}
+              onTouchMove={(e) => e.preventDefault()}
               onTouchEnd={handleCanvasTouchEnd}
               className="relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none"
             >
