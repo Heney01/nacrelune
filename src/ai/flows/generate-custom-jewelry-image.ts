@@ -105,7 +105,7 @@ const generateCustomJewelryImageFlow = ai.defineFlow(
     const prompt = generatePrompt(input.modelName, modelImageUri, charmsWithUris);
     
     const { media } = await ai.generate({
-      model: 'googleai/gemini-2.0-flash-preview-image-generation',
+      model: 'googleai/gemini-1.5-pro',
       prompt: prompt,
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
