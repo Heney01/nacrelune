@@ -424,7 +424,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         </div>
         <Separator />
         <CardContent className="p-0 flex-grow">
-            <ScrollArea className={cn(isMobile ? "h-[calc(100vh-200px)]" : "h-[calc(100vh-320px)]")}>
+            <ScrollArea className={cn(isMobile ? "h-[calc(100vh - 200px)]" : "h-[calc(100vh-320px)]")}>
                 {isLoadingCharms ? (
                     <div className="flex justify-center items-center h-full p-8">
                         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -447,8 +447,8 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                                                         <Image
                                                             src={charm.imageUrl}
                                                             alt={charm.name}
-                                                            width={isMobile ? 32 : 48}
-                                                            height={isMobile ? 32 : 48}
+                                                            width={isMobile ? 48 : 48}
+                                                            height={isMobile ? 48 : 48}
                                                             className="pointer-events-none"
                                                             data-ai-hint="jewelry charm"
                                                         />
@@ -645,3 +645,5 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     </>
   );
 }
+
+    
