@@ -61,9 +61,9 @@ The base jewelry model is "${modelName}". The image for this base model is provi
         { media: { url: modelImageUri } },
         {
             text: `
-The following charms have been added to the jewelry. You MUST place each charm on the model according to its specified position. The (x, y) coordinates are percentages of the base model image's dimensions, starting from the top-left corner. You must use these coordinates as precise anchor points.
+The following charms have been added to the jewelry. You MUST place each charm on the model according to its specified position. The (x, y) coordinates are percentages of the base model image's dimensions, starting from the top-left corner. You must use these coordinates as precise anchor points for each charm.
 
-Each charm is provided with its name, its position, and its corresponding image.
+Each charm is provided with its name, its position, and its corresponding image, one by one.
 `
         }
     ];
