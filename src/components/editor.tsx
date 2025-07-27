@@ -250,7 +250,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   // Placed Charm Touch event handlers
   const handlePlacedCharmTouchStart = (e: TouchEvent<HTMLDivElement>, placedCharm: PlacedCharm) => {
     e.stopPropagation(); 
-    e.preventDefault();
     const touch = e.touches[0];
     const rect = e.currentTarget.getBoundingClientRect();
 
@@ -266,12 +265,12 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   };
   
   const handleGlobalTouchMove = (e: globalThis.TouchEvent) => {
-    if (!touchDragging || !draggedCharm) return;
-    // This is now inside handleCanvasTouchMove and will be prevented there
-    // e.preventDefault(); 
-    const touch = e.touches[0];
-    updateCharmPosition(touch.clientX, touch.clientY);
-    setTouchPosition({ x: touch.clientX, y: touch.clientY });
+    if (touchDragging && draggedCharm) {
+        e.preventDefault(); 
+        const touch = e.touches[0];
+        updateCharmPosition(touch.clientX, touch.clientY);
+        setTouchPosition({ x: touch.clientX, y: touch.clientY });
+    }
   };
   
   const handleGlobalTouchEnd = () => {
@@ -283,6 +282,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   };
 
   useEffect(() => {
+    // Use passive: false to allow preventDefault
     window.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
     window.addEventListener('touchend', handleGlobalTouchEnd);
 
@@ -290,7 +290,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         window.removeEventListener('touchmove', handleGlobalTouchMove);
         window.removeEventListener('touchend', handleGlobalTouchEnd);
     };
-  }, [touchDragging, draggedCharm, pan, scale]); // Re-add dependencies to re-bind if they change
+  }, [touchDragging, draggedCharm, pan, scale]);
 
 
   const removeCharm = (id: string) => {
@@ -368,12 +368,12 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
 
   const handleCanvasTouchStart = (e: TouchEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest('.charm-on-canvas') || touchDragging) return;
-    e.preventDefault();
+    e.preventDefault(); // Prevent scroll
     
     if (e.touches.length === 2) {
+      setIsPanning(false); // Stop panning when pinch starts
       initialPinchDistance.current = getDistance(e.touches);
       scaleStartRef.current = scale;
-      setIsPanning(false);
     } else if (e.touches.length === 1) {
         setIsPanning(true);
         const touch = e.touches[0];
@@ -382,10 +382,8 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   };
 
   const handleCanvasTouchMove = (e: TouchEvent<HTMLDivElement>) => {
-    // Prevent scroll only when interacting with the canvas
-    e.preventDefault();
-    
-    if (touchDragging) return; // A charm is being dragged, not the canvas
+    if (touchDragging) return; 
+    e.preventDefault(); // Prevent scroll
 
     if (e.touches.length === 2 && initialPinchDistance.current && canvasRef.current) {
       const newDist = getDistance(e.touches);
@@ -414,10 +412,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     }
   };
 
-  const handleCanvasTouchEnd = (e: TouchEvent<HTMLDivElement>) => {
-     if (isPanning || initialPinchDistance.current) {
-        e.preventDefault();
-     }
+  const handleCanvasTouchEnd = () => {
     setIsPanning(false);
     initialPinchDistance.current = null;
   };
@@ -678,3 +673,5 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     </>
   );
 }
+
+    
