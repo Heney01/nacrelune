@@ -194,6 +194,14 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
     } else {
+        // For mouse, also set dataTransfer and hide default drag preview
+        if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = 'move';
+            // Create a transparent image to use as the drag preview
+            const img = new window.Image();
+            img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+            e.dataTransfer.setDragImage(img, 0, 0);
+        }
         startX = e.clientX;
         startY = e.clientY;
     }
