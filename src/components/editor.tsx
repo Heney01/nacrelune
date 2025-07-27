@@ -229,7 +229,15 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     }, {} as Record<string, Charm[]>);
   }, [filteredCharms]);
 
-  const addCharmToCanvas = (charm: Charm) => {
+  const addCharmFromCharmList = (charm: Charm) => {
+    addCharmToCanvas(charm, 'charmsPanel');
+  }
+
+  const addCharmFromSuggestions = (charm: Charm) => {
+    addCharmToCanvas(charm, 'suggestionsPanel');
+  };
+
+  const addCharmToCanvas = (charm: Charm, source: 'charmsPanel' | 'suggestionsPanel') => {
     if (!canvasRef.current) return;
 
     const canvasRect = canvasRef.current.getBoundingClientRect();
@@ -250,9 +258,8 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
       animation: 'breathe 0.5s ease-out'
     };
     setPlacedCharms(prev => [...prev, newCharm]);
-    
-    // Close sheet on mobile after adding a charm
-    if (isMobile) {
+
+    if (isMobile && source === 'charmsPanel') {
         setIsCharmsSheetOpen(false);
     }
 
@@ -440,15 +447,15 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                                             {charmsByCategory[category.id].map((charm) => (
                                                 <Dialog key={charm.id}>
                                                     <div
-                                                        onClick={() => { addCharmToCanvas(charm) }}
+                                                        onClick={() => { addCharmFromCharmList(charm) }}
                                                         className="relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer"
                                                         title={charm.name}
                                                     >
                                                         <Image
                                                             src={charm.imageUrl}
                                                             alt={charm.name}
-                                                            width={isMobile ? 48 : 48}
-                                                            height={isMobile ? 48 : 48}
+                                                            width={isMobile ? 40 : 48}
+                                                            height={isMobile ? 40 : 48}
                                                             className="pointer-events-none"
                                                             data-ai-hint="jewelry charm"
                                                         />
@@ -468,7 +475,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                                                             <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
                                                         </div>
                                                         <div className="mt-6 flex justify-end">
-                                                            <Button onClick={() => addCharmToCanvas(charm)}>{t('add_to_design_button')}</Button>
+                                                            <Button onClick={() => addCharmFromCharmList(charm)}>{t('add_to_design_button')}</Button>
                                                         </div>
                                                     </DialogContent>
                                                 </Dialog>
@@ -490,7 +497,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         <SuggestionSidebar 
           jewelryType={jewelryType.id} 
           modelDescription={model.name || ''} 
-          onAddCharm={addCharmToCanvas} 
+          onAddCharm={addCharmFromSuggestions} 
           charms={charms}
           locale={locale}
           isMobile={isMobile}
@@ -645,5 +652,3 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     </>
   );
 }
-
-    
