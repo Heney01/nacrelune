@@ -37,3 +37,18 @@ export interface PlacedCharm {
   rotation: number;
   animation?: string;
 }
+
+export interface Order {
+  id?: string;
+  modelName: string;
+  modelImage: string;
+  charms: { name: string; imageUrl: string }[];
+  shippingInfo: {
+    name: string;
+    address: string;
+    city: string;
+    zip: string;
+    country: string;
+  };
+  createdAt: any; // Firestore timestamp
+}
