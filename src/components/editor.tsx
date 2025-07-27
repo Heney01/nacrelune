@@ -18,9 +18,9 @@ import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { useTranslations, useRichTranslations } from '@/hooks/use-translations';
+import { useTranslations } from '@/hooks/use-translations';
 import { PurchaseDialog } from './purchase-dialog';
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getCharmSuggestions } from '@/app/actions';
 import type { Suggestion, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
@@ -50,7 +50,7 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
     }, [onRotate, placed.id]);
 
 
-    React.useEffect(() => {
+    useEffect(() => {
       const element = charmRef.current;
       if (!element) return;
 
@@ -120,7 +120,7 @@ interface EditorProps {
 
 export default function Editor({ model, jewelryType, onBack, locale }: EditorProps) {
   const t = useTranslations('Editor');
-  const tRich = useRichTranslations('HomePage');
+  const tHomepage = useTranslations('HomePage');
   const isMobile = useIsMobile();
   const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -411,6 +411,15 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
       window.addEventListener('touchmove', handleMove, { passive: false });
       window.addEventListener('touchend', handleInteractionEnd);
       
+      const handleWheel = (e: Event) => {
+          if (!(e.target as HTMLElement).closest('.charm-on-canvas')) {
+              e.preventDefault();
+              handleCanvasWheel(e as WheelEvent);
+          }
+      };
+
+      canvas.addEventListener('wheel', handleWheel, { passive: false });
+      
       return () => {
         canvas.removeEventListener('mousedown', handlePanStart);
         window.removeEventListener('mousemove', handleMove);
@@ -418,11 +427,11 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         canvas.removeEventListener('touchstart', handlePanStart);
         window.removeEventListener('touchmove', handleMove);
         window.removeEventListener('touchend', handleInteractionEnd);
+        canvas.removeEventListener('wheel', handleWheel);
       };
   }, [interactionState]);
 
-  const handleCanvasWheel = (e: WheelEvent<HTMLDivElement>) => {
-    e.preventDefault();
+  const handleCanvasWheel = (e: WheelEvent) => {
     if (!canvasRef.current) return;
 
     const zoomSensitivity = 0.001;
@@ -545,7 +554,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
             </div>
             <Button variant="ghost" onClick={onBack}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                {tRich('back_button')}
+                {tHomepage('back_button')}
             </Button>
           </div>
         </header>
@@ -569,7 +578,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
             </div>
             <div
               ref={canvasRef}
-              onWheel={handleCanvasWheel}
               className={cn("relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none", isMobile && "rounded-none border-x-0")}
             >
               <div
@@ -669,6 +677,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                 <SheetContent side="bottom" className="h-[50%] p-0">
                     <SheetHeader className="p-4 border-b">
                         <SheetTitle>{t('charms_title')}</SheetTitle>
+                        <SheetDescription />
                     </SheetHeader>
                    <CharmsPanel />
                 </SheetContent>
@@ -683,6 +692,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                 <SheetContent side="bottom" className="h-[80%] p-0">
                    <SheetHeader className="p-4 border-b">
                         <SheetTitle>{t('ai_suggestions_title')}</SheetTitle>
+                        <SheetDescription />
                     </SheetHeader>
                     <SuggestionSidebar 
                         onApplySuggestion={addCharmFromSuggestions}
