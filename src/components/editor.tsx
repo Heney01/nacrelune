@@ -374,7 +374,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   };
 
   const handleCanvasTouchEnd = (e: TouchEvent<HTMLDivElement>) => {
-    //e.preventDefault();
     setIsPanning(false);
     initialPinchDistance.current = null;
   };
@@ -618,8 +617,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
             style={{
               left: dragPosition.x - draggedCharm.offset.x,
               top: dragPosition.y - draggedCharm.offset.y,
-              transform: `rotate(${placedCharms.find(p => p.id === draggedCharm.source)?.rotation || 0}deg) scale(${scale})`,
-              transformOrigin: 'top left',
             }}
           >
             <Image
@@ -634,6 +631,3 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     </>
   );
 }
-
-
-    
