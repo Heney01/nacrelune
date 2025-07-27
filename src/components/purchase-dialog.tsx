@@ -2,14 +2,12 @@
 "use client";
 
 import React, { useState } from 'react';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { useTranslations, useRichTranslations } from '@/hooks/use-translations';
 import { ShoppingCart, Loader2, Download, PartyPopper, ArrowLeft, CreditCard, CheckCircle } from 'lucide-react';
 import { JewelryModel, PlacedCharm, Order } from '@/lib/types';
-import { getGeneratedJewelryImage, createOrder } from '@/app/actions';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { createOrder } from '@/app/actions';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -18,7 +16,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
-type Step = 'preview' | 'shipping' | 'payment' | 'confirmation';
+type Step = 'shipping' | 'payment' | 'confirmation';
 
 const ShippingSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -36,14 +34,11 @@ interface PurchaseDialogProps {
 
 export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogProps) {
     const t = useTranslations('Editor');
-    const tRich = useRichTranslations();
     const { toast } = useToast();
 
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-    const [error, setError] = useState<string | null>(null);
-    const [step, setStep] = useState<Step>('preview');
+    const [step, setStep] = useState<Step>('shipping');
     const [orderId, setOrderId] = useState<string | null>(null);
 
     const form = useForm<z.infer<typeof ShippingSchema>>({
@@ -56,29 +51,6 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
         country: "",
       },
     });
-
-    const handleGenerateImage = async () => {
-        setIsLoading(true);
-        setError(null);
-        setGeneratedImage(null);
-
-        try {
-            const result = await getGeneratedJewelryImage({
-                modelName: model.name,
-                modelImage: model.displayImageUrl,
-                charms: placedCharms.map(pc => ({ name: pc.charm.name })),
-                locale: locale,
-            });
-
-            setGeneratedImage(result.imageUrl);
-
-        } catch (err) {
-            console.error(err);
-            setError(t('error_generating_purchase_image'));
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     const handleShippingSubmit = async (values: z.infer<typeof ShippingSchema>) => {
       setIsLoading(true);
@@ -114,10 +86,8 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
     }
 
     const resetDialog = () => {
-        setGeneratedImage(null);
-        setError(null);
         setIsLoading(false);
-        setStep('preview');
+        setStep('shipping');
         setOrderId(null);
         form.reset();
     }
@@ -130,14 +100,11 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
     }
     
     const goBack = () => {
-        if (step === 'shipping') setStep('preview');
         if (step === 'payment') setStep('shipping');
     }
 
     const getTitle = () => {
         switch(step) {
-            case 'preview':
-                return generatedImage ? t('purchase_complete_title') : t('purchase_dialog_title');
             case 'shipping':
                 return "Enter Shipping Details";
             case 'payment':
@@ -151,8 +118,6 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
 
     const getDescription = () => {
          switch(step) {
-            case 'preview':
-                return generatedImage ? t('purchase_complete_description') : t('purchase_dialog_description');
             case 'shipping':
                 return "We need your address to ship your masterpiece.";
             case 'payment':
@@ -174,7 +139,7 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    {step !== 'preview' && (
+                    {step !== 'shipping' && (
                         <Button variant="ghost" size="icon" className="absolute top-3 left-3 h-7 w-7" onClick={goBack}>
                             <ArrowLeft className="h-4 w-4" />
                         </Button>
@@ -186,35 +151,6 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
                         {getDescription()}
                     </DialogDescription>
                 </DialogHeader>
-                
-                {/* Step: Preview */}
-                {step === 'preview' && (
-                    <div className="my-4 flex items-center justify-center">
-                        {isLoading && (
-                            <div className="flex flex-col items-center gap-4 text-center">
-                                <Loader2 className="h-16 w-16 animate-spin text-primary" />
-                                <p className="text-muted-foreground">{t('generating_image_message')}</p>
-                            </div>
-                        )}
-                        {error && (
-                             <Alert variant="destructive">
-                                <AlertTitle>{t('error_title')}</AlertTitle>
-                                <AlertDescription>{error}</AlertDescription>
-                            </Alert>
-                        )}
-                        {generatedImage && (
-                            <div className="flex flex-col items-center gap-4 text-center">
-                                <Image src={generatedImage} alt={t('generated_image_alt')} width={400} height={400} className="rounded-lg border shadow-lg" />
-                                <a href={generatedImage} download={`nacrelune-creation.png`}>
-                                    <Button variant="outline">
-                                        <Download className="mr-2 h-4 w-4" />
-                                        {t('download_image_button')}
-                                    </Button>
-                                </a>
-                            </div>
-                        )}
-                    </div>
-                )}
                 
                 {/* Step: Shipping */}
                 {step === 'shipping' && (
@@ -299,25 +235,12 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
                          </DialogClose>
                     </div>
                 )}
-
-                {/* Footer buttons */}
+                
                 <DialogFooter className="sm:justify-start">
-                     {step === 'preview' && !isLoading && !generatedImage && (
-                        <Button type="button" className="w-full" onClick={handleGenerateImage}>
-                           <PartyPopper className="mr-2 h-4 w-4" />
-                           {t('generate_final_image_button')}
-                        </Button>
-                    )}
-                    {step === 'preview' && generatedImage && (
-                        <Button type="button" className="w-full" onClick={() => setStep('shipping')}>
-                            <CreditCard className="mr-2 h-4 w-4" />
-                            Proceed to Checkout
-                        </Button>
-                    )}
                     {step !== 'confirmation' && (
                          <DialogClose asChild>
                             <Button type="button" variant="secondary" className="w-full">
-                                {tRich(step === 'preview' ? 'Editor.purchase_dialog_action' : 'HomePage.back_button')}
+                                {t('purchase_dialog_action')}
                             </Button>
                         </DialogClose>
                     )}
@@ -325,5 +248,4 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
             </DialogContent>
         </Dialog>
     );
-
-    
+}
