@@ -6,7 +6,6 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-import { getCharmSuggestions } from '@/app/actions';
 import type { SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Lightbulb, Sparkles, WandSparkles } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
@@ -18,41 +17,30 @@ import { useTranslations } from '@/hooks/use-translations';
 import { cn } from '@/lib/utils';
 
 interface SuggestionSidebarProps {
-  jewelryType: string;
-  modelDescription: string;
   onAddCharm: (charm: Charm) => void;
   charms: Charm[];
-  locale: string;
   isMobile?: boolean;
+  suggestions: SuggestCharmPlacementOutput | null;
+  isLoading: boolean;
+  error: string | null;
+  onGenerate: (preferences: string) => void;
 }
 
-export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm, charms, locale, isMobile=false }: SuggestionSidebarProps) {
+export function SuggestionSidebar({
+  onAddCharm,
+  charms,
+  isMobile = false,
+  suggestions,
+  isLoading,
+  error,
+  onGenerate
+}: SuggestionSidebarProps) {
   const t = useTranslations('Editor');
   const [preferences, setPreferences] = useState('');
-  const [suggestions, setSuggestions] = useState<SuggestCharmPlacementOutput | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    setSuggestions(null);
-
-    try {
-      const result = await getCharmSuggestions({
-        jewelryType,
-        modelDescription,
-        charmOptions: charms.map(c => c.name),
-        userPreferences: preferences,
-        locale: locale,
-      });
-      setSuggestions(result);
-    } catch (err) {
-      setError(t('error_generating_suggestions'));
-    } finally {
-      setIsLoading(false);
-    }
+    onGenerate(preferences);
   };
 
   const handleSuggestionClick = (charmName: string) => {
@@ -99,7 +87,7 @@ export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm, c
           )}
           {error && (
             <Alert variant="destructive">
-              <AlertTitle>Error</AlertTitle>
+              <AlertTitle>{t('error_title')}</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}

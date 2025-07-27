@@ -22,6 +22,8 @@ import { useTranslations, useRichTranslations } from '@/hooks/use-translations';
 import { PurchaseDialog } from './purchase-dialog';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { getCharmSuggestions } from '@/app/actions';
+import type { SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 
 
 interface PlacedCharmComponentProps {
@@ -115,18 +117,23 @@ interface SuggestionsPanelProps {
     charms: Charm[];
     locale: string;
     isMobile: boolean;
+    suggestions: SuggestCharmPlacementOutput | null;
+    isLoading: boolean;
+    error: string | null;
+    onGenerate: (preferences: string) => void;
 }
 
-const SuggestionsPanel = ({ jewelryType, model, onAddCharm, charms, locale, isMobile }: SuggestionsPanelProps) => {
+const SuggestionsPanel = ({ jewelryType, model, onAddCharm, charms, locale, isMobile, suggestions, isLoading, error, onGenerate }: SuggestionsPanelProps) => {
     return (
         <div className={cn(!isMobile && "lg:col-span-3")}>
             <SuggestionSidebar 
-                jewelryType={jewelryType.id} 
-                modelDescription={model.name || ''} 
                 onAddCharm={onAddCharm} 
                 charms={charms}
-                locale={locale}
                 isMobile={isMobile}
+                suggestions={suggestions}
+                isLoading={isLoading}
+                error={error}
+                onGenerate={onGenerate}
             />
         </div>
     );
@@ -161,6 +168,12 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   // State for pan and zoom
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+
+  // State for AI suggestions
+  const [suggestions, setSuggestions] = useState<SuggestCharmPlacementOutput | null>(null);
+  const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
+  const [suggestionError, setSuggestionError] = useState<string | null>(null);
+
 
   const interactionState = useRef({
     isDragging: false,
@@ -311,6 +324,26 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
       )
     );
   }, []);
+
+  const handleGenerateSuggestions = async (preferences: string) => {
+      setIsGeneratingSuggestions(true);
+      setSuggestionError(null);
+      // We don't clear old suggestions, so they remain visible while new ones load
+      try {
+        const result = await getCharmSuggestions({
+          jewelryType: jewelryType.id,
+          modelDescription: model.name,
+          charmOptions: charms.map(c => c.name),
+          userPreferences: preferences,
+          locale: locale,
+        });
+        setSuggestions(result);
+      } catch (err) {
+        setSuggestionError(t('error_generating_suggestions'));
+      } finally {
+        setIsGeneratingSuggestions(false);
+      }
+  };
 
 
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent, charmId: string) => {
@@ -624,7 +657,18 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
           </div>
 
           {/* AI Suggestions Panel */}
-          {!isMobile && <SuggestionsPanel jewelryType={jewelryType} model={model} onAddCharm={addCharmFromSuggestions} charms={charms} locale={locale} isMobile={isMobile} />}
+          {!isMobile && <SuggestionsPanel 
+                            jewelryType={jewelryType} 
+                            model={model} 
+                            onAddCharm={addCharmFromSuggestions} 
+                            charms={charms} 
+                            locale={locale} 
+                            isMobile={isMobile}
+                            suggestions={suggestions}
+                            isLoading={isGeneratingSuggestions}
+                            error={suggestionError}
+                            onGenerate={handleGenerateSuggestions}
+                         />}
         </div>
         </div>
       </main>
@@ -656,7 +700,18 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                    <SheetHeader className="p-4 border-b">
                         <SheetTitle>{t('ai_suggestions_title')}</SheetTitle>
                     </SheetHeader>
-                    <SuggestionsPanel jewelryType={jewelryType} model={model} onAddCharm={addCharmFromSuggestions} charms={charms} locale={locale} isMobile={isMobile} />
+                    <SuggestionsPanel 
+                        jewelryType={jewelryType} 
+                        model={model} 
+                        onAddCharm={addCharmFromSuggestions} 
+                        charms={charms} 
+                        locale={locale} 
+                        isMobile={isMobile}
+                        suggestions={suggestions}
+                        isLoading={isGeneratingSuggestions}
+                        error={suggestionError}
+                        onGenerate={handleGenerateSuggestions}
+                    />
                 </SheetContent>
             </Sheet>
           </div>
