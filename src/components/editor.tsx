@@ -17,7 +17,7 @@ import { NacreluneLogo } from './icons';
 import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { useTranslations, useRichTranslations } from '@/hooks/use-translations';
 import { PurchaseDialog } from './purchase-dialog';
 
@@ -51,6 +51,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   
   // Refs to store interaction starting points
   const dragStartPoint = useRef({ x: 0, y: 0 });
+  const panStartPoint = useRef({ x: 0, y: 0 });
 
   const getUrl = async (path: string) => {
     if (path && !path.startsWith('http')) {
@@ -168,6 +169,8 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     
     if ('touches' in e) {
       dragStartPoint.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    } else {
+      dragStartPoint.current = { x: e.clientX, y: e.clientY };
     }
   };
 
@@ -221,6 +224,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     }
     e.stopPropagation();
     setIsPanning(true);
+    panStartPoint.current = { x: e.clientX, y: e.clientY };
     setSelectedPlacedCharmId(null);
   };
 
@@ -266,7 +270,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
       scaleStartRef.current = scale;
       setIsPanning(false);
     } else if (e.touches.length === 1) {
-        dragStartPoint.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        panStartPoint.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         setIsPanning(true);
         setSelectedPlacedCharmId(null);
     }
@@ -295,10 +299,10 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     } else if (isPanning && e.touches.length === 1) {
         const touch = e.touches[0];
         setPan({
-            x: pan.x + touch.clientX - dragStartPoint.current.x,
-            y: pan.y + touch.clientY - dragStartPoint.current.y,
+            x: pan.x + touch.clientX - panStartPoint.current.x,
+            y: pan.y + touch.clientY - panStartPoint.current.y,
         });
-        dragStartPoint.current = { x: touch.clientX, y: touch.clientY };
+        panStartPoint.current = { x: touch.clientX, y: touch.clientY };
     } else if (e.touches.length > 1) { // Pinch-to-zoom logic
         if (initialPinchDistance.current) {
             const newDist = getDistance(e.touches);
@@ -590,3 +594,5 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     </>
   );
 }
+
+    
