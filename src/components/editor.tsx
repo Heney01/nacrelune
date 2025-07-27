@@ -263,7 +263,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         rotation: 0,
       };
       setPlacedCharms((prev) => [...prev, newCharm]);
-      // Switch source to the newly created charm to update its position on subsequent moves
       setDraggedCharm({ ...draggedCharm, source: newCharm.id });
     } else {
       setPlacedCharms(prev => prev.map(pc => pc.id === draggedCharm.source ? { ...pc, position: newPosition } : pc));
@@ -272,7 +271,8 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
 
   // Charm Touch event handlers
   const handleCharmTouchStart = (e: TouchEvent<HTMLDivElement>, charm: Charm, source: 'list' | string = 'list', existingPlacedCharm?: PlacedCharm) => {
-    e.stopPropagation();
+    e.stopPropagation(); // Prevent canvas touch handlers from firing
+    e.preventDefault(); // Prevent page scroll
     const touch = e.touches[0];
     const rect = e.currentTarget.getBoundingClientRect();
 
@@ -285,24 +285,34 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
       source: existingPlacedCharm ? existingPlacedCharm.id : 'list'
     });
     setTouchDragging(true);
-    // Show a ghost image for the finger
     setTouchPosition({ x: touch.clientX, y: touch.clientY });
   };
   
-  const handleCharmTouchMove = (e: TouchEvent<HTMLDivElement>) => {
+  const handleGlobalTouchMove = (e: globalThis.TouchEvent) => {
     if (!touchDragging || !draggedCharm) return;
-    e.preventDefault();
+    e.preventDefault(); // Prevent scroll while dragging a charm anywhere on the page
     const touch = e.touches[0];
     updateCharmPosition(touch.clientX, touch.clientY);
-    // Update ghost image position
     setTouchPosition({ x: touch.clientX, y: touch.clientY });
   };
   
-  const handleCharmTouchEnd = () => {
-    setTouchDragging(false);
-    setDraggedCharm(null);
-    setTouchPosition(null);
+  const handleGlobalTouchEnd = () => {
+    if (touchDragging) {
+      setTouchDragging(false);
+      setDraggedCharm(null);
+      setTouchPosition(null);
+    }
   };
+
+  useEffect(() => {
+    window.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
+    window.addEventListener('touchend', handleGlobalTouchEnd);
+
+    return () => {
+        window.removeEventListener('touchmove', handleGlobalTouchMove);
+        window.removeEventListener('touchend', handleGlobalTouchEnd);
+    };
+  }, [touchDragging, draggedCharm, pan, scale]);
 
 
   const removeCharm = (id: string) => {
@@ -369,7 +379,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   };
 
   // Canvas Touch Handlers
-  const getDistance = (touches: React.TouchList) => {
+  const getDistance = (touches: React.TouchList | TouchList) => {
     return Math.sqrt(
       Math.pow(touches[0].clientX - touches[1].clientX, 2) +
       Math.pow(touches[0].clientY - touches[1].clientY, 2)
@@ -377,7 +387,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   };
 
   const handleCanvasTouchStart = (e: TouchEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('.charm-on-canvas')) return;
+    if ((e.target as HTMLElement).closest('.charm-on-canvas') || touchDragging) return;
     e.preventDefault();
     
     if (e.touches.length === 2) {
@@ -391,6 +401,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   };
 
   const handleCanvasTouchMove = (e: TouchEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest('.charm-on-canvas') || touchDragging) return;
     e.preventDefault();
     if (e.touches.length === 2 && initialPinchDistance.current && canvasRef.current) {
       const newDist = getDistance(e.touches);
@@ -410,7 +421,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
 
       setScale(newScale);
       setPan({ x: newPanX, y: newPanY });
-      initialPinchDistance.current = newDist; // Update for continuous zoom
+      initialPinchDistance.current = newDist;
     } else if (isPanning && e.touches.length === 1) {
         const touch = e.touches[0];
         setPan({
@@ -456,7 +467,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
             </Button>
           </div>
         </header>
-      <main className="flex-grow p-4 md:p-8" onTouchMove={handleCharmTouchMove} onTouchEnd={handleCharmTouchEnd}>
+      <main className="flex-grow p-4 md:p-8">
       <div className="container mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
           {/* Charms Panel */}
@@ -685,5 +696,3 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     </>
   );
 }
-
-    
