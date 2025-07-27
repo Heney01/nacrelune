@@ -17,7 +17,7 @@ import { NacreluneLogo } from './icons';
 import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { useTranslations, useRichTranslations } from '@/hooks/use-translations';
 import { PurchaseDialog } from './purchase-dialog';
 
@@ -168,8 +168,10 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     setSelectedPlacedCharmId(charmId);
     
     if ('touches' in e) {
+      console.log(`[Touch Start] Charm: ${charmId}`);
       dragStartPoint.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     } else {
+      console.log(`[Mouse Down] Charm: ${charmId}`);
       dragStartPoint.current = { x: e.clientX, y: e.clientY };
     }
   };
@@ -213,7 +215,12 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     setPan({ x: newPanX, y: newPanY });
   };
 
-  const handleInteractionEnd = () => {
+  const handleInteractionEnd = (e: React.MouseEvent | React.TouchEvent) => {
+     if ('touches' in e) {
+        console.log('[Touch End] Interaction ended.');
+     } else {
+        console.log('[Mouse Up] Interaction ended.');
+     }
     setIsDragging(false);
     setIsPanning(false);
   };
@@ -223,18 +230,19 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
       return;
     }
     e.stopPropagation();
+    console.log('[Mouse Down] Canvas panning started.');
     setIsPanning(true);
-    panStartPoint.current = { x: e.clientX, y: e.clientY };
+    panStartPoint.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
     setSelectedPlacedCharmId(null);
   };
 
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!canvasRef.current) return;
-
+    
     if (isDragging && selectedPlacedCharmId) {
-        const canvasRect = canvasRef.current.getBoundingClientRect();
-        const dxPercent = (e.movementX / canvasRect.width) * 100 / scale;
-        const dyPercent = (e.movementY / canvasRect.height) * 100 / scale;
+        const dxPercent = (e.movementX / canvasRef.current.clientWidth) * 100 / scale;
+        const dyPercent = (e.movementY / canvasRef.current.clientHeight) * 100 / scale;
+        console.log(`[Mouse Move] Dragging charm. Delta: (${dxPercent.toFixed(2)}%, ${dyPercent.toFixed(2)}%)`);
         
         setPlacedCharms(prev =>
             prev.map(pc =>
@@ -244,10 +252,11 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
             )
         );
     } else if (isPanning) {
-        setPan(currentPan => ({
-            x: currentPan.x + e.movementX,
-            y: currentPan.y + e.movementY,
-        }));
+        console.log(`[Mouse Move] Panning canvas.`);
+        setPan({
+            x: e.clientX - panStartPoint.current.x,
+            y: e.clientY - panStartPoint.current.y,
+        });
     }
   };
   
@@ -269,11 +278,13 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     
     if (e.touches.length > 1) {
       e.preventDefault();
+      console.log('[Touch Start] Pinch-to-zoom started.');
       initialPinchDistance.current = getDistance(e.touches);
       scaleStartRef.current = scale;
       setIsPanning(false); // We are zooming not panning
     } else if (e.touches.length === 1) {
-        panStartPoint.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        console.log('[Touch Start] Canvas panning started.');
+        panStartPoint.current = { x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y };
         setIsPanning(true);
         setSelectedPlacedCharmId(null);
     }
@@ -290,6 +301,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         
         const dxPercent = (dx / canvasRect.width) * 100 / scale;
         const dyPercent = (dy / canvasRect.height) * 100 / scale;
+        console.log(`[Touch Move] Dragging charm. Delta: (${dxPercent.toFixed(2)}%, ${dyPercent.toFixed(2)}%)`);
 
         setPlacedCharms(prev =>
             prev.map(pc =>
@@ -301,13 +313,14 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         dragStartPoint.current = { x: touch.clientX, y: touch.clientY };
     } else if (isPanning && e.touches.length === 1) {
         const touch = e.touches[0];
+        console.log('[Touch Move] Panning canvas.');
         setPan({
-            x: pan.x + touch.clientX - panStartPoint.current.x,
-            y: pan.y + touch.clientY - panStartPoint.current.y,
+            x: touch.clientX - panStartPoint.current.x,
+            y: touch.clientY - panStartPoint.current.y,
         });
-        panStartPoint.current = { x: touch.clientX, y: touch.clientY };
     } else if (e.touches.length > 1) { // Pinch-to-zoom logic
         if (initialPinchDistance.current) {
+            console.log('[Touch Move] Pinch-to-zoom in progress.');
             const newDist = getDistance(e.touches);
             const scaleFactor = newDist / initialPinchDistance.current;
             const newScale = Math.min(Math.max(0.2, scaleStartRef.current * scaleFactor), 5);
@@ -330,8 +343,9 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
 
   const handleCanvasTouchEnd = (e: TouchEvent<HTMLDivElement>) => {
     e.stopPropagation();
+    console.log('[Touch End] Canvas interaction ended.');
     initialPinchDistance.current = null;
-    handleInteractionEnd();
+    handleInteractionEnd(e);
   };
 
 
@@ -358,6 +372,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     const handleDelete = (e: React.MouseEvent | React.TouchEvent) => {
       e.stopPropagation();
       e.preventDefault();
+      console.log(`[Delete] Deleting charm ${placed.id}`);
       removeCharm(placed.id);
     }
 
@@ -598,7 +613,5 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     </>
   );
 }
-
-    
 
     
