@@ -17,7 +17,7 @@ import { NacreluneLogo } from './icons';
 import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useTranslations, useRichTranslations } from '@/hooks/use-translations';
 import { PurchaseDialog } from './purchase-dialog';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -36,11 +36,11 @@ interface PlacedCharmComponentProps {
 const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDelete, onRotate }: PlacedCharmComponentProps) => {
     const charmRef = useRef<HTMLDivElement>(null);
 
-    const handleDelete = (e: React.MouseEvent | React.TouchEvent) => {
+    const handleDelete = useCallback((e: React.MouseEvent | React.TouchEvent) => {
         e.stopPropagation();
         e.preventDefault();
         onDelete(placed.id);
-    };
+    }, [onDelete, placed.id]);
 
     const handleWheelRotation = useCallback((e: WheelEvent) => {
         e.preventDefault(); 
@@ -48,7 +48,7 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
     }, [onRotate, placed.id]);
 
 
-    React.useEffect(() => {
+    useEffect(() => {
       const element = charmRef.current;
       if (!element) return;
 
@@ -59,7 +59,9 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
       element.addEventListener('wheel', handleWheel, { passive: false });
 
       return () => {
-        element.removeEventListener('wheel', handleWheel);
+        if(element) {
+            element.removeEventListener('wheel', handleWheel);
+        }
       };
     }, [handleWheelRotation]);
 
@@ -126,6 +128,10 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   const [charms, setCharms] = useState<Charm[]>([]);
   const [charmCategories, setCharmCategories] = useState<CharmCategory[]>([]);
   const [isLoadingCharms, setIsLoadingCharms] = useState(true);
+
+  // State for mobile sheets
+  const [isCharmsSheetOpen, setIsCharmsSheetOpen] = useState(false);
+  const [isSuggestionsSheetOpen, setIsSuggestionsSheetOpen] = useState(false);
 
   // State for pan and zoom
   const [scale, setScale] = useState(1);
@@ -245,6 +251,11 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     };
     setPlacedCharms(prev => [...prev, newCharm]);
     
+    // Close sheet on mobile after adding a charm
+    if (isMobile) {
+        setIsCharmsSheetOpen(false);
+    }
+
     setTimeout(() => {
         setPlacedCharms(prev => prev.map(pc => pc.id === newCharm.id ? { ...pc, animation: undefined } : pc));
     }, 500);
@@ -296,7 +307,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         const currentPlacedCharms = placedCharmsRef.current;
 
         if (interactionState.isDragging && interactionState.activeCharmId) {
-            if ('preventDefault' in e) e.preventDefault();
+            if ('preventDefault' in e && e.cancelable) e.preventDefault();
             const dx = point.clientX - interactionState.dragStart.x;
             const dy = point.clientY - interactionState.dragStart.y;
 
@@ -312,7 +323,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
             );
             interactionState.dragStart = { x: point.clientX, y: point.clientY };
         } else if (interactionState.isPanning) {
-            if ('preventDefault' in e) e.preventDefault();
+            if ('preventDefault' in e && e.cancelable) e.preventDefault();
             const newX = point.clientX - interactionState.panStart.x;
             const newY = point.clientY - interactionState.panStart.y;
             setPan({ x: newX, y: newY });
@@ -425,19 +436,19 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                                 <AccordionItem value={category.id} key={category.id}>
                                     <AccordionTrigger className="text-base font-headline">{category.name}</AccordionTrigger>
                                     <AccordionContent>
-                                        <div className="grid grid-cols-3 gap-4 pt-2">
+                                        <div className={cn("grid gap-2 pt-2", isMobile ? "grid-cols-4" : "grid-cols-3")}>
                                             {charmsByCategory[category.id].map((charm) => (
                                                 <Dialog key={charm.id}>
                                                     <div
                                                         onClick={() => { addCharmToCanvas(charm) }}
-                                                        className="relative group p-2 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer"
+                                                        className="relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer"
                                                         title={charm.name}
                                                     >
                                                         <Image
                                                             src={charm.imageUrl}
                                                             alt={charm.name}
-                                                            width={48}
-                                                            height={48}
+                                                            width={isMobile ? 32 : 48}
+                                                            height={isMobile ? 32 : 48}
                                                             className="pointer-events-none"
                                                             data-ai-hint="jewelry charm"
                                                         />
@@ -601,21 +612,21 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
 
        {isMobile && (
           <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-2 flex justify-around">
-            <Sheet>
+            <Sheet open={isCharmsSheetOpen} onOpenChange={setIsCharmsSheetOpen}>
                 <SheetTrigger asChild>
                     <Button variant="ghost" className="flex flex-col h-auto p-2">
                        <Gem className="h-6 w-6" />
                        <span className="text-xs">{t('charms_title')}</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="bottom" className="h-[80%] p-0">
+                <SheetContent side="bottom" className="h-[50%] p-0">
                     <SheetHeader className="p-4 border-b">
                         <SheetTitle>{t('charms_title')}</SheetTitle>
                     </SheetHeader>
                    <CharmsPanel />
                 </SheetContent>
             </Sheet>
-            <Sheet>
+            <Sheet open={isSuggestionsSheetOpen} onOpenChange={setIsSuggestionsSheetOpen}>
                  <SheetTrigger asChild>
                     <Button variant="ghost" className="flex flex-col h-auto p-2">
                        <Sparkles className="h-6 w-6" />
