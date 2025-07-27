@@ -19,7 +19,7 @@ interface PurchaseDialogProps {
 
 // Helper to convert an image URL to a data URI
 async function toDataURI(url: string): Promise<string> {
-  const response = await fetch(url);
+  const response = await fetch(url, { mode: 'cors' });
   const blob = await response.blob();
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
