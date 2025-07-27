@@ -157,16 +157,18 @@ export default function Home() {
                         <Card key={model.id} className="overflow-hidden group flex flex-col" onClick={() => handleModelSelect(model)}>
                           <div className="overflow-hidden relative">
                               <Image src={model.displayImageUrl} alt={model.name} width={400} height={400} className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300" data-ai-hint="jewelry" />
-                               <Dialog>
-                                <DialogTrigger asChild>
-                                    <Button variant="secondary" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                                        <ZoomIn className="h-5 w-5" />
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-3xl">
-                                    <Image src={model.displayImageUrl} alt={model.name} width={800} height={800} className="w-full h-auto object-contain rounded-lg" />
-                                </DialogContent>
-                              </Dialog>
+                               <div onClick={(e) => e.stopPropagation()}>
+                                <Dialog>
+                                    <DialogTrigger asChild>
+                                        <Button variant="secondary" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <ZoomIn className="h-5 w-5" />
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-3xl">
+                                        <Image src={model.displayImageUrl} alt={model.name} width={800} height={800} className="w-full h-auto object-contain rounded-lg" />
+                                    </DialogContent>
+                                </Dialog>
+                              </div>
                             </div>
                            <CardContent className="p-4 flex-grow flex flex-col justify-between">
                               <h3 className="text-lg font-headline flex-grow">{model.name}</h3>
@@ -198,3 +200,4 @@ export default function Home() {
     </div>
   );
 }
+
