@@ -30,7 +30,7 @@ interface PlacedCharmComponentProps {
     placed: PlacedCharm;
     isSelected: boolean;
     scale: number;
-    onDragStart: (e: React.MouseEvent | React.TouchEvent, charmId: string) => void;
+    onDragStart: (e: React.MouseEvent | TouchEvent, charmId: string) => void;
     onDelete: (charmId: string) => void;
     onRotate: (e: WheelEvent, charmId: string) => void;
 }
@@ -43,36 +43,36 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
         e.preventDefault();
         onDelete(placed.id);
     }, [onDelete, placed.id]);
-
-    const handleWheelRotation = useCallback((e: WheelEvent) => {
-        e.preventDefault(); 
-        onRotate(e, placed.id);
-    }, [onRotate, placed.id]);
-
-
+    
     useEffect(() => {
-      const element = charmRef.current;
-      if (!element) return;
+        const element = charmRef.current;
+        if (!element) return;
 
-      const handleWheel = (e: Event) => {
-          handleWheelRotation(e as WheelEvent)
-      }
-
-      element.addEventListener('wheel', handleWheel, { passive: false });
-
-      return () => {
-        if(element) {
-            element.removeEventListener('wheel', handleWheel);
+        const handleWheel = (e: Event) => {
+            e.preventDefault();
+            onRotate(e as WheelEvent, placed.id);
         }
-      };
-    }, [handleWheelRotation]);
+
+        const handleTouchStart = (e: TouchEvent) => {
+            onDragStart(e, placed.id);
+        }
+
+        element.addEventListener('wheel', handleWheel, { passive: false });
+        element.addEventListener('touchstart', handleTouchStart, { passive: false });
+
+        return () => {
+            if(element) {
+                element.removeEventListener('wheel', handleWheel);
+                element.removeEventListener('touchstart', handleTouchStart);
+            }
+        };
+    }, [onRotate, onDragStart, placed.id]);
 
 
     return (
         <div
             ref={charmRef}
             onMouseDown={(e) => onDragStart(e, placed.id)}
-            onTouchStart={(e) => onDragStart(e, placed.id)}
             className={cn(
                 "absolute group charm-on-canvas cursor-pointer p-1 rounded-full select-none",
                 {
@@ -332,7 +332,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   };
 
 
-  const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent, charmId: string) => {
+  const handleDragStart = useCallback((e: React.MouseEvent | TouchEvent, charmId: string) => {
     if ('preventDefault' in e) e.preventDefault();
     e.stopPropagation();
 
@@ -401,30 +401,33 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         interactionState.activeCharmId = null;
       };
 
-      // Mouse events
-      canvas.addEventListener('mousedown', handlePanStart);
-      window.addEventListener('mousemove', handleMove);
-      window.addEventListener('mouseup', handleInteractionEnd);
-
-      // Touch events
-      canvas.addEventListener('touchstart', handlePanStart, { passive: true });
-      window.addEventListener('touchmove', handleMove, { passive: false });
-      window.addEventListener('touchend', handleInteractionEnd);
-      
       const handleWheel = (e: Event) => {
           if (!(e.target as HTMLElement).closest('.charm-on-canvas')) {
               e.preventDefault();
               handleCanvasWheel(e as WheelEvent);
           }
       };
+      
+      const handleTouchStart = (e: TouchEvent) => {
+        handlePanStart(e);
+      };
 
+      // Mouse events
+      canvas.addEventListener('mousedown', handlePanStart);
+      window.addEventListener('mousemove', handleMove);
+      window.addEventListener('mouseup', handleInteractionEnd);
+
+      // Touch events
+      canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
+      window.addEventListener('touchmove', handleMove, { passive: false });
+      window.addEventListener('touchend', handleInteractionEnd);
       canvas.addEventListener('wheel', handleWheel, { passive: false });
       
       return () => {
         canvas.removeEventListener('mousedown', handlePanStart);
         window.removeEventListener('mousemove', handleMove);
         window.removeEventListener('mouseup', handleInteractionEnd);
-        canvas.removeEventListener('touchstart', handlePanStart);
+        canvas.removeEventListener('touchstart', handleTouchStart);
         window.removeEventListener('touchmove', handleMove);
         window.removeEventListener('touchend', handleInteractionEnd);
         canvas.removeEventListener('wheel', handleWheel);
@@ -522,7 +525,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                                                     <DialogContent className="max-w-md">
                                                         <DialogHeader>
                                                             <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
-                                                            <DialogDescription className="text-base">{charm.description}</DialogDescription>
+                                                            <DialogDescription>{charm.description}</DialogDescription>
                                                         </DialogHeader>
                                                         <div className="mt-4 flex justify-center">
                                                             <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
@@ -587,7 +590,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                       transformOrigin: '0 0',
                   }}
               >
-                  <Image src={model.editorImageUrl} alt={model.name} fill style={{ objectFit: 'contain' }} className="pointer-events-none" data-ai-hint="jewelry model" sizes="100vw" />
+                  <Image src={model.editorImageUrl} alt={model.name} fill priority style={{ objectFit: 'contain' }} className="pointer-events-none" data-ai-hint="jewelry model" sizes="50vw" />
               </div>
               <div className="absolute top-0 left-0 w-full h-full" style={{ perspective: '1000px' }}>
                   <div
@@ -677,7 +680,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                 <SheetContent side="bottom" className="h-[50%] p-0">
                     <SheetHeader className="p-4 border-b">
                         <SheetTitle>{t('charms_title')}</SheetTitle>
-                        <SheetDescription />
+                        <SheetDescription>{t('search_placeholder')}</SheetDescription>
                     </SheetHeader>
                    <CharmsPanel />
                 </SheetContent>
@@ -692,7 +695,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                 <SheetContent side="bottom" className="h-[80%] p-0">
                    <SheetHeader className="p-4 border-b">
                         <SheetTitle>{t('ai_suggestions_title')}</SheetTitle>
-                        <SheetDescription />
+                        <SheetDescription>{t('ai_suggestions_description')}</SheetDescription>
                     </SheetHeader>
                     <SuggestionSidebar 
                         onApplySuggestion={addCharmFromSuggestions}
@@ -710,3 +713,5 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     </>
   );
 }
+
+    
