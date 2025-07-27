@@ -17,7 +17,7 @@ import { NacreluneLogo } from './icons';
 import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { useTranslations, useRichTranslations } from '@/hooks/use-translations';
 import { PurchaseDialog } from './purchase-dialog';
 
@@ -262,13 +262,16 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   const scaleStartRef = useRef(1);
   
   const handleCanvasTouchStart = (e: TouchEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('.charm-on-canvas')) return;
+    e.stopPropagation();
+    if ((e.target as HTMLElement).closest('.charm-on-canvas')) {
+      return
+    };
     
     if (e.touches.length > 1) {
       e.preventDefault();
       initialPinchDistance.current = getDistance(e.touches);
       scaleStartRef.current = scale;
-      setIsPanning(false);
+      setIsPanning(false); // We are zooming not panning
     } else if (e.touches.length === 1) {
         panStartPoint.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         setIsPanning(true);
@@ -326,6 +329,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   };
 
   const handleCanvasTouchEnd = (e: TouchEvent<HTMLDivElement>) => {
+    e.stopPropagation();
     initialPinchDistance.current = null;
     handleInteractionEnd();
   };
