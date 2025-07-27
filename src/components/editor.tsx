@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { PurchaseDialog } from './purchase-dialog';
 import { ShoppingCart, Trash2, X, Search, ArrowLeft, Loader2, ZoomIn, ZoomOut, Move } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NacreluneLogo } from './icons';
@@ -412,7 +411,10 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                     <Trash2 className="mr-2 h-4 w-4" />
                     {t('clear_all_button')}
                   </Button>
-                  <PurchaseDialog model={model} placedCharms={placedCharms} locale={locale} />
+                  <Button>
+                    <ShoppingCart className="mr-2 h-4 w-4" />
+                    {t('purchase_button')}
+                  </Button>
                 </div>
             </div>
             <div
