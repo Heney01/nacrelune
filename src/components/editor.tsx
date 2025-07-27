@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useRef, WheelEvent, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useRef, WheelEvent, useCallback } from 'react';
 import Image from 'next/image';
 import { JewelryModel, PlacedCharm, Charm, JewelryType, CharmCategory } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -48,7 +48,7 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
     }, [onRotate, placed.id]);
 
 
-    useEffect(() => {
+    React.useEffect(() => {
       const element = charmRef.current;
       if (!element) return;
 
@@ -108,6 +108,31 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
 });
 PlacedCharmComponent.displayName = 'PlacedCharmComponent';
 
+interface SuggestionsPanelProps {
+    jewelryType: Omit<JewelryType, 'models'>;
+    model: JewelryModel;
+    onAddCharm: (charm: Charm) => void;
+    charms: Charm[];
+    locale: string;
+    isMobile: boolean;
+}
+
+const SuggestionsPanel = ({ jewelryType, model, onAddCharm, charms, locale, isMobile }: SuggestionsPanelProps) => {
+    return (
+        <div className={cn(!isMobile && "lg:col-span-3")}>
+            <SuggestionSidebar 
+                jewelryType={jewelryType.id} 
+                modelDescription={model.name || ''} 
+                onAddCharm={onAddCharm} 
+                charms={charms}
+                locale={locale}
+                isMobile={isMobile}
+            />
+        </div>
+    );
+};
+
+
 interface EditorProps {
   model: JewelryModel;
   jewelryType: Omit<JewelryType, 'models'>;
@@ -117,7 +142,7 @@ interface EditorProps {
 
 export default function Editor({ model, jewelryType, onBack, locale }: EditorProps) {
   const t = useTranslations('Editor');
-  const tRich = useRichTranslations();
+  const tRich = useRichTranslations('HomePage');
   const isMobile = useIsMobile();
   const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -167,7 +192,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     return path || 'https://placehold.co/100x100.png';
   }
 
-  useEffect(() => {
+  React.useEffect(() => {
     const fetchCharmsData = async () => {
       setIsLoadingCharms(true);
       try {
@@ -228,16 +253,8 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
       return acc;
     }, {} as Record<string, Charm[]>);
   }, [filteredCharms]);
-
-  const addCharmFromCharmList = (charm: Charm) => {
-    addCharmToCanvas(charm, 'charmsPanel');
-  }
-
-  const addCharmFromSuggestions = (charm: Charm) => {
-    addCharmToCanvas(charm, 'suggestionsPanel');
-  };
-
-  const addCharmToCanvas = (charm: Charm, source: 'charmsPanel' | 'suggestionsPanel') => {
+  
+  const addCharmToCanvas = useCallback((charm: Charm, source: 'charmsPanel' | 'suggestionsPanel') => {
     if (!canvasRef.current) return;
 
     const canvasRect = canvasRef.current.getBoundingClientRect();
@@ -266,7 +283,15 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     setTimeout(() => {
         setPlacedCharms(prev => prev.map(pc => pc.id === newCharm.id ? { ...pc, animation: undefined } : pc));
     }, 500);
-  };
+  }, [isMobile]);
+
+  const addCharmFromCharmList = useCallback((charm: Charm) => {
+    addCharmToCanvas(charm, 'charmsPanel');
+  }, [addCharmToCanvas]);
+
+  const addCharmFromSuggestions = useCallback((charm: Charm) => {
+    addCharmToCanvas(charm, 'suggestionsPanel');
+  }, [addCharmToCanvas]);
   
   const removeCharm = useCallback((id: string) => {
     setPlacedCharms(prev => prev.filter(c => c.id !== id));
@@ -302,7 +327,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   }, [interactionState]);
 
 
-    useEffect(() => {
+  React.useEffect(() => {
       const canvas = canvasRef.current;
       if (!canvas) return;
   
@@ -454,9 +479,9 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                                                         <Image
                                                             src={charm.imageUrl}
                                                             alt={charm.name}
-                                                            width={isMobile ? 40 : 48}
-                                                            height={isMobile ? 40 : 48}
-                                                            className="pointer-events-none"
+                                                            width={48}
+                                                            height={48}
+                                                            className="pointer-events-none p-1"
                                                             data-ai-hint="jewelry charm"
                                                         />
                                                         <p className="text-xs text-center mt-1 truncate">{charm.name}</p>
@@ -492,19 +517,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     </Card>
   );
 
-  const SuggestionsPanel = () => (
-     <div className={cn(!isMobile && "lg:col-span-3")}>
-        <SuggestionSidebar 
-          jewelryType={jewelryType.id} 
-          modelDescription={model.name || ''} 
-          onAddCharm={addCharmFromSuggestions} 
-          charms={charms}
-          locale={locale}
-          isMobile={isMobile}
-        />
-     </div>
-  );
-
   return (
     <>
       <header className="p-4 border-b">
@@ -514,7 +526,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
             </div>
             <Button variant="ghost" onClick={onBack}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                {tRich('HomePage.back_button')}
+                {tRich('back_button')}
             </Button>
           </div>
         </header>
@@ -612,7 +624,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
           </div>
 
           {/* AI Suggestions Panel */}
-          {!isMobile && <SuggestionsPanel />}
+          {!isMobile && <SuggestionsPanel jewelryType={jewelryType} model={model} onAddCharm={addCharmFromSuggestions} charms={charms} locale={locale} isMobile={isMobile} />}
         </div>
         </div>
       </main>
@@ -644,7 +656,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                    <SheetHeader className="p-4 border-b">
                         <SheetTitle>{t('ai_suggestions_title')}</SheetTitle>
                     </SheetHeader>
-                    <SuggestionsPanel />
+                    <SuggestionsPanel jewelryType={jewelryType} model={model} onAddCharm={addCharmFromSuggestions} charms={charms} locale={locale} isMobile={isMobile} />
                 </SheetContent>
             </Sheet>
           </div>
