@@ -90,6 +90,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
             imageUrl: imageUrl,
             description: data.description,
             categoryId: categoryRef.id,
+            price: data.price || 0,
           } as Charm;
         }));
         setCharms(fetchedCharms);

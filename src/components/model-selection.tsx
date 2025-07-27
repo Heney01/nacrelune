@@ -56,6 +56,7 @@ export function ModelSelection({ selectedType, onModelSelect, onBack }: ModelSel
                             displayImageUrl: displayImageUrl,
                             editorImageUrl: editorImageUrl,
                             snapPath: data.snapPath || '',
+                            price: data.price || 0,
                         } as JewelryModel;
                     })
                 );

@@ -12,6 +12,7 @@ export interface Charm {
   imageUrl: string;
   description: string;
   categoryId: string;
+  price?: number;
 }
 
 export interface JewelryModel {
@@ -20,6 +21,7 @@ export interface JewelryModel {
   displayImageUrl: string;
   editorImageUrl: string;
   snapPath?: string;
+  price?: number;
 }
 
 export interface JewelryType {
@@ -42,7 +44,8 @@ export interface Order {
   id?: string;
   modelName: string;
   modelImage: string;
-  charms: { name: string; imageUrl: string }[];
+  charms: { name: string; imageUrl: string; price?: number }[];
+  totalPrice: number;
   shippingInfo: {
     name: string;
     address: string;

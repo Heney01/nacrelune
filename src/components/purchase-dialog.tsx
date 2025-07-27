@@ -1,11 +1,11 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { useTranslations, useRichTranslations } from '@/hooks/use-translations';
-import { ShoppingCart, Loader2, Download, PartyPopper, ArrowLeft, CreditCard, CheckCircle } from 'lucide-react';
+import { ShoppingCart, Loader2, CheckCircle, ArrowLeft } from 'lucide-react';
 import { JewelryModel, PlacedCharm, Order } from '@/lib/types';
 import { createOrder } from '@/app/actions';
 import { Input } from './ui/input';
@@ -15,6 +15,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Separator } from './ui/separator';
 
 type Step = 'shipping' | 'payment' | 'confirmation';
 
@@ -41,6 +42,11 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
     const [step, setStep] = useState<Step>('shipping');
     const [orderId, setOrderId] = useState<string | null>(null);
 
+    const totalPrice = useMemo(() => {
+        const charmsPrice = placedCharms.reduce((total, pc) => total + (pc.charm.price || 0), 0);
+        return (model.price || 0) + charmsPrice;
+    }, [model, placedCharms]);
+
     const form = useForm<z.infer<typeof ShippingSchema>>({
       resolver: zodResolver(ShippingSchema),
       defaultValues: {
@@ -58,7 +64,12 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
         const orderData: Omit<Order, 'id' | 'createdAt'> = {
             modelName: model.name,
             modelImage: model.displayImageUrl,
-            charms: placedCharms.map(pc => ({ name: pc.charm.name, imageUrl: pc.charm.imageUrl })),
+            charms: placedCharms.map(pc => ({ 
+              name: pc.charm.name, 
+              imageUrl: pc.charm.imageUrl,
+              price: pc.charm.price || 0,
+            })),
+            totalPrice: totalPrice,
             shippingInfo: values,
         };
         const result = await createOrder(orderData);
@@ -106,7 +117,7 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
     const getTitle = () => {
         switch(step) {
             case 'shipping':
-                return "Enter Shipping Details";
+                return "Order Summary";
             case 'payment':
                 return "Payment Information";
             case 'confirmation':
@@ -115,24 +126,41 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
                 return "";
         }
     }
-
-    const getDescription = () => {
-         switch(step) {
-            case 'shipping':
-                return "We need your address to ship your masterpiece.";
-            case 'payment':
-                return "Enter your credit card details below.";
-            case 'confirmation':
-                return `Thank you for your purchase! Your order ID is #${orderId}. We will notify you when it ships.`;
-            default:
-                return "";
-        }
-    }
+    
+    const OrderSummary = () => (
+      <div className="space-y-4 my-4">
+        <div>
+          <h3 className="text-lg font-medium mb-2">Your Creation</h3>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span>Model: {model.name}</span>
+              <span>{(model.price || 0).toFixed(2)}€</span>
+            </div>
+             {placedCharms.length > 0 && (
+                <div className="pl-4">
+                    <h4 className="font-medium text-muted-foreground">Charms:</h4>
+                    {placedCharms.map(pc => (
+                        <div key={pc.id} className="flex justify-between">
+                            <span>{pc.charm.name}</span>
+                            <span>{(pc.charm.price || 0).toFixed(2)}€</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+          </div>
+        </div>
+        <Separator />
+        <div className="flex justify-between font-bold text-lg">
+          <span>Total</span>
+          <span>{totalPrice.toFixed(2)}€</span>
+        </div>
+      </div>
+    );
 
     return (
         <Dialog open={isOpen} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-                <Button>
+                <Button disabled={placedCharms.length === 0}>
                     <ShoppingCart className="mr-2 h-4 w-4" />
                     {t('purchase_button')}
                 </Button>
@@ -147,15 +175,16 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
                     <DialogTitle className="font-headline text-2xl text-center pt-2">
                         {getTitle()}
                     </DialogTitle>
-                    <DialogDescription className="text-center">
-                        {getDescription()}
-                    </DialogDescription>
                 </DialogHeader>
                 
                 {/* Step: Shipping */}
                 {step === 'shipping' && (
+                  <>
+                    <OrderSummary />
+                    <Separator />
                     <Form {...form}>
                       <form onSubmit={form.handleSubmit(handleShippingSubmit)} className="space-y-4 py-4">
+                        <h3 className="font-medium">Shipping Details</h3>
                         <FormField control={form.control} name="name" render={({ field }) => (
                           <FormItem>
                             <FormLabel>Full Name</FormLabel>
@@ -198,6 +227,7 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
                         </Button>
                       </form>
                     </Form>
+                  </>
                 )}
 
                 {/* Step: Payment */}
@@ -218,7 +248,7 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
                             </div>
                          </div>
                          <Button type="submit" className="w-full" disabled={isLoading}>
-                            {isLoading ? <Loader2 className="animate-spin" /> : `Pay & Complete Order`}
+                            {isLoading ? <Loader2 className="animate-spin" /> : `Pay ${totalPrice.toFixed(2)}€`}
                          </Button>
                     </form>
                 )}
