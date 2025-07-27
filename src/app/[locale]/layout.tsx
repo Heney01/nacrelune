@@ -1,42 +1,47 @@
-// This file is now redundant as we are not using next-intl
-// and can be removed. I will keep it for now to avoid breaking
-// the file structure, but will remove it in a future step.
 
 import { TranslationsProvider } from '@/hooks/use-translations';
-import { promises as fs } from 'fs';
-import path from 'path';
+import { Toaster } from "@/components/ui/toaster";
+import '../globals.css';
+import { ReactNode } from 'react';
 
+// Define available locales
+const availableLocales = ['en', 'fr'];
+
+// Function to get messages for a given locale
 async function getMessages(locale: string) {
+  // Validate locale
+  const finalLocale = availableLocales.includes(locale) ? locale : 'en';
   try {
-    const filePath = path.join(process.cwd(), 'messages', `${locale}.json`);
-    const fileContent = await fs.readFile(filePath, 'utf8');
-    return JSON.parse(fileContent);
-  } catch(e) {
-    console.error(`Could not load messages for locale: ${locale}`, e);
-    // Fallback to English if the locale file is not found
-    try {
-      const filePath = path.join(process.cwd(), 'messages', `en.json`);
-      const fileContent = await fs.readFile(filePath, 'utf8');
-      return JSON.parse(fileContent);
-    } catch(enError) {
-       console.error(`Could not load fallback messages for en`, enError);
-       return {}; // Return empty object if even English fails
-    }
+    return (await import(`../../../messages/${finalLocale}.json`)).default;
+  } catch (error) {
+    console.error(`Could not load messages for locale: ${finalLocale}`, error);
+    // Fallback to English if the locale file is missing
+    return (await import(`../../../messages/en.json`)).default;
   }
 }
 
 export default async function LocaleLayout({
   children,
-  params: {locale}
+  params: { locale },
 }: {
-  children: React.ReactNode;
-  params: {locale: string};
+  children: ReactNode;
+  params: { locale: string };
 }) {
   const messages = await getMessages(locale);
- 
+
   return (
-    <TranslationsProvider messages={messages}>
-        {children}
-    </TranslationsProvider>
+    <html lang={locale}>
+        <head>
+            <link rel="preconnect" href="https://fonts.googleapis.com" />
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+            <link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@400;700&display=swap" rel="stylesheet"></link>
+        </head>
+        <body className="font-body antialiased">
+            <TranslationsProvider messages={messages}>
+                {children}
+            </TranslationsProvider>
+            <Toaster />
+        </body>
+    </html>
   );
 }
