@@ -21,9 +21,10 @@ interface SuggestionSidebarProps {
   modelDescription: string;
   onAddCharm: (charm: Charm) => void;
   charms: Charm[];
+  locale: string;
 }
 
-export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm, charms }: SuggestionSidebarProps) {
+export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm, charms, locale }: SuggestionSidebarProps) {
   const t = useTranslations('Editor');
   const [preferences, setPreferences] = useState('');
   const [suggestions, setSuggestions] = useState<SuggestCharmPlacementOutput | null>(null);
@@ -42,6 +43,7 @@ export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm, c
         modelDescription,
         charmOptions: charms.map(c => c.name),
         userPreferences: preferences,
+        locale: locale,
       });
       setSuggestions(result);
     } catch (err) {

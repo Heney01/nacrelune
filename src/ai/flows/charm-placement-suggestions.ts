@@ -17,6 +17,7 @@ const SuggestCharmPlacementInputSchema = z.object({
   modelDescription: z.string().describe('The description of the selected jewelry model.'),
   charmOptions: z.array(z.string()).describe('The available charm options.'),
   userPreferences: z.string().optional().describe('Optional user preferences for charm placement.'),
+  locale: z.string().optional().describe('The locale for the response language (e.g., "en", "fr").'),
 });
 export type SuggestCharmPlacementInput = z.infer<typeof SuggestCharmPlacementInputSchema>;
 
@@ -60,6 +61,7 @@ const prompt = ai.definePrompt({
   output: {schema: SuggestCharmPlacementOutputSchema},
   tools: [shouldIntegrateCharmTool],
   prompt: `You are a jewelry design assistant. Your task is to suggest charm placements based on the provided information.
+Your response MUST be in the following language: {{{locale}}}.
 
 IMPORTANT: You MUST strictly adhere to the user's preferences. If the user expresses a negative constraint (e.g., "I hate...", "no red", "I don't like..."), you MUST NOT suggest any charm that violates this constraint. This is a strict rule.
 

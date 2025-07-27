@@ -25,9 +25,10 @@ interface EditorProps {
   model: JewelryModel;
   jewelryType: JewelryType;
   onBack: () => void;
+  locale: string;
 }
 
-export default function Editor({ model, jewelryType, onBack }: EditorProps) {
+export default function Editor({ model, jewelryType, onBack, locale }: EditorProps) {
   const t = useTranslations('Editor');
   const tRich = useRichTranslations();
   const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
@@ -539,6 +540,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
               modelDescription={model.name || ''} 
               onAddCharm={addCharmToCanvas} 
               charms={charms}
+              locale={locale}
             />
           </div>
         </div>

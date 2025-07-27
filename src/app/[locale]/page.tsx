@@ -15,11 +15,14 @@ import { collection, getDocs } from 'firebase/firestore';
 import { ref, getDownloadURL } from "firebase/storage";
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useTranslations } from '@/hooks/use-translations';
+import { useParams } from 'next/navigation';
 
 type Step = 'type-selection' | 'model-selection' | 'editor';
 
 export default function Home() {
   const t = useTranslations('HomePage');
+  const params = useParams();
+  const locale = Array.isArray(params.locale) ? params.locale[0] : params.locale;
   const [step, setStep] = useState<Step>('type-selection');
   const [selectedType, setSelectedType] = useState<JewelryType | null>(null);
   const [selectedModel, setSelectedModel] = useState<JewelryModel | null>(null);
@@ -190,8 +193,8 @@ export default function Home() {
           </>
         );
       case 'editor':
-        if (!selectedModel || !selectedType) return null;
-        return <Editor model={selectedModel} jewelryType={selectedType} onBack={handleBack} />;
+        if (!selectedModel || !selectedType || !locale) return null;
+        return <Editor model={selectedModel} jewelryType={selectedType} onBack={handleBack} locale={locale} />;
     }
   };
 
