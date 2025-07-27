@@ -45,9 +45,8 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
-  const [startPanPoint, setStartPanPoint] = useState({ x: 0, y: 0 });
+  const startPanPoint = useRef({ x: 0, y: 0 });
   const initialPinchDistance = useRef<number | null>(null);
-  const panStartRef = useRef({ x: 0, y: 0 });
   const scaleStartRef = useRef(1);
 
   // Mobile touch drag state
@@ -178,7 +177,9 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   
      const dragImage = e.currentTarget.querySelector('img')?.cloneNode(true) as HTMLElement;
       if(dragImage) {
-        dragImage.style.transform = `rotate(${placedCharm.rotation}deg)`;
+        dragImage.style.transform = `rotate(${placedCharm.rotation}deg) scale(${scale})`;
+        dragImage.style.position = 'absolute';
+        dragImage.style.top = '-9999px'; // Hide it off-screen
         document.body.appendChild(dragImage);
         e.dataTransfer.setDragImage(dragImage, offsetX * scale, offsetY * scale);
         setTimeout(() => document.body.removeChild(dragImage), 0);
@@ -338,15 +339,15 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     }
     e.preventDefault();
     setIsPanning(true);
-    setStartPanPoint({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+    startPanPoint.current = ({ x: e.clientX - pan.x, y: e.clientY - pan.y });
   };
   
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isPanning) return;
     e.preventDefault();
     setPan({
-      x: e.clientX - startPanPoint.x,
-      y: e.clientY - startPanPoint.y,
+      x: e.clientX - startPanPoint.current.x,
+      y: e.clientY - startPanPoint.current.y,
     });
   };
   
@@ -377,7 +378,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     } else if (e.touches.length === 1) {
         setIsPanning(true);
         const touch = e.touches[0];
-        panStartRef.current = { x: touch.clientX - pan.x, y: touch.clientY - pan.y };
+        startPanPoint.current = { x: touch.clientX - pan.x, y: touch.clientY - pan.y };
     }
   };
 
@@ -406,13 +407,14 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     } else if (isPanning && e.touches.length === 1) {
         const touch = e.touches[0];
         setPan({
-            x: touch.clientX - panStartRef.current.x,
-            y: touch.clientY - panStartRef.current.y,
+            x: touch.clientX - startPanPoint.current.x,
+            y: touch.clientY - startPanPoint.current.y,
         });
     }
   };
 
-  const handleCanvasTouchEnd = () => {
+  const handleCanvasTouchEnd = (e: TouchEvent<HTMLDivElement>) => {
+     e.preventDefault();
     setIsPanning(false);
     initialPinchDistance.current = null;
   };
@@ -664,8 +666,8 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
             <Image
               src={draggedCharm.charm.imageUrl}
               alt={draggedCharm.charm.name}
-              width={50}
-              height={50}
+              width={40 * scale}
+              height={40 * scale}
               className="rounded-full shadow-lg"
             />
           </div>
@@ -673,5 +675,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     </>
   );
 }
+
+    
 
     
