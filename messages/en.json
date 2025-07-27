@@ -1,3 +1,4 @@
+
 {
   "HomePage": {
     "title": "Begin Your Creation",
@@ -23,8 +24,6 @@
     "customize_title": "Customize Your {modelName}",
     "clear_all_button": "Clear All",
     "purchase_button": "Purchase",
-    "purchase_dialog_title": "Complete Your Masterpiece?",
-    "purchase_dialog_description": "Ready to see your final creation? Our AI will generate a beautiful image of your personalized jewelry.",
     "purchase_dialog_action": "Continue Designing",
     "added_charms_title": "Added Charms ({count})",
     "added_charms_placeholder": "Drag or click charms to add them to your jewelry.",
@@ -37,13 +36,30 @@
     "error_generating_suggestions": "An error occurred while generating suggestions. Please try again.",
     "suggestions_placeholder_title": "Your creative suggestions will appear here.",
     "recommended_badge": "Recommended",
-    "purchase_complete_title": "Your Masterpiece is Ready!",
-    "purchase_complete_description": "Here is the final render of your unique creation. You can download it to share with friends and family.",
-    "generating_image_message": "Our AI is crafting a professional photo of your jewelry... This may take a moment.",
-    "error_generating_purchase_image": "Sorry, we couldn't generate the final image. Please try again.",
-    "generated_image_alt": "Final generated image of the custom jewelry",
-    "download_image_button": "Download Image",
-    "generate_final_image_button": "Generate Final Image",
-    "error_title": "Oops! Something went wrong."
+    "error_title": "Oops! Something went wrong.",
+    "PurchaseDialog": {
+      "order_summary_title": "Order Summary",
+      "payment_information_title": "Payment Information",
+      "order_confirmed_title": "Order Confirmed!",
+      "your_creation_title": "Your Creation",
+      "model_label": "{modelName} (Model)",
+      "quantity_label": "Quantity: {quantity}",
+      "total_label": "Total",
+      "shipping_details_title": "Shipping Details",
+      "full_name_label": "Full Name",
+      "address_label": "Address",
+      "city_label": "City",
+      "zip_code_label": "ZIP Code",
+      "country_label": "Country",
+      "continue_to_payment_button": "Continue to Payment",
+      "card_number_label": "Card Number",
+      "expiry_label": "Expiry",
+      "cvc_label": "CVC",
+      "pay_button": "Pay {price}€",
+      "thank_you_message": "Thank you!",
+      "order_placed_message": "Your order has been placed successfully.",
+      "order_id_message": "Order ID: #{orderId}",
+      "close_button": "Close"
+    }
   }
 }

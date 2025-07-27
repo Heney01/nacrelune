@@ -1,3 +1,4 @@
+
 {
   "HomePage": {
     "title": "Commencez Votre Création",
@@ -23,8 +24,6 @@
     "customize_title": "Personnalisez votre {modelName}",
     "clear_all_button": "Tout effacer",
     "purchase_button": "Acheter",
-    "purchase_dialog_title": "Terminer votre chef-d'œuvre ?",
-    "purchase_dialog_description": "Prêt à voir votre création finale ? Notre IA va générer une belle image de votre bijou personnalisé.",
     "purchase_dialog_action": "Continuer la création",
     "added_charms_title": "Breloques ajoutées ({count})",
     "added_charms_placeholder": "Faites glisser ou cliquez sur les breloques pour les ajouter à votre bijou.",
@@ -37,13 +36,30 @@
     "error_generating_suggestions": "Une erreur est survenue lors de la génération des suggestions. Veuillez réessayer.",
     "suggestions_placeholder_title": "Vos suggestions créatives apparaîtront ici.",
     "recommended_badge": "Recommandé",
-    "purchase_complete_title": "Votre chef-d'œuvre est prêt !",
-    "purchase_complete_description": "Voici le rendu final de votre création unique. Vous pouvez le télécharger pour le partager avec vos amis et votre famille.",
-    "generating_image_message": "Notre IA prépare une photo professionnelle de votre bijou... Cela peut prendre un instant.",
-    "error_generating_purchase_image": "Désolé, nous n'avons pas pu générer l'image finale. Veuillez réessayer.",
-    "generated_image_alt": "Image finale générée du bijou personnalisé",
-    "download_image_button": "Télécharger l'image",
-    "generate_final_image_button": "Générer l'image finale",
-    "error_title": "Oups ! Un problème est survenu."
+    "error_title": "Oups ! Un problème est survenu.",
+     "PurchaseDialog": {
+      "order_summary_title": "Résumé de la commande",
+      "payment_information_title": "Informations de paiement",
+      "order_confirmed_title": "Commande confirmée !",
+      "your_creation_title": "Votre création",
+      "model_label": "{modelName} (Modèle)",
+      "quantity_label": "Quantité : {quantity}",
+      "total_label": "Total",
+      "shipping_details_title": "Détails de livraison",
+      "full_name_label": "Nom complet",
+      "address_label": "Adresse",
+      "city_label": "Ville",
+      "zip_code_label": "Code postal",
+      "country_label": "Pays",
+      "continue_to_payment_button": "Continuer vers le paiement",
+      "card_number_label": "Numéro de carte",
+      "expiry_label": "Expiration",
+      "cvc_label": "CVC",
+      "pay_button": "Payer {price}€",
+      "thank_you_message": "Merci !",
+      "order_placed_message": "Votre commande a été passée avec succès.",
+      "order_id_message": "N° de commande : #{orderId}",
+      "close_button": "Fermer"
+    }
   }
 }

@@ -3,8 +3,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
-import { useTranslations, useRichTranslations } from '@/hooks/use-translations';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { useTranslations } from '@/hooks/use-translations';
 import { ShoppingCart, Loader2, CheckCircle, ArrowLeft } from 'lucide-react';
 import { JewelryModel, PlacedCharm, Order, Charm } from '@/lib/types';
 import { createOrder } from '@/app/actions';
@@ -41,6 +41,7 @@ interface GroupedCharm {
 
 export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogProps) {
     const t = useTranslations('Editor');
+    const tDialog = useTranslations('Editor.PurchaseDialog');
     const { toast } = useToast();
 
     const [isOpen, setIsOpen] = useState(false);
@@ -136,11 +137,11 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
     const getTitle = () => {
         switch(step) {
             case 'shipping':
-                return "Order Summary";
+                return tDialog('order_summary_title');
             case 'payment':
-                return "Payment Information";
+                return tDialog('payment_information_title');
             case 'confirmation':
-                return "Order Confirmed!";
+                return tDialog('order_confirmed_title');
             default:
                 return "";
         }
@@ -149,12 +150,12 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
     const OrderSummary = () => (
       <div className="space-y-4 my-4">
         <div>
-          <h3 className="text-lg font-medium mb-4">Your Creation</h3>
+          <h3 className="text-lg font-medium mb-4">{tDialog('your_creation_title')}</h3>
           <div className="space-y-3 text-sm">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <Image src={model.displayImageUrl} alt={model.name} width={40} height={40} className="rounded-md border bg-muted" data-ai-hint="jewelry" />
-                    <span className="font-medium">{model.name} (Model)</span>
+                    <span className="font-medium">{tDialog('model_label', { modelName: model.name })}</span>
                 </div>
               <span>{(model.price || 0).toFixed(2)}€</span>
             </div>
@@ -166,7 +167,7 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
                                 <Image src={charm.imageUrl} alt={charm.name} width={40} height={40} className="rounded-md border bg-muted p-1" data-ai-hint="jewelry charm" />
                                 <div>
                                     <span className="font-medium">{charm.name}</span>
-                                    {quantity > 1 && <span className="text-muted-foreground text-xs block">Quantity: {quantity}</span>}
+                                    {quantity > 1 && <span className="text-muted-foreground text-xs block">{tDialog('quantity_label', { quantity })}</span>}
                                 </div>
                             </div>
                             <span>{((charm.price || 0) * quantity).toFixed(2)}€</span>
@@ -178,7 +179,7 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
         </div>
         <Separator />
         <div className="flex justify-between font-bold text-lg">
-          <span>Total</span>
+          <span>{tDialog('total_label')}</span>
           <span>{totalPrice.toFixed(2)}€</span>
         </div>
       </div>
@@ -211,17 +212,17 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
                     <Separator />
                     <Form {...form}>
                       <form onSubmit={form.handleSubmit(handleShippingSubmit)} className="space-y-4 py-4">
-                        <h3 className="font-medium">Shipping Details</h3>
+                        <h3 className="font-medium">{tDialog('shipping_details_title')}</h3>
                         <FormField control={form.control} name="name" render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Full Name</FormLabel>
+                            <FormLabel>{tDialog('full_name_label')}</FormLabel>
                             <FormControl><Input {...field} /></FormControl>
                             <FormMessage />
                           </FormItem>
                         )} />
                         <FormField control={form.control} name="address" render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Address</FormLabel>
+                            <FormLabel>{tDialog('address_label')}</FormLabel>
                             <FormControl><Input {...field} /></FormControl>
                             <FormMessage />
                           </FormItem>
@@ -229,14 +230,14 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
                         <div className="grid grid-cols-2 gap-4">
                             <FormField control={form.control} name="city" render={({ field }) => (
                               <FormItem>
-                                <FormLabel>City</FormLabel>
+                                <FormLabel>{tDialog('city_label')}</FormLabel>
                                 <FormControl><Input {...field} /></FormControl>
                                 <FormMessage />
                               </FormItem>
                             )} />
                             <FormField control={form.control} name="zip" render={({ field }) => (
                               <FormItem>
-                                <FormLabel>ZIP Code</FormLabel>
+                                <FormLabel>{tDialog('zip_code_label')}</FormLabel>
                                 <FormControl><Input {...field} /></FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -244,13 +245,13 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
                         </div>
                          <FormField control={form.control} name="country" render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Country</FormLabel>
+                            <FormLabel>{tDialog('country_label')}</FormLabel>
                             <FormControl><Input {...field} /></FormControl>
                             <FormMessage />
                           </FormItem>
                         )} />
                         <Button type="submit" className="w-full" disabled={isLoading}>
-                            {isLoading ? <Loader2 className="animate-spin" /> : "Continue to Payment"}
+                            {isLoading ? <Loader2 className="animate-spin" /> : tDialog('continue_to_payment_button')}
                         </Button>
                       </form>
                     </Form>
@@ -261,21 +262,21 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
                 {step === 'payment' && (
                     <form onSubmit={handlePaymentSubmit} className="space-y-4 py-4">
                         <div className="space-y-2">
-                           <Label htmlFor="card-number">Card Number</Label>
+                           <Label htmlFor="card-number">{tDialog('card_number_label')}</Label>
                            <Input id="card-number" placeholder="0000 0000 0000 0000" />
                         </div>
                          <div className="grid grid-cols-3 gap-4">
                             <div className="space-y-2 col-span-2">
-                                <Label htmlFor="expiry">Expiry</Label>
+                                <Label htmlFor="expiry">{tDialog('expiry_label')}</Label>
                                 <Input id="expiry" placeholder="MM/YY" />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="cvc">CVC</Label>
+                                <Label htmlFor="cvc">{tDialog('cvc_label')}</Label>
                                 <Input id="cvc" placeholder="123" />
                             </div>
                          </div>
                          <Button type="submit" className="w-full" disabled={isLoading}>
-                            {isLoading ? <Loader2 className="animate-spin" /> : `Pay ${totalPrice.toFixed(2)}€`}
+                            {isLoading ? <Loader2 className="animate-spin" /> : tDialog('pay_button', { price: totalPrice.toFixed(2) })}
                          </Button>
                     </form>
                 )}
@@ -284,11 +285,11 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
                 {step === 'confirmation' && (
                     <div className="py-4 flex flex-col items-center text-center">
                         <CheckCircle className="h-20 w-20 text-green-500 mb-4" />
-                        <p className="text-lg font-semibold mb-2">Thank you!</p>
-                        <p className="text-muted-foreground">Your order has been placed successfully.</p>
-                         <p className="text-muted-foreground mt-2 text-sm">Order ID: #{orderId}</p>
+                        <p className="text-lg font-semibold mb-2">{tDialog('thank_you_message')}</p>
+                        <p className="text-muted-foreground">{tDialog('order_placed_message')}</p>
+                         <p className="text-muted-foreground mt-2 text-sm">{tDialog('order_id_message', { orderId })}</p>
                          <DialogClose asChild>
-                            <Button className="mt-6 w-full">Close</Button>
+                            <Button className="mt-6 w-full">{tDialog('close_button')}</Button>
                          </DialogClose>
                     </div>
                 )}
