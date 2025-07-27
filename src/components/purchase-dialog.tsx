@@ -193,7 +193,7 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
                     {t('purchase_button')}
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md flex flex-col max-h-[90vh]">
                 <DialogHeader>
                     {step !== 'shipping' && (
                         <Button variant="ghost" size="icon" className="absolute top-3 left-3 h-7 w-7" onClick={goBack}>
@@ -205,6 +205,7 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
                     </DialogTitle>
                 </DialogHeader>
                 
+                <div className="flex-grow overflow-y-auto -mx-6 px-6">
                 {/* Step: Shipping */}
                 {step === 'shipping' && (
                   <>
@@ -293,8 +294,9 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
                          </DialogClose>
                     </div>
                 )}
+                </div>
                 
-                <DialogFooter className="sm:justify-start">
+                <DialogFooter className="sm:justify-start pt-4">
                     {step !== 'confirmation' && (
                          <DialogClose asChild>
                             <Button type="button" variant="secondary" className="w-full">
@@ -307,3 +309,5 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
         </Dialog>
     );
 }
+
+    
