@@ -33,7 +33,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   const tRich = useRichTranslations();
   const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [draggedCharm, setDraggedCharm] = useState<{charm: Charm, offset: {x: number, y: number}, source: 'list' | string } | null>(null);
+  const [draggedCharm, setDraggedCharm] = useState<{charm: Charm, offset: {x: number, y: number}, source: string } | null>(null);
   const [selectedCharmId, setSelectedCharmId] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   
@@ -165,7 +165,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   };
 
   const updateCharmPositionOnCanvas = (clientX: number, clientY: number) => {
-      if (!draggedCharm || !canvasRef.current || draggedCharm.source === 'list') return;
+      if (!draggedCharm || !canvasRef.current) return;
 
       const canvasRect = canvasRef.current.getBoundingClientRect();
       // Calculate the drop position relative to the canvas, accounting for pan and zoom
@@ -186,7 +186,8 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   
   // DRAG AND DROP LOGIC (MOUSE & TOUCH)
   const handleDragStart = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>, placedCharm: PlacedCharm) => {
-    e.preventDefault(); // Prevent default browser drag behavior
+    if ('button' in e && e.button !== 0) return; // Only allow left-click for drag
+    e.preventDefault();
     e.stopPropagation();
 
     const rect = e.currentTarget.getBoundingClientRect();
@@ -200,8 +201,8 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         startY = e.clientY;
     }
 
-    const offsetX = (startX - rect.left) / scale;
-    const offsetY = (startY - rect.top) / scale;
+    const offsetX = startX - rect.left;
+    const offsetY = startY - rect.top;
 
     setDraggedCharm({
         charm: placedCharm.charm,
@@ -229,7 +230,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
       }
 
       setDragPosition({ x: clientX, y: clientY });
-      updateCharmPositionOnCanvas(clientX - draggedCharm.offset.x * scale, clientY - draggedCharm.offset.y * scale);
+      updateCharmPositionOnCanvas(clientX - draggedCharm.offset.x, clientY - draggedCharm.offset.y);
   };
   
   const handleGlobalDragEnd = () => {
@@ -295,7 +296,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
 };
 
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('.charm-on-canvas') || isDragging) {
+    if ((e.target as HTMLElement).closest('.charm-on-canvas') || isDragging || e.button !== 0) {
       return;
     }
     e.preventDefault();
@@ -619,14 +620,15 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
             style={{
               left: dragPosition.x,
               top: dragPosition.y,
-              transform: `translate(-${draggedCharm.offset.x * scale}px, -${draggedCharm.offset.y * scale}px) rotate(${placedCharms.find(p => p.id === draggedCharm.source)?.rotation || 0}deg)`,
+              transform: `translate(-${draggedCharm.offset.x}px, -${draggedCharm.offset.y}px) rotate(${placedCharms.find(p => p.id === draggedCharm.source)?.rotation || 0}deg) scale(${scale})`,
+              transformOrigin: '0 0',
             }}
           >
             <Image
               src={draggedCharm.charm.imageUrl}
               alt={draggedCharm.charm.name}
-              width={40 * scale}
-              height={40 * scale}
+              width={40}
+              height={40}
               className="rounded-full shadow-lg"
             />
           </div>
