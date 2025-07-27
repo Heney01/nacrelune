@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { useTranslations, useRichTranslations } from '@/hooks/use-translations';
 import { ShoppingCart, Loader2, CheckCircle, ArrowLeft } from 'lucide-react';
-import { JewelryModel, PlacedCharm, Order } from '@/lib/types';
+import { JewelryModel, PlacedCharm, Order, Charm } from '@/lib/types';
 import { createOrder } from '@/app/actions';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -16,6 +16,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Separator } from './ui/separator';
+import Image from 'next/image';
 
 type Step = 'shipping' | 'payment' | 'confirmation';
 
@@ -33,6 +34,11 @@ interface PurchaseDialogProps {
     locale: string;
 }
 
+interface GroupedCharm {
+    charm: Charm;
+    quantity: number;
+}
+
 export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogProps) {
     const t = useTranslations('Editor');
     const { toast } = useToast();
@@ -46,6 +52,19 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
         const charmsPrice = placedCharms.reduce((total, pc) => total + (pc.charm.price || 0), 0);
         return (model.price || 0) + charmsPrice;
     }, [model, placedCharms]);
+
+    const groupedCharms: GroupedCharm[] = useMemo(() => {
+        const charmMap = new Map<string, GroupedCharm>();
+        placedCharms.forEach(pc => {
+            const existing = charmMap.get(pc.charm.id);
+            if (existing) {
+                existing.quantity += 1;
+            } else {
+                charmMap.set(pc.charm.id, { charm: pc.charm, quantity: 1 });
+            }
+        });
+        return Array.from(charmMap.values());
+    }, [placedCharms]);
 
     const form = useForm<z.infer<typeof ShippingSchema>>({
       resolver: zodResolver(ShippingSchema),
@@ -130,19 +149,27 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
     const OrderSummary = () => (
       <div className="space-y-4 my-4">
         <div>
-          <h3 className="text-lg font-medium mb-2">Your Creation</h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span>Model: {model.name}</span>
+          <h3 className="text-lg font-medium mb-4">Your Creation</h3>
+          <div className="space-y-3 text-sm">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <Image src={model.displayImageUrl} alt={model.name} width={40} height={40} className="rounded-md border bg-muted" data-ai-hint="jewelry" />
+                    <span className="font-medium">{model.name} (Model)</span>
+                </div>
               <span>{(model.price || 0).toFixed(2)}€</span>
             </div>
-             {placedCharms.length > 0 && (
-                <div className="pl-4">
-                    <h4 className="font-medium text-muted-foreground">Charms:</h4>
-                    {placedCharms.map(pc => (
-                        <div key={pc.id} className="flex justify-between">
-                            <span>{pc.charm.name}</span>
-                            <span>{(pc.charm.price || 0).toFixed(2)}€</span>
+             {groupedCharms.length > 0 && (
+                <div className="space-y-3 pl-4 border-l-2 border-dashed ml-5">
+                    {groupedCharms.map(({charm, quantity}) => (
+                        <div key={charm.id} className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <Image src={charm.imageUrl} alt={charm.name} width={40} height={40} className="rounded-md border bg-muted p-1" data-ai-hint="jewelry charm" />
+                                <div>
+                                    <span className="font-medium">{charm.name}</span>
+                                    {quantity > 1 && <span className="text-muted-foreground text-xs block">Quantity: {quantity}</span>}
+                                </div>
+                            </div>
+                            <span>{((charm.price || 0) * quantity).toFixed(2)}€</span>
                         </div>
                     ))}
                 </div>
@@ -160,7 +187,7 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
     return (
         <Dialog open={isOpen} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-                <Button disabled={placedCharms.length === 0}>
+                <Button>
                     <ShoppingCart className="mr-2 h-4 w-4" />
                     {t('purchase_button')}
                 </Button>
