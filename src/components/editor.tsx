@@ -45,18 +45,10 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const startPanPoint = useRef({ x: 0, y: 0 });
+  const [draggedCharm, setDraggedCharm] = useState<PlacedCharm | null>(null);
+  const dragOffset = useRef({ x: 0, y: 0 });
   const initialPinchDistance = useRef<number | null>(null);
   const scaleStartRef = useRef(1);
-
-  // Unified Drag state for both mouse and touch
-  const [draggedCharm, setDraggedCharm] = useState<{
-    placedCharmId: string;
-    charm: Charm;
-    offset: { x: number, y: number };
-    isCanvasDrag: boolean;
-  } | null>(null);
-
-  const [dragPosition, setDragPosition] = useState<{ x: number, y: number } | null>(null);
 
   const getUrl = async (path: string) => {
     if (path && !path.startsWith('http')) {
@@ -168,96 +160,137 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     }, 500);
   };
   
-  // UNIFIED DRAG AND DROP LOGIC (MOUSE & TOUCH)
-  const handleCharmDragStart = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>, placedCharm: PlacedCharm) => {
-    if ('button' in e && e.button !== 0) return; // Only allow left-click for drag
-    
-    e.stopPropagation();
-    
-    let startX, startY;
-    if ('touches' in e) {
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-    } else {
-        startX = e.clientX;
-        startY = e.clientY;
-    }
-
-    const charmRect = e.currentTarget.getBoundingClientRect();
-    const offsetX = startX - charmRect.left;
-    const offsetY = startY - charmRect.top;
-
-
-    setDraggedCharm({
-        placedCharmId: placedCharm.id,
-        charm: placedCharm.charm,
-        offset: { x: offsetX, y: offsetY },
-        isCanvasDrag: true
-    });
-    
-    setDragPosition({ x: startX, y: startY });
+  const handleCharmDragStart = (e: React.DragEvent<HTMLDivElement>, placedCharm: PlacedCharm) => {
+    e.dataTransfer.setData('application/json', JSON.stringify(placedCharm));
+    e.dataTransfer.effectAllowed = 'move';
+    const img = document.createElement('img');
+    img.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+    e.dataTransfer.setDragImage(img, 0, 0);
+    setDraggedCharm(placedCharm);
     setSelectedCharmId(null);
   };
 
+  const handlePlacedCharmMouseDown = (e: React.MouseEvent<HTMLDivElement>, placedCharm: PlacedCharm) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const charmElement = e.currentTarget;
+    const charmRect = charmElement.getBoundingClientRect();
+    const canvasRect = canvasRef.current!.getBoundingClientRect();
+
+    dragOffset.current = {
+        x: e.clientX - charmRect.left,
+        y: e.clientY - charmRect.top
+    };
+
+    setDraggedCharm(placedCharm);
+    setSelectedCharmId(null);
+  };
+
+  const handlePlacedCharmTouchStart = (e: React.TouchEvent<HTMLDivElement>, placedCharm: PlacedCharm) => {
+    e.stopPropagation();
+    const touch = e.touches[0];
+    const charmElement = e.currentTarget;
+    const charmRect = charmElement.getBoundingClientRect();
+
+    dragOffset.current = {
+        x: touch.clientX - charmRect.left,
+        y: touch.clientY - charmRect.top
+    };
+    
+    setDraggedCharm(placedCharm);
+    setSelectedCharmId(null);
+  };
+
+
   const updateCharmPosition = (clientX: number, clientY: number) => {
-      if (!draggedCharm || !canvasRef.current) return;
+    if (!draggedCharm || !canvasRef.current) return;
 
-      const canvasRect = canvasRef.current.getBoundingClientRect();
-      
-      const dropX_px = (clientX - canvasRect.left - pan.x - (draggedCharm.offset.x)) / scale;
-      const dropY_px = (clientY - canvasRect.top - pan.y - (draggedCharm.offset.y)) / scale;
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    
+    // Calculate position relative to the canvas, accounting for pan and zoom
+    const xInCanvas = (clientX - canvasRect.left - pan.x) / scale;
+    const yInCanvas = (clientY - canvasRect.top - pan.y) / scale;
 
-      const xPercent = (dropX_px / canvasRect.width) * 100;
-      const yPercent = (dropY_px / canvasRect.height) * 100;
-      
-      const newPosition = { x: xPercent, y: yPercent };
+    // Calculate position relative to the top-left of the charm image
+    const charmImageWidth = 40; // a fixed value for now
+    const charmImageHeight = 40;
+    
+    const dropX_px = xInCanvas - (dragOffset.current.x / scale);
+    const dropY_px = yInCanvas - (dragOffset.current.y / scale);
 
-      setPlacedCharms(prev =>
-          prev.map(pc => (pc.id === draggedCharm.placedCharmId ? { ...pc, position: newPosition } : pc))
-      );
+
+    const xPercent = (dropX_px / canvasRect.width) * 100;
+    const yPercent = (dropY_px / canvasRect.height) * 100;
+    
+    const newPosition = { x: xPercent, y: yPercent };
+
+    setPlacedCharms(prev =>
+      prev.map(pc => (pc.id === draggedCharm.id ? { ...pc, position: newPosition } : pc))
+    );
   };
 
-
-  const handleGlobalMove = (e: globalThis.MouseEvent | globalThis.TouchEvent) => {
-      if (!draggedCharm) return;
-      
-      let clientX, clientY;
-      if ('touches' in e) {
-          e.preventDefault();
-          clientX = e.touches[0].clientX;
-          clientY = e.touches[0].clientY;
-      } else {
-          clientX = e.clientX;
-          clientY = e.clientY;
-      }
-      setDragPosition({ x: clientX, y: clientY });
-      if(draggedCharm.isCanvasDrag){
-        updateCharmPosition(clientX, clientY);
-      }
+  const handleMouseMove = (e: globalThis.MouseEvent) => {
+    if (draggedCharm) {
+        updateCharmPosition(e.clientX, e.clientY);
+    } else if (isPanning) {
+        e.preventDefault();
+        setPan({
+          x: e.clientX - startPanPoint.current.x,
+          y: e.clientY - startPanPoint.current.y,
+        });
+    }
   };
-  
-  const handleGlobalDragEnd = () => {
+
+  const handleTouchMove = (e: globalThis.TouchEvent) => {
       if (draggedCharm) {
-          setDraggedCharm(null);
-          setDragPosition(null);
+          e.preventDefault();
+          updateCharmPosition(e.touches[0].clientX, e.touches[0].clientY);
       }
   };
+
 
   useEffect(() => {
-    // These listeners handle the movement of a charm
-    window.addEventListener('mousemove', handleGlobalMove, { passive: false });
-    window.addEventListener('touchmove', handleGlobalMove, { passive: false });
-    window.addEventListener('mouseup', handleGlobalDragEnd);
-    window.addEventListener('touchend', handleGlobalDragEnd);
-
-    return () => {
-        window.removeEventListener('mousemove', handleGlobalMove);
-        window.removeEventListener('touchmove', handleGlobalMove);
-        window.removeEventListener('mouseup', handleGlobalDragEnd);
-        window.removeEventListener('touchend', handleGlobalDragEnd);
+    const handleMouseUp = () => {
+      setDraggedCharm(null);
+      setIsPanning(false);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draggedCharm, pan, scale]);
+    const handleTouchEnd = () => {
+      setDraggedCharm(null);
+      setIsPanning(false);
+      initialPinchDistance.current = null;
+    };
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    
+    const canvasElement = canvasRef.current;
+    if (canvasElement) {
+        // We add the listener to the element directly to control passive option
+        const touchMoveHandler = (e: globalThis.TouchEvent) => {
+            if(draggedCharm || isPanning || e.touches.length === 2) {
+                e.preventDefault();
+            }
+            if (draggedCharm) {
+                updateCharmPosition(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        };
+        canvasElement.addEventListener('touchmove', touchMoveHandler, { passive: false });
+        window.addEventListener('touchend', handleTouchEnd);
+
+        return () => {
+            canvasElement.removeEventListener('touchmove', touchMoveHandler);
+            window.removeEventListener('touchend', handleTouchEnd);
+        }
+    }
+    
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [draggedCharm, isPanning, pan, scale]);
+
 
 
   const removeCharm = (id: string) => {
@@ -534,12 +567,14 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                       {placedCharms.map((placed) => (
                       <div
                           key={placed.id}
-                          onMouseDown={(e) => handleCharmDragStart(e, placed)}
-                          onTouchStart={(e) => handleCharmDragStart(e, placed)}
+                          draggable
+                          onDragStart={(e) => handleCharmDragStart(e, placed)}
+                          onMouseDown={(e) => handlePlacedCharmMouseDown(e, placed)}
+                          onTouchStart={(e) => handlePlacedCharmTouchStart(e, placed)}
                           onWheel={(e) => handlePlacedCharmRotation(e, placed.id)}
                           className={cn(
                             "absolute group charm-on-canvas cursor-grab",
-                            draggedCharm?.placedCharmId === placed.id && "opacity-50"
+                            draggedCharm?.id === placed.id && "opacity-50"
                           )}
                           style={{
                           left: `${placed.position.x}%`,
@@ -616,28 +651,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         </div>
         </div>
       </main>
-      {/* Ghost image for drag */}
-      {draggedCharm && dragPosition && (
-          <div
-            className="pointer-events-none absolute z-50"
-            style={{
-              left: dragPosition.x - draggedCharm.offset.x,
-              top: dragPosition.y - draggedCharm.offset.y,
-              transform: `scale(${draggedCharm.isCanvasDrag ? scale : 1})`,
-              transformOrigin: 'top left',
-            }}
-          >
-            <Image
-              src={draggedCharm.charm.imageUrl}
-              alt={draggedCharm.charm.name}
-              width={40}
-              height={40}
-              className="rounded-full shadow-lg"
-            />
-          </div>
-      )}
     </>
   );
 }
-
-    
