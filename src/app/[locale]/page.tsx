@@ -13,7 +13,7 @@ import { NacreluneLogo } from '@/components/icons';
 import { db, storage } from '@/lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { ref, getDownloadURL } from "firebase/storage";
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useTranslations } from '@/hooks/use-translations';
 
 type Step = 'type-selection' | 'model-selection' | 'editor';
@@ -165,6 +165,12 @@ export default function Home() {
                                         </Button>
                                     </DialogTrigger>
                                     <DialogContent className="max-w-3xl">
+                                       <DialogHeader>
+                                          <DialogTitle>{model.name}</DialogTitle>
+                                           <DialogDescription>
+                                              Enlarged view of the {model.name} model.
+                                           </DialogDescription>
+                                        </DialogHeader>
                                         <Image src={model.displayImageUrl} alt={model.name} width={800} height={800} className="w-full h-auto object-contain rounded-lg" />
                                     </DialogContent>
                                 </Dialog>
@@ -200,4 +206,3 @@ export default function Home() {
     </div>
   );
 }
-
