@@ -189,12 +189,10 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   ) => {
     e.stopPropagation();
     setSelectedPlacedCharmId(charmId);
-  
-    if (selectedPlacedCharmId === charmId) {
-        setIsDragging(true);
-        if ('touches' in e) {
-          startPanPoint.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        }
+    setIsDragging(true);
+
+    if ('touches' in e) {
+      startPanPoint.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }
   };
 
