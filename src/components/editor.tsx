@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useRef, WheelEvent, useCallback } from 'react';
+import React, { useState, useMemo, useRef, WheelEvent, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import { JewelryModel, PlacedCharm, Charm, JewelryType, CharmCategory } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -111,11 +111,8 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
 PlacedCharmComponent.displayName = 'PlacedCharmComponent';
 
 interface SuggestionsPanelProps {
-    jewelryType: Omit<JewelryType, 'models'>;
-    model: JewelryModel;
     onAddCharm: (charm: Charm) => void;
     charms: Charm[];
-    locale: string;
     isMobile: boolean;
     suggestions: SuggestCharmPlacementOutput | null;
     isLoading: boolean;
@@ -123,7 +120,7 @@ interface SuggestionsPanelProps {
     onGenerate: (preferences: string) => void;
 }
 
-const SuggestionsPanel = ({ jewelryType, model, onAddCharm, charms, locale, isMobile, suggestions, isLoading, error, onGenerate }: SuggestionsPanelProps) => {
+const SuggestionsPanel = ({ onAddCharm, charms, isMobile, suggestions, isLoading, error, onGenerate }: SuggestionsPanelProps) => {
     return (
         <div className={cn(!isMobile && "lg:col-span-3")}>
             <SuggestionSidebar 
@@ -205,7 +202,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     return path || 'https://placehold.co/100x100.png';
   }
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchCharmsData = async () => {
       setIsLoadingCharms(true);
       try {
@@ -289,8 +286,12 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     };
     setPlacedCharms(prev => [...prev, newCharm]);
 
-    if (isMobile && source === 'charmsPanel') {
-        setIsCharmsSheetOpen(false);
+    if (isMobile) {
+        if (source === 'charmsPanel') {
+            setIsCharmsSheetOpen(false);
+        } else if (source === 'suggestionsPanel') {
+            setIsSuggestionsSheetOpen(false);
+        }
     }
 
     setTimeout(() => {
@@ -360,7 +361,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   }, [interactionState]);
 
 
-  React.useEffect(() => {
+  useEffect(() => {
       const canvas = canvasRef.current;
       if (!canvas) return;
   
@@ -658,11 +659,8 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
 
           {/* AI Suggestions Panel */}
           {!isMobile && <SuggestionsPanel 
-                            jewelryType={jewelryType} 
-                            model={model} 
                             onAddCharm={addCharmFromSuggestions} 
                             charms={charms} 
-                            locale={locale} 
                             isMobile={isMobile}
                             suggestions={suggestions}
                             isLoading={isGeneratingSuggestions}
@@ -701,11 +699,8 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                         <SheetTitle>{t('ai_suggestions_title')}</SheetTitle>
                     </SheetHeader>
                     <SuggestionsPanel 
-                        jewelryType={jewelryType} 
-                        model={model} 
                         onAddCharm={addCharmFromSuggestions} 
                         charms={charms} 
-                        locale={locale} 
                         isMobile={isMobile}
                         suggestions={suggestions}
                         isLoading={isGeneratingSuggestions}
