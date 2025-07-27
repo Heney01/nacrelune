@@ -162,7 +162,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   };
   
   const updateCharmPosition = useCallback((movementX: number, movementY: number) => {
-    if (!isDragging || !selectedPlacedCharmId || !canvasRef.current) return;
+    if (!canvasRef.current) return;
   
     const canvasRect = canvasRef.current.getBoundingClientRect();
     const dxPercent = (movementX / canvasRect.width) * 100 / scale;
@@ -181,7 +181,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
           : pc
       )
     );
-  }, [isDragging, selectedPlacedCharmId, scale]);
+  }, [selectedPlacedCharmId, scale]);
 
 
   const handleInteractionStart = (
@@ -216,7 +216,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         const movementX = touch.clientX - dragStartPoint.current.x;
         const movementY = touch.clientY - dragStartPoint.current.y;
         updateCharmPosition(movementX, movementY);
-        dragStartPoint.current = { x: touch.clientX, y: touch.clientY }; // THIS IS THE FIX
+        dragStartPoint.current = { x: touch.clientX, y: touch.clientY };
       } else if (isPanning && e.touches.length === 1) {
         const touch = e.touches[0];
         setPan({
