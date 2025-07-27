@@ -1,4 +1,5 @@
 
+
 export interface CharmCategory {
   id: string;
   name: string;

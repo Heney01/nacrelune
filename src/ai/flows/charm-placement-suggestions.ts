@@ -21,14 +21,22 @@ const SuggestCharmPlacementInputSchema = z.object({
 });
 export type SuggestCharmPlacementInput = z.infer<typeof SuggestCharmPlacementInputSchema>;
 
-const SuggestCharmPlacementOutputSchema = z.object({
-  suggestions: z.array(
-    z.object({
-      charm: z.string().describe('The suggested charm.'),
-      placementDescription: z.string().describe('The suggested placement description.'),
-      shouldIntegrate: z.boolean().describe('Whether to integrate this suggestion into the design.'),
+const SuggestionSchema = z.object({
+  charm: z.string().describe('The suggested charm.'),
+  placementDescription: z.string().describe('The suggested placement description.'),
+  position: z
+    .object({
+      x: z.number().describe('The x coordinate for the placement, as a percentage from 0 to 100.'),
+      y: z.number().describe('The y coordinate for the placement, as a percentage from 0 to 100.'),
     })
-  ).describe('The list of charm placement suggestions.'),
+    .describe('The suggested coordinates for the charm placement.'),
+  shouldIntegrate: z.boolean().describe('Whether to integrate this suggestion into the design.'),
+});
+export type Suggestion = z.infer<typeof SuggestionSchema>;
+
+
+const SuggestCharmPlacementOutputSchema = z.object({
+  suggestions: z.array(SuggestionSchema).describe('The list of charm placement suggestions.'),
 });
 export type SuggestCharmPlacementOutput = z.infer<typeof SuggestCharmPlacementOutputSchema>;
 
@@ -60,8 +68,15 @@ const prompt = ai.definePrompt({
   input: {schema: SuggestCharmPlacementInputSchema},
   output: {schema: SuggestCharmPlacementOutputSchema},
   tools: [shouldIntegrateCharmTool],
-  prompt: `You are a jewelry design assistant. Your task is to suggest charm placements based on the provided information.
+  prompt: `You are a jewelry design assistant. Your task is to suggest charm placements based on the provided information, including specific coordinates.
 Your response MUST be in the following language: {{{locale}}}.
+
+When suggesting a placement, you MUST provide precise x and y coordinates as percentages (from 0 to 100) for where the charm should be placed on the jewelry model.
+- The (0, 0) coordinate is the top-left corner of the canvas.
+- The (100, 100) coordinate is the bottom-right corner.
+- The (50, 50) is the center.
+
+Think like a designer. Consider balance, symmetry, and aesthetic appeal based on the jewelry type and user preferences.
 
 IMPORTANT: You MUST strictly adhere to the user's preferences. If the user expresses a negative constraint (e.g., "I hate...", "no red", "I don't like..."), you MUST NOT suggest any charm that violates this constraint. This is a strict rule.
 
@@ -70,7 +85,7 @@ Model Name: {{{modelDescription}}}
 Available Charms: {{#each charmOptions}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
 User Preferences: {{{userPreferences}}}
 
-Suggest placements for a few of the available charms. For each suggestion, provide a brief description of where the charm should be placed. Use the shouldIntegrateCharm tool to determine if the charm suggestion should be integrated into the design.
+Suggest placements for a few of the available charms. For each suggestion, provide a brief description of where the charm should be placed, and the x/y coordinates. Use the shouldIntegrateCharm tool to determine if the charm suggestion should be integrated into the design.
 
 Output your suggestions in JSON format.`,
 });

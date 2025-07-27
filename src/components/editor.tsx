@@ -23,7 +23,7 @@ import { PurchaseDialog } from './purchase-dialog';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getCharmSuggestions } from '@/app/actions';
-import type { SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
+import type { Suggestion, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 
 
 interface PlacedCharmComponentProps {
@@ -109,32 +109,6 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
     );
 });
 PlacedCharmComponent.displayName = 'PlacedCharmComponent';
-
-interface SuggestionsPanelProps {
-    onAddCharm: (charm: Charm) => void;
-    charms: Charm[];
-    isMobile: boolean;
-    suggestions: SuggestCharmPlacementOutput | null;
-    isLoading: boolean;
-    error: string | null;
-    onGenerate: (preferences: string) => void;
-}
-
-const SuggestionsPanel = ({ onAddCharm, charms, isMobile, suggestions, isLoading, error, onGenerate }: SuggestionsPanelProps) => {
-    return (
-        <div className={cn(!isMobile && "lg:col-span-3")}>
-            <SuggestionSidebar 
-                onAddCharm={onAddCharm} 
-                charms={charms}
-                isMobile={isMobile}
-                suggestions={suggestions}
-                isLoading={isLoading}
-                error={error}
-                onGenerate={onGenerate}
-            />
-        </div>
-    );
-};
 
 
 interface EditorProps {
@@ -264,32 +238,41 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     }, {} as Record<string, Charm[]>);
   }, [filteredCharms]);
   
-  const addCharmToCanvas = useCallback((charm: Charm, source: 'charmsPanel' | 'suggestionsPanel') => {
-    if (!canvasRef.current) return;
-
-    const canvasRect = canvasRef.current.getBoundingClientRect();
-    const currentPan = panRef.current;
-    const currentScale = scaleRef.current;
-
-    const x_px = (canvasRect.width / 2) - currentPan.x;
-    const y_px = (canvasRect.height / 2) - currentPan.y;
+  const addCharmToCanvas = useCallback((
+    charm: Charm, 
+    options: {
+        source: 'charmsPanel' | 'suggestionsPanel';
+        position?: { x: number, y: number }
+    }) => {
     
-    const xPercent = (x_px / canvasRect.width / currentScale) * 100;
-    const yPercent = (y_px / canvasRect.height / currentScale) * 100;
+    let position = options.position;
+
+    if (!position) {
+        if (!canvasRef.current) return;
+        const canvasRect = canvasRef.current.getBoundingClientRect();
+        const currentPan = panRef.current;
+        const currentScale = scaleRef.current;
+        const x_px = (canvasRect.width / 2) - currentPan.x;
+        const y_px = (canvasRect.height / 2) - currentPan.y;
+        position = {
+            x: (x_px / canvasRect.width / currentScale) * 100,
+            y: (y_px / canvasRect.height / currentScale) * 100,
+        };
+    }
 
     const newCharm: PlacedCharm = {
       id: `${charm.id}-${Date.now()}`,
       charm,
-      position: { x: xPercent, y: yPercent },
+      position: position,
       rotation: 0,
       animation: 'breathe 0.5s ease-out'
     };
     setPlacedCharms(prev => [...prev, newCharm]);
 
     if (isMobile) {
-        if (source === 'charmsPanel') {
+        if (options.source === 'charmsPanel') {
             setIsCharmsSheetOpen(false);
-        } else if (source === 'suggestionsPanel') {
+        } else if (options.source === 'suggestionsPanel') {
             setIsSuggestionsSheetOpen(false);
         }
     }
@@ -300,12 +283,15 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   }, [isMobile]);
 
   const addCharmFromCharmList = useCallback((charm: Charm) => {
-    addCharmToCanvas(charm, 'charmsPanel');
+    addCharmToCanvas(charm, { source: 'charmsPanel' });
   }, [addCharmToCanvas]);
 
-  const addCharmFromSuggestions = useCallback((charm: Charm) => {
-    addCharmToCanvas(charm, 'suggestionsPanel');
-  }, [addCharmToCanvas]);
+  const addCharmFromSuggestions = useCallback((suggestion: Suggestion) => {
+    const charm = charms.find(c => c.name === suggestion.charm);
+    if (charm && suggestion.position) {
+        addCharmToCanvas(charm, { source: 'suggestionsPanel', position: suggestion.position });
+    }
+  }, [addCharmToCanvas, charms]);
   
   const removeCharm = useCallback((id: string) => {
     setPlacedCharms(prev => prev.filter(c => c.id !== id));
@@ -329,7 +315,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   const handleGenerateSuggestions = async (preferences: string) => {
       setIsGeneratingSuggestions(true);
       setSuggestionError(null);
-      // We don't clear old suggestions, so they remain visible while new ones load
       try {
         const result = await getCharmSuggestions({
           jewelryType: jewelryType.id,
@@ -658,15 +643,16 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
           </div>
 
           {/* AI Suggestions Panel */}
-          {!isMobile && <SuggestionsPanel 
-                            onAddCharm={addCharmFromSuggestions} 
-                            charms={charms} 
-                            isMobile={isMobile}
-                            suggestions={suggestions}
-                            isLoading={isGeneratingSuggestions}
-                            error={suggestionError}
-                            onGenerate={handleGenerateSuggestions}
-                         />}
+          {!isMobile && <div className="lg:col-span-3">
+            <SuggestionSidebar
+                onApplySuggestion={addCharmFromSuggestions}
+                charms={charms}
+                suggestions={suggestions}
+                isLoading={isGeneratingSuggestions}
+                error={suggestionError}
+                onGenerate={handleGenerateSuggestions}
+            />
+          </div>}
         </div>
         </div>
       </main>
@@ -698,8 +684,8 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                    <SheetHeader className="p-4 border-b">
                         <SheetTitle>{t('ai_suggestions_title')}</SheetTitle>
                     </SheetHeader>
-                    <SuggestionsPanel 
-                        onAddCharm={addCharmFromSuggestions} 
+                    <SuggestionSidebar 
+                        onApplySuggestion={addCharmFromSuggestions}
                         charms={charms} 
                         isMobile={isMobile}
                         suggestions={suggestions}
