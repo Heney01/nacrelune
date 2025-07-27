@@ -168,10 +168,9 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     setSelectedPlacedCharmId(charmId);
     
     if ('touches' in e) {
-      console.log(`[Touch Start] Charm: ${charmId}`);
+      e.preventDefault(); // Prevent simulated mouse events
       dragStartPoint.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     } else {
-      console.log(`[Mouse Down] Charm: ${charmId}`);
       dragStartPoint.current = { x: e.clientX, y: e.clientY };
     }
   };
@@ -216,13 +215,9 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   };
 
   const handleInteractionEnd = (e: React.MouseEvent | React.TouchEvent) => {
-     if ('touches' in e) {
-        console.log('[Touch End] Interaction ended.');
-     } else {
-        console.log('[Mouse Up] Interaction ended.');
-     }
     setIsDragging(false);
     setIsPanning(false);
+    initialPinchDistance.current = null;
   };
 
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -230,7 +225,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
       return;
     }
     e.stopPropagation();
-    console.log('[Mouse Down] Canvas panning started.');
     setIsPanning(true);
     panStartPoint.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
     setSelectedPlacedCharmId(null);
@@ -242,7 +236,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     if (isDragging && selectedPlacedCharmId) {
         const dxPercent = (e.movementX / canvasRef.current.clientWidth) * 100 / scale;
         const dyPercent = (e.movementY / canvasRef.current.clientHeight) * 100 / scale;
-        console.log(`[Mouse Move] Dragging charm. Delta: (${dxPercent.toFixed(2)}%, ${dyPercent.toFixed(2)}%)`);
         
         setPlacedCharms(prev =>
             prev.map(pc =>
@@ -252,7 +245,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
             )
         );
     } else if (isPanning) {
-        console.log(`[Mouse Move] Panning canvas.`);
         setPan({
             x: e.clientX - panStartPoint.current.x,
             y: e.clientY - panStartPoint.current.y,
@@ -278,12 +270,10 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     
     if (e.touches.length > 1) {
       e.preventDefault();
-      console.log('[Touch Start] Pinch-to-zoom started.');
       initialPinchDistance.current = getDistance(e.touches);
       scaleStartRef.current = scale;
       setIsPanning(false); // We are zooming not panning
     } else if (e.touches.length === 1) {
-        console.log('[Touch Start] Canvas panning started.');
         panStartPoint.current = { x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y };
         setIsPanning(true);
         setSelectedPlacedCharmId(null);
@@ -292,6 +282,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
 
   const handleCanvasTouchMove = (e: TouchEvent<HTMLDivElement>) => {
     if (!canvasRef.current) return;
+     e.preventDefault(); // This is crucial to prevent page scroll on mobile
     const canvasRect = canvasRef.current.getBoundingClientRect();
 
     if (isDragging && selectedPlacedCharmId && e.touches.length === 1) {
@@ -301,7 +292,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         
         const dxPercent = (dx / canvasRect.width) * 100 / scale;
         const dyPercent = (dy / canvasRect.height) * 100 / scale;
-        console.log(`[Touch Move] Dragging charm. Delta: (${dxPercent.toFixed(2)}%, ${dyPercent.toFixed(2)}%)`);
 
         setPlacedCharms(prev =>
             prev.map(pc =>
@@ -310,17 +300,16 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                     : pc
             )
         );
+        // Update the starting point for the next move event
         dragStartPoint.current = { x: touch.clientX, y: touch.clientY };
     } else if (isPanning && e.touches.length === 1) {
         const touch = e.touches[0];
-        console.log('[Touch Move] Panning canvas.');
         setPan({
             x: touch.clientX - panStartPoint.current.x,
             y: touch.clientY - panStartPoint.current.y,
         });
     } else if (e.touches.length > 1) { // Pinch-to-zoom logic
         if (initialPinchDistance.current) {
-            console.log('[Touch Move] Pinch-to-zoom in progress.');
             const newDist = getDistance(e.touches);
             const scaleFactor = newDist / initialPinchDistance.current;
             const newScale = Math.min(Math.max(0.2, scaleStartRef.current * scaleFactor), 5);
@@ -340,14 +329,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         }
     }
   };
-
-  const handleCanvasTouchEnd = (e: TouchEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-    console.log('[Touch End] Canvas interaction ended.');
-    initialPinchDistance.current = null;
-    handleInteractionEnd(e);
-  };
-
 
   const resetZoomAndPan = () => {
     setScale(1);
@@ -372,7 +353,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     const handleDelete = (e: React.MouseEvent | React.TouchEvent) => {
       e.stopPropagation();
       e.preventDefault();
-      console.log(`[Delete] Deleting charm ${placed.id}`);
       removeCharm(placed.id);
     }
 
@@ -532,7 +512,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
               onMouseLeave={handleInteractionEnd}
               onTouchStart={handleCanvasTouchStart}
               onTouchMove={handleCanvasTouchMove}
-              onTouchEnd={handleCanvasTouchEnd}
+              onTouchEnd={handleInteractionEnd}
               className="relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none"
             >
               <div
@@ -542,7 +522,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                       transformOrigin: '0 0',
                   }}
               >
-                  <Image src={model.editorImageUrl} alt={model.name} layout="fill" objectFit="contain" className="pointer-events-none" data-ai-hint="jewelry model" />
+                  <Image src={model.editorImageUrl} alt={model.name} fill style={{ objectFit: 'contain' }} className="pointer-events-none" data-ai-hint="jewelry model" />
               </div>
               <div className="absolute top-0 left-0 w-full h-full" style={{ perspective: '1000px' }}>
                   <div
@@ -613,7 +593,5 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     </>
   );
 }
-
-    
 
     
