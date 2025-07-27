@@ -46,8 +46,8 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   const [pan, setPan] = useState({ x: 0, y: 0 });
 
   // State for interaction tracking
-  const [isDragging, setIsDragging] = useState(false);
-  const [isPanning, setIsPanning] = useState(false);
+  const isDragging = useRef(false);
+  const isPanning = useRef(false);
   
   // Refs to store interaction starting points
   const dragStartPoint = useRef({ x: 0, y: 0 });
@@ -160,15 +160,15 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   };
   
   const handleCharmInteractionStart = (
-    e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>,
+    e: React.MouseEvent<HTMLDivElement> | TouchEvent,
     charmId: string
   ) => {
     e.stopPropagation();
-    setIsDragging(true);
+    isDragging.current = true;
     setSelectedPlacedCharmId(charmId);
     
     if ('touches' in e) {
-      e.preventDefault(); // Prevent simulated mouse events
+      e.preventDefault(); 
       dragStartPoint.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     } else {
       dragStartPoint.current = { x: e.clientX, y: e.clientY };
@@ -183,7 +183,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     setPlacedCharms([]);
   };
 
-  const handlePlacedCharmRotation = (e: WheelEvent<HTMLDivElement>, charmId: string) => {
+  const handlePlacedCharmRotation = (e: WheelEvent, charmId: string) => {
     e.preventDefault();
     e.stopPropagation();
     setPlacedCharms(prev =>
@@ -214,9 +214,9 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     setPan({ x: newPanX, y: newPanY });
   };
 
-  const handleInteractionEnd = (e: React.MouseEvent | React.TouchEvent) => {
-    setIsDragging(false);
-    setIsPanning(false);
+  const handleInteractionEnd = () => {
+    isDragging.current = false;
+    isPanning.current = false;
     initialPinchDistance.current = null;
   };
 
@@ -225,7 +225,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
       return;
     }
     e.stopPropagation();
-    setIsPanning(true);
+    isPanning.current = true;
     panStartPoint.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
     setSelectedPlacedCharmId(null);
   };
@@ -233,7 +233,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!canvasRef.current) return;
     
-    if (isDragging && selectedPlacedCharmId) {
+    if (isDragging.current && selectedPlacedCharmId) {
         const dxPercent = (e.movementX / canvasRef.current.clientWidth) * 100 / scale;
         const dyPercent = (e.movementY / canvasRef.current.clientHeight) * 100 / scale;
         
@@ -244,7 +244,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                     : pc
             )
         );
-    } else if (isPanning) {
+    } else if (isPanning.current) {
         setPan({
             x: e.clientX - panStartPoint.current.x,
             y: e.clientY - panStartPoint.current.y,
@@ -252,7 +252,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     }
   };
   
-  const getDistance = (touches: React.TouchList | TouchList) => {
+  const getDistance = (touches: TouchList) => {
     return Math.sqrt(
       Math.pow(touches[0].clientX - touches[1].clientX, 2) +
       Math.pow(touches[0].clientY - touches[1].clientY, 2)
@@ -262,7 +262,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   const initialPinchDistance = useRef<number | null>(null);
   const scaleStartRef = useRef(1);
   
-  const handleCanvasTouchStart = (e: TouchEvent<HTMLDivElement>) => {
+  const handleCanvasTouchStart = (e: TouchEvent) => {
     e.stopPropagation();
     if ((e.target as HTMLElement).closest('.charm-on-canvas')) {
       return
@@ -272,20 +272,20 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
       e.preventDefault();
       initialPinchDistance.current = getDistance(e.touches);
       scaleStartRef.current = scale;
-      setIsPanning(false); // We are zooming not panning
+      isPanning.current = false; 
     } else if (e.touches.length === 1) {
         panStartPoint.current = { x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y };
-        setIsPanning(true);
+        isPanning.current = true;
         setSelectedPlacedCharmId(null);
     }
   };
 
-  const handleCanvasTouchMove = (e: TouchEvent<HTMLDivElement>) => {
+  const handleCanvasTouchMove = (e: TouchEvent) => {
     if (!canvasRef.current) return;
-     e.preventDefault(); // This is crucial to prevent page scroll on mobile
+    e.preventDefault(); 
     const canvasRect = canvasRef.current.getBoundingClientRect();
 
-    if (isDragging && selectedPlacedCharmId && e.touches.length === 1) {
+    if (isDragging.current && selectedPlacedCharmId && e.touches.length === 1) {
         const touch = e.touches[0];
         const dx = touch.clientX - dragStartPoint.current.x;
         const dy = touch.clientY - dragStartPoint.current.y;
@@ -300,15 +300,14 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                     : pc
             )
         );
-        // Update the starting point for the next move event
         dragStartPoint.current = { x: touch.clientX, y: touch.clientY };
-    } else if (isPanning && e.touches.length === 1) {
+    } else if (isPanning.current && e.touches.length === 1) {
         const touch = e.touches[0];
         setPan({
             x: touch.clientX - panStartPoint.current.x,
             y: touch.clientY - panStartPoint.current.y,
         });
-    } else if (e.touches.length > 1) { // Pinch-to-zoom logic
+    } else if (e.touches.length > 1) { 
         if (initialPinchDistance.current) {
             const newDist = getDistance(e.touches);
             const scaleFactor = newDist / initialPinchDistance.current;
@@ -330,6 +329,26 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     }
   };
 
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const handleWheel = (e: WheelEvent) => handleCanvasWheel(e as unknown as WheelEvent<HTMLDivElement>);
+        
+        canvas.addEventListener('wheel', handleWheel, { passive: false });
+        canvas.addEventListener('touchstart', handleCanvasTouchStart, { passive: false });
+        canvas.addEventListener('touchmove', handleCanvasTouchMove, { passive: false });
+        canvas.addEventListener('touchend', handleInteractionEnd, { passive: false });
+
+        return () => {
+            canvas.removeEventListener('wheel', handleWheel);
+            canvas.removeEventListener('touchstart', handleCanvasTouchStart);
+            canvas.removeEventListener('touchmove', handleCanvasTouchMove);
+            canvas.removeEventListener('touchend', handleInteractionEnd);
+        };
+    }, [scale, pan, isDragging.current, isPanning.current, selectedPlacedCharmId]);
+
+
   const resetZoomAndPan = () => {
     setScale(1);
     setPan({ x: 0, y: 0 });
@@ -349,18 +368,33 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   
   const PlacedCharmComponent = ({ placed }: { placed: PlacedCharm }) => {
     const isSelected = selectedPlacedCharmId === placed.id;
+    const charmRef = useRef<HTMLDivElement>(null);
 
-    const handleDelete = (e: React.MouseEvent | React.TouchEvent) => {
+    const handleDelete = (e: React.MouseEvent | TouchEvent) => {
       e.stopPropagation();
       e.preventDefault();
       removeCharm(placed.id);
     }
+    
+    useEffect(() => {
+        const charmEl = charmRef.current;
+        if (!charmEl) return;
+        
+        const handleTouchStart = (e: TouchEvent) => handleCharmInteractionStart(e, placed.id);
+
+        charmEl.addEventListener('touchstart', handleTouchStart, { passive: false });
+        
+        return () => {
+            charmEl.removeEventListener('touchstart', handleTouchStart);
+        };
+    }, [placed.id]);
+
 
     return (
       <div
+        ref={charmRef}
         onMouseDown={(e) => handleCharmInteractionStart(e, placed.id)}
-        onTouchStart={(e) => handleCharmInteractionStart(e, placed.id)}
-        onWheel={(e) => handlePlacedCharmRotation(e, placed.id)}
+        onWheel={(e) => handlePlacedCharmRotation(e as unknown as WheelEvent<HTMLDivElement>, placed.id)}
         className={cn(
             "absolute group charm-on-canvas cursor-pointer p-1 rounded-full select-none",
             {
@@ -505,14 +539,10 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
             </div>
             <div
               ref={canvasRef}
-              onWheel={handleCanvasWheel}
               onMouseDown={handleCanvasMouseDown}
               onMouseMove={handleCanvasMouseMove}
               onMouseUp={handleInteractionEnd}
               onMouseLeave={handleInteractionEnd}
-              onTouchStart={handleCanvasTouchStart}
-              onTouchMove={handleCanvasTouchMove}
-              onTouchEnd={handleInteractionEnd}
               className="relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none"
             >
               <div
