@@ -65,7 +65,7 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
         try {
             const result = await getGeneratedJewelryImage({
                 modelName: model.name,
-                modelImage: model.editorImageUrl,
+                modelImage: model.displayImageUrl,
                 charms: placedCharms.map(pc => ({ name: pc.charm.name })),
                 locale: locale,
             });
@@ -85,7 +85,7 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
       try {
         const orderData: Omit<Order, 'id' | 'createdAt'> = {
             modelName: model.name,
-            modelImage: model.editorImageUrl,
+            modelImage: model.displayImageUrl,
             charms: placedCharms.map(pc => ({ name: pc.charm.name, imageUrl: pc.charm.imageUrl })),
             shippingInfo: values,
         };
@@ -124,7 +124,7 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
 
     const handleOpenChange = (open: boolean) => {
         setIsOpen(open);
-        if (open) {
+        if (!open) {
             resetDialog();
         }
     }
@@ -325,4 +325,5 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
             </DialogContent>
         </Dialog>
     );
-}
+
+    
