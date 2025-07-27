@@ -376,6 +376,12 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   const PlacedCharmComponent = ({ placed }: { placed: PlacedCharm }) => {
     const isSelected = selectedPlacedCharmId === placed.id;
 
+    const handleDelete = (e: React.MouseEvent | React.TouchEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      removeCharm(placed.id);
+    }
+
     return (
       <div
         onMouseDown={(e) => handleInteractionStart(e, placed.id)}
@@ -407,7 +413,10 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
           data-ai-hint="jewelry charm"
           draggable="false"
         />
-        <button onClick={() => removeCharm(placed.id)} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button 
+            onMouseDown={handleDelete}
+            onTouchEnd={handleDelete}
+            className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <X size={14} />
         </button>
       </div>
