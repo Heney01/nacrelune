@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
+import { PurchaseDialog } from './purchase-dialog';
 import { ShoppingCart, Trash2, X, Search, ArrowLeft, Loader2, ZoomIn, ZoomOut, Move } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NacreluneLogo } from './icons';
@@ -412,25 +412,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                     <Trash2 className="mr-2 h-4 w-4" />
                     {t('clear_all_button')}
                   </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button>
-                        <ShoppingCart className="mr-2 h-4 w-4" />
-                        {t('purchase_button')}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>{t('purchase_dialog_title')}</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {t('purchase_dialog_description')}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogAction>{t('purchase_dialog_action')}</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <PurchaseDialog model={model} placedCharms={placedCharms} locale={locale} />
                 </div>
             </div>
             <div

@@ -24,7 +24,7 @@
     "clear_all_button": "Clear All",
     "purchase_button": "Purchase",
     "purchase_dialog_title": "Complete Your Masterpiece?",
-    "purchase_dialog_description": "This is a prototype. In a real application, the next steps would involve finalizing your design, proceeding to checkout for payment, and entering shipping details for delivery.",
+    "purchase_dialog_description": "Ready to see your final creation? Our AI will generate a beautiful image of your personalized jewelry.",
     "purchase_dialog_action": "Continue Designing",
     "added_charms_title": "Added Charms ({count})",
     "added_charms_placeholder": "Drag or click charms to add them to your jewelry.",
@@ -36,6 +36,14 @@
     "generating_button": "Generating...",
     "error_generating_suggestions": "An error occurred while generating suggestions. Please try again.",
     "suggestions_placeholder_title": "Your creative suggestions will appear here.",
-    "recommended_badge": "Recommended"
+    "recommended_badge": "Recommended",
+    "purchase_complete_title": "Your Masterpiece is Ready!",
+    "purchase_complete_description": "Here is the final render of your unique creation. You can download it to share with friends and family.",
+    "generating_image_message": "Our AI is crafting a professional photo of your jewelry... This may take a moment.",
+    "error_generating_purchase_image": "Sorry, we couldn't generate the final image. Please try again.",
+    "generated_image_alt": "Final generated image of the custom jewelry",
+    "download_image_button": "Download Image",
+    "generate_final_image_button": "Generate Final Image",
+    "error_title": "Oops! Something went wrong."
   }
 }
