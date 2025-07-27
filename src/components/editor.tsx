@@ -33,7 +33,8 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   const tRich = useRichTranslations();
   const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCharmId, setSelectedCharmId] = useState<string | null>(null);
+  const [selectedPlacedCharmId, setSelectedPlacedCharmId] = useState<string | null>(null);
+
   const canvasRef = useRef<HTMLDivElement>(null);
   
   const [charms, setCharms] = useState<Charm[]>([]);
@@ -234,6 +235,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     }
     e.stopPropagation();
     setIsPanning(true);
+    setSelectedPlacedCharmId(null);
     startPanPoint.current = ({ x: e.clientX, y: e.clientY });
   };
   
@@ -265,9 +267,11 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     if (e.touches.length === 2) {
       initialPinchDistance.current = getDistance(e.touches);
       scaleStartRef.current = scale;
+      setSelectedPlacedCharmId(null);
     } else if (e.touches.length === 1) {
         const touch = e.touches[0];
         startPanPoint.current = { x: touch.clientX, y: touch.clientY };
+        setSelectedPlacedCharmId(null);
     }
   };
 
@@ -312,7 +316,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   };
   
   const handleCharmListClick = (charmId: string) => {
-    setSelectedCharmId(charmId);
+    setSelectedPlacedCharmId(charmId);
     setPlacedCharms(prev => prev.map(pc =>
       pc.id === charmId ? { ...pc, animation: 'breathe 0.5s ease-out' } : pc
     ));
@@ -324,17 +328,32 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   };
   
   const PlacedCharmComponent = ({ placed }: { placed: PlacedCharm }) => {
+    const isSelected = selectedPlacedCharmId === placed.id;
+
+    const handleSelectCharm = (e: React.MouseEvent | React.TouchEvent) => {
+        e.stopPropagation();
+        setSelectedPlacedCharmId(placed.id);
+    };
+
     return (
       <div
         onWheel={(e) => handlePlacedCharmRotation(e, placed.id)}
-        className="absolute group charm-on-canvas"
+        onClick={handleSelectCharm}
+        onTouchStart={handleSelectCharm}
+        className={cn(
+            "absolute group charm-on-canvas cursor-pointer p-1 rounded-full",
+            {
+                'border-2 border-primary border-dashed': isSelected,
+                'hover:border-2 hover:border-primary/50 hover:border-dashed': !isSelected,
+            }
+        )}
         style={{
           left: `${placed.position.x}%`,
           top: `${placed.position.y}%`,
           transform: `translate(-50%, -50%) rotate(${placed.rotation}deg)`,
           animation: placed.animation,
-          width: 40,
-          height: 40,
+          width: 48,
+          height: 48,
           touchAction: 'none',
         }}
       >
@@ -514,7 +533,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                                 {placedCharms.map(pc => (
                                     <li key={pc.id} 
                                         className={cn("flex items-center justify-between text-sm p-1 rounded-md cursor-pointer",
-                                          selectedCharmId === pc.id ? 'bg-muted' : 'hover:bg-muted/50'
+                                          selectedPlacedCharmId === pc.id ? 'bg-muted' : 'hover:bg-muted/50'
                                         )}
                                         onClick={() => handleCharmListClick(pc.id)}
                                     >
@@ -553,3 +572,4 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     
 
     
+
