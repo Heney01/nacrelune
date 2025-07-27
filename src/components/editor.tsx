@@ -170,8 +170,8 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
       const canvasRect = canvasRef.current.getBoundingClientRect();
       
       // Calculate drop position relative to the canvas, considering pan, zoom and initial offset
-      const dropX_px = (clientX - canvasRect.left - pan.x - (draggedCharm.offset.x * scale)) / scale;
-      const dropY_px = (clientY - canvasRect.top - pan.y - (draggedCharm.offset.y * scale)) / scale;
+      const dropX_px = (clientX - canvasRect.left - pan.x - (draggedCharm.offset.x)) / scale;
+      const dropY_px = (clientY - canvasRect.top - pan.y - (draggedCharm.offset.y)) / scale;
 
       // Calculate the percentage relative to the canvas dimensions for consistent placement
       const xPercent = (dropX_px / canvasRect.width) * 100;
@@ -188,11 +188,12 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   // DRAG AND DROP LOGIC (MOUSE & TOUCH)
   const handleDragStart = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>, placedCharm: PlacedCharm) => {
     if ('button' in e && e.button !== 0) return; // Only allow left-click for drag
-    e.preventDefault();
+    
     e.stopPropagation();
     
     let startX, startY;
     if ('touches' in e) {
+        e.preventDefault();
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
     } else {
@@ -207,7 +208,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
 
     setDraggedCharm({
         charm: placedCharm.charm,
-        offset: { x: offsetX / scale, y: offsetY / scale },
+        offset: { x: offsetX, y: offsetY },
         source: placedCharm.id
     });
     
@@ -219,10 +220,9 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   const handleGlobalDragMove = (e: globalThis.MouseEvent | globalThis.TouchEvent) => {
       if (!isDragging || !draggedCharm) return;
       
-      e.preventDefault();
-
       let clientX, clientY;
       if ('touches' in e) {
+          e.preventDefault();
           clientX = e.touches[0].clientX;
           clientY = e.touches[0].clientY;
       } else {
@@ -346,7 +346,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   };
 
   const handleCanvasTouchMove = (e: TouchEvent<HTMLDivElement>) => {
-    if (isDragging) return; 
+    if (isDragging || !isPanning && e.touches.length !== 2) return; 
     e.preventDefault(); // Prevent scroll
 
     if (e.touches.length === 2 && initialPinchDistance.current && canvasRef.current) {
@@ -377,7 +377,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   };
 
   const handleCanvasTouchEnd = (e: TouchEvent<HTMLDivElement>) => {
-     e.preventDefault();
+    e.preventDefault();
     setIsPanning(false);
     initialPinchDistance.current = null;
   };
@@ -619,9 +619,9 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
           <div
             className="pointer-events-none absolute z-50"
             style={{
-              left: dragPosition.x,
-              top: dragPosition.y,
-              transform: `translate(-${draggedCharm.offset.x * scale}px, -${draggedCharm.offset.y * scale}px) rotate(${placedCharms.find(p => p.id === draggedCharm.source)?.rotation || 0}deg) scale(${scale})`,
+              left: dragPosition.x - draggedCharm.offset.x,
+              top: dragPosition.y - draggedCharm.offset.y,
+              transform: `rotate(${placedCharms.find(p => p.id === draggedCharm.source)?.rotation || 0}deg) scale(${scale})`,
               transformOrigin: 'top left',
             }}
           >
