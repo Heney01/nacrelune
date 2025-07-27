@@ -50,8 +50,8 @@ export async function generateCustomJewelryImage(input: GenerateCustomJewelryIma
   return generateCustomJewelryImageFlow(input);
 }
 
-const generatePrompt = (modelName: string, modelImageUri: string, charmsWithUris: {name: string, imageUrl: string, position: {x: number, y: number}}[]) => {
-    const promptParts: any[] = [
+const generateMessageContent = (modelName: string, modelImageUri: string, charmsWithUris: {name: string, imageUrl: string, position: {x: number, y: number}}[]) => {
+    const content: any[] = [
         {
             text: `You are a professional jewelry photographer. Your task is to generate a realistic, high-quality image of a custom piece of jewelry being worn on a person's neck.
 
@@ -69,20 +69,20 @@ Each charm is provided with its name, its position, and its corresponding image,
     ];
 
     if (charmsWithUris.length === 0) {
-        promptParts.push({text: "\n- No charms added. Just create a beautiful shot of the base model."});
+        content.push({text: "\n- No charms added. Just create a beautiful shot of the base model."});
     } else {
         charmsWithUris.forEach((charm) => {
-            promptParts.push({text: `\n- Charm: "${charm.name}", Position: (x: ${charm.position.x.toFixed(2)}%, y: ${charm.position.y.toFixed(2)}%)`});
-            promptParts.push({media: {url: charm.imageUrl}});
+            content.push({text: `\n- Charm: "${charm.name}", Position: (x: ${charm.position.x.toFixed(2)}%, y: ${charm.position.y.toFixed(2)}%)`});
+            content.push({media: {url: charm.imageUrl}});
         });
     }
 
-    promptParts.push({
+    content.push({
         text: `
 Generate a single, coherent, photorealistic image of the final piece of jewelry. The photo should be a close-up, focusing on the jewelry against the skin and collarbone. The lighting should be professional and highlight the details of the jewelry. The final image should look like a product photo from a luxury brand's website.`
     });
 
-    return promptParts;
+    return content;
 };
 
 
@@ -102,11 +102,11 @@ const generateCustomJewelryImageFlow = ai.defineFlow(
         }))
     );
 
-    const prompt = generatePrompt(input.modelName, modelImageUri, charmsWithUris);
+    const messageContent = generateMessageContent(input.modelName, modelImageUri, charmsWithUris);
     
     const { media } = await ai.generate({
       model: 'googleai/gemini-1.5-pro',
-      prompt: prompt,
+      messages: [{ role: 'user', content: messageContent }],
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
       },
