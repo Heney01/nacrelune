@@ -19,7 +19,7 @@ import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useRichTranslations } from '@/hooks/use-translations';
 
 interface EditorProps {
   model: JewelryModel;
@@ -29,6 +29,7 @@ interface EditorProps {
 
 export default function Editor({ model, jewelryType, onBack }: EditorProps) {
   const t = useTranslations('Editor');
+  const tRich = useRichTranslations();
   const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [draggedCharm, setDraggedCharm] = useState<{charm: Charm, offset: {x: number, y: number}, source: 'list' | string } | null>(null);
@@ -320,7 +321,7 @@ export default function Editor({ model, jewelryType, onBack }: EditorProps) {
             </div>
             <Button variant="ghost" onClick={onBack}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                {t.rich('HomePage.back_button')}
+                {tRich('HomePage.back_button')}
             </Button>
           </div>
         </header>

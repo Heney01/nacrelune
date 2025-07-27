@@ -14,7 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Badge } from './ui/badge';
 import Image from 'next/image';
 import { Charm } from '@/lib/types';
-import { useTranslations } from 'next-intl';
+import { useTranslations } from '@/hooks/use-translations';
 
 interface SuggestionSidebarProps {
   jewelryType: string;

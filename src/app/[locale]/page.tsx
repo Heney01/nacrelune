@@ -14,7 +14,7 @@ import { db, storage } from '@/lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { ref, getDownloadURL } from "firebase/storage";
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { useTranslations } from 'next-intl';
+import { useTranslations } from '@/hooks/use-translations';
 
 type Step = 'type-selection' | 'model-selection' | 'editor';
 
@@ -116,8 +116,8 @@ export default function Home() {
                           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
                              <type.icon className="w-8 h-8 text-primary" />
                           </div>
-                          <h3 className="text-xl font-headline">{t(`jewelry_types.${type.id}` as any)}</h3>
-                          <p className="text-sm text-muted-foreground">{t(`jewelry_types.${type.id}_description` as any)}</p>
+                          <h3 className="text-xl font-headline">{t(`jewelry_types.${type.id}`)}</h3>
+                          <p className="text-sm text-muted-foreground">{t(`jewelry_types.${type.id}_description`)}</p>
                         </CardContent>
                       </Card>
                     ))}
@@ -146,7 +146,7 @@ export default function Home() {
               <div className="container mx-auto">
                 <section>
                   <h2 className="text-3xl font-headline tracking-tight mb-4 text-center">{t('model_selection_title')}</h2>
-                  <p className="text-muted-foreground mb-12 max-w-2xl mx-auto text-center">{t('model_selection_subtitle', { jewelryTypeName: t(`jewelry_types.${selectedType.id}` as any).toLowerCase() })}</p>
+                  <p className="text-muted-foreground mb-12 max-w-2xl mx-auto text-center">{t('model_selection_subtitle', { jewelryTypeName: t(`jewelry_types.${selectedType.id}`).toLowerCase() })}</p>
                   {isLoadingModels ? (
                     <div className="flex justify-center items-center h-64">
                       <Loader2 className="h-16 w-16 animate-spin text-primary" />
