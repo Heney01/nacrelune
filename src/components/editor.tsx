@@ -168,9 +168,10 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
       if (!draggedCharm || !canvasRef.current) return;
 
       const canvasRect = canvasRef.current.getBoundingClientRect();
-      // Calculate the drop position relative to the canvas, accounting for pan and zoom
-      const dropX_px = (clientX - canvasRect.left - pan.x) / scale;
-      const dropY_px = (clientY - canvasRect.top - pan.y) / scale;
+      
+      // Calculate drop position relative to the canvas, considering pan, zoom and initial offset
+      const dropX_px = (clientX - canvasRect.left - pan.x - (draggedCharm.offset.x * scale)) / scale;
+      const dropY_px = (clientY - canvasRect.top - pan.y - (draggedCharm.offset.y * scale)) / scale;
 
       // Calculate the percentage relative to the canvas dimensions for consistent placement
       const xPercent = (dropX_px / canvasRect.width) * 100;
@@ -189,10 +190,8 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     if ('button' in e && e.button !== 0) return; // Only allow left-click for drag
     e.preventDefault();
     e.stopPropagation();
-
-    const rect = e.currentTarget.getBoundingClientRect();
+    
     let startX, startY;
-
     if ('touches' in e) {
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
@@ -201,12 +200,14 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         startY = e.clientY;
     }
 
-    const offsetX = startX - rect.left;
-    const offsetY = startY - rect.top;
+    const charmRect = e.currentTarget.getBoundingClientRect();
+    const offsetX = startX - charmRect.left;
+    const offsetY = startY - charmRect.top;
+
 
     setDraggedCharm({
         charm: placedCharm.charm,
-        offset: { x: offsetX, y: offsetY },
+        offset: { x: offsetX / scale, y: offsetY / scale },
         source: placedCharm.id
     });
     
@@ -230,7 +231,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
       }
 
       setDragPosition({ x: clientX, y: clientY });
-      updateCharmPositionOnCanvas(clientX - draggedCharm.offset.x, clientY - draggedCharm.offset.y);
+      updateCharmPositionOnCanvas(clientX, clientY);
   };
   
   const handleGlobalDragEnd = () => {
@@ -620,8 +621,8 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
             style={{
               left: dragPosition.x,
               top: dragPosition.y,
-              transform: `translate(-${draggedCharm.offset.x}px, -${draggedCharm.offset.y}px) rotate(${placedCharms.find(p => p.id === draggedCharm.source)?.rotation || 0}deg) scale(${scale})`,
-              transformOrigin: '0 0',
+              transform: `translate(-${draggedCharm.offset.x * scale}px, -${draggedCharm.offset.y * scale}px) rotate(${placedCharms.find(p => p.id === draggedCharm.source)?.rotation || 0}deg) scale(${scale})`,
+              transformOrigin: 'top left',
             }}
           >
             <Image
@@ -636,5 +637,3 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     </>
   );
 }
-
-    
