@@ -159,7 +159,7 @@ export default function Home() {
                               <Image src={model.displayImageUrl} alt={model.name} width={400} height={400} className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300" data-ai-hint="jewelry" />
                                <Dialog>
                                 <DialogTrigger asChild>
-                                    <Button variant="secondary" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button variant="secondary" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                                         <ZoomIn className="h-5 w-5" />
                                     </Button>
                                 </DialogTrigger>
