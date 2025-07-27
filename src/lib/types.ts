@@ -23,7 +23,7 @@ export interface JewelryModel {
 }
 
 export interface JewelryType {
-  id: 'necklace' | 'bracelet' | 'earrings';
+  id: 'necklace' | 'bracelet' | 'earring';
   name: string;
   icon: React.ComponentType<{ className?: string }>;
   description: string;
