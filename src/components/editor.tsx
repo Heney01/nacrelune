@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useRef, DragEvent, WheelEvent, useEffect, TouchEvent } from 'react';
+import React, { useState, useMemo, useRef, WheelEvent, useEffect, TouchEvent } from 'react';
 import Image from 'next/image';
 import { JewelryModel, PlacedCharm, Charm, JewelryType, CharmCategory } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -169,14 +169,12 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
 
       const canvasRect = canvasRef.current.getBoundingClientRect();
       
-      // Calculate drop position relative to the canvas, considering pan, zoom and initial offset
       const dropX_px = (clientX - canvasRect.left - pan.x - (draggedCharm.offset.x)) / scale;
       const dropY_px = (clientY - canvasRect.top - pan.y - (draggedCharm.offset.y)) / scale;
 
-      // Calculate the percentage relative to the canvas dimensions for consistent placement
       const xPercent = (dropX_px / canvasRect.width) * 100;
       const yPercent = (dropY_px / canvasRect.height) * 100;
-
+      
       const newPosition = { x: xPercent, y: yPercent };
 
       // Update the position of the moved charm
@@ -193,7 +191,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     
     let startX, startY;
     if ('touches' in e) {
-        e.preventDefault();
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
     } else {
@@ -346,7 +343,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   };
 
   const handleCanvasTouchMove = (e: TouchEvent<HTMLDivElement>) => {
-    if (isDragging || !isPanning && e.touches.length !== 2) return; 
+    if (isDragging) return;
     e.preventDefault(); // Prevent scroll
 
     if (e.touches.length === 2 && initialPinchDistance.current && canvasRef.current) {
@@ -377,7 +374,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   };
 
   const handleCanvasTouchEnd = (e: TouchEvent<HTMLDivElement>) => {
-    e.preventDefault();
+    //e.preventDefault();
     setIsPanning(false);
     initialPinchDistance.current = null;
   };
@@ -537,7 +534,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                           onWheel={(e) => handlePlacedCharmRotation(e, placed.id)}
                           className={cn(
                             "absolute group charm-on-canvas cursor-grab",
-                            isDragging && draggedCharm?.source === placed.id && "opacity-0"
+                            isDragging && draggedCharm?.source === placed.id && "opacity-50"
                           )}
                           style={{
                           left: `${placed.position.x}%`,
@@ -637,3 +634,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     </>
   );
 }
+
+
+    
