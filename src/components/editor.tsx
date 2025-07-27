@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useRef, WheelEvent, useCallback } from 'react';
+import React, { useState, useMemo, useRef, WheelEvent, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import { JewelryModel, PlacedCharm, Charm, JewelryType, CharmCategory } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -17,11 +17,11 @@ import { NacreluneLogo } from './icons';
 import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
-import { Dialog, DialogContent, DialogTrigger, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
+import { Dialog, DialogTrigger, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { useTranslations, useRichTranslations } from '@/hooks/use-translations';
 import { PurchaseDialog } from './purchase-dialog';
-import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+
 
 const PlacedCharmComponent = React.memo(({ placed, isSelected, scale, onDragStart, onDelete, onRotate }: PlacedCharmComponentProps) => {
     const charmRef = useRef<HTMLDivElement>(null);
@@ -33,13 +33,11 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, scale, onDragStar
     };
 
     const handleWheelRotation = useCallback((e: WheelEvent) => {
-        e.preventDefault(); // Prevent page scroll
+        e.preventDefault(); 
         onRotate(e, placed.id);
     }, [onRotate, placed.id]);
 
 
-    // Use a useEffect to attach the wheel event listener directly
-    // This allows us to use { passive: false } to enable e.preventDefault()
     useEffect(() => {
       const element = charmRef.current;
       if (!element) return;
@@ -274,6 +272,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
 
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent, charmId: string) => {
     e.stopPropagation();
+    if ('preventDefault' in e) e.preventDefault();
 
     interactionState.isDragging = true;
     interactionState.isPanning = false;
@@ -282,10 +281,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
 
     const point = 'touches' in e ? e.touches[0] : e;
     interactionState.dragStart = { x: point.clientX, y: point.clientY };
-
-    if ('touches' in e) {
-      e.preventDefault();
-    }
   }, [interactionState]);
 
 
@@ -297,6 +292,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
       const getPoint = (e: MouseEvent | TouchEvent) => 'touches' in e ? e.touches[0] : e;
 
       const handleMove = (e: MouseEvent | TouchEvent) => {
+        if ('preventDefault' in e) e.preventDefault();
         const point = getPoint(e);
         const currentScale = scaleRef.current;
         const currentPlacedCharms = placedCharmsRef.current;
@@ -328,11 +324,10 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         const target = e.target as HTMLElement;
         if (target.closest('.charm-on-canvas')) return;
 
-        if (e.type === 'mousedown') {
-            setSelectedPlacedCharmId(null);
-        }
-
-        e.preventDefault();
+        if ('preventDefault' in e) e.preventDefault();
+        
+        setSelectedPlacedCharmId(null);
+        
         interactionState.isPanning = true;
         interactionState.isDragging = false;
         
@@ -342,14 +337,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
       }
 
       const handleInteractionEnd = (e: MouseEvent | TouchEvent) => {
-        if (e.type === 'touchend' && interactionState.isPanning && !interactionState.isDragging) {
-             const endPoint = (e as TouchEvent).changedTouches[0];
-             const startPoint = interactionState.dragStart;
-             const distance = Math.sqrt(Math.pow(endPoint.clientX - startPoint.x, 2) + Math.pow(endPoint.clientY - startPoint.y, 2));
-             if (distance < 10) { // It's a tap, not a pan
-                 setSelectedPlacedCharmId(null);
-             }
-        }
         interactionState.isDragging = false;
         interactionState.isPanning = false;
         interactionState.activeCharmId = null;
@@ -522,7 +509,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
               ref={canvasRef}
               onWheel={handleCanvasWheel}
               className="relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none"
-              onMouseDown={() => setSelectedPlacedCharmId(null)}
             >
               <div
                   className="absolute top-0 left-0 w-full h-full pointer-events-none"
@@ -531,7 +517,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                       transformOrigin: '0 0',
                   }}
               >
-                  <Image src={model.editorImageUrl} alt={model.name} fill style={{ objectFit: 'contain' }} className="pointer-events-none" data-ai-hint="jewelry model" />
+                  <Image src={model.editorImageUrl} alt={model.name} fill style={{ objectFit: 'contain' }} className="pointer-events-none" data-ai-hint="jewelry model" sizes="100vw" />
               </div>
               <div className="absolute top-0 left-0 w-full h-full" style={{ perspective: '1000px' }}>
                   <div

@@ -114,7 +114,7 @@ export function ModelSelection({ selectedType, onModelSelect, onBack }: ModelSel
                                                                 Enlarged view of the {model.name} model.
                                                             </DialogDescription>
                                                         </DialogHeader>
-                                                        <Image src={model.displayImageUrl} alt={model.name} width={800} height={800} className="w-full h-auto object-contain rounded-lg" />
+                                                        <Image src={model.displayImageUrl} alt={model.name} width={800} height={800} className="w-full h-auto object-contain rounded-lg" data-ai-hint="jewelry model" sizes="100vw"/>
                                                     </DialogContent>
                                                 </Dialog>
                                             </div>

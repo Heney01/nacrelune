@@ -22,7 +22,7 @@ type Step = 'type-selection' | 'model-selection' | 'editor';
 export default function Home() {
   const t = useTranslations('HomePage');
   const params = useParams();
-  const locale = Array.isArray(params.locale) ? params.locale[0] : params.locale;
+  const locale = Array.isArray(params.locale) ? params.locale[0] : params.locale as string;
   const [step, setStep] = useState<Step>('type-selection');
   const [selectedType, setSelectedType] = useState<Omit<JewelryType, 'models'> | null>(null);
   const [selectedModel, setSelectedModel] = useState<JewelryModel | null>(null);
