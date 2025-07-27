@@ -56,7 +56,7 @@ const generatePrompt = (modelName: string, modelImageUri: string, charmsWithUris
 Base Jewelry Model: ${modelName}
 The base image for the model is provided as the first media input.
 
-The following charms have been added to the jewelry. You MUST place them on the model according to their specified positions. The (x, y) coordinates are percentages of the base model image's dimensions, starting from the top-left corner. The charms are provided with their names and images. The charm images are provided as subsequent media inputs, in the same order as they are listed below.
+The following charms have been added to the jewelry. You MUST place them on the model according to their specified positions. The (x, y) coordinates are percentages of the base model image's dimensions, starting from the top-left corner. You must use these coordinates as precise anchor points. The charms are provided with their names and images. The charm images are provided as subsequent media inputs, in the same order as they are listed below.
 
 Charms:
 `;
@@ -70,7 +70,7 @@ Charms:
     }
 
     promptText += `
-Generate a single, coherent, photorealistic image of the final piece of jewelry on a clean, elegant, neutral background (like light gray, off-white, or a soft texture). The lighting should be professional and highlight the details of the jewelry. The final image should look like a product photo from a luxury brand's website.`;
+Generate a single, coherent, photorealistic image of the final piece of jewelry being worn on a person's neck. The photo should be a close-up, focusing on the jewelry against the skin and collarbone. The lighting should be professional and highlight the details of the jewelry. The final image should look like a product photo from a luxury brand's website.`;
 
     const promptParts: any[] = [{ text: promptText }, { media: { url: modelImageUri } }];
     charmsWithUris.forEach(charm => {
