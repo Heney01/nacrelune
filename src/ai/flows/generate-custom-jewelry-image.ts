@@ -54,9 +54,9 @@ const generatePrompt = (modelName: string, modelImageUri: string, charmsWithUris
     let promptText = `You are a professional jewelry photographer. Your task is to generate a realistic, high-quality image of a custom piece of jewelry.
 
 Base Jewelry Model: ${modelName}
-The base image for the model is provided.
+The base image for the model is provided as the first media input.
 
-The following charms have been added to the jewelry. You MUST place them on the model according to their specified positions (x, y percentages from the top-left corner of the image). The charms are provided with their names and images.
+The following charms have been added to the jewelry. You MUST place them on the model according to their specified positions (x, y percentages from the top-left corner of the image). The charms are provided with their names and images. The charm images are provided as subsequent media inputs, in the same order as they are listed below.
 
 Charms:
 `;
@@ -64,8 +64,8 @@ Charms:
     if (charmsWithUris.length === 0) {
         promptText += "- No charms added. Just create a beautiful shot of the base model.";
     } else {
-        charmsWithUris.forEach(charm => {
-            promptText += `- Charm: "${charm.name}", Position: (x: ${charm.position.x.toFixed(2)}%, y: ${charm.position.y.toFixed(2)}%)\n`;
+        charmsWithUris.forEach((charm, index) => {
+            promptText += `- Charm #${index + 1}: "${charm.name}", Position: (x: ${charm.position.x.toFixed(2)}%, y: ${charm.position.y.toFixed(2)}%)\n`;
         });
     }
 
