@@ -58,7 +58,7 @@ export const JEWELRY_TYPES: JewelryType[] = [
     ],
   },
   {
-    id: 'earrings',
+    id: 'earring',
     name: 'Earrings',
     icon: Ear,
     description: "Stylish earrings to complete your look.",
