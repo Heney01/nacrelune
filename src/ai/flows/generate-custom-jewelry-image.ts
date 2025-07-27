@@ -56,7 +56,7 @@ const generatePrompt = (modelName: string, modelImageUri: string, charmsWithUris
 Base Jewelry Model: ${modelName}
 The base image for the model is provided as the first media input.
 
-The following charms have been added to the jewelry. You MUST place them on the model according to their specified positions (x, y percentages from the top-left corner of the image). The charms are provided with their names and images. The charm images are provided as subsequent media inputs, in the same order as they are listed below.
+The following charms have been added to the jewelry. You MUST place them on the model according to their specified positions. The (x, y) coordinates are percentages of the base model image's dimensions, starting from the top-left corner. The charms are provided with their names and images. The charm images are provided as subsequent media inputs, in the same order as they are listed below.
 
 Charms:
 `;
