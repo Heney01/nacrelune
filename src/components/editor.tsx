@@ -216,7 +216,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         const movementX = touch.clientX - dragStartPoint.current.x;
         const movementY = touch.clientY - dragStartPoint.current.y;
         updateCharmPosition(movementX, movementY);
-        dragStartPoint.current = { x: touch.clientX, y: touch.clientY };
+        dragStartPoint.current = { x: touch.clientX, y: touch.clientY }; // THIS IS THE FIX
       } else if (isPanning && e.touches.length === 1) {
         const touch = e.touches[0];
         setPan({
@@ -618,6 +618,8 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
 
 
 
+
+    
 
     
 
