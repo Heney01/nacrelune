@@ -17,18 +17,6 @@ interface PurchaseDialogProps {
     locale: string;
 }
 
-// Helper to convert an image URL to a data URI
-async function toDataURI(url: string): Promise<string> {
-  const response = await fetch(url, { mode: 'cors' });
-  const blob = await response.blob();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
-
 export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogProps) {
     const t = useTranslations('Editor');
     const [isOpen, setIsOpen] = useState(false);
@@ -42,20 +30,14 @@ export function PurchaseDialog({ model, placedCharms, locale }: PurchaseDialogPr
         setGeneratedImage(null);
 
         try {
-            // Convert all image URLs to data URIs
-            const modelImageDaTaUri = await toDataURI(model.editorImageUrl);
-            const charmsWithDataUris = await Promise.all(
-                placedCharms.map(async (pc) => ({
-                    name: pc.charm.name,
-                    imageUrl: await toDataURI(pc.charm.imageUrl),
-                    position: pc.position,
-                }))
-            );
-            
             const result = await getGeneratedJewelryImage({
                 modelName: model.name,
-                modelImage: modelImageDaTaUri,
-                charms: charmsWithDataUris,
+                modelImage: model.editorImageUrl,
+                charms: placedCharms.map(pc => ({
+                    name: pc.charm.name,
+                    imageUrl: pc.charm.imageUrl,
+                    position: pc.position,
+                })),
                 locale: locale,
             });
 
