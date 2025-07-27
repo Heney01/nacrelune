@@ -7,8 +7,8 @@
       "necklace_description": "Chaînes et pendentifs gracieux.",
       "bracelet": "Bracelets",
       "bracelet_description": "Un bijou de poignet élégant pour toute occasion.",
-      "earrings": "Boucles d'oreilles",
-      "earrings_description": "Des boucles d'oreilles stylées pour compléter votre look."
+      "earring": "Boucles d'oreilles",
+      "earring_description": "Des boucles d'oreilles stylées pour compléter votre look."
     },
     "model_selection_title": "Sélectionnez un Modèle",
     "model_selection_subtitle": "Sélectionnez un magnifique modèle de {jewelryTypeName} comme base pour votre création personnalisée.",

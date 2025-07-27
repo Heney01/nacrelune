@@ -7,8 +7,8 @@
       "necklace_description": "Graceful chains and pendants.",
       "bracelet": "Bracelets",
       "bracelet_description": "Elegant wristwear for any occasion.",
-      "earrings": "Earrings",
-      "earrings_description": "Stylish earrings to complete your look."
+      "earring": "Earrings",
+      "earring_description": "Stylish earrings to complete your look."
     },
     "model_selection_title": "Select a Model",
     "model_selection_subtitle": "Select a beautiful {jewelryTypeName} model as the foundation for your custom design.",
