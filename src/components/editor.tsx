@@ -45,12 +45,10 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const startPanPoint = useRef({ x: 0, y: 0 });
   const initialPinchDistance = useRef<number | null>(null);
   const scaleStartRef = useRef(1);
-
-  // State for dragging a placed charm
-  const [draggedCharm, setDraggedCharm] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null);
 
 
   const getUrl = async (path: string) => {
@@ -162,78 +160,69 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     }, 500);
   };
   
-  const updateCharmPosition = useCallback((clientX: number, clientY: number) => {
-    if (!draggedCharm || !canvasRef.current) return;
-
+  const updateCharmPosition = useCallback((movementX: number, movementY: number) => {
+    if (!isDragging || !selectedPlacedCharmId || !canvasRef.current) return;
+  
     const canvasRect = canvasRef.current.getBoundingClientRect();
-
-    // Calculate mouse position relative to the canvas, adjusted for pan.
-    const mouseXOnCanvas = clientX - canvasRect.left - pan.x;
-    const mouseYOnCanvas = clientY - canvasRect.top - pan.y;
-
-    // Adjust for the initial click offset within the charm, scaled by the current zoom level.
-    const charmTopLeftX = mouseXOnCanvas - (draggedCharm.offsetX * scale);
-    const charmTopLeftY = mouseYOnCanvas - (draggedCharm.offsetY * scale);
-
-    // Convert the pixel position on the scaled canvas to a percentage of the unscaled canvas.
-    const xPercent = (charmTopLeftX / scale / canvasRect.width) * 100;
-    const yPercent = (charmTopLeftY / scale / canvasRect.height) * 100;
-    
+    const dxPercent = (movementX / canvasRect.width) * 100 / scale;
+    const dyPercent = (movementY / canvasRect.height) * 100 / scale;
+  
     setPlacedCharms(prev =>
       prev.map(pc =>
-        pc.id === draggedCharm.id
-          ? { ...pc, position: { x: xPercent, y: yPercent } }
+        pc.id === selectedPlacedCharmId
+          ? {
+              ...pc,
+              position: {
+                x: pc.position.x + dxPercent,
+                y: pc.position.y + dyPercent,
+              },
+            }
           : pc
       )
     );
-  }, [draggedCharm, scale, pan]);
+  }, [isDragging, selectedPlacedCharmId, scale]);
 
 
   useEffect(() => {
     const handleMouseMove = (e: globalThis.MouseEvent) => {
-        updateCharmPosition(e.clientX, e.clientY);
+      if (isDragging) {
+        updateCharmPosition(e.movementX, e.movementY);
+      } else if (isPanning) {
+        setPan(currentPan => ({
+            x: currentPan.x + e.movementX,
+            y: currentPan.y + e.movementY,
+        }));
+      }
     };
-
+  
     const handleTouchMove = (e: globalThis.TouchEvent) => {
-        if (e.touches.length > 0) {
-            updateCharmPosition(e.touches[0].clientX, e.touches[0].clientY);
-        }
-    }
-
+      if (isDragging && e.touches.length === 1) {
+          const touch = e.touches[0];
+          const movementX = touch.clientX - startPanPoint.current.x;
+          const movementY = touch.clientY - startPanPoint.current.y;
+          updateCharmPosition(movementX, movementY);
+          startPanPoint.current = { x: touch.clientX, y: touch.clientY };
+      }
+    };
+  
     const handleInteractionEnd = () => {
       setIsPanning(false);
-      setDraggedCharm(null);
+      setIsDragging(false);
       initialPinchDistance.current = null;
     };
-    
-    if (draggedCharm) {
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('touchmove', handleTouchMove);
-        window.addEventListener('mouseup', handleInteractionEnd);
-        window.addEventListener('touchend', handleInteractionEnd);
-    } else if (isPanning) {
-        const handlePanMove = (e: globalThis.MouseEvent) => {
-            setPan(currentPan => ({
-                x: currentPan.x + e.movementX,
-                y: currentPan.y + e.movementY,
-            }));
-        }
-        window.addEventListener('mousemove', handlePanMove);
-        window.addEventListener('mouseup', handleInteractionEnd);
-        return () => {
-            window.removeEventListener('mousemove', handlePanMove);
-            window.removeEventListener('mouseup', handleInteractionEnd);
-        }
-    }
-        
+  
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('touchmove', handleTouchMove);
+    window.addEventListener('mouseup', handleInteractionEnd);
+    window.addEventListener('touchend', handleInteractionEnd);
+  
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('mouseup', handleInteractionEnd);
       window.removeEventListener('touchend', handleInteractionEnd);
     };
-  }, [draggedCharm, isPanning, updateCharmPosition]);
-
+  }, [isDragging, isPanning, updateCharmPosition]);
 
 
   const removeCharm = (id: string) => {
@@ -370,34 +359,20 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     const handleInteractionStart = (e: React.MouseEvent | React.TouchEvent) => {
         e.stopPropagation();
         setSelectedPlacedCharmId(placed.id);
-
-        const target = e.currentTarget as HTMLDivElement;
-        const rect = target.getBoundingClientRect();
-
-        let clientX, clientY;
-        if ('touches' in e) {
-            clientX = e.touches[0].clientX;
-            clientY = e.touches[0].clientY;
-        } else {
-            clientX = e.clientX;
-            clientY = e.clientY;
-        }
-
-        const offsetX = (clientX - rect.left);
-        const offsetY = (clientY - rect.top);
         
-        setDraggedCharm({ id: placed.id, offsetX: offsetX / scale, offsetY: offsetY / scale });
+        if (isSelected) {
+            setIsDragging(true);
+            if ('touches' in e) {
+              startPanPoint.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+        }
     };
 
     return (
       <div
-        onClick={(e) => {
-          e.stopPropagation();
-          setSelectedPlacedCharmId(placed.id);
-        }}
-        onWheel={(e) => handlePlacedCharmRotation(e, placed.id)}
         onMouseDown={handleInteractionStart}
         onTouchStart={handleInteractionStart}
+        onWheel={(e) => handlePlacedCharmRotation(e, placed.id)}
         className={cn(
             "absolute group charm-on-canvas cursor-pointer p-1 rounded-full",
             {
@@ -631,5 +606,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
 
 
 
+
+    
 
     
