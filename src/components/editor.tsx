@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useRef, WheelEvent, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useRef, WheelEvent, useCallback } from 'react';
 import Image from 'next/image';
 import { JewelryModel, PlacedCharm, Charm, JewelryType, CharmCategory } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -11,16 +11,17 @@ import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { Trash2, X, Search, ArrowLeft, Loader2, ZoomIn, ZoomOut, Move } from 'lucide-react';
+import { Trash2, X, Search, ArrowLeft, Loader2, ZoomIn, ZoomOut, Move, Sparkles, Gem } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NacreluneLogo } from './icons';
 import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
-import { Dialog, DialogTrigger, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useTranslations, useRichTranslations } from '@/hooks/use-translations';
 import { PurchaseDialog } from './purchase-dialog';
-import { useToast } from '@/hooks/use-toast';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 const PlacedCharmComponent = React.memo(({ placed, isSelected, scale, onDragStart, onDelete, onRotate }: PlacedCharmComponentProps) => {
@@ -38,7 +39,7 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, scale, onDragStar
     }, [onRotate, placed.id]);
 
 
-    useEffect(() => {
+    React.useEffect(() => {
       const element = charmRef.current;
       if (!element) return;
 
@@ -117,6 +118,7 @@ interface EditorProps {
 export default function Editor({ model, jewelryType, onBack, locale }: EditorProps) {
   const t = useTranslations('Editor');
   const tRich = useRichTranslations();
+  const isMobile = useIsMobile();
   const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPlacedCharmId, setSelectedPlacedCharmId] = useState<string | null>(null);
@@ -161,7 +163,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     return path || 'https://placehold.co/100x100.png';
   }
 
-  useEffect(() => {
+  React.useEffect(() => {
     const fetchCharmsData = async () => {
       setIsLoadingCharms(true);
       try {
@@ -284,20 +286,19 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   }, [interactionState]);
 
 
-    // Event listeners using useEffect to handle passive:false and stale closures
-    useEffect(() => {
+    React.useEffect(() => {
       const canvas = canvasRef.current;
       if (!canvas) return;
   
       const getPoint = (e: MouseEvent | TouchEvent) => 'touches' in e ? e.touches[0] : e;
 
       const handleMove = (e: MouseEvent | TouchEvent) => {
-        if ('preventDefault' in e) e.preventDefault();
         const point = getPoint(e);
         const currentScale = scaleRef.current;
         const currentPlacedCharms = placedCharmsRef.current;
 
         if (interactionState.isDragging && interactionState.activeCharmId) {
+            if ('preventDefault' in e) e.preventDefault();
             const dx = point.clientX - interactionState.dragStart.x;
             const dy = point.clientY - interactionState.dragStart.y;
 
@@ -311,9 +312,9 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                         : pc
                 )
             );
-            // Update start point for next move event
             interactionState.dragStart = { x: point.clientX, y: point.clientY };
         } else if (interactionState.isPanning) {
+            if ('preventDefault' in e) e.preventDefault();
             const newX = point.clientX - interactionState.panStart.x;
             const newY = point.clientY - interactionState.panStart.y;
             setPan({ x: newX, y: newY });
@@ -323,8 +324,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
       const handlePanStart = (e: MouseEvent | TouchEvent) => {
         const target = e.target as HTMLElement;
         if (target.closest('.charm-on-canvas')) return;
-
-        if ('preventDefault' in e) e.preventDefault();
         
         setSelectedPlacedCharmId(null);
         
@@ -348,7 +347,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
       window.addEventListener('mouseup', handleInteractionEnd);
 
       // Touch events
-      canvas.addEventListener('touchstart', handlePanStart, { passive: false });
+      canvas.addEventListener('touchstart', handlePanStart, { passive: true });
       window.addEventListener('touchmove', handleMove, { passive: false });
       window.addEventListener('touchend', handleInteractionEnd);
       
@@ -360,7 +359,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         window.removeEventListener('touchmove', handleMove);
         window.removeEventListener('touchend', handleInteractionEnd);
       };
-  }, [interactionState]); // Only depends on the stable ref object
+  }, [interactionState]);
 
   const handleCanvasWheel = (e: WheelEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -398,6 +397,97 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     }, 500);
   };
   
+  const CharmsPanel = () => (
+    <Card className={cn("flex flex-col", isMobile ? "h-full w-full border-0 shadow-none rounded-none" : "lg:col-span-3")}>
+        <CardHeader className={cn(isMobile && "py-4")}>
+            <CardTitle className="font-headline text-xl">{t('charms_title')}</CardTitle>
+        </CardHeader>
+        <div className="px-4 pb-4">
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                    placeholder={t('search_placeholder')}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                />
+            </div>
+        </div>
+        <Separator />
+        <CardContent className="p-0 flex-grow">
+            <ScrollArea className={cn(isMobile ? "h-[calc(100vh-200px)]" : "h-[calc(100vh-320px)]")}>
+                {isLoadingCharms ? (
+                    <div className="flex justify-center items-center h-full p-8">
+                        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                    </div>
+                ) : (
+                    <Accordion type="multiple" defaultValue={charmCategories.map(c => c.id)} className="p-4">
+                        {charmCategories.map(category => (
+                            charmsByCategory[category.id] && charmsByCategory[category.id].length > 0 && (
+                                <AccordionItem value={category.id} key={category.id}>
+                                    <AccordionTrigger className="text-base font-headline">{category.name}</AccordionTrigger>
+                                    <AccordionContent>
+                                        <div className="grid grid-cols-3 gap-4 pt-2">
+                                            {charmsByCategory[category.id].map((charm) => (
+                                                <Dialog key={charm.id}>
+                                                    <div
+                                                        onClick={() => { addCharmToCanvas(charm) }}
+                                                        className="relative group p-2 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer"
+                                                        title={charm.name}
+                                                    >
+                                                        <Image
+                                                            src={charm.imageUrl}
+                                                            alt={charm.name}
+                                                            width={48}
+                                                            height={48}
+                                                            className="pointer-events-none"
+                                                            data-ai-hint="jewelry charm"
+                                                        />
+                                                        <p className="text-xs text-center mt-1 truncate">{charm.name}</p>
+                                                        <DialogTrigger asChild>
+                                                            <Button variant="secondary" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                                                <ZoomIn className="h-4 w-4" />
+                                                            </Button>
+                                                        </DialogTrigger>
+                                                    </div>
+                                                    <DialogContent className="max-w-md">
+                                                        <DialogHeader>
+                                                            <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
+                                                            <DialogDescription className="text-base">{charm.description}</DialogDescription>
+                                                        </DialogHeader>
+                                                        <div className="mt-4 flex justify-center">
+                                                            <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
+                                                        </div>
+                                                        <div className="mt-6 flex justify-end">
+                                                            <Button onClick={() => addCharmToCanvas(charm)}>{t('add_to_design_button')}</Button>
+                                                        </div>
+                                                    </DialogContent>
+                                                </Dialog>
+                                            ))}
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            )
+                        ))}
+                    </Accordion>
+                )}
+            </ScrollArea>
+        </CardContent>
+    </Card>
+  );
+
+  const SuggestionsPanel = () => (
+     <div className={cn(!isMobile && "lg:col-span-3")}>
+        <SuggestionSidebar 
+          jewelryType={jewelryType.id} 
+          modelDescription={model.name || ''} 
+          onAddCharm={addCharmToCanvas} 
+          charms={charms}
+          locale={locale}
+          isMobile={isMobile}
+        />
+     </div>
+  );
 
   return (
     <>
@@ -412,90 +502,15 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
             </Button>
           </div>
         </header>
-      <main className="flex-grow p-4 md:p-8">
-      <div className="container mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+      <main className={cn("flex-grow p-4 md:p-8", isMobile && "p-0")}>
+      <div className={cn("container mx-auto", isMobile && "px-0")}>
+        <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 h-full", isMobile && "grid-cols-1 gap-0")}>
           {/* Charms Panel */}
-          <Card className="lg:col-span-3 flex flex-col">
-            <CardHeader>
-              <CardTitle className="font-headline text-xl">{t('charms_title')}</CardTitle>
-            </CardHeader>
-            <div className="px-4 pb-4">
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder={t('search_placeholder')}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-9"
-                    />
-                </div>
-            </div>
-            <Separator />
-            <CardContent className="p-0 flex-grow">
-              <ScrollArea className="h-[calc(100vh-320px)]">
-                {isLoadingCharms ? (
-                  <div className="flex justify-center items-center h-full p-8">
-                      <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                  </div>
-                ) : (
-                <Accordion type="multiple" defaultValue={charmCategories.map(c => c.id)} className="p-4">
-                  {charmCategories.map(category => (
-                    charmsByCategory[category.id] && charmsByCategory[category.id].length > 0 && (
-                      <AccordionItem value={category.id} key={category.id}>
-                        <AccordionTrigger className="text-base font-headline">{category.name}</AccordionTrigger>
-                        <AccordionContent>
-                          <div className="grid grid-cols-3 gap-4 pt-2">
-                            {charmsByCategory[category.id].map((charm) => (
-                              <Dialog key={charm.id}>
-                                <div
-                                    onClick={()=>{ addCharmToCanvas(charm)}}
-                                    className="relative group p-2 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer"
-                                    title={charm.name}
-                                  >
-                                    <Image 
-                                      src={charm.imageUrl} 
-                                      alt={charm.name} 
-                                      width={48} 
-                                      height={48} 
-                                      className="pointer-events-none" 
-                                      data-ai-hint="jewelry charm"
-                                      />
-                                      <p className="text-xs text-center mt-1 truncate">{charm.name}</p>
-                                    <DialogTrigger asChild>
-                                        <Button variant="secondary" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                                            <ZoomIn className="h-4 w-4" />
-                                        </Button>
-                                    </DialogTrigger>
-                                  </div>
-                                  <DialogContent className="max-w-md">
-                                    <DialogHeader>
-                                      <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
-                                      <DialogDescription className="text-base">{charm.description}</DialogDescription>
-                                    </DialogHeader>
-                                    <div className="mt-4 flex justify-center">
-                                        <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
-                                    </div>
-                                    <div className="mt-6 flex justify-end">
-                                        <Button onClick={() => addCharmToCanvas(charm)}>{t('add_to_design_button')}</Button>
-                                    </div>
-                                  </DialogContent>
-                                </Dialog>
-                            ))}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    )
-                  ))}
-                </Accordion>
-                )}
-              </ScrollArea>
-            </CardContent>
-          </Card>
+          {!isMobile && <CharmsPanel />}
 
           {/* Editor Canvas */}
-          <div className="lg:col-span-6 flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <div className={cn("lg:col-span-6 flex flex-col gap-4", isMobile && "order-first")}>
+             <div className={cn("flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2", isMobile && "px-4 pt-4")}>
               <h2 className="text-2xl font-headline tracking-tight">{t('customize_title', {modelName: model.name})}</h2>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={clearAllCharms} disabled={placedCharms.length === 0}>
@@ -508,7 +523,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
             <div
               ref={canvasRef}
               onWheel={handleCanvasWheel}
-              className="relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none"
+              className={cn("relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none", isMobile && "rounded-none border-x-0")}
             >
               <div
                   className="absolute top-0 left-0 w-full h-full pointer-events-none"
@@ -547,7 +562,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                   <Button variant="outline" size="icon" onClick={resetZoomAndPan}><Move /></Button>
               </div>
             </div>
-            <Card>
+            <Card className={cn(isMobile && "rounded-none border-x-0")}>
                 <CardHeader>
                     <CardTitle className="font-headline text-lg">{t('added_charms_title', {count: placedCharms.length})}</CardTitle>
                 </CardHeader>
@@ -581,18 +596,38 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
           </div>
 
           {/* AI Suggestions Panel */}
-          <div className="lg:col-span-3">
-            <SuggestionSidebar 
-              jewelryType={jewelryType.id} 
-              modelDescription={model.name || ''} 
-              onAddCharm={addCharmToCanvas} 
-              charms={charms}
-              locale={locale}
-            />
-          </div>
+          {!isMobile && <SuggestionsPanel />}
         </div>
         </div>
       </main>
+
+       {isMobile && (
+          <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-2 flex justify-around">
+            <Sheet>
+                <SheetTrigger asChild>
+                    <Button variant="ghost" className="flex flex-col h-auto p-2">
+                       <Gem className="h-6 w-6" />
+                       <span className="text-xs">{t('charms_title')}</span>
+                    </Button>
+                </SheetTrigger>
+                <SheetContent side="bottom" className="h-[80%] p-0">
+                   <CharmsPanel />
+                </SheetContent>
+            </Sheet>
+            <Sheet>
+                 <SheetTrigger asChild>
+                    <Button variant="ghost" className="flex flex-col h-auto p-2">
+                       <Sparkles className="h-6 w-6" />
+                       <span className="text-xs">{t('ai_suggestions_title')}</span>
+                    </Button>
+                </SheetTrigger>
+                <SheetContent side="bottom" className="h-[80%] p-0">
+                    <SuggestionsPanel />
+                </SheetContent>
+            </Sheet>
+          </div>
+        )}
     </>
   );
 }
+

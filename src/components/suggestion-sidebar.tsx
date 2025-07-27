@@ -15,6 +15,7 @@ import { Badge } from './ui/badge';
 import Image from 'next/image';
 import { Charm } from '@/lib/types';
 import { useTranslations } from '@/hooks/use-translations';
+import { cn } from '@/lib/utils';
 
 interface SuggestionSidebarProps {
   jewelryType: string;
@@ -22,9 +23,10 @@ interface SuggestionSidebarProps {
   onAddCharm: (charm: Charm) => void;
   charms: Charm[];
   locale: string;
+  isMobile?: boolean;
 }
 
-export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm, charms, locale }: SuggestionSidebarProps) {
+export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm, charms, locale, isMobile=false }: SuggestionSidebarProps) {
   const t = useTranslations('Editor');
   const [preferences, setPreferences] = useState('');
   const [suggestions, setSuggestions] = useState<SuggestCharmPlacementOutput | null>(null);
@@ -61,8 +63,8 @@ export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm, c
   };
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader>
+    <Card className={cn("h-full flex flex-col", isMobile && "border-0 shadow-none rounded-none")}>
+      <CardHeader className={cn(isMobile && "py-4")}>
         <CardTitle className="font-headline text-xl flex items-center gap-2">
           <WandSparkles className="text-primary" />
           {t('ai_suggestions_title')}
