@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useRef, DragEvent, WheelEvent, useEffect } from 'react';
+import React, { useState, useMemo, useRef, DragEvent, WheelEvent, useEffect, TouchEvent } from 'react';
 import Image from 'next/image';
 import { JewelryModel, PlacedCharm, Charm, JewelryType, CharmCategory } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,7 @@ import { NacreluneLogo } from './icons';
 import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { useTranslations, useRichTranslations } from '@/hooks/use-translations';
 import { PurchaseDialog } from './purchase-dialog';
 
@@ -46,6 +46,10 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [startPanPoint, setStartPanPoint] = useState({ x: 0, y: 0 });
+
+  // Mobile touch drag state
+  const [touchDragging, setTouchDragging] = useState(false);
+  const [touchPosition, setTouchPosition] = useState<{x: number, y: number} | null>(null);
 
   const getUrl = async (path: string) => {
     if (path && !path.startsWith('http')) {
@@ -225,7 +229,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
 
     setDraggedCharm(null);
   };
-  
+
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
   };
@@ -233,6 +237,72 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   const handleDragEnd = () => {
     setDraggedCharm(null);
   };
+
+  const updateCharmPosition = (clientX: number, clientY: number) => {
+    if (!draggedCharm || !canvasRef.current) return;
+
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    const dropX_px = (clientX - canvasRect.left - pan.x) / scale - draggedCharm.offset.x;
+    const dropY_px = (clientY - canvasRect.top - pan.y) / scale - draggedCharm.offset.y;
+    
+    const charmWidth = 40;
+    const centeredDropX_px = dropX_px + (charmWidth / 2);
+    const centeredDropY_px = dropY_px + (charmWidth / 2);
+
+    const xPercent = (centeredDropX_px / canvasRect.width) * 100;
+    const yPercent = (centeredDropY_px / canvasRect.height) * 100;
+
+    const newPosition = { x: xPercent, y: yPercent };
+
+    if (draggedCharm.source === 'list') {
+      const newCharm: PlacedCharm = {
+        id: `${draggedCharm.charm.id}-${Date.now()}`,
+        charm: draggedCharm.charm,
+        position: newPosition,
+        rotation: 0,
+      };
+      setPlacedCharms((prev) => [...prev, newCharm]);
+      // Switch source to the newly created charm to update its position on subsequent moves
+      setDraggedCharm({ ...draggedCharm, source: newCharm.id });
+    } else {
+      setPlacedCharms(prev => prev.map(pc => pc.id === draggedCharm.source ? { ...pc, position: newPosition } : pc));
+    }
+  };
+
+  // Touch event handlers
+  const handleTouchStart = (e: TouchEvent<HTMLDivElement>, charm: Charm, source: 'list' | string = 'list', existingPlacedCharm?: PlacedCharm) => {
+    e.stopPropagation();
+    const touch = e.touches[0];
+    const rect = e.currentTarget.getBoundingClientRect();
+
+    const offsetX = (touch.clientX - rect.left) / (existingPlacedCharm ? scale : 1);
+    const offsetY = (touch.clientY - rect.top) / (existingPlacedCharm ? scale : 1);
+
+    setDraggedCharm({
+      charm,
+      offset: { x: offsetX, y: offsetY },
+      source: existingPlacedCharm ? existingPlacedCharm.id : 'list'
+    });
+    setTouchDragging(true);
+    // Show a ghost image for the finger
+    setTouchPosition({ x: touch.clientX, y: touch.clientY });
+  };
+  
+  const handleTouchMove = (e: TouchEvent<HTMLDivElement>) => {
+    if (!touchDragging || !draggedCharm) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    updateCharmPosition(touch.clientX, touch.clientY);
+    // Update ghost image position
+    setTouchPosition({ x: touch.clientX, y: touch.clientY });
+  };
+  
+  const handleTouchEnd = () => {
+    setTouchDragging(false);
+    setDraggedCharm(null);
+    setTouchPosition(null);
+  };
+
 
   const removeCharm = (id: string) => {
     setPlacedCharms(placedCharms.filter(c => c.id !== id));
@@ -327,7 +397,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
             </Button>
           </div>
         </header>
-      <main className="flex-grow p-4 md:p-8">
+      <main className="flex-grow p-4 md:p-8" onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
       <div className="container mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
           {/* Charms Panel */}
@@ -367,6 +437,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                                     draggable
                                     onDragStart={(e) => handleDragStart(e, charm)}
                                     onDragEnd={handleDragEnd}
+                                    onTouchStart={(e) => handleTouchStart(e, charm)}
                                     onClick={() => addCharmToCanvas(charm)}
                                     className="relative group p-2 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer"
                                     title={charm.name}
@@ -451,6 +522,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                           draggable
                           onDragStart={(e) => handlePlacedCharmDragStart(e, placed)}
                           onDragEnd={handleDragEnd}
+                          onTouchStart={(e) => handleTouchStart(e, placed.charm, 'canvas', placed)}
                           onWheel={(e) => handlePlacedCharmRotation(e, placed.id)}
                           onMouseDown={(e) => e.stopPropagation()}
                           className="absolute group charm-on-canvas"
@@ -529,6 +601,27 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         </div>
         </div>
       </main>
+      {/* Ghost image for touch drag */}
+      {touchDragging && touchPosition && draggedCharm && (
+          <div
+            className="pointer-events-none absolute z-50"
+            style={{
+              left: touchPosition.x,
+              top: touchPosition.y,
+              transform: 'translate(15px, 15px)', // Offset to see the charm next to the finger
+            }}
+          >
+            <Image
+              src={draggedCharm.charm.imageUrl}
+              alt={draggedCharm.charm.name}
+              width={50}
+              height={50}
+              className="rounded-full shadow-lg"
+            />
+          </div>
+      )}
     </>
   );
 }
+
+    
