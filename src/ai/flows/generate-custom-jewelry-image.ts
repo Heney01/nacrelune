@@ -23,14 +23,12 @@ async function toDataURI(url: string): Promise<string> {
   return `data:${blob.type};base64,${buffer.toString('base64')}`;
 }
 
-
 const CharmInputSchema = z.object({
   name: z.string().describe('The name of the charm.'),
-  imageUrl: z.string().describe("A public URL to the charm's image."),
-  position: z.object({
-    x: z.number().describe('The x-coordinate percentage.'),
-    y: z.number().describe('The y-coordinate percentage.'),
-  }).describe('The position of the charm on the jewelry model.'),
+  // The following fields are not used by the new prompt, 
+  // but we keep them for potential future use and to avoid breaking the client-side call.
+  imageUrl: z.string(), 
+  position: z.object({ x: z.number(), y: z.number() }),
 });
 
 const GenerateCustomJewelryImageInputSchema = z.object({
@@ -50,42 +48,6 @@ export async function generateCustomJewelryImage(input: GenerateCustomJewelryIma
   return generateCustomJewelryImageFlow(input);
 }
 
-const generateMessageContent = (modelName: string, modelImageUri: string, charmsWithUris: {name: string, imageUrl: string, position: {x: number, y: number}}[]) => {
-    const content: any[] = [
-        {
-            text: `You are a professional jewelry photographer. Your task is to generate a realistic, high-quality image of a custom piece of jewelry being worn on a person's neck.
-
-The base jewelry model is "${modelName}". The image for this base model is provided first.
-`,
-        },
-        { media: { url: modelImageUri } },
-        {
-            text: `
-The following charms have been added to the jewelry. You MUST place each charm on the model according to its specified position. The (x, y) coordinates are percentages of the base model image's dimensions, starting from the top-left corner. You must use these coordinates as precise anchor points for each charm.
-
-Each charm is provided with its name, its position, and its corresponding image, one by one.
-`
-        }
-    ];
-
-    if (charmsWithUris.length === 0) {
-        content.push({text: "\n- No charms added. Just create a beautiful shot of the base model."});
-    } else {
-        charmsWithUris.forEach((charm) => {
-            content.push({text: `\n- Charm: "${charm.name}", Position: (x: ${charm.position.x.toFixed(2)}%, y: ${charm.position.y.toFixed(2)}%)`});
-            content.push({media: {url: charm.imageUrl}});
-        });
-    }
-
-    content.push({
-        text: `
-Generate a single, coherent, photorealistic image of the final piece of jewelry. The photo should be a close-up, focusing on the jewelry against the skin and collarbone. The lighting should be professional and highlight the details of the jewelry. The final image should look like a product photo from a luxury brand's website.`
-    });
-
-    return content;
-};
-
-
 const generateCustomJewelryImageFlow = ai.defineFlow(
   {
     name: 'generateCustomJewelryImageFlow',
@@ -93,20 +55,22 @@ const generateCustomJewelryImageFlow = ai.defineFlow(
     outputSchema: GenerateCustomJewelryImageOutputSchema,
   },
   async (input) => {
-    // Convert all URLs to data URIs on the server
     const modelImageUri = await toDataURI(input.modelImage);
-    const charmsWithUris = await Promise.all(
-        input.charms.map(async (charm) => ({
-            ...charm,
-            imageUrl: await toDataURI(charm.imageUrl),
-        }))
-    );
 
-    const messageContent = generateMessageContent(input.modelName, modelImageUri, charmsWithUris);
-    
+    const charmNames = input.charms.map(c => c.name).join(', ');
+
+    let textPrompt = `Generate a single, coherent, photorealistic image of a custom piece of jewelry being worn on a person's neck.
+The base jewelry model is a "${input.modelName}".
+It is adorned with the following charms: ${charmNames || 'no charms'}.
+The photo should be a close-up, focusing on the jewelry against the skin and collarbone. The lighting should be professional and highlight the details of the jewelry. The final image should look like a product photo from a luxury brand's website.
+Refer to the provided image for the style of the base jewelry model.`;
+
     const { media } = await ai.generate({
-      model: 'googleai/gemini-1.5-pro',
-      messages: [{ role: 'user', content: messageContent }],
+      model: 'googleai/gemini-2.0-flash-preview-image-generation',
+      prompt: [
+        { media: { url: modelImageUri } },
+        { text: textPrompt },
+      ],
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
       },
