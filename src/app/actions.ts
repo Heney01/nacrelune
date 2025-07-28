@@ -1,4 +1,3 @@
-
 // @/app/actions.ts
 'use server';
 
@@ -13,7 +12,7 @@ export async function getCharmSuggestions(
     return suggestions;
   } catch (error) {
     console.error('Error getting charm suggestions:', error);
-    // In a real app, you might want to return a more user-friendly error
-    throw new Error('Failed to generate suggestions.');
+    // Return an empty array of suggestions instead of throwing an error
+    return { suggestions: [] };
   }
 }
