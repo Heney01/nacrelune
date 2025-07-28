@@ -24,6 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CartSheet } from './cart-sheet';
 import html2canvas from 'html2canvas';
+import { CartWidget } from './cart-widget';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -513,6 +514,7 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
                         {tHomepage('back_button')}
                     </Link>
                 </Button>
+                <CartWidget />
             </div>
           </div>
         </header>
