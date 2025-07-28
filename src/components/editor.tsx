@@ -444,7 +444,7 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
         }
 
         // Wait a moment for the DOM to update before capturing
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 300));
 
         try {
           const canvas = await html2canvas(canvasRef.current, {
@@ -705,3 +705,5 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
     </>
   );
 }
+
+    
