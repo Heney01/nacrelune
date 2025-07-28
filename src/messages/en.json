@@ -48,6 +48,8 @@
     "cart_remove_item": "Remove item",
     "cart_total": "Total",
     "create_new_jewel_button": "Create a New Jewel",
-    "view_charms_action": "View Charms"
+    "view_charms_action": "View Charms",
+    "cart_preview_title": "Preview of {modelName}",
+    "cart_preview_description": "Here is a preview of your custom creation."
   }
 }

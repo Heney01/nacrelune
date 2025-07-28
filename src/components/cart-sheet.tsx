@@ -13,6 +13,14 @@ import React, { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Card } from './ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 interface CartSheetProps {
   children?: ReactNode;
@@ -72,28 +80,49 @@ export function CartSheet({ children, open, onOpenChange }: CartSheetProps) {
                 {cart.map((item) => (
                     <Card key={item.id} className="overflow-hidden">
                          <div className="p-4 flex items-start gap-4">
-                            <div className="relative w-20 h-20 rounded-md overflow-hidden border">
-                            <Image
-                                src={item.previewImage || item.model.displayImageUrl}
-                                alt={item.model.name}
-                                fill
-                                className="object-cover"
-                                sizes="80px"
-                            />
-                            </div>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <div className="relative w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border cursor-pointer group">
+                                  <Image
+                                      src={item.previewImage || item.model.displayImageUrl}
+                                      alt={item.model.name}
+                                      fill
+                                      className="object-cover group-hover:scale-105 transition-transform"
+                                      sizes="80px"
+                                  />
+                                </div>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-xl">
+                                <DialogHeader>
+                                  <DialogTitle>{t('cart_preview_title', { modelName: item.model.name })}</DialogTitle>
+                                  <DialogDescription>
+                                    {t('cart_preview_description')}
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="mt-4">
+                                  <Image 
+                                    src={item.previewImage || item.model.displayImageUrl} 
+                                    alt={`Preview of ${item.model.name}`} 
+                                    width={800} 
+                                    height={800} 
+                                    className="w-full h-auto object-contain rounded-lg"
+                                  />
+                                </div>
+                              </DialogContent>
+                            </Dialog>
                             <div className="flex-grow">
-                            <p className="font-bold">{item.model.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                                {item.jewelryType.name}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                                {t('added_charms_title', { count: item.placedCharms.length })}
-                            </p>
+                              <p className="font-bold">{item.model.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                  {item.jewelryType.name}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                  {t('added_charms_title', { count: item.placedCharms.length })}
+                              </p>
                             </div>
                              <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8"
+                                className="h-8 w-8 flex-shrink-0"
                                 onClick={() => removeFromCart(item.id)}
                                 >
                                 <Trash2 className="h-4 w-4" />
