@@ -46,6 +46,10 @@
     "item_added_dialog_title": "Item Added to Cart",
     "item_added_dialog_description": "Your creation has been saved. What would you like to do next?",
     "item_added_dialog_action_checkout": "Proceed to Checkout",
-    "item_added_dialog_action_new": "Create a New Jewel"
+    "item_added_dialog_action_new": "Create a New Jewel",
+    "cart_empty_title": "Your cart is empty",
+    "cart_empty_description": "Find the perfect piece to start your creation.",
+    "cart_remove_item": "Remove item",
+    "cart_total": "Total"
   }
 }

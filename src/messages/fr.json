@@ -46,6 +46,10 @@
     "item_added_dialog_title": "Article ajouté au panier",
     "item_added_dialog_description": "Votre création a été enregistrée. Que souhaitez-vous faire maintenant ?",
     "item_added_dialog_action_checkout": "Passer au paiement",
-    "item_added_dialog_action_new": "Créer un nouveau bijou"
+    "item_added_dialog_action_new": "Créer un nouveau bijou",
+    "cart_empty_title": "Votre panier est vide",
+    "cart_empty_description": "Trouvez la pièce parfaite pour commencer votre création.",
+    "cart_remove_item": "Supprimer l'article",
+    "cart_total": "Total"
   }
 }
