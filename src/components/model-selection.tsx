@@ -9,14 +9,17 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeft, Loader2, ZoomIn } from 'lucide-react';
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useTranslations } from '@/hooks/use-translations';
 
 
 interface ModelSelectionProps {
     selectedType: JewelryType;
+    locale: string;
 }
 
-export function ModelSelection({ selectedType }: ModelSelectionProps) {
+export function ModelSelection({ selectedType, locale }: ModelSelectionProps) {
     const [loadingModelId, setLoadingModelId] = useState<string | null>(null);
+    const t = useTranslations('HomePage');
 
     const handleModelClick = (modelId: string) => {
         setLoadingModelId(modelId);
@@ -26,22 +29,22 @@ export function ModelSelection({ selectedType }: ModelSelectionProps) {
         <>
             <div className="flex justify-start mb-8">
                 <Button variant="ghost" asChild>
-                    <Link href="/">
+                    <Link href={`/${locale}`}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Retour
+                        {t('back_button')}
                     </Link>
                 </Button>
             </div>
             <section>
-                <h2 className="text-3xl font-headline tracking-tight mb-4 text-center">Sélectionnez un Modèle</h2>
-                <p className="text-muted-foreground mb-12 max-w-2xl mx-auto text-center">Sélectionnez un magnifique modèle de {selectedType.name.toLowerCase()} comme base pour votre création personnalisée.</p>
+                <h2 className="text-3xl font-headline tracking-tight mb-4 text-center">{t('model_selection_title')}</h2>
+                <p className="text-muted-foreground mb-12 max-w-2xl mx-auto text-center">{t('model_selection_subtitle', { jewelryTypeName: selectedType.name.toLowerCase() })}</p>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                     {selectedType.models.map((model, index) => (
                         <Card key={model.id} className="overflow-hidden group flex flex-col">
                            <div className="overflow-hidden relative">
                                 <Link 
-                                    href={`/?type=${selectedType.id}&model=${model.id}`} 
+                                    href={`/${locale}/?type=${selectedType.id}&model=${model.id}`} 
                                     onClick={() => handleModelClick(model.id)}
                                     className="contents"
                                 >
@@ -52,7 +55,7 @@ export function ModelSelection({ selectedType }: ModelSelectionProps) {
                                         height={400} 
                                         className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300" 
                                         data-ai-hint="jewelry"
-                                        priority={index < 4} // Prioritize loading for the first few images
+                                        priority={index < 4}
                                     />
                                      {loadingModelId === model.id && (
                                         <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
@@ -83,10 +86,10 @@ export function ModelSelection({ selectedType }: ModelSelectionProps) {
                                 <h3 className="text-lg font-headline flex-grow">{model.name}</h3>
                                 <Button asChild variant="outline" size="sm" className="w-full mt-4" disabled={!!loadingModelId}>
                                     <Link 
-                                        href={`/?type=${selectedType.id}&model=${model.id}`} 
+                                        href={`/${locale}/?type=${selectedType.id}&model=${model.id}`} 
                                         onClick={() => handleModelClick(model.id)}
                                     >
-                                        {loadingModelId === model.id ? <Loader2 className="animate-spin" /> : 'Sélectionner'}
+                                        {loadingModelId === model.id ? <Loader2 className="animate-spin" /> : t('select_button')}
                                     </Link>
                                 </Button>
                             </CardContent>
@@ -97,5 +100,3 @@ export function ModelSelection({ selectedType }: ModelSelectionProps) {
         </>
     );
 }
-
-    

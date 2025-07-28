@@ -20,10 +20,11 @@ import { CharmsPanel } from './charms-panel';
 import { Input } from './ui/input';
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useParams } from 'next/navigation';
 import { CartSheet } from './cart-sheet';
 import html2canvas from 'html2canvas';
 import { CartWidget } from './cart-widget';
+import { useTranslations } from '@/hooks/use-translations';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -120,7 +121,13 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   const isMobile = useIsMobile();
   const { cart, addToCart, updateCartItem } = useCart();
   const { toast } = useToast();
+  const t = useTranslations('Editor');
+  const tHome = useTranslations('HomePage');
+  const tCharm = useTranslations('CharmsPanel');
+  
   const searchParams = useSearchParams();
+  const params = useParams();
+  const locale = params.locale as string;
 
   const cartItemId = searchParams.get('cartItemId');
   
@@ -130,24 +137,19 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   
-  // State for mobile sheets
   const [isCharmsSheetOpen, setIsCharmsSheetOpen] = useState(false);
   const [isSuggestionsSheetOpen, setIsSuggestionsSheetOpen] = useState(false);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
 
-  // State for pan and zoom
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
 
-  // State for AI suggestions
   const [suggestions, setSuggestions] = useState<SuggestCharmPlacementOutput | null>(null);
   const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
   const [suggestionError, setSuggestionError] = useState<string | null>(null);
 
-  // State for charms panel search
   const [charmsSearchTerm, setCharmsSearchTerm] = useState('');
 
-  // State for screenshot capture
   const [isCapturing, setIsCapturing] = useState(false);
   
   const isEditing = cartItemId !== null;
@@ -170,7 +172,6 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     panStart: { x: 0, y: 0 },
   }).current;
 
-  // Use refs to store latest state values to avoid stale closures in event listeners
   const panRef = useRef(pan);
   panRef.current = pan;
   const scaleRef = useRef(scale);
@@ -260,7 +261,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
         });
         setSuggestions(result);
       } catch (err) {
-        setSuggestionError('Une erreur est survenue lors de la génération des suggestions. Veuillez réessayer.');
+        setSuggestionError(t('error_generating_suggestions'));
       } finally {
         setIsGeneratingSuggestions(false);
       }
@@ -350,12 +351,10 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
         handlePanStart(e);
       };
 
-      // Mouse events
       canvas.addEventListener('mousedown', handlePanStart);
       window.addEventListener('mousemove', handleMove);
       window.addEventListener('mouseup', handleInteractionEnd);
 
-      // Touch events
       canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
       window.addEventListener('touchmove', handleMove, { passive: false });
       window.addEventListener('touchend', handleInteractionEnd);
@@ -437,15 +436,14 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
           return;
         }
 
-        // Wait a moment for the DOM to update before capturing
         await new Promise(resolve => setTimeout(resolve, 100));
 
         try {
           const canvas = await html2canvas(canvasRef.current, {
-            backgroundColor: null, // for transparent background
+            backgroundColor: null,
             logging: false,
             useCORS: true,
-            scale: 2 // for better quality
+            scale: 2
           });
           const previewImage = canvas.toDataURL('image/png');
 
@@ -459,8 +457,8 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
               };
               updateCartItem(cartItemId, updatedItem);
               toast({
-                  title: 'Article Mis à Jour',
-                  description: `Votre création pour ${model.name} a été mise à jour dans le panier.`,
+                  title: t('toast_item_updated_title'),
+                  description: t('toast_item_updated_description', {modelName: model.name}),
               });
           } else {
               const newItem: Omit<CartItem, 'id'> = {
@@ -471,8 +469,8 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
               }
               addToCart(newItem);
               toast({
-                  title: 'Ajouté au Panier',
-                  description: `${model.name} a été ajouté à votre panier.`,
+                  title: t('toast_item_added_title'),
+                  description: t('toast_item_added_description', {modelName: model.name}),
               });
           }
 
@@ -481,7 +479,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
           console.error("Erreur lors de la capture du canvas:", error);
           toast({
               variant: 'destructive',
-              title: 'Oups! Un problème est survenu.',
+              title: t('toast_error_title'),
               description: "Impossible de capturer l'image de la création."
           });
         } finally {
@@ -491,7 +489,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
 
       capture();
     }
-  }, [isCapturing, addToCart, updateCartItem, cartItemId, isEditing, jewelryType, model, placedCharms, toast]);
+  }, [isCapturing, addToCart, updateCartItem, cartItemId, isEditing, jewelryType, model, placedCharms, toast, t]);
 
 
   const charmsPanelDesktop = useMemo(() => (
@@ -508,14 +506,14 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       <CartSheet open={isCartSheetOpen} onOpenChange={setIsCartSheetOpen} />
       <header className="p-4 border-b">
           <div className="container mx-auto flex justify-between items-center">
-            <Link href="/" className="flex items-center gap-2">
+            <Link href={`/${locale}`} className="flex items-center gap-2">
               <NacreluneLogo className="h-8 w-auto text-foreground" />
             </Link>
             <div className="flex items-center gap-2">
                <Button variant="ghost" asChild>
-                    <Link href={`/?type=${jewelryType.id}`}>
+                    <Link href={`/${locale}/?type=${jewelryType.id}`}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Retour
+                        {tHome('back_button')}
                     </Link>
                 </Button>
                 <CartWidget />
@@ -525,27 +523,25 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       <main className={cn("flex-grow p-4 md:p-8", isMobile && "p-0")}>
         <div className={cn("container mx-auto", isMobile && "px-0")}>
             <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 h-full", isMobile && "grid-cols-1 gap-0")}>
-            {/* Charms Panel */}
             {!isMobile && (
                 <div className="lg:col-span-3">
                     {charmsPanelDesktop}
                 </div>
             )}
 
-            {/* Editor Canvas */}
             <div className={cn("lg:col-span-6 flex flex-col gap-4", isMobile && "order-first")}>
                 <div className={cn("flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2", isMobile && "px-4 pt-4")}>
-                <h2 className="text-2xl font-headline tracking-tight">Personnalisez votre {model.name}</h2>
+                <h2 className="text-2xl font-headline tracking-tight">{t('customize_title', { modelName: model.name })}</h2>
                     <div className="flex gap-2">
                     {isEditing ? (
                         <Button onClick={handleUpdateCart} disabled={isCapturing}>
                             <PlusCircle className="mr-2 h-4 w-4" />
-                            Mettre à jour l'article
+                            {t('update_item_button')}
                         </Button>
                     ) : (
                         <Button onClick={handleAddToCart} disabled={isCapturing}>
                             <ShoppingCart className="mr-2 h-4 w-4" />
-                            Ajouter au panier
+                            {t('add_to_cart_button')}
                         </Button>
                     )}
                     </div>
@@ -591,11 +587,11 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                 </div>
                 <Card className={cn(isMobile && "rounded-none border-x-0")}>
                     <CardHeader>
-                        <CardTitle className="font-headline text-lg">Breloques ajoutées ({placedCharms.length})</CardTitle>
+                        <CardTitle className="font-headline text-lg">{t('added_charms_title', {count: placedCharms.length})}</CardTitle>
                     </CardHeader>
                     <CardContent>
                         {placedCharms.length === 0 ? (
-                            <p className="text-muted-foreground text-sm">Faites glisser ou cliquez sur les breloques pour les ajouter à votre bijou.</p>
+                            <p className="text-muted-foreground text-sm">{t('added_charms_placeholder')}</p>
                         ) : (
                             <ScrollArea className="h-24">
                                 <ul className="space-y-2">
@@ -622,7 +618,6 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                 </Card>
             </div>
 
-            {/* AI Suggestions Panel */}
             {!isMobile && <div className="lg:col-span-3">
                 <SuggestionSidebar
                     onApplySuggestion={addCharmFromSuggestions}
@@ -643,18 +638,18 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                 <SheetTrigger asChild>
                     <Button variant="ghost" className="flex flex-col h-auto p-2">
                        <Gem className="h-6 w-6" />
-                       <span className="text-xs">Breloques</span>
+                       <span className="text-xs">{tCharm('title')}</span>
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="bottom" className="h-[80%] p-0 flex flex-col" onOpenAutoFocus={(e) => e.preventDefault()}>
                     <SheetHeader className="p-4 border-b">
-                        <SheetTitle>Breloques</SheetTitle>
+                        <SheetTitle>{tCharm('title')}</SheetTitle>
                     </SheetHeader>
                     <div className="p-4 border-b">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder="Rechercher des breloques..."
+                                placeholder={tCharm('search_placeholder')}
                                 value={charmsSearchTerm}
                                 onChange={(e) => setCharmsSearchTerm(e.target.value)}
                                 className="pl-9"
@@ -676,12 +671,12 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                  <SheetTrigger asChild>
                     <Button variant="ghost" className="flex flex-col h-auto p-2">
                        <Sparkles className="h-6 w-6" />
-                       <span className="text-xs">Suggestions IA</span>
+                       <span className="text-xs">{t('ai_suggestions_title')}</span>
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="bottom" className="h-[80%] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
                    <SheetHeader className="p-4 border-b">
-                        <SheetTitle>Suggestions IA</SheetTitle>
+                        <SheetTitle>{t('ai_suggestions_title')}</SheetTitle>
                    </SheetHeader>
                     <SuggestionSidebar 
                         onApplySuggestion={addCharmFromSuggestions}

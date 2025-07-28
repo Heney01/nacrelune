@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -5,23 +6,26 @@ import type { JewelryType } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useTranslations } from '@/hooks/use-translations';
 
 interface TypeSelectionProps {
     jewelryTypes: JewelryType[];
+    locale: string;
 }
 
-export function TypeSelection({ jewelryTypes }: TypeSelectionProps) {
+export function TypeSelection({ jewelryTypes, locale }: TypeSelectionProps) {
     const [loadingTypeId, setLoadingTypeId] = useState<string | null>(null);
+    const t = useTranslations('HomePage');
 
     return (
         <section className="text-center">
-            <h2 className="text-3xl font-headline tracking-tight mb-4">Commencez Votre Création</h2>
-            <p className="text-muted-foreground mb-12 max-w-2xl mx-auto">Choisissez un type de bijou pour commencer à concevoir. Chaque pièce est une toile pour votre histoire, attendant d'être ornée de breloques qui vous parlent.</p>
+            <h2 className="text-3xl font-headline tracking-tight mb-4">{t('title')}</h2>
+            <p className="text-muted-foreground mb-12 max-w-2xl mx-auto">{t('subtitle')}</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {jewelryTypes.map((type) => (
                     <Link 
                         key={type.id} 
-                        href={`/?type=${type.id}`} 
+                        href={`/${locale}/?type=${type.id}`} 
                         className="contents"
                         onClick={() => setLoadingTypeId(type.id)}
                     >

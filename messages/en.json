@@ -1,0 +1,65 @@
+
+{
+  "HomePage": {
+    "title": "Begin Your Creation",
+    "subtitle": "Choose a jewelry type to start designing. Each piece is a canvas for your story, waiting to be adorned with charms that speak to you.",
+    "jewelry_types": {
+      "necklace": "Necklaces",
+      "necklace_description": "Graceful chains and pendants.",
+      "bracelet": "Bracelets",
+      "bracelet_description": "Elegant wristwear for any occasion.",
+      "earring": "Earrings",
+      "earring_description": "Stylish earrings to complete your look."
+    },
+    "model_selection_title": "Select a Model",
+    "model_selection_subtitle": "Select a beautiful {jewelryTypeName} model as the foundation for your custom design.",
+    "back_button": "Back",
+    "select_button": "Select",
+    "footer_text": "© {year} Nacrelune. All rights reserved."
+  },
+  "Editor": {
+    "charms_title": "Charms",
+    "search_placeholder": "Search charms...",
+    "add_to_design_button": "Add to Design",
+    "customize_title": "Customize Your {modelName}",
+    "add_to_cart_button": "Add to Cart",
+    "update_item_button": "Update Item",
+    "added_charms_title": "Added Charms ({count})",
+    "added_charms_placeholder": "Drag or click charms to add them to your jewelry.",
+    "ai_suggestions_title": "AI Suggestions",
+    "ai_suggestions_description": "Let our AI help you find the perfect placement for your charms.",
+    "preferences_label": "Your Preferences (Optional)",
+    "preferences_placeholder": "e.g., 'I like asymmetrical designs' or 'a minimalist look'",
+    "generate_ideas_button": "Generate Ideas",
+    "generating_button": "Generating...",
+    "error_generating_suggestions": "An error occurred while generating suggestions. Please try again.",
+    "suggestions_placeholder_title": "Your creative suggestions will appear here.",
+    "recommended_badge": "Recommended",
+    "toast_error_title": "Oops! Something went wrong.",
+    "toast_item_added_title": "Added to Cart",
+    "toast_item_added_description": "{modelName} has been added to your cart.",
+    "toast_item_updated_title": "Item Updated",
+    "toast_item_updated_description": "Your design for {modelName} has been updated in the cart."
+  },
+  "Cart": {
+    "title": "Your Cart",
+    "item_count": "({count})",
+    "empty_title": "Your cart is empty",
+    "empty_description": "Find the perfect piece to start your creation.",
+    "remove_item": "Remove item",
+    "total": "Total",
+    "create_new_jewel_button": "Create a New Jewel",
+    "view_charms_action": "View Charms ({count})",
+    "preview_title": "Preview of {modelName}",
+    "preview_description": "Here is a preview of your custom creation.",
+    "checkout_button": "Checkout",
+    "price": "{price, number, ::currency/USD}"
+  },
+  "CharmsPanel": {
+    "title": "Charms",
+    "search_placeholder": "Search charms...",
+    "add_to_design_button": "Add to Design",
+    "loading_error": "Error loading charm categories",
+    "loading": "Loading..."
+  }
+}

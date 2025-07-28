@@ -12,7 +12,6 @@ import type { JewelryType, JewelryModel, Charm } from '@/lib/types';
 import Link from 'next/link';
 import { CartWidget } from './cart-widget';
 
-// This is a client component that wraps the main page logic
 export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, locale, messages }: {
     searchParams: { [key: string]: string | string[] | undefined };
     jewelryTypes: Omit<JewelryType, 'icon'>[];
@@ -20,7 +19,6 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
     locale: string;
     messages: any;
 }) {
-    // Re-associate icons on the client side
     const jewelryTypes = initialJewelryTypes.map(jt => {
         if (jt.id === 'necklace') return { ...jt, icon: Gem };
         if (jt.id === 'bracelet') return { ...jt, icon: HandMetal };
@@ -57,7 +55,7 @@ function PageContent({ selectedType, selectedModel, jewelryTypes, allCharms, loc
     const t = useTranslations('HomePage');
   
     if (selectedModel && selectedType) {
-      return <Editor model={selectedModel} jewelryType={selectedType} allCharms={allCharms} locale={locale} />;
+      return <Editor model={selectedModel} jewelryType={selectedType} allCharms={allCharms} />;
     }
   
     return (
@@ -79,7 +77,7 @@ function PageContent({ selectedType, selectedModel, jewelryTypes, allCharms, loc
                     locale={locale}
                 />
             ) : (
-                <TypeSelection jewelryTypes={jewelryTypes} />
+                <TypeSelection jewelryTypes={jewelryTypes} locale={locale} />
             )}
           </div>
         </main>

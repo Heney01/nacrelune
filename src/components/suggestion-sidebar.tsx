@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -13,6 +14,7 @@ import { Badge } from './ui/badge';
 import Image from 'next/image';
 import { Charm } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/hooks/use-translations';
 
 interface SuggestionSidebarProps {
   onApplySuggestion: (suggestion: Suggestion) => void;
@@ -34,6 +36,7 @@ export function SuggestionSidebar({
   onGenerate
 }: SuggestionSidebarProps) {
   const [preferences, setPreferences] = useState('');
+  const t = useTranslations('Editor');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,26 +52,26 @@ export function SuggestionSidebar({
       <CardHeader className={cn(isMobile && "py-4")}>
         <CardTitle className="font-headline text-xl flex items-center gap-2">
           <WandSparkles className="text-primary" />
-          Suggestions de l'IA
+          {t('ai_suggestions_title')}
         </CardTitle>
         <CardDescription>
-          Laissez notre IA vous aider à trouver l'emplacement parfait pour vos breloques.
+          {t('ai_suggestions_description')}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col gap-4">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="preferences" className="font-bold">Vos préférences (Facultatif)</Label>
+            <Label htmlFor="preferences" className="font-bold">{t('preferences_label')}</Label>
             <Textarea
               id="preferences"
-              placeholder="ex: 'J'aime les designs asymétriques' ou 'un look minimaliste'"
+              placeholder={t('preferences_placeholder')}
               value={preferences}
               onChange={(e) => setPreferences(e.target.value)}
               className="mt-2"
             />
           </div>
           <Button type="submit" className="w-full" disabled={isLoading || charms.length === 0}>
-            {isLoading ? 'Génération en cours...' : <> <Sparkles className="mr-2 h-4 w-4" /> Générer des idées</>}
+            {isLoading ? t('generating_button') : <> <Sparkles className="mr-2 h-4 w-4" /> {t('generate_ideas_button')}</>}
           </Button>
         </form>
         <div className="flex-grow mt-4">
@@ -81,7 +84,7 @@ export function SuggestionSidebar({
           )}
           {error && (
             <Alert variant="destructive">
-              <AlertTitle>Oups! Un problème est survenu.</AlertTitle>
+              <AlertTitle>{t('toast_error_title')}</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
@@ -99,11 +102,11 @@ export function SuggestionSidebar({
                         <div className="flex-1">
                           <CardTitle className="text-base font-headline">{suggestion.charm}</CardTitle>
                           <p className="text-sm text-muted-foreground">{suggestion.placementDescription}</p>
-                          {suggestion.shouldIntegrate && <Badge variant="secondary" className="mt-2">Recommandé</Badge>}
+                          {suggestion.shouldIntegrate && <Badge variant="secondary" className="mt-2">{t('recommended_badge')}</Badge>}
                         </div>
                         <Button size="sm" variant="outline" onClick={() => handleSuggestionClick(suggestion)}>
                             <PlusCircle className="mr-2 h-4 w-4" />
-                            Ajouter
+                            {t('add_to_design_button')}
                         </Button>
                     </div>
                   </Card>
@@ -114,7 +117,7 @@ export function SuggestionSidebar({
            {!isLoading && !suggestions && !error && (
             <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-full p-4 border border-dashed rounded-lg">
                 <Lightbulb className="w-10 h-10 mb-4" />
-                <p>Vos suggestions créatives apparaîtront ici.</p>
+                <p>{t('suggestions_placeholder_title')}</p>
             </div>
            )}
         </div>

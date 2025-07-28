@@ -5,7 +5,12 @@ import '../globals.css';
 import { ReactNode } from 'react';
 import { getMessages } from '@/lib/translations';
 import { CartProvider } from '@/hooks/use-cart';
+import type { Metadata } from 'next';
 
+export const metadata: Metadata = {
+  title: 'Nacrelune',
+  description: 'Concevez vos propres bijoux personnalisés avec Nacrelune.',
+};
 
 export default async function LocaleLayout({
   children,

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -13,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Input } from './ui/input';
 import { getCharmCategories } from '@/lib/data';
+import { useTranslations } from '@/hooks/use-translations';
 
 interface CharmsPanelProps {
     allCharms: Charm[];
@@ -26,6 +28,7 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
     const isMobile = useIsMobile();
     const [charmCategories, setCharmCategories] = useState<CharmCategory[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const t = useTranslations('CharmsPanel');
     
     useEffect(() => {
         const fetchCategories = async () => {
@@ -34,13 +37,13 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                 const categories = await getCharmCategories();
                 setCharmCategories(categories);
             } catch (error) {
-                console.error("Erreur lors de la récupération des catégories de breloques", error);
+                console.error(t('loading_error'), error);
             } finally {
                 setIsLoading(false);
             }
         };
         fetchCategories();
-    }, []);
+    }, [t]);
 
     const filteredCharms = useMemo(() => {
         if (!searchTerm) {
@@ -96,7 +99,7 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                             </div>
                             <div className="mt-6 flex justify-end">
                                 <DialogClose asChild>
-                                    <Button onClick={() => onAddCharm(charm)}>Ajouter à la création</Button>
+                                    <Button onClick={() => onAddCharm(charm)}>{t('add_to_design_button')}</Button>
                                 </DialogClose>
                             </div>
                         </DialogContent>
@@ -144,13 +147,13 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
     return (
         <Card className={cn("flex flex-col h-full")}>
             <CardHeader>
-                <CardTitle className="font-headline text-xl">Breloques</CardTitle>
+                <CardTitle className="font-headline text-xl">{t('title')}</CardTitle>
             </CardHeader>
             <div className="px-4 pb-4">
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Rechercher des breloques..."
+                        placeholder={t('search_placeholder')}
                         value={searchTerm}
                         onChange={(e) => onSearchTermChange(e.target.value)}
                         className="pl-9"
