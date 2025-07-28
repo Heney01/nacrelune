@@ -242,10 +242,6 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
     setPlacedCharms(prev => prev.filter(c => c.id !== id));
   }, []);
   
-  const clearAllCharms = () => {
-    setPlacedCharms([]);
-  };
-
   const handlePlacedCharmRotation = useCallback((e: WheelEvent, charmId: string) => {
     const rotationAmount = e.deltaY * 0.1;
     setPlacedCharms(prev =>
@@ -540,10 +536,6 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
              <div className={cn("flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2", isMobile && "px-4 pt-4")}>
               <h2 className="text-2xl font-headline tracking-tight">{t('customize_title', {modelName: model.name})}</h2>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={clearAllCharms} disabled={placedCharms.length === 0}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    {t('clear_all_button')}
-                  </Button>
                   {isEditing ? (
                      <Button onClick={handleUpdateCart} disabled={isCapturing}>
                         <PlusCircle className="mr-2 h-4 w-4" />
@@ -563,24 +555,22 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
             >
                 <div
                     ref={canvasRef}
-                    className="relative w-full h-full"
+                    className="relative w-full h-full grid place-items-center"
                     style={{
                         transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
                         transformOrigin: '0 0',
                     }}
                 >
-                    <div className="w-full h-full grid place-items-center">
-                         <Image
-                            src={model.editorImageUrl}
-                            alt={model.name}
-                            width={1000}
-                            height={1000}
-                            className="pointer-events-none max-w-full max-h-full object-contain"
-                            data-ai-hint="jewelry model"
-                            priority
-                        />
-                    </div>
-                   
+                    <Image
+                        src={model.editorImageUrl}
+                        alt={model.name}
+                        width={1000}
+                        height={1000}
+                        className="pointer-events-none max-w-full max-h-full object-contain"
+                        data-ai-hint="jewelry model"
+                        priority
+                    />
+                    
                     {placedCharms.map((placed) => (
                         <PlacedCharmComponent
                             key={placed.id}
