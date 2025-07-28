@@ -435,6 +435,10 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
           setIsCapturing(false);
           return;
         }
+
+        // Wait a moment for the DOM to update before capturing
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         try {
           const canvas = await html2canvas(canvasRef.current, {
             backgroundColor: null, // for transparent background
@@ -484,7 +488,6 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
         }
       };
 
-      // The capture runs after the state has been updated and the component re-rendered.
       capture();
     }
   }, [isCapturing, addToCart, updateCartItem, cartItemId, isEditing, jewelryType, model, placedCharms, t, toast]);
@@ -695,3 +698,5 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
     </>
   );
 }
+
+    
