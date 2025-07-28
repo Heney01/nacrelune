@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NacreluneLogo } from './icons';
 import { useTranslations } from '@/hooks/use-translations';
@@ -545,13 +545,21 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
                 <div className="flex gap-2">
                   {isEditing ? (
                      <Button onClick={handleUpdateCart} disabled={isCapturing}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        {t('update_item_button')}
+                        {isCapturing ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <PlusCircle className="mr-2 h-4 w-4" />
+                        )}
+                        {isCapturing ? t('generating_button') : t('update_item_button')}
                     </Button>
                   ) : (
                     <Button onClick={handleAddToCart} disabled={isCapturing}>
-                        <ShoppingCart className="mr-2 h-4 w-4" />
-                        {t('add_to_cart_button')}
+                        {isCapturing ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <ShoppingCart className="mr-2 h-4 w-4" />
+                        )}
+                        {isCapturing ? t('generating_button') : t('add_to_cart_button')}
                     </Button>
                   )}
                 </div>
