@@ -558,33 +558,36 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
                 </div>
             </div>
             <div
-              ref={canvasWrapperRef}
-              className={cn("relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none", isMobile && "rounded-none border-x-0")}
+                ref={canvasWrapperRef}
+                className={cn("relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none", isMobile && "rounded-none border-x-0")}
             >
-              <div
-                  ref={canvasRef}
-                  className="absolute top-0 left-0 w-full h-full"
-                  style={{
-                      transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
-                      transformOrigin: '0 0',
-                      backgroundImage: `url(${model.editorImageUrl})`,
-                      backgroundSize: 'contain',
-                      backgroundRepeat: 'no-repeat',
-                      backgroundPosition: 'center',
-                  }}
-                  data-ai-hint="jewelry model"
-              >
-                  {placedCharms.map((placed) => (
-                    <PlacedCharmComponent 
-                        key={placed.id} 
-                        placed={placed}
-                        isSelected={selectedPlacedCharmId === placed.id}
-                        onDragStart={handleDragStart}
-                        onDelete={removeCharm}
-                        onRotate={handlePlacedCharmRotation}
+                <div
+                    ref={canvasRef}
+                    className="absolute top-0 left-0 w-full h-full"
+                    style={{
+                        transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
+                        transformOrigin: '0 0',
+                    }}
+                >
+                    <Image
+                        src={model.editorImageUrl}
+                        alt={model.name}
+                        fill
+                        className="object-contain pointer-events-none"
+                        data-ai-hint="jewelry model"
+                        priority
                     />
-                  ))}
-              </div>
+                    {placedCharms.map((placed) => (
+                        <PlacedCharmComponent
+                            key={placed.id}
+                            placed={placed}
+                            isSelected={selectedPlacedCharmId === placed.id}
+                            onDragStart={handleDragStart}
+                            onDelete={removeCharm}
+                            onRotate={handlePlacedCharmRotation}
+                        />
+                    ))}
+                </div>
             </div>
             <Card className={cn(isMobile && "rounded-none border-x-0")}>
                 <CardHeader>
@@ -696,3 +699,5 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
     </>
   );
 }
+
+    
