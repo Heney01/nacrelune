@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -50,26 +49,26 @@ export function SuggestionSidebar({
       <CardHeader className={cn(isMobile && "py-4")}>
         <CardTitle className="font-headline text-xl flex items-center gap-2">
           <WandSparkles className="text-primary" />
-          AI Suggestions
+          Suggestions de l'IA
         </CardTitle>
         <CardDescription>
-          Let our AI help you find the perfect placement for your charms.
+          Laissez notre IA vous aider à trouver l'emplacement parfait pour vos breloques.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col gap-4">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="preferences" className="font-bold">Your Preferences (Optional)</Label>
+            <Label htmlFor="preferences" className="font-bold">Vos préférences (Facultatif)</Label>
             <Textarea
               id="preferences"
-              placeholder="e.g., 'I like asymmetrical designs' or 'a minimalist look'"
+              placeholder="ex: 'J'aime les designs asymétriques' ou 'un look minimaliste'"
               value={preferences}
               onChange={(e) => setPreferences(e.target.value)}
               className="mt-2"
             />
           </div>
           <Button type="submit" className="w-full" disabled={isLoading || charms.length === 0}>
-            {isLoading ? 'Generating...' : <> <Sparkles className="mr-2 h-4 w-4" /> Generate Ideas</>}
+            {isLoading ? 'Génération en cours...' : <> <Sparkles className="mr-2 h-4 w-4" /> Générer des idées</>}
           </Button>
         </form>
         <div className="flex-grow mt-4">
@@ -82,7 +81,7 @@ export function SuggestionSidebar({
           )}
           {error && (
             <Alert variant="destructive">
-              <AlertTitle>Oops! Something went wrong.</AlertTitle>
+              <AlertTitle>Oups! Un problème est survenu.</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
@@ -100,11 +99,11 @@ export function SuggestionSidebar({
                         <div className="flex-1">
                           <CardTitle className="text-base font-headline">{suggestion.charm}</CardTitle>
                           <p className="text-sm text-muted-foreground">{suggestion.placementDescription}</p>
-                          {suggestion.shouldIntegrate && <Badge variant="secondary" className="mt-2">Recommended</Badge>}
+                          {suggestion.shouldIntegrate && <Badge variant="secondary" className="mt-2">Recommandé</Badge>}
                         </div>
                         <Button size="sm" variant="outline" onClick={() => handleSuggestionClick(suggestion)}>
                             <PlusCircle className="mr-2 h-4 w-4" />
-                            Add to Design
+                            Ajouter
                         </Button>
                     </div>
                   </Card>
@@ -115,7 +114,7 @@ export function SuggestionSidebar({
            {!isLoading && !suggestions && !error && (
             <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-full p-4 border border-dashed rounded-lg">
                 <Lightbulb className="w-10 h-10 mb-4" />
-                <p>Your creative suggestions will appear here.</p>
+                <p>Vos suggestions créatives apparaîtront ici.</p>
             </div>
            )}
         </div>

@@ -13,10 +13,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 
 interface ModelSelectionProps {
     selectedType: JewelryType;
-    locale: string;
 }
 
-export function ModelSelection({ selectedType, locale }: ModelSelectionProps) {
+export function ModelSelection({ selectedType }: ModelSelectionProps) {
     const [loadingModelId, setLoadingModelId] = useState<string | null>(null);
 
     const handleModelClick = (modelId: string) => {
@@ -29,13 +28,13 @@ export function ModelSelection({ selectedType, locale }: ModelSelectionProps) {
                 <Button variant="ghost" asChild>
                     <Link href="/">
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back
+                        Retour
                     </Link>
                 </Button>
             </div>
             <section>
-                <h2 className="text-3xl font-headline tracking-tight mb-4 text-center">Select a Model</h2>
-                <p className="text-muted-foreground mb-12 max-w-2xl mx-auto text-center">Select a beautiful {selectedType.name.toLowerCase()} model as the foundation for your custom design.</p>
+                <h2 className="text-3xl font-headline tracking-tight mb-4 text-center">Sélectionnez un Modèle</h2>
+                <p className="text-muted-foreground mb-12 max-w-2xl mx-auto text-center">Sélectionnez un magnifique modèle de {selectedType.name.toLowerCase()} comme base pour votre création personnalisée.</p>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                     {selectedType.models.map((model, index) => (
@@ -72,7 +71,7 @@ export function ModelSelection({ selectedType, locale }: ModelSelectionProps) {
                                             <DialogHeader>
                                                 <DialogTitle>{model.name}</DialogTitle>
                                                 <DialogDescription>
-                                                    Enlarged view of the {model.name} model.
+                                                    Vue agrandie du modèle {model.name}.
                                                 </DialogDescription>
                                             </DialogHeader>
                                             <Image src={model.displayImageUrl} alt={model.name} width={800} height={800} className="w-full h-auto object-contain rounded-lg" data-ai-hint="jewelry model" sizes="100vw"/>
@@ -87,7 +86,7 @@ export function ModelSelection({ selectedType, locale }: ModelSelectionProps) {
                                         href={`/?type=${selectedType.id}&model=${model.id}`} 
                                         onClick={() => handleModelClick(model.id)}
                                     >
-                                        {loadingModelId === model.id ? <Loader2 className="animate-spin" /> : 'Select'}
+                                        {loadingModelId === model.id ? <Loader2 className="animate-spin" /> : 'Sélectionner'}
                                     </Link>
                                 </Button>
                             </CardContent>
@@ -98,3 +97,5 @@ export function ModelSelection({ selectedType, locale }: ModelSelectionProps) {
         </>
     );
 }
+
+    

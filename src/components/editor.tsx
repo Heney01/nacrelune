@@ -114,10 +114,9 @@ interface EditorProps {
   model: JewelryModel;
   jewelryType: Omit<JewelryType, 'models' | 'icon'>;
   allCharms: Charm[];
-  locale: string;
 }
 
-export default function Editor({ model, jewelryType, allCharms, locale }: EditorProps) {
+export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   const isMobile = useIsMobile();
   const { cart, addToCart, updateCartItem } = useCart();
   const { toast } = useToast();
@@ -261,7 +260,7 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
         });
         setSuggestions(result);
       } catch (err) {
-        setSuggestionError('An error occurred while generating suggestions. Please try again.');
+        setSuggestionError('Une erreur est survenue lors de la génération des suggestions. Veuillez réessayer.');
       } finally {
         setIsGeneratingSuggestions(false);
       }
@@ -460,8 +459,8 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
               };
               updateCartItem(cartItemId, updatedItem);
               toast({
-                  title: 'Item Updated',
-                  description: `Your design for ${model.name} has been updated in the cart.`,
+                  title: 'Article Mis à Jour',
+                  description: `Votre création pour ${model.name} a été mise à jour dans le panier.`,
               });
           } else {
               const newItem: Omit<CartItem, 'id'> = {
@@ -472,18 +471,18 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
               }
               addToCart(newItem);
               toast({
-                  title: 'Added to Cart',
-                  description: `${model.name} has been added to your cart.`,
+                  title: 'Ajouté au Panier',
+                  description: `${model.name} a été ajouté à votre panier.`,
               });
           }
 
           setIsCartSheetOpen(true);
         } catch (error) {
-          console.error("Error capturing canvas:", error);
+          console.error("Erreur lors de la capture du canvas:", error);
           toast({
               variant: 'destructive',
-              title: 'Oops! Something went wrong.',
-              description: "Could not capture design image."
+              title: 'Oups! Un problème est survenu.',
+              description: "Impossible de capturer l'image de la création."
           });
         } finally {
           setIsCapturing(false);
@@ -516,7 +515,7 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
                <Button variant="ghost" asChild>
                     <Link href={`/?type=${jewelryType.id}`}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back
+                        Retour
                     </Link>
                 </Button>
                 <CartWidget />
@@ -536,17 +535,17 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
           {/* Editor Canvas */}
           <div className={cn("lg:col-span-6 flex flex-col gap-4", isMobile && "order-first")}>
              <div className={cn("flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2", isMobile && "px-4 pt-4")}>
-              <h2 className="text-2xl font-headline tracking-tight">Customize Your {model.name}</h2>
+              <h2 className="text-2xl font-headline tracking-tight">Personnalisez votre {model.name}</h2>
                 <div className="flex gap-2">
                   {isEditing ? (
                      <Button onClick={handleUpdateCart} disabled={isCapturing}>
                         <PlusCircle className="mr-2 h-4 w-4" />
-                        Update Item
+                        Mettre à jour l'article
                     </Button>
                   ) : (
                     <Button onClick={handleAddToCart} disabled={isCapturing}>
                         <ShoppingCart className="mr-2 h-4 w-4" />
-                        Add to Cart
+                        Ajouter au panier
                     </Button>
                   )}
                 </div>
@@ -592,11 +591,11 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
             </div>
             <Card className={cn(isMobile && "rounded-none border-x-0")}>
                 <CardHeader>
-                    <CardTitle className="font-headline text-lg">Added Charms ({placedCharms.length})</CardTitle>
+                    <CardTitle className="font-headline text-lg">Breloques ajoutées ({placedCharms.length})</CardTitle>
                 </CardHeader>
                 <CardContent>
                     {placedCharms.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">Drag or click charms to add them to your jewelry.</p>
+                        <p className="text-muted-foreground text-sm">Faites glisser ou cliquez sur les breloques pour les ajouter à votre bijou.</p>
                     ) : (
                         <ScrollArea className="h-24">
                             <ul className="space-y-2">
@@ -644,18 +643,18 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
                 <SheetTrigger asChild>
                     <Button variant="ghost" className="flex flex-col h-auto p-2">
                        <Gem className="h-6 w-6" />
-                       <span className="text-xs">Charms</span>
+                       <span className="text-xs">Breloques</span>
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="bottom" className="h-[80%] p-0 flex flex-col" onOpenAutoFocus={(e) => e.preventDefault()}>
                     <SheetHeader className="p-4 border-b">
-                        <SheetTitle>Charms</SheetTitle>
+                        <SheetTitle>Breloques</SheetTitle>
                     </SheetHeader>
                     <div className="p-4 border-b">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder="Search charms..."
+                                placeholder="Rechercher des breloques..."
                                 value={charmsSearchTerm}
                                 onChange={(e) => setCharmsSearchTerm(e.target.value)}
                                 className="pl-9"
@@ -677,12 +676,12 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
                  <SheetTrigger asChild>
                     <Button variant="ghost" className="flex flex-col h-auto p-2">
                        <Sparkles className="h-6 w-6" />
-                       <span className="text-xs">AI Suggestions</span>
+                       <span className="text-xs">Suggestions IA</span>
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="bottom" className="h-[80%] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
                    <SheetHeader className="p-4 border-b">
-                        <SheetTitle>AI Suggestions</SheetTitle>
+                        <SheetTitle>Suggestions IA</SheetTitle>
                    </SheetHeader>
                     <SuggestionSidebar 
                         onApplySuggestion={addCharmFromSuggestions}
@@ -698,5 +697,3 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
           </div>
         )}
     </>
-  );
-}

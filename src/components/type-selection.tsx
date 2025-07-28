@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -16,8 +15,8 @@ export function TypeSelection({ jewelryTypes }: TypeSelectionProps) {
 
     return (
         <section className="text-center">
-            <h2 className="text-3xl font-headline tracking-tight mb-4">Begin Your Creation</h2>
-            <p className="text-muted-foreground mb-12 max-w-2xl mx-auto">Choose a jewelry type to start designing. Each piece is a canvas for your story, waiting to be adorned with charms that speak to you.</p>
+            <h2 className="text-3xl font-headline tracking-tight mb-4">Commencez Votre Création</h2>
+            <p className="text-muted-foreground mb-12 max-w-2xl mx-auto">Choisissez un type de bijou pour commencer à concevoir. Chaque pièce est une toile pour votre histoire, attendant d'être ornée de breloques qui vous parlent.</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {jewelryTypes.map((type) => (
                     <Link 

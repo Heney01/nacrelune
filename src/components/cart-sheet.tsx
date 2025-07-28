@@ -40,18 +40,18 @@ export function CartSheet({ children, open, onOpenChange }: {
       {children && <SheetTrigger asChild>{children}</SheetTrigger>}
       <SheetContent className="flex flex-col">
         <SheetHeader>
-          <SheetTitle className="font-headline text-2xl">Your Cart ({totalItems})</SheetTitle>
+          <SheetTitle className="font-headline text-2xl">Votre Panier ({totalItems})</SheetTitle>
         </SheetHeader>
         {cart.length === 0 ? (
           <div className="flex-grow flex flex-col items-center justify-center text-center text-muted-foreground">
             <ShoppingCart className="w-16 h-16 mb-4" />
-            <p className="font-bold text-lg">Your cart is empty</p>
-            <p className="text-sm">Find the perfect piece to start your creation.</p>
+            <p className="font-bold text-lg">Votre panier est vide</p>
+            <p className="text-sm">Trouvez la pièce parfaite pour commencer votre création.</p>
             <SheetClose asChild>
               <Button variant="outline" asChild className="mt-6">
                 <Link href="/">
                   <PlusCircle className="mr-2 h-4 w-4" />
-                  Create a New Jewel
+                  Créer un nouveau bijou
                 </Link>
               </Button>
             </SheetClose>
@@ -63,7 +63,7 @@ export function CartSheet({ children, open, onOpenChange }: {
                 <Button variant="outline" className="w-full" asChild>
                   <Link href="/">
                     <PlusCircle className="mr-2 h-4 w-4" />
-                    Create a New Jewel
+                    Créer un nouveau bijou
                   </Link>
                 </Button>
               </SheetClose>
@@ -89,15 +89,15 @@ export function CartSheet({ children, open, onOpenChange }: {
                           </DialogTrigger>
                           <DialogContent className="max-w-xl">
                             <DialogHeader>
-                              <DialogTitle>Preview of {item.model.name}</DialogTitle>
+                              <DialogTitle>Aperçu de {item.model.name}</DialogTitle>
                               <DialogDescription>
-                                Here is a preview of your custom creation.
+                                Voici un aperçu de votre création personnalisée.
                               </DialogDescription>
                             </DialogHeader>
                             <div className="mt-4 grid place-items-center">
                               <Image
                                 src={item.previewImage || item.model.displayImageUrl}
-                                alt={`Preview of ${item.model.name}`}
+                                alt={`Aperçu de ${item.model.name}`}
                                 width={800}
                                 height={800}
                                 className="w-full h-auto object-contain rounded-lg max-w-full max-h-[70vh]"
@@ -111,7 +111,7 @@ export function CartSheet({ children, open, onOpenChange }: {
                             {item.jewelryType.name}
                           </p>
                           <p className="text-sm font-bold mt-1">
-                            ${itemPrice.toFixed(2)}
+                            {itemPrice.toFixed(2)} €
                           </p>
                         </div>
                         <Button
@@ -121,14 +121,14 @@ export function CartSheet({ children, open, onOpenChange }: {
                           onClick={() => removeFromCart(item.id)}
                         >
                           <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Remove item</span>
+                          <span className="sr-only">Supprimer l'article</span>
                         </Button>
                       </div>
                       {item.placedCharms.length > 0 && (
                         <AccordionItem value={item.id} className="border-t">
                           <AccordionTrigger className="text-sm px-4 py-2 hover:no-underline hover:bg-muted/50">
                             <div className="flex justify-between w-full items-center">
-                              <span>View Charms ({item.placedCharms.length})</span>
+                              <span>Voir les breloques ({item.placedCharms.length})</span>
                             </div>
                           </AccordionTrigger>
                           <AccordionContent className="p-4 pt-0">
@@ -139,7 +139,7 @@ export function CartSheet({ children, open, onOpenChange }: {
                                     <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={24} height={24} className="rounded-sm border" data-ai-hint="jewelry charm" />
                                     <span>{pc.charm.name}</span>
                                   </div>
-                                  <span className="text-muted-foreground">${(pc.charm.price || 0).toFixed(2)}</span>
+                                  <span className="text-muted-foreground">{(pc.charm.price || 0).toFixed(2)} €</span>
                                 </li>
                               ))}
                             </ul>
@@ -155,11 +155,11 @@ export function CartSheet({ children, open, onOpenChange }: {
               <div className="w-full space-y-4">
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total</span>
-                  <span>${totalPrice.toFixed(2)}</span>
+                  <span>{totalPrice.toFixed(2)} €</span>
                 </div>
                 <SheetClose asChild>
                   <Button className="w-full" disabled>
-                    Purchase
+                    Acheter
                   </Button>
                 </SheetClose>
               </div>
