@@ -22,6 +22,16 @@ import { Input } from './ui/input';
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 
 interface PlacedCharmComponentProps {
@@ -147,6 +157,8 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
 
   // State for charms panel search
   const [charmsSearchTerm, setCharmsSearchTerm] = useState('');
+
+  const [isItemAddedDialogOpen, setIsItemAddedDialogOpen] = useState(false);
 
   const isEditing = cartItemId !== null;
 
@@ -415,11 +427,7 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
         previewImage: '' // Placeholder, we'll generate this later
     }
     addToCart(newItem);
-    toast({
-        title: t('item_added_to_cart_title'),
-        description: t('item_added_to_cart_description', { modelName: model.name }),
-    });
-    router.push(`/${locale}`);
+    setIsItemAddedDialogOpen(true);
   };
 
   const handleUpdateCart = () => {
@@ -438,6 +446,18 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
         description: t('item_updated_description', { modelName: model.name }),
     });
     router.push(`/${locale}`); // Or maybe back to cart view
+  }
+
+  const handleProceedToCheckout = () => {
+    setIsItemAddedDialogOpen(false);
+    // Later, this will redirect to the cart/checkout page
+    // For now, let's redirect to home
+    router.push(`/${locale}`);
+  }
+
+  const handleCreateNew = () => {
+    setIsItemAddedDialogOpen(false);
+    router.push(`/${locale}`);
   }
 
   const charmsPanelDesktop = useMemo(() => (
@@ -640,6 +660,25 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
             </Sheet>
           </div>
         )}
+
+        <AlertDialog open={isItemAddedDialogOpen} onOpenChange={setIsItemAddedDialogOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>{t('item_added_dialog_title')}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        {t('item_added_dialog_description')}
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={handleProceedToCheckout}>
+                        {t('item_added_dialog_action_checkout')}
+                    </AlertDialogCancel>
+                    <AlertDialogAction onClick={handleCreateNew}>
+                        {t('item_added_dialog_action_new')}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </>
   );
 }
