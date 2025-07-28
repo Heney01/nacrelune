@@ -4,22 +4,25 @@
 import React, { useState, useMemo, useRef, WheelEvent, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { JewelryModel, PlacedCharm, Charm, JewelryType } from '@/lib/types';
+import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { Trash2, X, ArrowLeft, Gem, Sparkles, Search } from 'lucide-react';
+import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NacreluneLogo } from './icons';
 import { useTranslations } from '@/hooks/use-translations';
-import { PurchaseDialog } from './purchase-dialog';
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getCharmSuggestions } from '@/app/actions';
 import type { Suggestion, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { CharmsPanel } from './charms-panel';
 import { Input } from './ui/input';
+import { useCart } from '@/hooks/use-cart';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import { CartWidget } from './cart-widget';
 
 
 interface PlacedCharmComponentProps {
@@ -109,16 +112,23 @@ PlacedCharmComponent.displayName = 'PlacedCharmComponent';
 
 interface EditorProps {
   model: JewelryModel;
-  jewelryType: Omit<JewelryType, 'models'>;
+  jewelryType: Omit<JewelryType, 'models' | 'icon'>;
   allCharms: Charm[];
   locale: string;
+  cartItemId?: string;
 }
 
-export default function Editor({ model, jewelryType, allCharms, locale }: EditorProps) {
+export default function Editor({ model, jewelryType, allCharms, locale, cartItemId }: EditorProps) {
   const t = useTranslations('Editor');
   const tHomepage = useTranslations('HomePage');
   const isMobile = useIsMobile();
-  const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
+  const router = useRouter();
+  const { toast } = useToast();
+  const { cart, addItem, updateItem } = useCart();
+  
+  const existingCartItem = useMemo(() => cartItemId ? cart.find(item => item.id === cartItemId) : undefined, [cart, cartItemId]);
+
+  const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>(existingCartItem?.placedCharms || []);
   const [selectedPlacedCharmId, setSelectedPlacedCharmId] = useState<string | null>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -386,6 +396,42 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
       ));
     }, 500);
   };
+  
+  const totalPrice = useMemo(() => {
+    return (model.price || 0) + placedCharms.reduce((acc, pc) => acc + (pc.charm.price || 0), 0);
+  }, [model, placedCharms]);
+
+  const handleAddToCart = () => {
+    const newItem: Omit<CartItem, 'id'> = {
+        jewelryType,
+        model,
+        placedCharms,
+        price: totalPrice,
+    };
+    addItem(newItem);
+    toast({
+      title: t('toast_item_added_title'),
+      description: t('toast_item_added_description', { modelName: model.name }),
+    });
+    router.push(`/${locale}?type=${jewelryType.id}`);
+  };
+
+  const handleUpdateCart = () => {
+    if (existingCartItem) {
+        const updatedItem: CartItem = {
+            ...existingCartItem,
+            placedCharms,
+            price: totalPrice,
+        };
+        updateItem(updatedItem.id, updatedItem);
+        toast({
+            title: t('toast_item_updated_title'),
+            description: t('toast_item_updated_description', { modelName: model.name }),
+        });
+        router.push(`/${locale}`);
+    }
+  };
+
 
   const charmsPanelDesktop = useMemo(() => (
     <CharmsPanel 
@@ -400,15 +446,18 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
     <>
       <header className="p-4 border-b">
           <div className="container mx-auto flex justify-between items-center">
-            <div className="flex items-center gap-2">
+            <Link href={`/${locale}`} className="flex items-center gap-2">
               <NacreluneLogo className="h-8 w-auto text-foreground" />
+            </Link>
+            <div className="flex items-center gap-2">
+               <Button variant="ghost" asChild>
+                    <Link href={existingCartItem ? `/${locale}`: `/${locale}?type=${jewelryType.id}`}>
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        {tHomepage('back_button')}
+                    </Link>
+                </Button>
+                <CartWidget />
             </div>
-            <Button variant="ghost" asChild>
-                <Link href={`/?type=${jewelryType.id}`}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    {tHomepage('back_button')}
-                </Link>
-            </Button>
           </div>
         </header>
       <main className={cn("flex-grow p-4 md:p-8", isMobile && "p-0")}>
@@ -430,7 +479,17 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
                     <Trash2 className="mr-2 h-4 w-4" />
                     {t('clear_all_button')}
                   </Button>
-                  <PurchaseDialog model={model} placedCharms={placedCharms} locale={locale} />
+                  {existingCartItem ? (
+                      <Button onClick={handleUpdateCart}>
+                          <PlusCircle className="mr-2 h-4 w-4" />
+                          {t('update_item_button')}
+                      </Button>
+                  ) : (
+                      <Button onClick={handleAddToCart}>
+                          <ShoppingCart className="mr-2 h-4 w-4" />
+                          {t('add_to_cart_button')}
+                      </Button>
+                  )}
                 </div>
             </div>
             <div
@@ -561,7 +620,6 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
                 <SheetContent side="bottom" className="h-[80%] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
                    <SheetHeader className="p-4 border-b">
                         <SheetTitle>{t('ai_suggestions_title')}</SheetTitle>
-                        <SheetDescription />
                    </SheetHeader>
                     <SuggestionSidebar 
                         onApplySuggestion={addCharmFromSuggestions}
