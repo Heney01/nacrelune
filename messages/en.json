@@ -24,6 +24,8 @@
     "customize_title": "Customize Your {modelName}",
     "clear_all_button": "Clear All",
     "purchase_button": "Purchase",
+    "add_to_cart_button": "Add to Cart",
+    "update_item_button": "Update Item",
     "added_charms_title": "Added Charms ({count})",
     "added_charms_placeholder": "Drag or click charms to add them to your jewelry.",
     "ai_suggestions_title": "AI Suggestions",
@@ -35,6 +37,11 @@
     "error_generating_suggestions": "An error occurred while generating suggestions. Please try again.",
     "suggestions_placeholder_title": "Your creative suggestions will appear here.",
     "recommended_badge": "Recommended",
-    "error_title": "Oops! Something went wrong."
+    "error_title": "Oops! Something went wrong.",
+    "item_added_to_cart_title": "Added to Cart",
+    "item_added_to_cart_description": "{modelName} has been added to your cart.",
+    "item_updated_title": "Item Updated",
+    "item_updated_description": "Your design for {modelName} has been updated in the cart.",
+    "cart_title": "Your Cart"
   }
 }

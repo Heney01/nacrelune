@@ -10,6 +10,7 @@ import { TypeSelection } from '@/components/type-selection';
 import { ModelSelection } from '@/components/model-selection';
 import type { JewelryType, JewelryModel, Charm } from '@/lib/types';
 import Link from 'next/link';
+import { CartWidget } from './cart-widget';
 
 // This is a client component that wraps the main page logic
 export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, locale, messages }: {
@@ -66,6 +67,7 @@ function PageContent({ selectedType, selectedModel, jewelryTypes, allCharms, loc
             <Link href={`/${locale}`} className="flex items-center gap-2">
               <NacreluneLogo className="h-8 w-auto text-foreground" />
             </Link>
+            <CartWidget />
           </div>
         </header>
 

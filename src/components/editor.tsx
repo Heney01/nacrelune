@@ -4,12 +4,12 @@
 import React, { useState, useMemo, useRef, WheelEvent, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { JewelryModel, PlacedCharm, Charm, JewelryType } from '@/lib/types';
+import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart } from 'lucide-react';
+import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NacreluneLogo } from './icons';
 import { useTranslations } from '@/hooks/use-translations';
@@ -19,6 +19,9 @@ import { getCharmSuggestions } from '@/app/actions';
 import type { Suggestion, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { CharmsPanel } from './charms-panel';
 import { Input } from './ui/input';
+import { useCart } from '@/hooks/use-cart';
+import { useToast } from '@/hooks/use-toast';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 
 interface PlacedCharmComponentProps {
@@ -117,6 +120,12 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
   const t = useTranslations('Editor');
   const tHomepage = useTranslations('HomePage');
   const isMobile = useIsMobile();
+  const { cart, addToCart, updateCartItem } = useCart();
+  const { toast } = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const cartItemId = searchParams.get('cartItemId');
   
   const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
   const [selectedPlacedCharmId, setSelectedPlacedCharmId] = useState<string | null>(null);
@@ -138,6 +147,17 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
 
   // State for charms panel search
   const [charmsSearchTerm, setCharmsSearchTerm] = useState('');
+
+  const isEditing = cartItemId !== null;
+
+  useEffect(() => {
+    if (isEditing) {
+      const itemToEdit = cart.find(item => item.id === cartItemId);
+      if (itemToEdit) {
+        setPlacedCharms(itemToEdit.placedCharms);
+      }
+    }
+  }, [isEditing, cart, cartItemId]);
 
 
   const interactionState = useRef({
@@ -387,10 +407,38 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
     }, 500);
   };
   
-  const handlePurchase = () => {
-    // Placeholder for purchase logic
-    alert('Purchase logic not implemented yet!');
+  const handleAddToCart = () => {
+    const newItem: Omit<CartItem, 'id'> = {
+        model,
+        jewelryType,
+        placedCharms,
+        previewImage: '' // Placeholder, we'll generate this later
+    }
+    addToCart(newItem);
+    toast({
+        title: t('item_added_to_cart_title'),
+        description: t('item_added_to_cart_description', { modelName: model.name }),
+    });
+    router.push(`/${locale}`);
   };
+
+  const handleUpdateCart = () => {
+    if (!cartItemId) return;
+
+    const updatedItem = {
+      id: cartItemId,
+      model,
+      jewelryType,
+      placedCharms,
+      previewImage: '' // Placeholder
+    };
+    updateCartItem(cartItemId, updatedItem);
+    toast({
+        title: t('item_updated_title'),
+        description: t('item_updated_description', { modelName: model.name }),
+    });
+    router.push(`/${locale}`); // Or maybe back to cart view
+  }
 
   const charmsPanelDesktop = useMemo(() => (
     <CharmsPanel 
@@ -437,10 +485,17 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
                     <Trash2 className="mr-2 h-4 w-4" />
                     {t('clear_all_button')}
                   </Button>
-                  <Button onClick={handlePurchase}>
-                      <ShoppingCart className="mr-2 h-4 w-4" />
-                      {t('purchase_button')}
-                  </Button>
+                  {isEditing ? (
+                     <Button onClick={handleUpdateCart}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        {t('update_item_button')}
+                    </Button>
+                  ) : (
+                    <Button onClick={handleAddToCart}>
+                        <ShoppingCart className="mr-2 h-4 w-4" />
+                        {t('add_to_cart_button')}
+                    </Button>
+                  )}
                 </div>
             </div>
             <div

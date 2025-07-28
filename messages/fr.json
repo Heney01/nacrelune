@@ -24,6 +24,8 @@
     "customize_title": "Personnalisez votre {modelName}",
     "clear_all_button": "Tout effacer",
     "purchase_button": "Acheter",
+    "add_to_cart_button": "Ajouter au Panier",
+    "update_item_button": "Mettre à jour l'article",
     "added_charms_title": "Breloques ajoutées ({count})",
     "added_charms_placeholder": "Faites glisser ou cliquez sur les breloques pour les ajouter à votre bijou.",
     "ai_suggestions_title": "Suggestions de l'IA",
@@ -35,6 +37,11 @@
     "error_generating_suggestions": "Une erreur est survenue lors de la génération des suggestions. Veuillez réessayer.",
     "suggestions_placeholder_title": "Vos suggestions créatives apparaîtront ici.",
     "recommended_badge": "Recommandé",
-    "error_title": "Oups ! Un problème est survenu."
+    "error_title": "Oups ! Un problème est survenu.",
+    "item_added_to_cart_title": "Ajouté au panier",
+    "item_added_to_cart_description": "{modelName} a été ajouté à votre panier.",
+    "item_updated_title": "Article mis à jour",
+    "item_updated_description": "Votre création pour {modelName} a été mise à jour dans le panier.",
+    "cart_title": "Votre Panier"
   }
 }
