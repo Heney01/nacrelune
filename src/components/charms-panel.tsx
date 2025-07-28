@@ -9,7 +9,6 @@ import { ref, getDownloadURL } from 'firebase/storage';
 import { Charm, CharmCategory } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -106,9 +105,88 @@ export function CharmsPanel({ onCharmsLoaded, onAddCharm, isMobile = false }: Ch
         }, {} as Record<string, Charm[]>);
     }, [filteredCharms]);
 
+    if (isMobile) {
+        return (
+            <div className="flex flex-col h-full">
+                <div className="p-4 border-b">
+                    <SheetHeader>
+                        <SheetTitle>{t('charms_title')}</SheetTitle>
+                    </SheetHeader>
+                </div>
+                <div className="p-4">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder={t('search_placeholder')}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-9"
+                        />
+                    </div>
+                </div>
+                <Separator />
+                 {isLoadingCharms ? (
+                    <div className="flex justify-center items-center h-full p-8">
+                        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                    </div>
+                ) : (
+                    <Accordion type="multiple" defaultValue={charmCategories.map(c => c.id)} className="p-4">
+                        {charmCategories.map(category => (
+                            charmsByCategory[category.id] && charmsByCategory[category.id].length > 0 && (
+                                <AccordionItem value={category.id} key={category.id}>
+                                    <AccordionTrigger className="text-base font-headline">{category.name}</AccordionTrigger>
+                                    <AccordionContent>
+                                        <div className={cn("grid gap-2 pt-2", isMobile ? "grid-cols-4" : "grid-cols-3")}>
+                                            {charmsByCategory[category.id].map((charm) => (
+                                                <Dialog key={charm.id}>
+                                                    <div
+                                                        onClick={() => onAddCharm(charm)}
+                                                        className="relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer"
+                                                        title={charm.name}
+                                                    >
+                                                        <Image
+                                                            src={charm.imageUrl}
+                                                            alt={charm.name}
+                                                            width={48}
+                                                            height={48}
+                                                            className="pointer-events-none p-1"
+                                                            data-ai-hint="jewelry charm"
+                                                        />
+                                                        <p className="text-xs text-center mt-1 truncate">{charm.name}</p>
+                                                        <DialogTrigger asChild>
+                                                            <Button variant="secondary" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                                                <ZoomIn className="h-4 w-4" />
+                                                            </Button>
+                                                        </DialogTrigger>
+                                                    </div>
+                                                    <DialogContent className="max-w-md">
+                                                        <DialogHeader>
+                                                            <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
+                                                            <DialogDescription>{charm.description}</DialogDescription>
+                                                        </DialogHeader>
+                                                        <div className="mt-4 flex justify-center">
+                                                            <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
+                                                        </div>
+                                                        <div className="mt-6 flex justify-end">
+                                                            <Button onClick={() => onAddCharm(charm)}>{t('add_to_design_button')}</Button>
+                                                        </div>
+                                                    </DialogContent>
+                                                </Dialog>
+                                            ))}
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            )
+                        ))}
+                    </Accordion>
+                )}
+            </div>
+        )
+    }
+
     return (
-        <Card className={cn("flex flex-col", isMobile ? "h-full w-full border-0 shadow-none rounded-none" : "lg:col-span-3")}>
-            <CardHeader className={cn(isMobile && "py-4")}>
+        <Card className={cn("flex flex-col h-full", "lg:col-span-3")}>
+            <CardHeader>
                 <CardTitle className="font-headline text-xl">{t('charms_title')}</CardTitle>
             </CardHeader>
             <div className="px-4 pb-4">
@@ -124,7 +202,7 @@ export function CharmsPanel({ onCharmsLoaded, onAddCharm, isMobile = false }: Ch
             </div>
             <Separator />
             <CardContent className="p-0 flex-grow">
-                <ScrollArea className={cn(isMobile ? "h-full" : "h-[calc(100vh-320px)]")}>
+                <ScrollArea className="h-[calc(100vh-320px)]">
                     {isLoadingCharms ? (
                         <div className="flex justify-center items-center h-full p-8">
                             <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -136,7 +214,7 @@ export function CharmsPanel({ onCharmsLoaded, onAddCharm, isMobile = false }: Ch
                                     <AccordionItem value={category.id} key={category.id}>
                                         <AccordionTrigger className="text-base font-headline">{category.name}</AccordionTrigger>
                                         <AccordionContent>
-                                            <div className={cn("grid gap-2 pt-2", isMobile ? "grid-cols-4" : "grid-cols-3")}>
+                                            <div className="grid grid-cols-3 gap-2 pt-2">
                                                 {charmsByCategory[category.id].map((charm) => (
                                                     <Dialog key={charm.id}>
                                                         <div
@@ -185,3 +263,4 @@ export function CharmsPanel({ onCharmsLoaded, onAddCharm, isMobile = false }: Ch
         </Card>
     );
 }
+

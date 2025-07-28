@@ -48,9 +48,6 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
         }
         
         const handleTouchStart = (e: TouchEvent) => {
-            if (e.cancelable) {
-                e.preventDefault();
-            }
             onDragStart(e, placed.id);
         }
 
@@ -405,13 +402,13 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
       <div className={cn("container mx-auto", isMobile && "px-0")}>
         <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 h-full", isMobile && "grid-cols-1 gap-0")}>
           {/* Charms Panel */}
-          {!isMobile && <div className="lg:col-span-3">
+          {!isMobile && (
             <CharmsPanel 
                 onCharmsLoaded={setCharms} 
                 onAddCharm={addCharmFromCharmList} 
                 isMobile={isMobile}
             />
-          </div>}
+          )}
 
           {/* Editor Canvas */}
           <div className={cn("lg:col-span-6 flex flex-col gap-4", isMobile && "order-first")}>
@@ -517,15 +514,14 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                        <span className="text-xs">{t('charms_title')}</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="bottom" className="h-[80%] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
-                    <SheetHeader className="p-4 border-b">
-                        <SheetTitle>{t('charms_title')}</SheetTitle>
-                    </SheetHeader>
-                   <CharmsPanel 
-                        onCharmsLoaded={setCharms} 
-                        onAddCharm={addCharmFromCharmList} 
-                        isMobile={isMobile}
-                    />
+                <SheetContent side="bottom" className="h-[80%] p-0 flex flex-col" onOpenAutoFocus={(e) => e.preventDefault()}>
+                    <ScrollArea className="flex-grow">
+                        <CharmsPanel 
+                            onCharmsLoaded={setCharms} 
+                            onAddCharm={addCharmFromCharmList} 
+                            isMobile={true}
+                        />
+                    </ScrollArea>
                 </SheetContent>
             </Sheet>
             <Sheet open={isSuggestionsSheetOpen} onOpenChange={setIsSuggestionsSheetOpen}>
@@ -538,6 +534,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                 <SheetContent side="bottom" className="h-[80%] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
                    <SheetHeader className="p-4 border-b">
                         <SheetTitle>{t('ai_suggestions_title')}</SheetTitle>
+                        <SheetDescription />
                    </SheetHeader>
                     <SuggestionSidebar 
                         onApplySuggestion={addCharmFromSuggestions}
@@ -555,5 +552,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     </>
   );
 }
+
 
 
