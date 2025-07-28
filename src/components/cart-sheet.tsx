@@ -8,9 +8,10 @@ import { useTranslations } from '@/hooks/use-translations';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, ShoppingCart, PlusCircle } from 'lucide-react';
+import { Trash2, ShoppingCart, PlusCircle, ChevronDown } from 'lucide-react';
 import React, { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 
 interface CartSheetProps {
   children?: ReactNode;
@@ -66,41 +67,58 @@ export function CartSheet({ children, open, onOpenChange }: CartSheetProps) {
                 </SheetClose>
             </div>
             <ScrollArea className="flex-grow my-4 pr-4">
-              <div className="space-y-4">
+              <Accordion type="multiple" className="space-y-4">
                 {cart.map((item) => (
-                  <div key={item.id} className="flex items-start gap-4">
-                    <div className="relative w-20 h-20 rounded-md overflow-hidden border">
-                      <Image
-                        src={item.model.displayImageUrl}
-                        alt={item.model.name}
-                        fill
-                        className="object-cover"
-                        sizes="80px"
-                      />
-                    </div>
-                    <div className="flex-grow">
-                      <p className="font-bold">{item.model.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {item.jewelryType.name}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {t('added_charms_title', { count: item.placedCharms.length })}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                       <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => removeFromCart(item.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">{t('cart_remove_item')}</span>
-                      </Button>
-                    </div>
-                  </div>
+                    <Card key={item.id} className="overflow-hidden">
+                         <div className="p-4 flex items-start gap-4">
+                            <div className="relative w-20 h-20 rounded-md overflow-hidden border">
+                            <Image
+                                src={item.model.displayImageUrl}
+                                alt={item.model.name}
+                                fill
+                                className="object-cover"
+                                sizes="80px"
+                            />
+                            </div>
+                            <div className="flex-grow">
+                            <p className="font-bold">{item.model.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                                {item.jewelryType.name}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                                {t('added_charms_title', { count: item.placedCharms.length })}
+                            </p>
+                            </div>
+                             <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => removeFromCart(item.id)}
+                                >
+                                <Trash2 className="h-4 w-4" />
+                                <span className="sr-only">{t('cart_remove_item')}</span>
+                            </Button>
+                        </div>
+                        {item.placedCharms.length > 0 && (
+                             <AccordionItem value={item.id} className="border-t">
+                                <AccordionTrigger className="text-sm px-4 py-2 hover:no-underline hover:bg-muted/50">
+                                    {t('view_charms_action')}
+                                </AccordionTrigger>
+                                <AccordionContent className="p-4 pt-0">
+                                    <ul className="space-y-2">
+                                        {item.placedCharms.map(pc => (
+                                            <li key={pc.id} className="flex items-center gap-2 text-sm">
+                                                <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={24} height={24} className="rounded-sm border" data-ai-hint="jewelry charm" />
+                                                <span>{pc.charm.name}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </AccordionContent>
+                            </AccordionItem>
+                        )}
+                    </Card>
                 ))}
-              </div>
+              </Accordion>
             </ScrollArea>
             <SheetFooter className="mt-auto border-t pt-4">
                <div className="w-full space-y-4">

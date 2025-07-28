@@ -43,14 +43,11 @@
     "item_updated_title": "Item Updated",
     "item_updated_description": "Your design for {modelName} has been updated in the cart.",
     "cart_title": "Your Cart",
-    "item_added_dialog_title": "Item Added to Cart",
-    "item_added_dialog_description": "Your creation has been saved. What would you like to do next?",
-    "item_added_dialog_action_checkout": "Proceed to Checkout",
-    "item_added_dialog_action_new": "Create a New Jewel",
     "cart_empty_title": "Your cart is empty",
     "cart_empty_description": "Find the perfect piece to start your creation.",
     "cart_remove_item": "Remove item",
     "cart_total": "Total",
-    "create_new_jewel_button": "Create a New Jewel"
+    "create_new_jewel_button": "Create a New Jewel",
+    "view_charms_action": "View Charms"
   }
 }
