@@ -5,12 +5,13 @@ import React from 'react';
 import Editor from '@/components/editor';
 import { NacreluneLogo } from '@/components/icons';
 import { useTranslations } from '@/hooks/use-translations';
-import { Gem, HandMetal, Ear } from 'lucide-react';
+import { Gem, HandMetal, Ear, User } from 'lucide-react';
 import { TypeSelection } from '@/components/type-selection';
 import { ModelSelection } from '@/components/model-selection';
 import type { JewelryType, JewelryModel, Charm } from '@/lib/types';
 import Link from 'next/link';
 import { CartWidget } from './cart-widget';
+import { Button } from './ui/button';
 
 export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, locale }: {
     searchParams: { [key: string]: string | string[] | undefined };
@@ -44,7 +45,15 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
             <Link href={`/${locale}`} className="flex items-center gap-2">
               <NacreluneLogo className="h-8 w-auto text-foreground" />
             </Link>
-            <CartWidget />
+            <div className="flex items-center gap-2">
+              <CartWidget />
+              <Button variant="ghost" size="icon" asChild>
+                <Link href="/login">
+                  <User className="h-6 w-6" />
+                  <span className="sr-only">Se connecter</span>
+                </Link>
+              </Button>
+            </div>
           </div>
         </header>
 
