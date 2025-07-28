@@ -12,8 +12,7 @@ import { SuggestionSidebar } from './suggestion-sidebar';
 import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NacreluneLogo } from './icons';
-import { useTranslations } from '@/hooks/use-translations';
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getCharmSuggestions } from '@/app/actions';
 import type { Suggestion, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
@@ -21,7 +20,7 @@ import { CharmsPanel } from './charms-panel';
 import { Input } from './ui/input';
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { CartSheet } from './cart-sheet';
 import html2canvas from 'html2canvas';
 import { CartWidget } from './cart-widget';
@@ -119,12 +118,9 @@ interface EditorProps {
 }
 
 export default function Editor({ model, jewelryType, allCharms, locale }: EditorProps) {
-  const t = useTranslations('Editor');
-  const tHomepage = useTranslations('HomePage');
   const isMobile = useIsMobile();
   const { cart, addToCart, updateCartItem } = useCart();
   const { toast } = useToast();
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const cartItemId = searchParams.get('cartItemId');
@@ -262,11 +258,10 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
           modelDescription: model.name,
           charmOptions: allCharms.map(c => c.name),
           userPreferences: preferences,
-          locale: locale,
         });
         setSuggestions(result);
       } catch (err) {
-        setSuggestionError(t('error_generating_suggestions'));
+        setSuggestionError('An error occurred while generating suggestions. Please try again.');
       } finally {
         setIsGeneratingSuggestions(false);
       }
@@ -465,8 +460,8 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
               };
               updateCartItem(cartItemId, updatedItem);
               toast({
-                  title: t('item_updated_title'),
-                  description: t('item_updated_description', { modelName: model.name }),
+                  title: 'Item Updated',
+                  description: `Your design for ${model.name} has been updated in the cart.`,
               });
           } else {
               const newItem: Omit<CartItem, 'id'> = {
@@ -477,8 +472,8 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
               }
               addToCart(newItem);
               toast({
-                  title: t('item_added_to_cart_title'),
-                  description: t('item_added_to_cart_description', { modelName: model.name }),
+                  title: 'Added to Cart',
+                  description: `${model.name} has been added to your cart.`,
               });
           }
 
@@ -487,7 +482,7 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
           console.error("Error capturing canvas:", error);
           toast({
               variant: 'destructive',
-              title: t('error_title'),
+              title: 'Oops! Something went wrong.',
               description: "Could not capture design image."
           });
         } finally {
@@ -497,7 +492,7 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
 
       capture();
     }
-  }, [isCapturing, addToCart, updateCartItem, cartItemId, isEditing, jewelryType, model, placedCharms, t, toast]);
+  }, [isCapturing, addToCart, updateCartItem, cartItemId, isEditing, jewelryType, model, placedCharms, toast]);
 
 
   const charmsPanelDesktop = useMemo(() => (
@@ -514,14 +509,14 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
       <CartSheet open={isCartSheetOpen} onOpenChange={setIsCartSheetOpen} />
       <header className="p-4 border-b">
           <div className="container mx-auto flex justify-between items-center">
-            <Link href={`/${locale}`} className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2">
               <NacreluneLogo className="h-8 w-auto text-foreground" />
             </Link>
             <div className="flex items-center gap-2">
                <Button variant="ghost" asChild>
-                    <Link href={`/${locale}?type=${jewelryType.id}`}>
+                    <Link href={`/?type=${jewelryType.id}`}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        {tHomepage('back_button')}
+                        Back
                     </Link>
                 </Button>
                 <CartWidget />
@@ -541,17 +536,17 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
           {/* Editor Canvas */}
           <div className={cn("lg:col-span-6 flex flex-col gap-4", isMobile && "order-first")}>
              <div className={cn("flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2", isMobile && "px-4 pt-4")}>
-              <h2 className="text-2xl font-headline tracking-tight">{t('customize_title', {modelName: model.name})}</h2>
+              <h2 className="text-2xl font-headline tracking-tight">Customize Your {model.name}</h2>
                 <div className="flex gap-2">
                   {isEditing ? (
                      <Button onClick={handleUpdateCart} disabled={isCapturing}>
                         <PlusCircle className="mr-2 h-4 w-4" />
-                        {t('update_item_button')}
+                        Update Item
                     </Button>
                   ) : (
                     <Button onClick={handleAddToCart} disabled={isCapturing}>
                         <ShoppingCart className="mr-2 h-4 w-4" />
-                        {t('add_to_cart_button')}
+                        Add to Cart
                     </Button>
                   )}
                 </div>
@@ -597,11 +592,11 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
             </div>
             <Card className={cn(isMobile && "rounded-none border-x-0")}>
                 <CardHeader>
-                    <CardTitle className="font-headline text-lg">{t('added_charms_title', {count: placedCharms.length})}</CardTitle>
+                    <CardTitle className="font-headline text-lg">Added Charms ({placedCharms.length})</CardTitle>
                 </CardHeader>
                 <CardContent>
                     {placedCharms.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">{t('added_charms_placeholder')}</p>
+                        <p className="text-muted-foreground text-sm">Drag or click charms to add them to your jewelry.</p>
                     ) : (
                         <ScrollArea className="h-24">
                             <ul className="space-y-2">
@@ -649,18 +644,18 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
                 <SheetTrigger asChild>
                     <Button variant="ghost" className="flex flex-col h-auto p-2">
                        <Gem className="h-6 w-6" />
-                       <span className="text-xs">{t('charms_title')}</span>
+                       <span className="text-xs">Charms</span>
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="bottom" className="h-[80%] p-0 flex flex-col" onOpenAutoFocus={(e) => e.preventDefault()}>
                     <SheetHeader className="p-4 border-b">
-                        <SheetTitle>{t('charms_title')}</SheetTitle>
+                        <SheetTitle>Charms</SheetTitle>
                     </SheetHeader>
                     <div className="p-4 border-b">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder={t('search_placeholder')}
+                                placeholder="Search charms..."
                                 value={charmsSearchTerm}
                                 onChange={(e) => setCharmsSearchTerm(e.target.value)}
                                 className="pl-9"
@@ -682,12 +677,12 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
                  <SheetTrigger asChild>
                     <Button variant="ghost" className="flex flex-col h-auto p-2">
                        <Sparkles className="h-6 w-6" />
-                       <span className="text-xs">{t('ai_suggestions_title')}</span>
+                       <span className="text-xs">AI Suggestions</span>
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="bottom" className="h-[80%] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
                    <SheetHeader className="p-4 border-b">
-                        <SheetTitle>{t('ai_suggestions_title')}</SheetTitle>
+                        <SheetTitle>AI Suggestions</SheetTitle>
                    </SheetHeader>
                     <SuggestionSidebar 
                         onApplySuggestion={addCharmFromSuggestions}

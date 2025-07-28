@@ -5,10 +5,9 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import type { JewelryModel, JewelryType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeft, Loader2, ZoomIn } from 'lucide-react';
 import Image from 'next/image';
-import { useTranslations } from '@/hooks/use-translations';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 
@@ -18,7 +17,6 @@ interface ModelSelectionProps {
 }
 
 export function ModelSelection({ selectedType, locale }: ModelSelectionProps) {
-    const t = useTranslations('HomePage');
     const [loadingModelId, setLoadingModelId] = useState<string | null>(null);
 
     const handleModelClick = (modelId: string) => {
@@ -29,22 +27,22 @@ export function ModelSelection({ selectedType, locale }: ModelSelectionProps) {
         <>
             <div className="flex justify-start mb-8">
                 <Button variant="ghost" asChild>
-                    <Link href={`/${locale}`}>
+                    <Link href="/">
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        {t('back_button')}
+                        Back
                     </Link>
                 </Button>
             </div>
             <section>
-                <h2 className="text-3xl font-headline tracking-tight mb-4 text-center">{t('model_selection_title')}</h2>
-                <p className="text-muted-foreground mb-12 max-w-2xl mx-auto text-center">{t('model_selection_subtitle', { jewelryTypeName: t(`jewelry_types.${selectedType.id}`).toLowerCase() })}</p>
+                <h2 className="text-3xl font-headline tracking-tight mb-4 text-center">Select a Model</h2>
+                <p className="text-muted-foreground mb-12 max-w-2xl mx-auto text-center">Select a beautiful {selectedType.name.toLowerCase()} model as the foundation for your custom design.</p>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                     {selectedType.models.map((model, index) => (
                         <Card key={model.id} className="overflow-hidden group flex flex-col">
                            <div className="overflow-hidden relative">
                                 <Link 
-                                    href={`/${locale}?type=${selectedType.id}&model=${model.id}`} 
+                                    href={`/?type=${selectedType.id}&model=${model.id}`} 
                                     onClick={() => handleModelClick(model.id)}
                                     className="contents"
                                 >
@@ -86,10 +84,10 @@ export function ModelSelection({ selectedType, locale }: ModelSelectionProps) {
                                 <h3 className="text-lg font-headline flex-grow">{model.name}</h3>
                                 <Button asChild variant="outline" size="sm" className="w-full mt-4" disabled={!!loadingModelId}>
                                     <Link 
-                                        href={`/${locale}?type=${selectedType.id}&model=${model.id}`} 
+                                        href={`/?type=${selectedType.id}&model=${model.id}`} 
                                         onClick={() => handleModelClick(model.id)}
                                     >
-                                        {loadingModelId === model.id ? <Loader2 className="animate-spin" /> : t('select_button')}
+                                        {loadingModelId === model.id ? <Loader2 className="animate-spin" /> : 'Select'}
                                     </Link>
                                 </Button>
                             </CardContent>

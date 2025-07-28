@@ -3,7 +3,6 @@
 
 import Link from 'next/link';
 import type { JewelryType } from "@/lib/types";
-import { useTranslations } from "@/hooks/use-translations";
 import { Card, CardContent } from "@/components/ui/card";
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
@@ -13,18 +12,17 @@ interface TypeSelectionProps {
 }
 
 export function TypeSelection({ jewelryTypes }: TypeSelectionProps) {
-    const t = useTranslations('HomePage');
     const [loadingTypeId, setLoadingTypeId] = useState<string | null>(null);
 
     return (
         <section className="text-center">
-            <h2 className="text-3xl font-headline tracking-tight mb-4">{t('title')}</h2>
-            <p className="text-muted-foreground mb-12 max-w-2xl mx-auto">{t('subtitle')}</p>
+            <h2 className="text-3xl font-headline tracking-tight mb-4">Begin Your Creation</h2>
+            <p className="text-muted-foreground mb-12 max-w-2xl mx-auto">Choose a jewelry type to start designing. Each piece is a canvas for your story, waiting to be adorned with charms that speak to you.</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {jewelryTypes.map((type) => (
                     <Link 
                         key={type.id} 
-                        href={`?type=${type.id}`} 
+                        href={`/?type=${type.id}`} 
                         className="contents"
                         onClick={() => setLoadingTypeId(type.id)}
                     >
@@ -38,8 +36,8 @@ export function TypeSelection({ jewelryTypes }: TypeSelectionProps) {
                                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
                                     <type.icon className="w-8 h-8 text-primary" />
                                 </div>
-                                <h3 className="text-xl font-headline">{t(`jewelry_types.${type.id}`)}</h3>
-                                <p className="text-sm text-muted-foreground">{t(`jewelry_types.${type.id}_description`)}</p>
+                                <h3 className="text-xl font-headline">{type.name}</h3>
+                                <p className="text-sm text-muted-foreground">{type.description}</p>
                             </CardContent>
                         </Card>
                     </Link>

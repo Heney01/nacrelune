@@ -11,7 +11,6 @@ import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, Dialog
 import { Button } from '@/components/ui/button';
 import { Loader2, Search, ZoomIn } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useTranslations } from '@/hooks/use-translations';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Input } from './ui/input';
 import { getCharmCategories } from '@/lib/data';
@@ -25,7 +24,6 @@ interface CharmsPanelProps {
 }
 
 export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermChange, isMobileSheet = false }: CharmsPanelProps) {
-    const t = useTranslations('Editor');
     const isMobile = useIsMobile();
     const [charmCategories, setCharmCategories] = useState<CharmCategory[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -99,7 +97,7 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                             </div>
                             <div className="mt-6 flex justify-end">
                                 <DialogClose asChild>
-                                    <Button onClick={() => onAddCharm(charm)}>{t('add_to_design_button')}</Button>
+                                    <Button onClick={() => onAddCharm(charm)}>Add to Design</Button>
                                 </DialogClose>
                             </div>
                         </DialogContent>
@@ -147,13 +145,13 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
     return (
         <Card className={cn("flex flex-col h-full")}>
             <CardHeader>
-                <CardTitle className="font-headline text-xl">{t('charms_title')}</CardTitle>
+                <CardTitle className="font-headline text-xl">Charms</CardTitle>
             </CardHeader>
             <div className="px-4 pb-4">
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder={t('search_placeholder')}
+                        placeholder="Search charms..."
                         value={searchTerm}
                         onChange={(e) => onSearchTermChange(e.target.value)}
                         className="pl-9"

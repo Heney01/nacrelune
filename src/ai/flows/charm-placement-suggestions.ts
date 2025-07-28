@@ -10,14 +10,15 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'zod';
+import { defineTool } from 'genkit';
+
 
 const SuggestCharmPlacementInputSchema = z.object({
   jewelryType: z.string().describe('The type of jewelry (necklace, bracelet, earrings).'),
   modelDescription: z.string().describe('The description of the selected jewelry model.'),
   charmOptions: z.array(z.string()).describe('The available charm options.'),
   userPreferences: z.string().optional().describe('Optional user preferences for charm placement.'),
-  locale: z.string().optional().describe('The locale for the response language (e.g., "en", "fr").'),
 });
 export type SuggestCharmPlacementInput = z.infer<typeof SuggestCharmPlacementInputSchema>;
 
@@ -40,9 +41,9 @@ const SuggestCharmPlacementOutputSchema = z.object({
 });
 export type SuggestCharmPlacementOutput = z.infer<typeof SuggestCharmPlacementOutputSchema>;
 
-const shouldIntegrateCharmTool = ai.defineTool({
+const shouldIntegrateCharmTool = defineTool({
   name: 'shouldIntegrateCharm',
-  description: 'Determines whether a given charm suggestion should be integrated into the design based on contextual relevance.',
+  description: 'Determines whether a given charm suggestion should be contextually relevant.',
   inputSchema: z.object({
     charm: z.string().describe('The charm being suggested.'),
     placementDescription: z.string().describe('The description of the suggested placement.'),
@@ -63,13 +64,19 @@ export async function suggestCharmPlacement(input: SuggestCharmPlacementInput): 
   return suggestCharmPlacementFlow(input);
 }
 
-const prompt = ai.definePrompt({
-  name: 'suggestCharmPlacementPrompt',
-  input: {schema: SuggestCharmPlacementInputSchema},
-  output: {schema: SuggestCharmPlacementOutputSchema},
-  tools: [shouldIntegrateCharmTool],
-  prompt: `You are a jewelry design assistant. Your task is to suggest charm placements based on the provided information, including specific coordinates.
-Your response MUST be in the following language: {{{locale}}}.
+const suggestCharmPlacementFlow = ai.flow(
+  {
+    name: 'suggestCharmPlacementFlow',
+    inputSchema: SuggestCharmPlacementInputSchema,
+    outputSchema: SuggestCharmPlacementOutputSchema,
+  },
+  async (input) => {
+     if (input.charmOptions.length === 0) {
+      return { suggestions: [] };
+    }
+
+    const llmResponse = await ai.generate({
+      prompt: `You are a jewelry design assistant. Your task is to suggest charm placements based on the provided information, including specific coordinates.
 
 When suggesting a placement, you MUST provide precise x and y coordinates as percentages (from 0 to 100) for where the charm should be placed on the jewelry model.
 - The (0, 0) coordinate is the top-left corner of the canvas.
@@ -80,27 +87,19 @@ Think like a designer. Consider balance, symmetry, and aesthetic appeal based on
 
 IMPORTANT: You MUST strictly adhere to the user's preferences. If the user expresses a negative constraint (e.g., "I hate...", "no red", "I don't like..."), you MUST NOT suggest any charm that violates this constraint. This is a strict rule.
 
-Jewelry Type: {{{jewelryType}}}
-Model Name: {{{modelDescription}}}
-Available Charms: {{#each charmOptions}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
-User Preferences: {{{userPreferences}}}
+Jewelry Type: ${input.jewelryType}
+Model Name: ${input.modelDescription}
+Available Charms: ${input.charmOptions.join(', ')}
+User Preferences: ${input.userPreferences}
 
-Suggest placements for a few of the available charms. For each suggestion, provide a brief description of where the charm should be placed, and the x/y coordinates. Use the shouldIntegrateCharm tool to determine if the charm suggestion should be integrated into the design.
+Suggest placements for a few of the available charms. For each suggestion, provide a brief description of where the charm should be placed, and the x/y coordinates. Use the shouldIntegrateCharm tool to determine if the charm suggestion should be integrated into the design.`,
+      tools: [shouldIntegrateCharmTool],
+      output: {
+        schema: SuggestCharmPlacementOutputSchema
+      }
+    });
 
-Output your suggestions in JSON format.`,
-});
-
-const suggestCharmPlacementFlow = ai.defineFlow(
-  {
-    name: 'suggestCharmPlacementFlow',
-    inputSchema: SuggestCharmPlacementInputSchema,
-    outputSchema: SuggestCharmPlacementOutputSchema,
-  },
-  async input => {
-     if (input.charmOptions.length === 0) {
-      return { suggestions: [] };
-    }
-    const {output} = await prompt(input);
+    const output = llmResponse.output();
     if (!output) {
       throw new Error('No output from prompt');
     }

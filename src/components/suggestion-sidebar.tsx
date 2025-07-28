@@ -13,7 +13,6 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Badge } from './ui/badge';
 import Image from 'next/image';
 import { Charm } from '@/lib/types';
-import { useTranslations } from '@/hooks/use-translations';
 import { cn } from '@/lib/utils';
 
 interface SuggestionSidebarProps {
@@ -35,7 +34,6 @@ export function SuggestionSidebar({
   error,
   onGenerate
 }: SuggestionSidebarProps) {
-  const t = useTranslations('Editor');
   const [preferences, setPreferences] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -52,26 +50,26 @@ export function SuggestionSidebar({
       <CardHeader className={cn(isMobile && "py-4")}>
         <CardTitle className="font-headline text-xl flex items-center gap-2">
           <WandSparkles className="text-primary" />
-          {t('ai_suggestions_title')}
+          AI Suggestions
         </CardTitle>
         <CardDescription>
-          {t('ai_suggestions_description')}
+          Let our AI help you find the perfect placement for your charms.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col gap-4">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="preferences" className="font-bold">{t('preferences_label')}</Label>
+            <Label htmlFor="preferences" className="font-bold">Your Preferences (Optional)</Label>
             <Textarea
               id="preferences"
-              placeholder={t('preferences_placeholder')}
+              placeholder="e.g., 'I like asymmetrical designs' or 'a minimalist look'"
               value={preferences}
               onChange={(e) => setPreferences(e.target.value)}
               className="mt-2"
             />
           </div>
           <Button type="submit" className="w-full" disabled={isLoading || charms.length === 0}>
-            {isLoading ? t('generating_button') : <> <Sparkles className="mr-2 h-4 w-4" /> {t('generate_ideas_button')}</>}
+            {isLoading ? 'Generating...' : <> <Sparkles className="mr-2 h-4 w-4" /> Generate Ideas</>}
           </Button>
         </form>
         <div className="flex-grow mt-4">
@@ -84,7 +82,7 @@ export function SuggestionSidebar({
           )}
           {error && (
             <Alert variant="destructive">
-              <AlertTitle>{t('error_title')}</AlertTitle>
+              <AlertTitle>Oops! Something went wrong.</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
@@ -102,11 +100,11 @@ export function SuggestionSidebar({
                         <div className="flex-1">
                           <CardTitle className="text-base font-headline">{suggestion.charm}</CardTitle>
                           <p className="text-sm text-muted-foreground">{suggestion.placementDescription}</p>
-                          {suggestion.shouldIntegrate && <Badge variant="secondary" className="mt-2">{t('recommended_badge')}</Badge>}
+                          {suggestion.shouldIntegrate && <Badge variant="secondary" className="mt-2">Recommended</Badge>}
                         </div>
                         <Button size="sm" variant="outline" onClick={() => handleSuggestionClick(suggestion)}>
                             <PlusCircle className="mr-2 h-4 w-4" />
-                            {t('add_to_design_button')}
+                            Add to Design
                         </Button>
                     </div>
                   </Card>
@@ -117,7 +115,7 @@ export function SuggestionSidebar({
            {!isLoading && !suggestions && !error && (
             <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-full p-4 border border-dashed rounded-lg">
                 <Lightbulb className="w-10 h-10 mb-4" />
-                <p>{t('suggestions_placeholder_title')}</p>
+                <p>Your creative suggestions will appear here.</p>
             </div>
            )}
         </div>

@@ -1,4 +1,4 @@
 import { config } from 'dotenv';
 config();
 
-import '@/ai/flows/charm-placement-suggestions.ts';
+import './flows/charm-placement-suggestions.ts';
