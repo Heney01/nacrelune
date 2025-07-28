@@ -50,9 +50,6 @@
     "view_charms_action": "View Charms",
     "cart_preview_title": "Preview of {modelName}",
     "cart_preview_description": "Here is a preview of your custom creation.",
-    "item_price": "${price}",
-    "order_success_title": "Order Placed!",
-    "order_success_description": "Your order #{orderId} has been successfully placed.",
-    "order_error_description": "There was a problem placing your order. Please try again."
+    "item_price": "${price}"
   }
 }

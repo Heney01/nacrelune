@@ -8,8 +8,8 @@ import { useTranslations } from '@/hooks/use-translations';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, ShoppingCart, PlusCircle, Loader2 } from 'lucide-react';
-import React, { ReactNode, useState } from 'react';
+import { Trash2, ShoppingCart, PlusCircle } from 'lucide-react';
+import React, { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Card } from './ui/card';
@@ -21,8 +21,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { placeOrder } from '@/app/actions';
-import { useToast } from '@/hooks/use-toast';
 
 export function CartSheet({ children, open, onOpenChange }: {
   children?: ReactNode;
@@ -30,11 +28,9 @@ export function CartSheet({ children, open, onOpenChange }: {
   onOpenChange?: (open: boolean) => void;
 }) {
   const t = useTranslations('Editor');
-  const { cart, removeFromCart, clearCart } = useCart();
+  const { cart, removeFromCart } = useCart();
   const pathname = usePathname();
   const locale = pathname.split('/')[1] || 'en';
-  const { toast } = useToast();
-  const [isProcessing, setIsProcessing] = useState(false);
 
   const totalItems = cart.length;
   
@@ -43,27 +39,6 @@ export function CartSheet({ children, open, onOpenChange }: {
     const charmsPrice = item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
     return sum + modelPrice + charmsPrice;
   }, 0);
-
-  const handlePurchase = async () => {
-    setIsProcessing(true);
-    try {
-      const orderId = await placeOrder(cart);
-      toast({
-        title: t('order_success_title'),
-        description: t('order_success_description', { orderId }),
-      });
-      clearCart();
-    } catch (error) {
-      console.error("Purchase failed", error);
-      toast({
-        variant: 'destructive',
-        title: t('error_title'),
-        description: t('order_error_description'),
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -187,14 +162,11 @@ export function CartSheet({ children, open, onOpenChange }: {
                   <span>{t('cart_total')}</span>
                   <span>${totalPrice.toFixed(2)}</span>
                 </div>
-                <Button className="w-full" onClick={handlePurchase} disabled={isProcessing}>
-                  {isProcessing ? (
-                    <>
-                      <Loader2 className="animate-spin" />
-                      {t('generating_button')}
-                    </>
-                  ) : t('purchase_button')}
-                </Button>
+                <SheetClose asChild>
+                  <Button className="w-full" disabled>
+                    {t('purchase_button')}
+                  </Button>
+                </SheetClose>
               </div>
             </SheetFooter>
           </>

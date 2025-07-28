@@ -50,9 +50,6 @@
     "view_charms_action": "Voir les breloques",
     "cart_preview_title": "Aperçu de {modelName}",
     "cart_preview_description": "Voici un aperçu de votre création personnalisée.",
-    "item_price": "{price}€",
-    "order_success_title": "Commande passée !",
-    "order_success_description": "Votre commande n°{orderId} a été passée avec succès.",
-    "order_error_description": "Un problème est survenu lors de la validation de votre commande. Veuillez réessayer."
+    "item_price": "{price}€"
   }
 }
