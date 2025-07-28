@@ -3,12 +3,12 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useCart, CartProvider } from '@/hooks/use-cart';
-import { useTranslations, TranslationsProvider } from '@/hooks/use-translations';
+import { useCart } from '@/hooks/use-cart';
+import { useTranslations } from '@/hooks/use-translations';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, ShoppingCart, PlusCircle, Loader2 } from 'lucide-react';
+import { Trash2, ShoppingCart, PlusCircle } from 'lucide-react';
 import React, { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
@@ -21,14 +21,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { getMessages } from '@/lib/translations';
 
-// This is the actual content of the cart. By creating it as a separate component,
-// we can wrap it with the necessary context providers.
-function CartContent({ onClose, locale, messages }: { onClose: () => void, locale: string, messages: any }) {
+export function CartSheet({ children, open, onOpenChange }: {
+  children?: ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const t = useTranslations('Editor');
   const { cart, removeFromCart } = useCart();
-  
+  const pathname = usePathname();
+  const locale = pathname.split('/')[1] || 'en';
+
   const totalItems = cart.length;
   
   const totalPrice = cart.reduce((sum, item) => {
@@ -38,9 +41,8 @@ function CartContent({ onClose, locale, messages }: { onClose: () => void, local
   }, 0);
 
   return (
-    // We re-provide the translation context here because the SheetContent is portaled
-    // and loses the original context.
-    <TranslationsProvider messages={messages}>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      {children && <SheetTrigger asChild>{children}</SheetTrigger>}
       <SheetContent className="flex flex-col">
         <SheetHeader>
           <SheetTitle className="font-headline text-2xl">{t('cart_title')} ({totalItems})</SheetTitle>
@@ -170,57 +172,6 @@ function CartContent({ onClose, locale, messages }: { onClose: () => void, local
           </>
         )}
       </SheetContent>
-    </TranslationsProvider>
-  );
-}
-
-
-// The main CartSheet component now manages fetching the messages and passing them down.
-export function CartSheet({ children, open, onOpenChange }: {
-  children?: ReactNode;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-}) {
-  const pathname = usePathname();
-  const locale = pathname.split('/')[1] || 'en';
-  const [messages, setMessages] = React.useState(null);
-
-  React.useEffect(() => {
-    // Reset messages when sheet is closed
-    if (!open) {
-      setMessages(null);
-      return;
-    }
-    
-    // Fetch messages when sheet is opened
-    getMessages(locale).then(setMessages);
-
-  }, [open, locale]);
-
-  const handleClose = () => {
-    if (onOpenChange) {
-      onOpenChange(false);
-    }
-  };
-
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      {children && <SheetTrigger asChild>{children}</SheetTrigger>}
-      <CartProvider>
-          {messages ? (
-              <CartContent onClose={handleClose} locale={locale} messages={messages} />
-          ) : (
-              <SheetContent>
-                  <SheetHeader>
-                      {/* We provide a basic title to satisfy accessibility requirements during loading */}
-                      <SheetTitle>Loading...</SheetTitle>
-                  </SheetHeader>
-                  <div className="flex justify-center items-center h-full">
-                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  </div>
-              </SheetContent>
-          )}
-      </CartProvider>
     </Sheet>
   );
 }
