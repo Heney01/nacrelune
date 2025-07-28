@@ -12,6 +12,7 @@ import { Trash2, ShoppingCart, PlusCircle, ChevronDown } from 'lucide-react';
 import React, { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { Card } from './ui/card';
 
 interface CartSheetProps {
   children?: ReactNode;
