@@ -25,22 +25,33 @@ export async function getJewelryTypesAndModels(
     for (const typeInfo of baseTypes) {
         try {
             const querySnapshot = await getDocs(collection(db, typeInfo.id));
-            const models = await Promise.all(
-                querySnapshot.docs.map(async (doc) => {
-                    const data = doc.data();
-                    const displayImageUrl = await getUrl(data.displayImageUrl, 'https://placehold.co/800x800.png');
-                    const editorImageUrl = await getUrl(data.editorImageUrl, 'https://placehold.co/800x800.png');
-                    
-                    return {
-                        id: doc.id,
-                        name: data.name,
-                        displayImageUrl: displayImageUrl,
-                        editorImageUrl: editorImageUrl,
-                        snapPath: data.snapPath || '',
-                        price: data.price || 0,
-                    } as JewelryModel;
-                })
-            );
+            const docs = querySnapshot.docs;
+
+            // Get all image URLs in parallel
+            const imageUrlPromises = docs.map(doc => {
+                const data = doc.data();
+                return Promise.all([
+                    getUrl(data.displayImageUrl, 'https://placehold.co/800x800.png'),
+                    getUrl(data.editorImageUrl, 'https://placehold.co/800x800.png')
+                ]);
+            });
+
+            const imageUrls = await Promise.all(imageUrlPromises);
+
+            const models = docs.map((doc, index) => {
+                const data = doc.data();
+                const [displayImageUrl, editorImageUrl] = imageUrls[index];
+                
+                return {
+                    id: doc.id,
+                    name: data.name,
+                    displayImageUrl: displayImageUrl,
+                    editorImageUrl: editorImageUrl,
+                    snapPath: data.snapPath || '',
+                    price: data.price || 0,
+                } as JewelryModel;
+            });
+            
             typesWithModels.push({ ...typeInfo, models });
         } catch (error) {
             console.error(`Error fetching models for ${typeInfo.id}: `, error);
@@ -53,19 +64,25 @@ export async function getJewelryTypesAndModels(
 export async function getCharms(): Promise<Charm[]> {
      try {
         const charmsSnapshot = await getDocs(collection(db, "charms"));
-        const fetchedCharms = await Promise.all(charmsSnapshot.docs.map(async (doc) => {
+        const docs = charmsSnapshot.docs;
+
+        // Get all image URLs in parallel
+        const imageUrlPromises = docs.map(doc => getUrl(doc.data().imageUrl, 'https://placehold.co/100x100.png'));
+        const imageUrls = await Promise.all(imageUrlPromises);
+
+        const fetchedCharms = docs.map((doc, index) => {
             const data = doc.data();
-            const imageUrl = await getUrl(data.imageUrl, 'https://placehold.co/100x100.png');
             const categoryRef = data.category as DocumentReference;
             return {
                 id: doc.id,
                 name: data.name,
-                imageUrl: imageUrl,
+                imageUrl: imageUrls[index],
                 description: data.description,
                 categoryId: categoryRef.id,
                 price: data.price || 0,
             } as Charm;
-        }));
+        });
+
         return fetchedCharms;
     } catch (error) {
         console.error("Error fetching charms data: ", error);
@@ -77,16 +94,25 @@ export async function getCharms(): Promise<Charm[]> {
 export async function getCharmCategories(): Promise<CharmCategory[]> {
     try {
         const categoriesSnapshot = await getDocs(collection(db, "charmCategories"));
-        const fetchedCategories = await Promise.all(categoriesSnapshot.docs.map(async (doc) => {
+        const docs = categoriesSnapshot.docs;
+
+        // Get all image URLs in parallel
+        const imageUrlPromises = docs.map(doc => {
+            const imageUrl = doc.data().imageUrl;
+            return imageUrl ? getUrl(imageUrl, 'https://placehold.co/100x100.png') : Promise.resolve(undefined);
+        });
+        const imageUrls = await Promise.all(imageUrlPromises);
+
+        const fetchedCategories = docs.map((doc, index) => {
             const data = doc.data();
-            const imageUrl = data.imageUrl ? await getUrl(data.imageUrl, 'https://placehold.co/100x100.png') : undefined;
             return {
                 id: doc.id,
                 name: data.name,
                 description: data.description,
-                imageUrl: imageUrl,
+                imageUrl: imageUrls[index],
             } as CharmCategory;
-        }));
+        });
+
         return fetchedCategories;
     } catch (error) {
         console.error("Error fetching charm categories: ", error);
