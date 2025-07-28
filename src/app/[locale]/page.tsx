@@ -1,31 +1,8 @@
 
-import React from 'react';
-import { getJewelryTypesAndModels, getCharms } from '@/lib/data';
-import type { JewelryType, Charm } from '@/lib/types';
-import { HomePageClient } from '@/components/home-page-client';
-import { getMessages } from '@/lib/translations';
-
-const JEWELRY_TYPES_INFO: Omit<JewelryType, 'models' | 'icon'>[] = [
-  { id: 'necklace', name: 'Necklaces', description: "Graceful chains and pendants." },
-  { id: 'bracelet', name: 'Bracelets', description: "Elegant wristwear for any occasion." },
-  { id: 'earring', name: 'Earrings', description: "Stylish earrings to complete your look." },
-];
-
-export default async function Home({ searchParams, params }: {
-  searchParams: { [key: string]: string | string[] | undefined };
-  params: { locale: string };
-}) {
-  const jewelryTypesData = await getJewelryTypesAndModels(JEWELRY_TYPES_INFO);
-  const charms = await getCharms();
-  const messages = await getMessages(params.locale);
-  
+export default function Home() {
   return (
-    <HomePageClient
-      searchParams={searchParams}
-      jewelryTypes={jewelryTypesData}
-      allCharms={charms}
-      locale={params.locale}
-      messages={messages}
-    />
+    <div style={{ display: 'grid', placeContent: 'center', height: '100vh', fontFamily: 'sans-serif', fontSize: '2rem' }}>
+      <h1>Hello World</h1>
+    </div>
   );
 }
