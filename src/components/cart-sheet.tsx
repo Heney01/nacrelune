@@ -74,7 +74,7 @@ export function CartSheet({ children, open, onOpenChange }: CartSheetProps) {
                          <div className="p-4 flex items-start gap-4">
                             <div className="relative w-20 h-20 rounded-md overflow-hidden border">
                             <Image
-                                src={item.model.displayImageUrl}
+                                src={item.previewImage || item.model.displayImageUrl}
                                 alt={item.model.name}
                                 fill
                                 className="object-cover"

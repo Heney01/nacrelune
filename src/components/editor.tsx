@@ -23,6 +23,7 @@ import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CartSheet } from './cart-sheet';
+import html2canvas from 'html2canvas';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -165,7 +166,6 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
     isDragging: false,
     isPanning: false,
     dragStart: { x: 0, y: 0 },
-    panStart: { x: 0, y: 0 },
     activeCharmId: null as string | null,
   }).current;
 
@@ -407,27 +407,41 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
       ));
     }, 500);
   };
+
+  const captureCanvas = async (): Promise<string> => {
+    if (!canvasRef.current) {
+        return '';
+    }
+    const canvas = await html2canvas(canvasRef.current, { 
+        backgroundColor: null, // for transparent background
+        logging: false,
+        useCORS: true,
+        scale: 2 // for better quality
+    });
+    return canvas.toDataURL('image/png');
+  }
   
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
+    const previewImage = await captureCanvas();
     const newItem: Omit<CartItem, 'id'> = {
         model,
         jewelryType,
         placedCharms,
-        previewImage: '' // Placeholder, we'll generate this later
+        previewImage: previewImage
     }
     addToCart(newItem);
     setIsCartSheetOpen(true);
   };
 
-  const handleUpdateCart = () => {
+  const handleUpdateCart = async () => {
     if (!cartItemId) return;
-
+    const previewImage = await captureCanvas();
     const updatedItem = {
       id: cartItemId,
       model,
       jewelryType,
       placedCharms,
-      previewImage: '' // Placeholder
+      previewImage: previewImage
     };
     updateCartItem(cartItemId, updatedItem);
     toast({
