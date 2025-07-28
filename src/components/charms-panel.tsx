@@ -11,11 +11,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Loader2, Search, ZoomIn } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslations } from '@/hooks/use-translations';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface CharmsPanelProps {
     onCharmsLoaded: (charms: Charm[]) => void;
@@ -104,6 +106,67 @@ export function CharmsPanel({ onCharmsLoaded, onAddCharm, isMobile = false }: Ch
             return acc;
         }, {} as Record<string, Charm[]>);
     }, [filteredCharms]);
+    
+    const renderCharmGrid = (inMobile: boolean) => (
+         <div className="p-4">
+             {isLoadingCharms ? (
+                <div className="flex justify-center items-center h-full p-8">
+                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                </div>
+            ) : (
+                <Accordion type="multiple" defaultValue={charmCategories.map(c => c.id)} className="w-full">
+                    {charmCategories.map(category => (
+                        charmsByCategory[category.id] && charmsByCategory[category.id].length > 0 && (
+                            <AccordionItem value={category.id} key={category.id}>
+                                <AccordionTrigger className="text-base font-headline">{category.name}</AccordionTrigger>
+                                <AccordionContent>
+                                    <div className={cn("grid gap-2 pt-2", inMobile ? "grid-cols-4" : "grid-cols-3")}>
+                                        {charmsByCategory[category.id].map((charm) => (
+                                            <Dialog key={charm.id}>
+                                                 <DialogTrigger asChild>
+                                                    <div
+                                                        className="relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer"
+                                                        title={charm.name}
+                                                    >
+                                                        <Image
+                                                            src={charm.imageUrl}
+                                                            alt={charm.name}
+                                                            width={48}
+                                                            height={48}
+                                                            className="pointer-events-none p-1"
+                                                            data-ai-hint="jewelry charm"
+                                                        />
+                                                        <p className="text-xs text-center mt-1 truncate">{charm.name}</p>
+                                                        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                                          <ZoomIn className="h-4 w-4" />
+                                                        </div>
+                                                    </div>
+                                                </DialogTrigger>
+                                                <DialogContent className="max-w-md">
+                                                    <DialogHeader>
+                                                        <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
+                                                        <DialogDescription>{charm.description}</DialogDescription>
+                                                    </DialogHeader>
+                                                    <div className="mt-4 flex justify-center">
+                                                        <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
+                                                    </div>
+                                                    <div className="mt-6 flex justify-end">
+                                                        <DialogClose asChild>
+                                                            <Button onClick={() => onAddCharm(charm)}>{t('add_to_design_button')}</Button>
+                                                        </DialogClose>
+                                                    </div>
+                                                </DialogContent>
+                                            </Dialog>
+                                        ))}
+                                    </div>
+                                </AccordionContent>
+                            </AccordionItem>
+                        )
+                    ))}
+                </Accordion>
+            )}
+        </div>
+    );
 
     if (isMobile) {
         return (
@@ -125,61 +188,7 @@ export function CharmsPanel({ onCharmsLoaded, onAddCharm, isMobile = false }: Ch
                     </div>
                 </div>
                 <Separator />
-                 {isLoadingCharms ? (
-                    <div className="flex justify-center items-center h-full p-8">
-                        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                    </div>
-                ) : (
-                    <Accordion type="multiple" defaultValue={charmCategories.map(c => c.id)} className="p-4">
-                        {charmCategories.map(category => (
-                            charmsByCategory[category.id] && charmsByCategory[category.id].length > 0 && (
-                                <AccordionItem value={category.id} key={category.id}>
-                                    <AccordionTrigger className="text-base font-headline">{category.name}</AccordionTrigger>
-                                    <AccordionContent>
-                                        <div className={cn("grid gap-2 pt-2", isMobile ? "grid-cols-4" : "grid-cols-3")}>
-                                            {charmsByCategory[category.id].map((charm) => (
-                                                <Dialog key={charm.id}>
-                                                    <div
-                                                        onClick={() => onAddCharm(charm)}
-                                                        className="relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer"
-                                                        title={charm.name}
-                                                    >
-                                                        <Image
-                                                            src={charm.imageUrl}
-                                                            alt={charm.name}
-                                                            width={48}
-                                                            height={48}
-                                                            className="pointer-events-none p-1"
-                                                            data-ai-hint="jewelry charm"
-                                                        />
-                                                        <p className="text-xs text-center mt-1 truncate">{charm.name}</p>
-                                                        <DialogTrigger asChild>
-                                                            <Button variant="secondary" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                                                                <ZoomIn className="h-4 w-4" />
-                                                            </Button>
-                                                        </DialogTrigger>
-                                                    </div>
-                                                    <DialogContent className="max-w-md">
-                                                        <DialogHeader>
-                                                            <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
-                                                            <DialogDescription>{charm.description}</DialogDescription>
-                                                        </DialogHeader>
-                                                        <div className="mt-4 flex justify-center">
-                                                            <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
-                                                        </div>
-                                                        <div className="mt-6 flex justify-end">
-                                                            <Button onClick={() => onAddCharm(charm)}>{t('add_to_design_button')}</Button>
-                                                        </div>
-                                                    </DialogContent>
-                                                </Dialog>
-                                            ))}
-                                        </div>
-                                    </AccordionContent>
-                                </AccordionItem>
-                            )
-                        ))}
-                    </Accordion>
-                )}
+                {renderCharmGrid(true)}
             </div>
         )
     }
@@ -203,64 +212,9 @@ export function CharmsPanel({ onCharmsLoaded, onAddCharm, isMobile = false }: Ch
             <Separator />
             <CardContent className="p-0 flex-grow">
                 <ScrollArea className="h-[calc(100vh-320px)]">
-                    {isLoadingCharms ? (
-                        <div className="flex justify-center items-center h-full p-8">
-                            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                        </div>
-                    ) : (
-                        <Accordion type="multiple" defaultValue={charmCategories.map(c => c.id)} className="p-4">
-                            {charmCategories.map(category => (
-                                charmsByCategory[category.id] && charmsByCategory[category.id].length > 0 && (
-                                    <AccordionItem value={category.id} key={category.id}>
-                                        <AccordionTrigger className="text-base font-headline">{category.name}</AccordionTrigger>
-                                        <AccordionContent>
-                                            <div className="grid grid-cols-3 gap-2 pt-2">
-                                                {charmsByCategory[category.id].map((charm) => (
-                                                    <Dialog key={charm.id}>
-                                                        <div
-                                                            onClick={() => onAddCharm(charm)}
-                                                            className="relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer"
-                                                            title={charm.name}
-                                                        >
-                                                            <Image
-                                                                src={charm.imageUrl}
-                                                                alt={charm.name}
-                                                                width={48}
-                                                                height={48}
-                                                                className="pointer-events-none p-1"
-                                                                data-ai-hint="jewelry charm"
-                                                            />
-                                                            <p className="text-xs text-center mt-1 truncate">{charm.name}</p>
-                                                            <DialogTrigger asChild>
-                                                                <Button variant="secondary" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                                                                    <ZoomIn className="h-4 w-4" />
-                                                                </Button>
-                                                            </DialogTrigger>
-                                                        </div>
-                                                        <DialogContent className="max-w-md">
-                                                            <DialogHeader>
-                                                                <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
-                                                                <DialogDescription>{charm.description}</DialogDescription>
-                                                            </DialogHeader>
-                                                            <div className="mt-4 flex justify-center">
-                                                                <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
-                                                            </div>
-                                                            <div className="mt-6 flex justify-end">
-                                                                <Button onClick={() => onAddCharm(charm)}>{t('add_to_design_button')}</Button>
-                                                            </div>
-                                                        </DialogContent>
-                                                    </Dialog>
-                                                ))}
-                                            </div>
-                                        </AccordionContent>
-                                    </AccordionItem>
-                                )
-                            ))}
-                        </Accordion>
-                    )}
+                    {renderCharmGrid(false)}
                 </ScrollArea>
             </CardContent>
         </Card>
     );
 }
-
