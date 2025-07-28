@@ -42,6 +42,15 @@
     "item_added_to_cart_description": "{modelName} has been added to your cart.",
     "item_updated_title": "Item Updated",
     "item_updated_description": "Your design for {modelName} has been updated in the cart.",
-    "cart_title": "Your Cart"
+    "cart_title": "Your Cart",
+    "cart_empty_title": "Your cart is empty",
+    "cart_empty_description": "Find the perfect piece to start your creation.",
+    "cart_remove_item": "Remove item",
+    "cart_total": "Total",
+    "create_new_jewel_button": "Create a New Jewel",
+    "view_charms_action": "View Charms",
+    "cart_preview_title": "Preview of {modelName}",
+    "cart_preview_description": "Here is a preview of your custom creation.",
+    "item_price": "${price}"
   }
 }

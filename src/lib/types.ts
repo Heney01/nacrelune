@@ -18,7 +18,7 @@ export interface Charm {
 
 export interface JewelryModel {
   id: string;
-  name: string;
+  name:string;
   displayImageUrl: string;
   editorImageUrl: string;
   snapPath?: string;
@@ -41,18 +41,10 @@ export interface PlacedCharm {
   animation?: string;
 }
 
-export interface Order {
-  id?: string;
-  modelName: string;
-  modelImage: string;
-  charms: { name: string; imageUrl: string; price?: number }[];
-  totalPrice: number;
-  shippingInfo: {
-    name: string;
-    address: string;
-    city: string;
-    zip: string;
-    country: string;
-  };
-  createdAt: any; // Firestore timestamp
+export interface CartItem {
+    id: string;
+    model: JewelryModel;
+    jewelryType: Omit<JewelryType, 'models' | 'icon'>;
+    placedCharms: PlacedCharm[];
+    previewImage: string; // URL to a generated preview of the final design
 }

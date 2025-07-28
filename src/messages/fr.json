@@ -42,6 +42,15 @@
     "item_added_to_cart_description": "{modelName} a été ajouté à votre panier.",
     "item_updated_title": "Article mis à jour",
     "item_updated_description": "Votre création pour {modelName} a été mise à jour dans le panier.",
-    "cart_title": "Votre Panier"
+    "cart_title": "Votre Panier",
+    "cart_empty_title": "Votre panier est vide",
+    "cart_empty_description": "Trouvez la pièce parfaite pour commencer votre création.",
+    "cart_remove_item": "Supprimer l'article",
+    "cart_total": "Total",
+    "create_new_jewel_button": "Créer un nouveau bijou",
+    "view_charms_action": "Voir les breloques",
+    "cart_preview_title": "Aperçu de {modelName}",
+    "cart_preview_description": "Voici un aperçu de votre création personnalisée.",
+    "item_price": "{price}€"
   }
 }
