@@ -5,10 +5,12 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import type { JewelryModel, JewelryType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ArrowLeft, Loader2, ZoomIn } from 'lucide-react';
 import Image from 'next/image';
 import { useTranslations } from '@/hooks/use-translations';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+
 
 interface ModelSelectionProps {
     selectedType: JewelryType;
@@ -44,6 +46,7 @@ export function ModelSelection({ selectedType, locale }: ModelSelectionProps) {
                                 <Link 
                                     href={`/${locale}?type=${selectedType.id}&model=${model.id}`} 
                                     onClick={() => handleModelClick(model.id)}
+                                    className="contents"
                                 >
                                     <Image 
                                         src={model.displayImageUrl} 
@@ -97,11 +100,3 @@ export function ModelSelection({ selectedType, locale }: ModelSelectionProps) {
         </>
     );
 }
-
-// Dummy components to avoid import errors if not present
-const Dialog = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
-const DialogTrigger = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
-const DialogContent = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
-const DialogHeader = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
-const DialogTitle = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
-const DialogDescription = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
