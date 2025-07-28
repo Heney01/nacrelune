@@ -16,6 +16,7 @@ import { Loader2, Search, ZoomIn } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslations } from '@/hooks/use-translations';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Input } from './ui/input';
 
 
 interface CharmsPanelProps {
