@@ -559,27 +559,28 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
             </div>
             <div
                 ref={canvasWrapperRef}
-                className={cn("relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none", isMobile && "rounded-none border-x-0")}
+                className={cn("relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none grid place-items-center", isMobile && "rounded-none border-x-0")}
             >
                 <div
                     ref={canvasRef}
-                    className="absolute top-0 left-0 w-full h-full"
+                    className="relative w-full h-full"
                     style={{
                         transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
                         transformOrigin: '0 0',
                     }}
                 >
                     <div className="w-full h-full grid place-items-center">
-                        <Image
+                         <Image
                             src={model.editorImageUrl}
                             alt={model.name}
                             width={1000}
                             height={1000}
-                            className="pointer-events-none max-w-full max-h-full"
+                            className="pointer-events-none max-w-full max-h-full object-contain"
                             data-ai-hint="jewelry model"
                             priority
                         />
                     </div>
+                   
                     {placedCharms.map((placed) => (
                         <PlacedCharmComponent
                             key={placed.id}

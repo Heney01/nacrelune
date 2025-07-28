@@ -36,8 +36,6 @@ export function CartSheet({ children, open, onOpenChange }: CartSheetProps) {
 
   const totalItems = cart.length;
   
-  // Simple sum of prices, assuming price is available.
-  // In a real app, this would be more complex (currency, etc.)
   const totalPrice = cart.reduce((sum, item) => {
     const modelPrice = item.model.price || 0;
     const charmsPrice = item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
@@ -57,7 +55,7 @@ export function CartSheet({ children, open, onOpenChange }: CartSheetProps) {
              <SheetClose asChild>
                 <Button variant="outline" asChild className="mt-6">
                     <Link href={`/${locale}`}>
-                        <PlusCircle />
+                        <PlusCircle className="mr-2 h-4 w-4" />
                         {t('create_new_jewel_button')}
                     </Link>
                 </Button>
@@ -69,7 +67,7 @@ export function CartSheet({ children, open, onOpenChange }: CartSheetProps) {
                  <SheetClose asChild>
                     <Button variant="outline" className="w-full" asChild>
                          <Link href={`/${locale}`}>
-                            <PlusCircle />
+                            <PlusCircle className="mr-2 h-4 w-4" />
                             {t('create_new_jewel_button')}
                         </Link>
                     </Button>
