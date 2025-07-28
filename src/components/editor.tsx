@@ -3,11 +3,11 @@
 
 import React, { useState, useMemo, useRef, WheelEvent, useCallback, useEffect } from 'react';
 import Image from 'next/image';
-import { JewelryModel, PlacedCharm, Charm, JewelryType, CharmCategory } from '@/lib/types';
+import Link from 'next/link';
+import { JewelryModel, PlacedCharm, Charm, JewelryType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { SuggestionSidebar } from './suggestion-sidebar';
 import { Trash2, X, ArrowLeft, Gem, Sparkles, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -110,11 +110,11 @@ PlacedCharmComponent.displayName = 'PlacedCharmComponent';
 interface EditorProps {
   model: JewelryModel;
   jewelryType: Omit<JewelryType, 'models'>;
-  onBack: () => void;
+  allCharms: Charm[];
   locale: string;
 }
 
-export default function Editor({ model, jewelryType, onBack, locale }: EditorProps) {
+export default function Editor({ model, jewelryType, allCharms, locale }: EditorProps) {
   const t = useTranslations('Editor');
   const tHomepage = useTranslations('HomePage');
   const isMobile = useIsMobile();
@@ -122,8 +122,6 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   const [selectedPlacedCharmId, setSelectedPlacedCharmId] = useState<string | null>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null);
-  
-  const [charms, setCharms] = useState<Charm[]>([]);
   
   // State for mobile sheets
   const [isCharmsSheetOpen, setIsCharmsSheetOpen] = useState(false);
@@ -207,11 +205,11 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   }, [addCharmToCanvas]);
 
   const addCharmFromSuggestions = useCallback((suggestion: Suggestion) => {
-    const charm = charms.find(c => c.name === suggestion.charm);
+    const charm = allCharms.find(c => c.name === suggestion.charm);
     if (charm && suggestion.position) {
         addCharmToCanvas(charm, { source: 'suggestionsPanel', position: suggestion.position });
     }
-  }, [addCharmToCanvas, charms]);
+  }, [addCharmToCanvas, allCharms]);
   
   const removeCharm = useCallback((id: string) => {
     setPlacedCharms(prev => prev.filter(c => c.id !== id));
@@ -239,7 +237,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         const result = await getCharmSuggestions({
           jewelryType: jewelryType.id,
           modelDescription: model.name,
-          charmOptions: charms.map(c => c.name),
+          charmOptions: allCharms.map(c => c.name),
           userPreferences: preferences,
           locale: locale,
         });
@@ -391,12 +389,12 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
 
   const charmsPanelDesktop = useMemo(() => (
     <CharmsPanel 
-        onCharmsLoaded={setCharms} 
+        allCharms={allCharms}
         onAddCharm={addCharmFromCharmList} 
-        isMobileSheet={false}
         searchTerm={charmsSearchTerm}
+        onSearchTermChange={setCharmsSearchTerm}
     />
-  ), [addCharmFromCharmList, charmsSearchTerm]);
+  ), [allCharms, addCharmFromCharmList, charmsSearchTerm]);
 
   return (
     <>
@@ -405,9 +403,11 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
             <div className="flex items-center gap-2">
               <NacreluneLogo className="h-8 w-auto text-foreground" />
             </div>
-            <Button variant="ghost" onClick={onBack}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                {tHomepage('back_button')}
+            <Button variant="ghost" asChild>
+                <Link href={`/?type=${jewelryType.id}`}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    {tHomepage('back_button')}
+                </Link>
             </Button>
           </div>
         </header>
@@ -505,7 +505,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
           {!isMobile && <div className="lg:col-span-3">
             <SuggestionSidebar
                 onApplySuggestion={addCharmFromSuggestions}
-                charms={charms}
+                charms={allCharms}
                 suggestions={suggestions}
                 isLoading={isGeneratingSuggestions}
                 error={suggestionError}
@@ -542,10 +542,11 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                     </div>
                     <ScrollArea className="flex-grow">
                         <CharmsPanel 
-                            onCharmsLoaded={setCharms} 
+                            allCharms={allCharms} 
                             onAddCharm={addCharmFromCharmList} 
                             isMobileSheet={true}
                             searchTerm={charmsSearchTerm}
+                            onSearchTermChange={setCharmsSearchTerm}
                         />
                     </ScrollArea>
                 </SheetContent>
@@ -564,7 +565,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                    </SheetHeader>
                     <SuggestionSidebar 
                         onApplySuggestion={addCharmFromSuggestions}
-                        charms={charms} 
+                        charms={allCharms} 
                         isMobile={isMobile}
                         suggestions={suggestions}
                         isLoading={isGeneratingSuggestions}
