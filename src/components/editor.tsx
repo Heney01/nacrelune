@@ -132,6 +132,7 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
   const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
   const [selectedPlacedCharmId, setSelectedPlacedCharmId] = useState<string | null>(null);
 
+  const canvasWrapperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   
   // State for mobile sheets
@@ -291,7 +292,7 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
 
 
   useEffect(() => {
-      const canvas = canvasRef.current;
+      const canvas = canvasWrapperRef.current;
       if (!canvas) return;
   
       const getPoint = (e: MouseEvent | TouchEvent) => 'touches' in e ? e.touches[0] : e;
@@ -300,14 +301,17 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
         const point = getPoint(e);
         const currentScale = scaleRef.current;
         const currentPlacedCharms = placedCharmsRef.current;
+        const canvasEl = canvasRef.current;
+
+        if (!canvasEl) return;
 
         if (interactionState.isDragging && interactionState.activeCharmId) {
             if ('preventDefault' in e && e.cancelable) e.preventDefault();
             const dx = point.clientX - interactionState.dragStart.x;
             const dy = point.clientY - interactionState.dragStart.y;
 
-            const dxPercent = (dx / canvas.clientWidth) * 100 / currentScale;
-            const dyPercent = (dy / canvas.clientHeight) * 100 / currentScale;
+            const dxPercent = (dx / canvasEl.clientWidth) * 100 / currentScale;
+            const dyPercent = (dy / canvasEl.clientHeight) * 100 / currentScale;
 
             setPlacedCharms(
                 currentPlacedCharms.map(pc =>
@@ -379,13 +383,13 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
   }, [interactionState]);
 
   const handleCanvasWheel = (e: WheelEvent) => {
-    if (!canvasRef.current) return;
+    if (!canvasWrapperRef.current) return;
 
     const zoomSensitivity = 0.001;
     const newScale = scale - e.deltaY * zoomSensitivity;
     const clampedScale = Math.min(Math.max(0.2, newScale), 5);
 
-    const canvasRect = canvasRef.current.getBoundingClientRect();
+    const canvasRect = canvasWrapperRef.current.getBoundingClientRect();
     const mouseX = e.clientX - canvasRect.left;
     const mouseY = e.clientY - canvasRect.top;
     
@@ -554,10 +558,11 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
                 </div>
             </div>
             <div
-              ref={canvasRef}
+              ref={canvasWrapperRef}
               className={cn("relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none", isMobile && "rounded-none border-x-0")}
             >
               <div
+                  ref={canvasRef}
                   className="absolute top-0 left-0 w-full h-full"
                   style={{
                       transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
