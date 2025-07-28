@@ -132,25 +132,26 @@ export function CharmsPanel({ onCharmsLoaded, onAddCharm, isMobileSheet = false,
 
         return (
              <Dialog key={charm.id}>
-                <DialogTrigger asChild>
-                    <div
-                        className="relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer"
-                        title={charm.name}
-                    >
-                        <Image
-                            src={charm.imageUrl}
-                            alt={charm.name}
-                            width={48}
-                            height={48}
-                            className="pointer-events-none p-1"
-                            data-ai-hint="jewelry charm"
-                        />
-                        <p className="text-xs text-center mt-1 truncate">{charm.name}</p>
+                <div
+                    onClick={() => onAddCharm(charm)}
+                    className="relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer"
+                    title={charm.name}
+                >
+                    <Image
+                        src={charm.imageUrl}
+                        alt={charm.name}
+                        width={48}
+                        height={48}
+                        className="pointer-events-none p-1"
+                        data-ai-hint="jewelry charm"
+                    />
+                    <p className="text-xs text-center mt-1 truncate">{charm.name}</p>
+                    <DialogTrigger asChild>
                         <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                           <ZoomIn className="h-4 w-4" />
                         </div>
-                    </div>
-                </DialogTrigger>
+                    </DialogTrigger>
+                </div>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
                         <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
@@ -209,7 +210,7 @@ export function CharmsPanel({ onCharmsLoaded, onAddCharm, isMobileSheet = false,
                     <Input
                         placeholder={t('search_placeholder')}
                         value={searchTerm}
-                        onChange={(e) => (e.target as any).value}
+                        onChange={(e) => onAddCharm(e.target.value as any)}
                         className="pl-9"
                     />
                 </div>
