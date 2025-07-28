@@ -8,7 +8,6 @@ import { collection, getDocs, DocumentReference } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { Charm, CharmCategory } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
@@ -16,7 +15,6 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Search, ZoomIn } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslations } from '@/hooks/use-translations';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 
@@ -113,6 +111,7 @@ export function CharmsPanel({ onCharmsLoaded, onAddCharm, isMobileSheet = false,
         if (isMobileSheet) {
             return (
                 <div
+                    key={charm.id}
                     onClick={() => onAddCharm(charm)}
                     className="relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer"
                     title={charm.name}
@@ -199,7 +198,7 @@ export function CharmsPanel({ onCharmsLoaded, onAddCharm, isMobileSheet = false,
     }
 
     return (
-        <Card className={cn("flex flex-col h-full", "lg:col-span-3")}>
+        <Card className={cn("flex flex-col", "lg:col-span-3")}>
             <CardHeader>
                 <CardTitle className="font-headline text-xl">{t('charms_title')}</CardTitle>
             </CardHeader>
@@ -216,9 +215,7 @@ export function CharmsPanel({ onCharmsLoaded, onAddCharm, isMobileSheet = false,
             </div>
             <Separator />
             <CardContent className="p-0 flex-grow">
-                <ScrollArea>
-                    {renderCharmGrid()}
-                </ScrollArea>
+                {renderCharmGrid()}
             </CardContent>
         </Card>
     );
