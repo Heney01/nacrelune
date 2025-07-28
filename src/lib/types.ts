@@ -40,31 +40,3 @@ export interface PlacedCharm {
   rotation: number;
   animation?: string;
 }
-
-export interface CartItem {
-  id: string; // Unique ID for the cart item
-  jewelryType: Omit<JewelryType, 'models' | 'icon'>;
-  model: JewelryModel;
-  placedCharms: PlacedCharm[];
-  price: number;
-}
-
-
-export interface Order {
-  id?: string;
-  items: {
-    modelName: string;
-    modelImage: string;
-    charms: { name: string; imageUrl: string; price?: number }[];
-    price: number;
-  }[];
-  totalPrice: number;
-  shippingInfo: {
-    name: string;
-    address: string;
-    city: string;
-    zip: string;
-    country: string;
-  };
-  createdAt: any; // Firestore timestamp
-}

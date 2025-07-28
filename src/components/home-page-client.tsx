@@ -9,7 +9,6 @@ import { Gem, HandMetal, Ear } from 'lucide-react';
 import { TypeSelection } from '@/components/type-selection';
 import { ModelSelection } from '@/components/model-selection';
 import type { JewelryType, JewelryModel, Charm } from '@/lib/types';
-import { CartWidget } from './cart-widget';
 import Link from 'next/link';
 
 // This is a client component that wraps the main page logic
@@ -30,8 +29,6 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
     
     const selectedTypeId = searchParams?.type as JewelryType['id'] | undefined;
     const selectedModelId = searchParams?.model as string | undefined;
-    const cartItemId = searchParams?.cartItem as string | undefined;
-
 
     const selectedType = selectedTypeId ? jewelryTypes.find(t => t.id === selectedTypeId) : null;
     const selectedModel = selectedType && selectedModelId ? selectedType.models.find(m => m.id === selectedModelId) : null;
@@ -44,24 +41,22 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
                 jewelryTypes={jewelryTypes}
                 allCharms={allCharms}
                 locale={locale}
-                cartItemId={cartItemId}
             />
         </TranslationsProvider>
     )
 }
 
-function PageContent({ selectedType, selectedModel, jewelryTypes, allCharms, locale, cartItemId }: {
+function PageContent({ selectedType, selectedModel, jewelryTypes, allCharms, locale }: {
     selectedType: JewelryType | null;
     selectedModel: JewelryModel | null;
     jewelryTypes: JewelryType[];
     allCharms: Charm[];
     locale: string;
-    cartItemId?: string;
 }) {
     const t = useTranslations('HomePage');
   
     if (selectedModel && selectedType) {
-      return <Editor model={selectedModel} jewelryType={selectedType} allCharms={allCharms} locale={locale} cartItemId={cartItemId} />;
+      return <Editor model={selectedModel} jewelryType={selectedType} allCharms={allCharms} locale={locale} />;
     }
   
     return (
@@ -71,7 +66,6 @@ function PageContent({ selectedType, selectedModel, jewelryTypes, allCharms, loc
             <Link href={`/${locale}`} className="flex items-center gap-2">
               <NacreluneLogo className="h-8 w-auto text-foreground" />
             </Link>
-            <CartWidget />
           </div>
         </header>
 

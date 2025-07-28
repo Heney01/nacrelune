@@ -4,12 +4,12 @@
 import React, { useState, useMemo, useRef, WheelEvent, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem } from '@/lib/types';
+import { JewelryModel, PlacedCharm, Charm, JewelryType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle } from 'lucide-react';
+import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NacreluneLogo } from './icons';
 import { useTranslations } from '@/hooks/use-translations';
@@ -19,10 +19,6 @@ import { getCharmSuggestions } from '@/app/actions';
 import type { Suggestion, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { CharmsPanel } from './charms-panel';
 import { Input } from './ui/input';
-import { useCart } from '@/hooks/use-cart';
-import { useRouter } from 'next/navigation';
-import { useToast } from '@/hooks/use-toast';
-import { CartWidget } from './cart-widget';
 
 
 interface PlacedCharmComponentProps {
@@ -115,20 +111,14 @@ interface EditorProps {
   jewelryType: Omit<JewelryType, 'models' | 'icon'>;
   allCharms: Charm[];
   locale: string;
-  cartItemId?: string;
 }
 
-export default function Editor({ model, jewelryType, allCharms, locale, cartItemId }: EditorProps) {
+export default function Editor({ model, jewelryType, allCharms, locale }: EditorProps) {
   const t = useTranslations('Editor');
   const tHomepage = useTranslations('HomePage');
   const isMobile = useIsMobile();
-  const router = useRouter();
-  const { toast } = useToast();
-  const { cart, addItem, updateItem } = useCart();
   
-  const existingCartItem = useMemo(() => cartItemId ? cart.find(item => item.id === cartItemId) : undefined, [cart, cartItemId]);
-
-  const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>(existingCartItem?.placedCharms || []);
+  const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
   const [selectedPlacedCharmId, setSelectedPlacedCharmId] = useState<string | null>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -397,41 +387,10 @@ export default function Editor({ model, jewelryType, allCharms, locale, cartItem
     }, 500);
   };
   
-  const totalPrice = useMemo(() => {
-    return (model.price || 0) + placedCharms.reduce((acc, pc) => acc + (pc.charm.price || 0), 0);
-  }, [model, placedCharms]);
-
-  const handleAddToCart = () => {
-    const newItem: Omit<CartItem, 'id'> = {
-        jewelryType,
-        model,
-        placedCharms,
-        price: totalPrice,
-    };
-    addItem(newItem);
-    toast({
-      title: t('toast_item_added_title'),
-      description: t('toast_item_added_description', { modelName: model.name }),
-    });
-    router.push(`/${locale}?type=${jewelryType.id}`);
+  const handlePurchase = () => {
+    // Placeholder for purchase logic
+    alert('Purchase logic not implemented yet!');
   };
-
-  const handleUpdateCart = () => {
-    if (existingCartItem) {
-        const updatedItem: CartItem = {
-            ...existingCartItem,
-            placedCharms,
-            price: totalPrice,
-        };
-        updateItem(updatedItem.id, updatedItem);
-        toast({
-            title: t('toast_item_updated_title'),
-            description: t('toast_item_updated_description', { modelName: model.name }),
-        });
-        router.push(`/${locale}`);
-    }
-  };
-
 
   const charmsPanelDesktop = useMemo(() => (
     <CharmsPanel 
@@ -451,12 +410,11 @@ export default function Editor({ model, jewelryType, allCharms, locale, cartItem
             </Link>
             <div className="flex items-center gap-2">
                <Button variant="ghost" asChild>
-                    <Link href={existingCartItem ? `/${locale}`: `/${locale}?type=${jewelryType.id}`}>
+                    <Link href={`/${locale}?type=${jewelryType.id}`}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         {tHomepage('back_button')}
                     </Link>
                 </Button>
-                <CartWidget />
             </div>
           </div>
         </header>
@@ -479,17 +437,10 @@ export default function Editor({ model, jewelryType, allCharms, locale, cartItem
                     <Trash2 className="mr-2 h-4 w-4" />
                     {t('clear_all_button')}
                   </Button>
-                  {existingCartItem ? (
-                      <Button onClick={handleUpdateCart}>
-                          <PlusCircle className="mr-2 h-4 w-4" />
-                          {t('update_item_button')}
-                      </Button>
-                  ) : (
-                      <Button onClick={handleAddToCart}>
-                          <ShoppingCart className="mr-2 h-4 w-4" />
-                          {t('add_to_cart_button')}
-                      </Button>
-                  )}
+                  <Button onClick={handlePurchase}>
+                      <ShoppingCart className="mr-2 h-4 w-4" />
+                      {t('purchase_button')}
+                  </Button>
                 </div>
             </div>
             <div
