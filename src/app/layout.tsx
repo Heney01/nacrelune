@@ -1,24 +1,19 @@
 
-import { TranslationsProvider } from '@/hooks/use-translations';
 import { Toaster } from "@/components/ui/toaster";
-import '../globals.css';
+import './globals.css';
 import { ReactNode } from 'react';
-import { getMessages } from '@/lib/translations';
 import { CartProvider } from '@/hooks/use-cart';
+import { TranslationsProvider } from '@/hooks/use-translations';
+import messages from '@/messages/en.json';
 
 
-export default async function LocaleLayout({
+export default function RootLayout({
   children,
-  params,
 }: {
   children: ReactNode;
-  params: { locale: string };
 }) {
-  const { locale } = params;
-  const messages = await getMessages(locale);
-
   return (
-    <html lang={locale}>
+    <html lang="en">
         <head>
             <link rel="preconnect" href="https://fonts.googleapis.com" />
             <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

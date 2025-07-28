@@ -3,7 +3,7 @@ import React from 'react';
 import { getJewelryTypesAndModels, getCharms } from '@/lib/data';
 import type { JewelryType, Charm } from '@/lib/types';
 import { HomePageClient } from '@/components/home-page-client';
-import { getMessages } from '@/lib/translations';
+import messages from '@/messages/en.json';
 
 const JEWELRY_TYPES_INFO: Omit<JewelryType, 'models' | 'icon'>[] = [
   { id: 'necklace', name: 'Necklaces', description: "Graceful chains and pendants." },
@@ -11,24 +11,18 @@ const JEWELRY_TYPES_INFO: Omit<JewelryType, 'models' | 'icon'>[] = [
   { id: 'earring', name: 'Earrings', description: "Stylish earrings to complete your look." },
 ];
 
-export default async function Home({ searchParams, params }: {
+export default async function Home({ searchParams }: {
   searchParams: { [key: string]: string | string[] | undefined };
-  params: { locale: string };
 }) {
-  // Fetch all data on the server
-  const awaitedParams = await params;
-  const awaitedSearchParams = await searchParams;
-
   const jewelryTypesData = await getJewelryTypesAndModels(JEWELRY_TYPES_INFO);
   const charms = await getCharms();
-  const messages = await getMessages(awaitedParams.locale);
   
   return (
     <HomePageClient
-      searchParams={awaitedSearchParams}
+      searchParams={searchParams}
       jewelryTypes={jewelryTypesData}
       allCharms={charms}
-      locale={awaitedParams.locale}
+      locale="en"
       messages={messages}
     />
   );
