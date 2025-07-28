@@ -50,6 +50,7 @@
     "create_new_jewel_button": "Créer un nouveau bijou",
     "view_charms_action": "Voir les breloques",
     "cart_preview_title": "Aperçu de {modelName}",
-    "cart_preview_description": "Voici un aperçu de votre création personnalisée."
+    "cart_preview_description": "Voici un aperçu de votre création personnalisée.",
+    "item_price": "{price}€"
   }
 }

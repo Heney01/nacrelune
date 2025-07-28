@@ -8,7 +8,7 @@ import { useTranslations } from '@/hooks/use-translations';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, ShoppingCart, PlusCircle, ChevronDown } from 'lucide-react';
+import { Trash2, ShoppingCart, PlusCircle } from 'lucide-react';
 import React, { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
@@ -30,7 +30,7 @@ interface CartSheetProps {
 
 export function CartSheet({ children, open, onOpenChange }: CartSheetProps) {
   const t = useTranslations('Editor');
-  const { cart, removeFromCart, clearCart } = useCart();
+  const { cart, removeFromCart } = useCart();
   const pathname = usePathname();
   const locale = pathname.split('/')[1] || 'en';
 
@@ -77,77 +77,85 @@ export function CartSheet({ children, open, onOpenChange }: CartSheetProps) {
             </div>
             <ScrollArea className="flex-grow my-4 pr-4">
               <Accordion type="multiple" className="space-y-4">
-                {cart.map((item) => (
-                    <Card key={item.id} className="overflow-hidden">
-                         <div className="p-4 flex items-start gap-4">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <div className="relative w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border cursor-pointer group">
-                                  <Image
-                                      src={item.previewImage || item.model.displayImageUrl}
-                                      alt={item.model.name}
-                                      fill
-                                      className="object-cover group-hover:scale-105 transition-transform"
-                                      sizes="80px"
-                                  />
+                {cart.map((item) => {
+                    const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+                    return (
+                        <Card key={item.id} className="overflow-hidden">
+                             <div className="p-4 flex items-start gap-4">
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <div className="relative w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border cursor-pointer group">
+                                      <Image
+                                          src={item.previewImage || item.model.displayImageUrl}
+                                          alt={item.model.name}
+                                          fill
+                                          className="object-cover group-hover:scale-105 transition-transform"
+                                          sizes="80px"
+                                      />
+                                    </div>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-xl">
+                                    <DialogHeader>
+                                      <DialogTitle>{t('cart_preview_title', { modelName: item.model.name })}</DialogTitle>
+                                      <DialogDescription>
+                                        {t('cart_preview_description')}
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="mt-4">
+                                      <Image 
+                                        src={item.previewImage || item.model.displayImageUrl} 
+                                        alt={`Preview of ${item.model.name}`} 
+                                        width={800} 
+                                        height={800} 
+                                        className="w-full h-auto object-contain rounded-lg"
+                                      />
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+                                <div className="flex-grow">
+                                  <p className="font-bold">{item.model.name}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                      {item.jewelryType.name}
+                                  </p>
+                                   <p className="text-sm font-bold mt-1">
+                                      {t('item_price', { price: itemPrice.toFixed(2) })}
+                                  </p>
                                 </div>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-xl">
-                                <DialogHeader>
-                                  <DialogTitle>{t('cart_preview_title', { modelName: item.model.name })}</DialogTitle>
-                                  <DialogDescription>
-                                    {t('cart_preview_description')}
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <div className="mt-4">
-                                  <Image 
-                                    src={item.previewImage || item.model.displayImageUrl} 
-                                    alt={`Preview of ${item.model.name}`} 
-                                    width={800} 
-                                    height={800} 
-                                    className="w-full h-auto object-contain rounded-lg"
-                                  />
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                            <div className="flex-grow">
-                              <p className="font-bold">{item.model.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                  {item.jewelryType.name}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                  {t('added_charms_title', { count: item.placedCharms.length })}
-                              </p>
+                                 <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 flex-shrink-0"
+                                    onClick={() => removeFromCart(item.id)}
+                                    >
+                                    <Trash2 className="h-4 w-4" />
+                                    <span className="sr-only">{t('cart_remove_item')}</span>
+                                </Button>
                             </div>
-                             <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 flex-shrink-0"
-                                onClick={() => removeFromCart(item.id)}
-                                >
-                                <Trash2 className="h-4 w-4" />
-                                <span className="sr-only">{t('cart_remove_item')}</span>
-                            </Button>
-                        </div>
-                        {item.placedCharms.length > 0 && (
-                             <AccordionItem value={item.id} className="border-t">
-                                <AccordionTrigger className="text-sm px-4 py-2 hover:no-underline hover:bg-muted/50">
-                                    {t('view_charms_action')}
-                                </AccordionTrigger>
-                                <AccordionContent className="p-4 pt-0">
-                                    <ul className="space-y-2">
-                                        {item.placedCharms.map(pc => (
-                                            <li key={pc.id} className="flex items-center gap-2 text-sm">
-                                                <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={24} height={24} className="rounded-sm border" data-ai-hint="jewelry charm" />
-                                                <span>{pc.charm.name}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </AccordionContent>
-                            </AccordionItem>
-                        )}
-                    </Card>
-                ))}
+                            {item.placedCharms.length > 0 && (
+                                 <AccordionItem value={item.id} className="border-t">
+                                    <AccordionTrigger className="text-sm px-4 py-2 hover:no-underline hover:bg-muted/50">
+                                        <div className="flex justify-between w-full items-center">
+                                            <span>{t('view_charms_action')} ({item.placedCharms.length})</span>
+                                        </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="p-4 pt-0">
+                                        <ul className="space-y-2">
+                                            {item.placedCharms.map(pc => (
+                                                <li key={pc.id} className="flex items-center justify-between gap-2 text-sm">
+                                                    <div className="flex items-center gap-2">
+                                                        <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={24} height={24} className="rounded-sm border" data-ai-hint="jewelry charm" />
+                                                        <span>{pc.charm.name}</span>
+                                                    </div>
+                                                    <span className="text-muted-foreground">{t('item_price', { price: (pc.charm.price || 0).toFixed(2) })}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            )}
+                        </Card>
+                    )
+                })}
               </Accordion>
             </ScrollArea>
             <SheetFooter className="mt-auto border-t pt-4">
@@ -161,11 +169,6 @@ export function CartSheet({ children, open, onOpenChange }: CartSheetProps) {
                         {t('purchase_button')}
                     </Button>
                  </SheetClose>
-                 {cart.length > 0 && (
-                    <Button variant="outline" className="w-full" onClick={clearCart}>
-                       <Trash2 className="mr-2 h-4 w-4" /> {t('clear_all_button')}
-                    </Button>
-                 )}
                </div>
             </SheetFooter>
           </>
