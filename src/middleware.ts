@@ -1,41 +1,28 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 
-const locales = ['en', 'fr'];
-const defaultLocale = 'en';
-
-function getLocale(request: NextRequest): string {
-  const acceptLanguage = request.headers.get('accept-language') || '';
-  const preferredLocales = acceptLanguage.split(',').map(l => l.split(';')[0]);
-
-  for (const locale of preferredLocales) {
-    if (locales.includes(locale)) {
-      return locale;
-    }
-    const lang = locale.split('-')[0];
-    if (locales.includes(lang)) {
-        return lang;
-    }
-  }
-
-  return defaultLocale;
-}
-
+// This middleware redirects the root path to the default locale.
+// This is a temporary solution to ensure the app starts.
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const pathnameHasLocale = locales.some(
-    (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
-  );
+  // If the request is for the root, redirect to the default locale.
+  if (pathname === '/') {
+    return NextResponse.redirect(new URL('/en', request.url));
+  }
 
-  if (pathnameHasLocale) return;
-
-  const locale = getLocale(request);
-  request.nextUrl.pathname = `/${locale}${pathname}`;
-  return NextResponse.redirect(request.nextUrl);
+  return NextResponse.next();
 }
 
 export const config = {
   matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
     '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 };
