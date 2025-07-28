@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle } from 'lucide-react';
+import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NacreluneLogo } from './icons';
 import { useTranslations } from '@/hooks/use-translations';
@@ -395,6 +395,13 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
     setScale(clampedScale);
     setPan({ x: newPanX, y: newPanY });
   };
+
+  const handleZoom = (direction: 'in' | 'out') => {
+    const zoomFactor = 0.2;
+    const newScale = direction === 'in' ? scale * (1 + zoomFactor) : scale * (1 - zoomFactor);
+    const clampedScale = Math.min(Math.max(0.2, newScale), 5);
+    setScale(clampedScale);
+  };
   
   const resetZoomAndPan = useCallback(() => {
     setScale(1);
@@ -581,6 +588,11 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
                             onRotate={handlePlacedCharmRotation}
                         />
                     ))}
+                </div>
+                 <div className="absolute bottom-2 right-2 flex gap-2">
+                    <Button variant="secondary" size="icon" onClick={() => handleZoom('in')}><ZoomIn /></Button>
+                    <Button variant="secondary" size="icon" onClick={() => handleZoom('out')}><ZoomOut /></Button>
+                    <Button variant="secondary" size="icon" onClick={resetZoomAndPan}><Maximize /></Button>
                 </div>
             </div>
             <Card className={cn(isMobile && "rounded-none border-x-0")}>
