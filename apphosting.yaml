@@ -3,7 +3,7 @@
 
 # Specifies the location where the backend will be deployed.
 # We are using a European region to be closer to our users.
-location: europe-west1
+location: us-central1
 
 runConfig:
   # Increase this value if you'd like to automatically spin up
