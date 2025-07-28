@@ -124,7 +124,7 @@ export function CharmsPanel({ onCharmsLoaded, onAddCharm, isMobile = false }: Ch
             </div>
             <Separator />
             <CardContent className="p-0 flex-grow">
-                <ScrollArea className={cn(isMobile ? "h-[calc(100vh - 200px)]" : "h-[calc(100vh-320px)]")}>
+                <ScrollArea className={cn(isMobile ? "h-full" : "h-[calc(100vh-320px)]")}>
                     {isLoadingCharms ? (
                         <div className="flex justify-center items-center h-full p-8">
                             <Loader2 className="h-12 w-12 animate-spin text-primary" />
