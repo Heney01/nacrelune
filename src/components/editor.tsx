@@ -393,7 +393,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     <CharmsPanel 
         onCharmsLoaded={setCharms} 
         onAddCharm={addCharmFromCharmList} 
-        isMobile={false}
+        isMobileSheet={false}
         searchTerm={charmsSearchTerm}
     />
   ), [addCharmFromCharmList, charmsSearchTerm]);
@@ -544,7 +544,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                         <CharmsPanel 
                             onCharmsLoaded={setCharms} 
                             onAddCharm={addCharmFromCharmList} 
-                            isMobile={true}
+                            isMobileSheet={true}
                             searchTerm={charmsSearchTerm}
                         />
                     </ScrollArea>
@@ -578,7 +578,3 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     </>
   );
 }
-
-
-
-
