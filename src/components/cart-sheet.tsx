@@ -41,7 +41,16 @@ export function CartSheet({ children, open, onOpenChange }: {
   }, 0);
 
   const formatPrice = (price: number) => {
-    return t('price', { price: price.toFixed(2) });
+    try {
+        return new Intl.NumberFormat(locale, {
+            style: 'currency',
+            currency: locale === 'fr' ? 'EUR' : 'USD',
+        }).format(price);
+    } catch (e) {
+        console.error("Price formatting error:", e);
+        // Fallback for simple display
+        return locale === 'fr' ? `${price.toFixed(2)} €` : `$${price.toFixed(2)}`;
+    }
   };
 
   return (

@@ -37,13 +37,13 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                 const categories = await getCharmCategories();
                 setCharmCategories(categories);
             } catch (error) {
-                console.error(t('loading_error'), error);
+                console.error('Error loading charm categories', error);
             } finally {
                 setIsLoading(false);
             }
         };
         fetchCategories();
-    }, [t]);
+    }, []);
 
     const filteredCharms = useMemo(() => {
         if (!searchTerm) {
@@ -120,6 +120,7 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
              {isLoading ? (
                 <div className="flex justify-center items-center h-full p-8">
                     <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                    <span className="sr-only">{t('loading')}</span>
                 </div>
             ) : (
                 <Accordion type="multiple" defaultValue={charmCategories.map(c => c.id)} className="w-full">

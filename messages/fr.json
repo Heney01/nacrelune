@@ -53,7 +53,7 @@
     "preview_title": "Aperçu de {modelName}",
     "preview_description": "Voici un aperçu de votre création personnalisée.",
     "checkout_button": "Acheter",
-    "price": "{price} €"
+    "price": "{price, number, ::currency/EUR}"
   },
   "CharmsPanel": {
     "title": "Breloques",

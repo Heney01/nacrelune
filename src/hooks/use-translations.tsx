@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useCallback } from 'react';
 import get from 'lodash.get';
 
 const TranslationsContext = createContext<any>(null);
@@ -21,7 +21,7 @@ export const useTranslations = (namespace: string) => {
     throw new Error('useTranslations must be used within a TranslationsProvider');
   }
 
-  return (key: string, values?: Record<string, any>) => {
+  return useCallback((key: string, values?: Record<string, any>) => {
     let translation = get(messages, `${namespace}.${key}`) as string;
 
     if (translation === undefined) {
@@ -37,5 +37,5 @@ export const useTranslations = (namespace: string) => {
     }
 
     return translation;
-  };
+  }, [messages, namespace]);
 };
