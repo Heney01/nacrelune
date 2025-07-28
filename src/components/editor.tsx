@@ -48,6 +48,9 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
         }
         
         const handleTouchStart = (e: TouchEvent) => {
+            if (e.cancelable) {
+                e.preventDefault();
+            }
             onDragStart(e, placed.id);
         }
 
@@ -249,7 +252,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
 
 
   const handleDragStart = useCallback((e: React.MouseEvent | TouchEvent, charmId: string) => {
-    if ('preventDefault' in e) e.preventDefault();
+    if ('preventDefault' in e && e.cancelable) e.preventDefault();
     e.stopPropagation();
 
     interactionState.isDragging = true;
@@ -514,7 +517,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                        <span className="text-xs">{t('charms_title')}</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="bottom" className="h-[50%] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+                <SheetContent side="bottom" className="h-[80%] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
                     <SheetHeader className="p-4 border-b">
                         <SheetTitle>{t('charms_title')}</SheetTitle>
                     </SheetHeader>
@@ -552,4 +555,5 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     </>
   );
 }
+
 
