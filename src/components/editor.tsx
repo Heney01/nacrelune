@@ -670,15 +670,19 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel onClick={handleProceedToCheckout}>
+                    <AlertDialogAction onClick={handleProceedToCheckout}>
                         {t('item_added_dialog_action_checkout')}
-                    </AlertDialogCancel>
-                    <AlertDialogAction onClick={handleCreateNew}>
-                        {t('item_added_dialog_action_new')}
                     </AlertDialogAction>
+                    <AlertDialogCancel asChild>
+                       <Button variant="outline" onClick={handleCreateNew}>
+                            {t('item_added_dialog_action_new')}
+                       </Button>
+                    </AlertDialogCancel>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
     </>
   );
 }
+
+    
