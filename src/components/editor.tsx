@@ -523,117 +523,117 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
           </div>
         </header>
       <main className={cn("flex-grow p-4 md:p-8", isMobile && "p-0")}>
-      <div className={cn("container mx-auto", isMobile && "px-0")}>
-        <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 h-full", isMobile && "grid-cols-1 gap-0")}>
-          {/* Charms Panel */}
-          {!isMobile && (
-             <div className="lg:col-span-3">
-                {charmsPanelDesktop}
-            </div>
-          )}
+        <div className={cn("container mx-auto", isMobile && "px-0")}>
+            <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 h-full", isMobile && "grid-cols-1 gap-0")}>
+            {/* Charms Panel */}
+            {!isMobile && (
+                <div className="lg:col-span-3">
+                    {charmsPanelDesktop}
+                </div>
+            )}
 
-          {/* Editor Canvas */}
-          <div className={cn("lg:col-span-6 flex flex-col gap-4", isMobile && "order-first")}>
-             <div className={cn("flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2", isMobile && "px-4 pt-4")}>
-              <h2 className="text-2xl font-headline tracking-tight">Personnalisez votre {model.name}</h2>
-                <div className="flex gap-2">
-                  {isEditing ? (
-                     <Button onClick={handleUpdateCart} disabled={isCapturing}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Mettre à jour l'article
-                    </Button>
-                  ) : (
-                    <Button onClick={handleAddToCart} disabled={isCapturing}>
-                        <ShoppingCart className="mr-2 h-4 w-4" />
-                        Ajouter au panier
-                    </Button>
-                  )}
-                </div>
-            </div>
-            <div
-                ref={canvasWrapperRef}
-                className={cn("relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none grid place-items-center", isMobile && "rounded-none border-x-0")}
-            >
-                <div
-                    ref={canvasRef}
-                    className="relative w-full h-full grid place-items-center"
-                    style={{
-                        transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
-                        transformOrigin: '0 0',
-                    }}
-                >
-                    <Image
-                        src={model.editorImageUrl}
-                        alt={model.name}
-                        width={1000}
-                        height={1000}
-                        className="pointer-events-none max-w-full max-h-full object-contain"
-                        data-ai-hint="jewelry model"
-                        priority
-                    />
-                    
-                    {placedCharms.map((placed) => (
-                        <PlacedCharmComponent
-                            key={placed.id}
-                            placed={placed}
-                            isSelected={selectedPlacedCharmId === placed.id}
-                            onDragStart={handleDragStart}
-                            onDelete={removeCharm}
-                            onRotate={handlePlacedCharmRotation}
-                        />
-                    ))}
-                </div>
-                 <div className="absolute bottom-2 right-2 flex gap-2">
-                    <Button variant="secondary" size="icon" onClick={() => handleZoom('in')}><ZoomIn /></Button>
-                    <Button variant="secondary" size="icon" onClick={() => handleZoom('out')}><ZoomOut /></Button>
-                    <Button variant="secondary" size="icon" onClick={resetZoomAndPan}><Maximize /></Button>
-                </div>
-            </div>
-            <Card className={cn(isMobile && "rounded-none border-x-0")}>
-                <CardHeader>
-                    <CardTitle className="font-headline text-lg">Breloques ajoutées ({placedCharms.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {placedCharms.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">Faites glisser ou cliquez sur les breloques pour les ajouter à votre bijou.</p>
+            {/* Editor Canvas */}
+            <div className={cn("lg:col-span-6 flex flex-col gap-4", isMobile && "order-first")}>
+                <div className={cn("flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2", isMobile && "px-4 pt-4")}>
+                <h2 className="text-2xl font-headline tracking-tight">Personnalisez votre {model.name}</h2>
+                    <div className="flex gap-2">
+                    {isEditing ? (
+                        <Button onClick={handleUpdateCart} disabled={isCapturing}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Mettre à jour l'article
+                        </Button>
                     ) : (
-                        <ScrollArea className="h-24">
-                            <ul className="space-y-2">
-                                {placedCharms.map(pc => (
-                                    <li key={pc.id} 
-                                        className={cn("flex items-center justify-between text-sm p-1 rounded-md cursor-pointer",
-                                          selectedPlacedCharmId === pc.id ? 'bg-muted' : 'hover:bg-muted/50'
-                                        )}
-                                        onClick={() => handleCharmListClick(pc.id)}
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={24} height={24} className="rounded-sm" data-ai-hint="jewelry charm" />
-                                            <span>{pc.charm.name}</span>
-                                        </div>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); removeCharm(pc.id); }}>
-                                            <X className="h-4 w-4" />
-                                        </Button>
-                                    </li>
-                                ))}
-                            </ul>
-                        </ScrollArea>
+                        <Button onClick={handleAddToCart} disabled={isCapturing}>
+                            <ShoppingCart className="mr-2 h-4 w-4" />
+                            Ajouter au panier
+                        </Button>
                     )}
-                </CardContent>
-            </Card>
-          </div>
+                    </div>
+                </div>
+                <div
+                    ref={canvasWrapperRef}
+                    className={cn("relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none grid place-items-center", isMobile && "rounded-none border-x-0")}
+                >
+                    <div
+                        ref={canvasRef}
+                        className="relative w-full h-full grid place-items-center"
+                        style={{
+                            transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
+                            transformOrigin: '0 0',
+                        }}
+                    >
+                        <Image
+                            src={model.editorImageUrl}
+                            alt={model.name}
+                            width={1000}
+                            height={1000}
+                            className="pointer-events-none max-w-full max-h-full object-contain"
+                            data-ai-hint="jewelry model"
+                            priority
+                        />
+                        
+                        {placedCharms.map((placed) => (
+                            <PlacedCharmComponent
+                                key={placed.id}
+                                placed={placed}
+                                isSelected={selectedPlacedCharmId === placed.id}
+                                onDragStart={handleDragStart}
+                                onDelete={removeCharm}
+                                onRotate={handlePlacedCharmRotation}
+                            />
+                        ))}
+                    </div>
+                    <div className="absolute bottom-2 right-2 flex gap-2">
+                        <Button variant="secondary" size="icon" onClick={() => handleZoom('in')}><ZoomIn /></Button>
+                        <Button variant="secondary" size="icon" onClick={() => handleZoom('out')}><ZoomOut /></Button>
+                        <Button variant="secondary" size="icon" onClick={resetZoomAndPan}><Maximize /></Button>
+                    </div>
+                </div>
+                <Card className={cn(isMobile && "rounded-none border-x-0")}>
+                    <CardHeader>
+                        <CardTitle className="font-headline text-lg">Breloques ajoutées ({placedCharms.length})</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {placedCharms.length === 0 ? (
+                            <p className="text-muted-foreground text-sm">Faites glisser ou cliquez sur les breloques pour les ajouter à votre bijou.</p>
+                        ) : (
+                            <ScrollArea className="h-24">
+                                <ul className="space-y-2">
+                                    {placedCharms.map(pc => (
+                                        <li key={pc.id} 
+                                            className={cn("flex items-center justify-between text-sm p-1 rounded-md cursor-pointer",
+                                            selectedPlacedCharmId === pc.id ? 'bg-muted' : 'hover:bg-muted/50'
+                                            )}
+                                            onClick={() => handleCharmListClick(pc.id)}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={24} height={24} className="rounded-sm" data-ai-hint="jewelry charm" />
+                                                <span>{pc.charm.name}</span>
+                                            </div>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); removeCharm(pc.id); }}>
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </ScrollArea>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
 
-          {/* AI Suggestions Panel */}
-          {!isMobile && <div className="lg:col-span-3">
-            <SuggestionSidebar
-                onApplySuggestion={addCharmFromSuggestions}
-                charms={allCharms}
-                suggestions={suggestions}
-                isLoading={isGeneratingSuggestions}
-                error={suggestionError}
-                onGenerate={handleGenerateSuggestions}
-            />
-          </div>}
-        </div>
+            {/* AI Suggestions Panel */}
+            {!isMobile && <div className="lg:col-span-3">
+                <SuggestionSidebar
+                    onApplySuggestion={addCharmFromSuggestions}
+                    charms={allCharms}
+                    suggestions={suggestions}
+                    isLoading={isGeneratingSuggestions}
+                    error={suggestionError}
+                    onGenerate={handleGenerateSuggestions}
+                />
+            </div>}
+            </div>
         </div>
       </main>
 
@@ -697,3 +697,5 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
           </div>
         )}
     </>
+  );
+}
