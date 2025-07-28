@@ -167,4 +167,3 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
         </Card>
     );
 }
-

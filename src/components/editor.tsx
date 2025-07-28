@@ -9,12 +9,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize, Loader2 } from 'lucide-react';
+import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NacreluneLogo } from './icons';
 import { useTranslations } from '@/hooks/use-translations';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetClose } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { getCharmSuggestions } from '@/app/actions';
 import type { Suggestion, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { CharmsPanel } from './charms-panel';
 import { Input } from './ui/input';
@@ -30,9 +31,10 @@ interface PlacedCharmComponentProps {
     isSelected: boolean;
     onDragStart: (e: React.MouseEvent<HTMLDivElement> | TouchEvent, charmId: string) => void;
     onDelete: (charmId: string) => void;
+    onRotate: (e: WheelEvent, charmId: string) => void;
 }
   
-const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDelete }: PlacedCharmComponentProps) => {
+const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDelete, onRotate }: PlacedCharmComponentProps) => {
     const charmRef = useRef<HTMLDivElement>(null);
 
     const handleDelete = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -44,19 +46,28 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
     useEffect(() => {
         const element = charmRef.current;
         if (!element) return;
+
+        const handleWheel = (e: Event) => {
+            e.preventDefault();
+            onRotate(e as WheelEvent, placed.id);
+        }
         
         const handleTouchStart = (e: TouchEvent) => {
             onDragStart(e, placed.id);
         }
-        
+
+        element.addEventListener('wheel', handleWheel, { passive: false });
         element.addEventListener('touchstart', handleTouchStart, { passive: false });
+
 
         return () => {
             if(element) {
+                element.removeEventListener('wheel', handleWheel);
                 element.removeEventListener('touchstart', handleTouchStart);
             }
         };
-    }, [onDragStart, placed.id]);
+    }, [onRotate, onDragStart, placed.id]);
+
 
     return (
         <div
@@ -231,19 +242,36 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
     setPlacedCharms(prev => prev.filter(c => c.id !== id));
   }, []);
   
+  const handlePlacedCharmRotation = useCallback((e: WheelEvent, charmId: string) => {
+    const rotationAmount = e.deltaY * 0.1;
+    setPlacedCharms(prev =>
+      prev.map(pc =>
+        pc.id === charmId
+          ? { ...pc, rotation: (pc.rotation + rotationAmount) % 360 }
+          : pc
+      )
+    );
+  }, []);
+
   const handleGenerateSuggestions = async (preferences: string) => {
       setIsGeneratingSuggestions(true);
       setSuggestionError(null);
       try {
-        // This functionality is temporarily disabled
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setSuggestions({ suggestions: [] });
+        const result = await getCharmSuggestions({
+          jewelryType: jewelryType.id,
+          modelDescription: model.name,
+          charmOptions: allCharms.map(c => c.name),
+          userPreferences: preferences,
+          locale: locale,
+        });
+        setSuggestions(result);
       } catch (err) {
         setSuggestionError(t('error_generating_suggestions'));
       } finally {
         setIsGeneratingSuggestions(false);
       }
   };
+
 
   const handleDragStart = useCallback((e: React.MouseEvent | TouchEvent, charmId: string) => {
     if ('preventDefault' in e && e.cancelable) e.preventDefault();
@@ -258,26 +286,6 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
     interactionState.dragStart = { x: point.clientX, y: point.clientY };
   }, [interactionState]);
 
-
-  const handleCanvasWheel = useCallback((e: WheelEvent) => {
-    if (!canvasWrapperRef.current) return;
-    e.preventDefault();
-
-    const zoomSensitivity = 0.001;
-    const newScale = scale - e.deltaY * zoomSensitivity;
-    const clampedScale = Math.min(Math.max(0.2, newScale), 5);
-
-    const canvasRect = canvasWrapperRef.current.getBoundingClientRect();
-    const mouseX = e.clientX - canvasRect.left;
-    const mouseY = e.clientY - canvasRect.top;
-    
-    const currentPan = panRef.current;
-    const newPanX = mouseX - (mouseX - currentPan.x) * (clampedScale / scale);
-    const newPanY = mouseY - (mouseY - currentPan.y) * (clampedScale / scale);
-
-    setScale(clampedScale);
-    setPan({ x: newPanX, y: newPanY });
-  }, [scale]);
 
   useEffect(() => {
       const canvas = canvasWrapperRef.current;
@@ -338,7 +346,10 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
       };
 
       const handleWheel = (e: Event) => {
-        handleCanvasWheel(e as WheelEvent);
+          if (!(e.target as HTMLElement).closest('.charm-on-canvas')) {
+              e.preventDefault();
+              handleCanvasWheel(e as WheelEvent);
+          }
       };
       
       const handleTouchStart = (e: TouchEvent) => {
@@ -349,23 +360,41 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
       canvas.addEventListener('mousedown', handlePanStart);
       window.addEventListener('mousemove', handleMove);
       window.addEventListener('mouseup', handleInteractionEnd);
-      canvas.addEventListener('wheel', handleWheel, { passive: false });
 
       // Touch events
       canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
       window.addEventListener('touchmove', handleMove, { passive: false });
       window.addEventListener('touchend', handleInteractionEnd);
+      canvas.addEventListener('wheel', handleWheel, { passive: false });
       
       return () => {
         canvas.removeEventListener('mousedown', handlePanStart);
         window.removeEventListener('mousemove', handleMove);
         window.removeEventListener('mouseup', handleInteractionEnd);
-        canvas.removeEventListener('wheel', handleWheel);
         canvas.removeEventListener('touchstart', handleTouchStart);
         window.removeEventListener('touchmove', handleMove);
         window.removeEventListener('touchend', handleInteractionEnd);
+        canvas.removeEventListener('wheel', handleWheel);
       };
-  }, [interactionState, handleCanvasWheel]);
+  }, [interactionState]);
+
+  const handleCanvasWheel = (e: WheelEvent) => {
+    if (!canvasWrapperRef.current) return;
+
+    const zoomSensitivity = 0.001;
+    const newScale = scale - e.deltaY * zoomSensitivity;
+    const clampedScale = Math.min(Math.max(0.2, newScale), 5);
+
+    const canvasRect = canvasWrapperRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - canvasRect.left;
+    const mouseY = e.clientY - canvasRect.top;
+    
+    const newPanX = mouseX - (mouseX - pan.x) * (clampedScale / scale);
+    const newPanY = mouseY - (mouseY - pan.y) * (clampedScale / scale);
+
+    setScale(clampedScale);
+    setPan({ x: newPanX, y: newPanY });
+  };
 
   const handleZoom = (direction: 'in' | 'out') => {
     const zoomFactor = 0.2;
@@ -415,7 +444,7 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
         }
 
         // Wait a moment for the DOM to update before capturing
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         try {
           const canvas = await html2canvas(canvasRef.current, {
@@ -516,21 +545,13 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
                 <div className="flex gap-2">
                   {isEditing ? (
                      <Button onClick={handleUpdateCart} disabled={isCapturing}>
-                        {isCapturing ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <PlusCircle className="mr-2 h-4 w-4" />
-                        )}
-                        {isCapturing ? t('generating_button') : t('update_item_button')}
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        {t('update_item_button')}
                     </Button>
                   ) : (
                     <Button onClick={handleAddToCart} disabled={isCapturing}>
-                        {isCapturing ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <ShoppingCart className="mr-2 h-4 w-4" />
-                        )}
-                        {isCapturing ? t('generating_button') : t('add_to_cart_button')}
+                        <ShoppingCart className="mr-2 h-4 w-4" />
+                        {t('add_to_cart_button')}
                     </Button>
                   )}
                 </div>
@@ -564,6 +585,7 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
                             isSelected={selectedPlacedCharmId === placed.id}
                             onDragStart={handleDragStart}
                             onDelete={removeCharm}
+                            onRotate={handlePlacedCharmRotation}
                         />
                     ))}
                 </div>
@@ -683,5 +705,3 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
     </>
   );
 }
-
-    
