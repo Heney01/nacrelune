@@ -46,13 +46,14 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
             e.preventDefault();
             onRotate(e as WheelEvent, placed.id);
         }
-
+        
         const handleTouchStart = (e: TouchEvent) => {
             onDragStart(e, placed.id);
         }
 
         element.addEventListener('wheel', handleWheel, { passive: false });
         element.addEventListener('touchstart', handleTouchStart, { passive: false });
+
 
         return () => {
             if(element) {
@@ -513,10 +514,9 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                        <span className="text-xs">{t('charms_title')}</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="bottom" className="h-[50%] p-0">
+                <SheetContent side="bottom" className="h-[50%] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
                     <SheetHeader className="p-4 border-b">
                         <SheetTitle>{t('charms_title')}</SheetTitle>
-                        <SheetDescription>{t('search_placeholder')}</SheetDescription>
                     </SheetHeader>
                    <CharmsPanel 
                         onCharmsLoaded={setCharms} 
@@ -532,11 +532,10 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                        <span className="text-xs">{t('ai_suggestions_title')}</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="bottom" className="h-[80%] p-0">
+                <SheetContent side="bottom" className="h-[80%] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
                    <SheetHeader className="p-4 border-b">
                         <SheetTitle>{t('ai_suggestions_title')}</SheetTitle>
-                        <SheetDescription>{t('ai_suggestions_description')}</SheetDescription>
-                    </SheetHeader>
+                   </SheetHeader>
                     <SuggestionSidebar 
                         onApplySuggestion={addCharmFromSuggestions}
                         charms={charms} 
@@ -553,3 +552,4 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     </>
   );
 }
+
