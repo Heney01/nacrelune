@@ -447,7 +447,8 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
   ), [allCharms, addCharmFromCharmList, charmsSearchTerm]);
 
   return (
-    <CartSheet open={isCartSheetOpen} onOpenChange={setIsCartSheetOpen}>
+    <>
+      <CartSheet open={isCartSheetOpen} onOpenChange={setIsCartSheetOpen} />
       <header className="p-4 border-b">
           <div className="container mx-auto flex justify-between items-center">
             <Link href={`/${locale}`} className="flex items-center gap-2">
@@ -637,6 +638,8 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
             </Sheet>
           </div>
         )}
-    </CartSheet>
+    </>
   );
 }
+
+    
