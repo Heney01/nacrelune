@@ -569,14 +569,17 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
                         transformOrigin: '0 0',
                     }}
                 >
-                    <Image
-                        src={model.editorImageUrl}
-                        alt={model.name}
-                        fill
-                        className="object-contain pointer-events-none"
-                        data-ai-hint="jewelry model"
-                        priority
-                    />
+                    <div className="w-full h-full grid place-items-center">
+                        <Image
+                            src={model.editorImageUrl}
+                            alt={model.name}
+                            width={1000}
+                            height={1000}
+                            className="pointer-events-none max-w-full max-h-full"
+                            data-ai-hint="jewelry model"
+                            priority
+                        />
+                    </div>
                     {placedCharms.map((placed) => (
                         <PlacedCharmComponent
                             key={placed.id}
@@ -699,5 +702,3 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
     </>
   );
 }
-
-    
