@@ -6,63 +6,50 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-import { getCharmSuggestions } from '@/app/actions';
-import type { SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
-import { Lightbulb, Sparkles, WandSparkles } from 'lucide-react';
+import type { Suggestion, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
+import { Lightbulb, Sparkles, WandSparkles, PlusCircle } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Badge } from './ui/badge';
 import Image from 'next/image';
 import { Charm } from '@/lib/types';
 import { useTranslations } from '@/hooks/use-translations';
+import { cn } from '@/lib/utils';
 
 interface SuggestionSidebarProps {
-  jewelryType: string;
-  modelDescription: string;
-  onAddCharm: (charm: Charm) => void;
+  onApplySuggestion: (suggestion: Suggestion) => void;
   charms: Charm[];
-  locale: string;
+  isMobile?: boolean;
+  suggestions: SuggestCharmPlacementOutput | null;
+  isLoading: boolean;
+  error: string | null;
+  onGenerate: (preferences: string) => void;
 }
 
-export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm, charms, locale }: SuggestionSidebarProps) {
+export function SuggestionSidebar({
+  onApplySuggestion,
+  charms,
+  isMobile = false,
+  suggestions,
+  isLoading,
+  error,
+  onGenerate
+}: SuggestionSidebarProps) {
   const t = useTranslations('Editor');
   const [preferences, setPreferences] = useState('');
-  const [suggestions, setSuggestions] = useState<SuggestCharmPlacementOutput | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    setSuggestions(null);
-
-    try {
-      const result = await getCharmSuggestions({
-        jewelryType,
-        modelDescription,
-        charmOptions: charms.map(c => c.name),
-        userPreferences: preferences,
-        locale: locale,
-      });
-      setSuggestions(result);
-    } catch (err) {
-      setError(t('error_generating_suggestions'));
-    } finally {
-      setIsLoading(false);
-    }
+    onGenerate(preferences);
   };
 
-  const handleSuggestionClick = (charmName: string) => {
-    const charm = charms.find(c => c.name === charmName);
-    if (charm) {
-      onAddCharm(charm);
-    }
+  const handleSuggestionClick = (suggestion: Suggestion) => {
+    onApplySuggestion(suggestion);
   };
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader>
+    <Card className={cn("h-full flex flex-col", isMobile && "border-0 shadow-none rounded-none")}>
+      <CardHeader className={cn(isMobile && "py-4")}>
         <CardTitle className="font-headline text-xl flex items-center gap-2">
           <WandSparkles className="text-primary" />
           {t('ai_suggestions_title')}
@@ -97,28 +84,31 @@ export function SuggestionSidebar({ jewelryType, modelDescription, onAddCharm, c
           )}
           {error && (
             <Alert variant="destructive">
-              <AlertTitle>Error</AlertTitle>
+              <AlertTitle>{t('error_title')}</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
           {suggestions && (
-             <div className="space-y-4">
+             <div className="space-y-2">
               {suggestions.suggestions.map((suggestion, index) => {
                  const charm = charms.find(c => c.name === suggestion.charm);
                  return(
                   <Card 
                     key={index} 
-                    className={`cursor-pointer hover:shadow-md transition-shadow ${suggestion.shouldIntegrate ? 'border-primary' : ''}`}
-                    onClick={() => handleSuggestionClick(suggestion.charm)}
+                    className={`${suggestion.shouldIntegrate ? 'border-primary' : ''}`}
                   >
-                    <CardHeader className="flex flex-row items-start gap-4 space-y-0 p-4">
-                        {charm && <Image src={charm.imageUrl} alt={charm.name} width={40} height={40} className="border rounded-md p-1" data-ai-hint="jewelry charm" />}
+                    <div className="p-4 flex items-center gap-4">
+                        {charm && <Image src={charm.imageUrl} alt={charm.name} width={40} height={40} className="border rounded-md p-1 bg-white" data-ai-hint="jewelry charm" />}
                         <div className="flex-1">
                           <CardTitle className="text-base font-headline">{suggestion.charm}</CardTitle>
                           <p className="text-sm text-muted-foreground">{suggestion.placementDescription}</p>
+                          {suggestion.shouldIntegrate && <Badge variant="secondary" className="mt-2">{t('recommended_badge')}</Badge>}
                         </div>
-                        {suggestion.shouldIntegrate && <Badge variant="secondary">{t('recommended_badge')}</Badge>}
-                    </CardHeader>
+                        <Button size="sm" variant="outline" onClick={() => handleSuggestionClick(suggestion)}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            {t('add_to_design_button')}
+                        </Button>
+                    </div>
                   </Card>
                  )
               })}
