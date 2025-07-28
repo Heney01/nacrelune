@@ -97,13 +97,13 @@ function CartContent({ onClose, locale, messages }: { onClose: () => void, local
                                                             {t('cart_preview_description')}
                                                         </DialogDescription>
                                                     </DialogHeader>
-                                                    <div className="mt-4">
+                                                    <div className="mt-4 grid place-items-center">
                                                         <Image
                                                             src={item.previewImage || item.model.displayImageUrl}
                                                             alt={`Preview of ${item.model.name}`}
                                                             width={800}
                                                             height={800}
-                                                            className="w-full h-auto object-contain rounded-lg"
+                                                            className="w-full h-auto object-contain rounded-lg max-w-full max-h-[70vh]"
                                                         />
                                                     </div>
                                                 </DialogContent>
@@ -197,16 +197,11 @@ export function CartSheet({ children, open, onOpenChange }: {
     }
   };
 
-  const sheetContent = (
+  const sheetContent = messages ? (
     <CartProvider>
-      {messages ? (
-        <CartContent onClose={handleClose} locale={locale} messages={messages} />
-      ) : (
-        // You can render a loading state here if messages are not yet available
-        <SheetContent></SheetContent>
-      )}
+      <CartContent onClose={handleClose} locale={locale} messages={messages} />
     </CartProvider>
-  );
+  ) : null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
