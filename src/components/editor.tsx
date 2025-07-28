@@ -15,7 +15,6 @@ import { NacreluneLogo } from './icons';
 import { useTranslations } from '@/hooks/use-translations';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetClose } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { getCharmSuggestions } from '@/app/actions';
 import type { Suggestion, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { CharmsPanel } from './charms-panel';
 import { Input } from './ui/input';
@@ -236,14 +235,9 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
       setIsGeneratingSuggestions(true);
       setSuggestionError(null);
       try {
-        const result = await getCharmSuggestions({
-          jewelryType: jewelryType.id,
-          modelDescription: model.name,
-          charmOptions: allCharms.map(c => c.name),
-          userPreferences: preferences,
-          locale: locale,
-        });
-        setSuggestions(result);
+        // This functionality is temporarily disabled
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setSuggestions({ suggestions: [] });
       } catch (err) {
         setSuggestionError(t('error_generating_suggestions'));
       } finally {
