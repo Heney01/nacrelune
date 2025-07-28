@@ -167,6 +167,7 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
     isPanning: false,
     dragStart: { x: 0, y: 0 },
     activeCharmId: null as string | null,
+    panStart: { x: 0, y: 0 },
   }).current;
 
   // Use refs to store latest state values to avoid stale closures in event listeners
@@ -391,10 +392,10 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
     setPan({ x: newPanX, y: newPanY });
   };
   
-  const resetZoomAndPan = () => {
+  const resetZoomAndPan = useCallback(() => {
     setScale(1);
     setPan({ x: 0, y: 0 });
-  };
+  }, []);
   
   const handleCharmListClick = (charmId: string) => {
     setSelectedPlacedCharmId(charmId);
@@ -409,17 +410,32 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
   };
 
   const captureCanvas = async (): Promise<string> => {
-    if (!canvasRef.current) {
-        return '';
-    }
-    const canvas = await html2canvas(canvasRef.current, { 
-        backgroundColor: null, // for transparent background
-        logging: false,
-        useCORS: true,
-        scale: 2 // for better quality
+    return new Promise((resolve) => {
+        // Reset state for capture
+        setSelectedPlacedCharmId(null);
+        resetZoomAndPan();
+
+        // Wait a tick for the DOM to update with the reset state
+        setTimeout(async () => {
+            if (!canvasRef.current) {
+                resolve('');
+                return;
+            }
+            try {
+                const canvas = await html2canvas(canvasRef.current, { 
+                    backgroundColor: null, // for transparent background
+                    logging: false,
+                    useCORS: true,
+                    scale: 2 // for better quality
+                });
+                resolve(canvas.toDataURL('image/png'));
+            } catch (error) {
+                console.error("Error capturing canvas:", error);
+                resolve('');
+            }
+        }, 50); // A small delay is often enough
     });
-    return canvas.toDataURL('image/png');
-  }
+}
   
   const handleAddToCart = async () => {
     const previewImage = await captureCanvas();
@@ -655,5 +671,3 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
     </>
   );
 }
-
-    
