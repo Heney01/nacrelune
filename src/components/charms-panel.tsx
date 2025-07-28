@@ -12,7 +12,6 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Loader2, Search, ZoomIn } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -23,11 +22,11 @@ interface CharmsPanelProps {
     onCharmsLoaded: (charms: Charm[]) => void;
     onAddCharm: (charm: Charm) => void;
     isMobile?: boolean;
+    searchTerm: string;
 }
 
-export function CharmsPanel({ onCharmsLoaded, onAddCharm, isMobile = false }: CharmsPanelProps) {
+export function CharmsPanel({ onCharmsLoaded, onAddCharm, isMobile = false, searchTerm }: CharmsPanelProps) {
     const t = useTranslations('Editor');
-    const [searchTerm, setSearchTerm] = useState('');
     const [charms, setCharms] = useState<Charm[]>([]);
     const [charmCategories, setCharmCategories] = useState<CharmCategory[]>([]);
     const [isLoadingCharms, setIsLoadingCharms] = useState(true);
@@ -107,7 +106,7 @@ export function CharmsPanel({ onCharmsLoaded, onAddCharm, isMobile = false }: Ch
         }, {} as Record<string, Charm[]>);
     }, [filteredCharms]);
     
-    const renderCharmGrid = (inMobile: boolean) => (
+    const renderCharmGrid = () => (
          <div className="p-4">
              {isLoadingCharms ? (
                 <div className="flex justify-center items-center h-full p-8">
@@ -120,7 +119,7 @@ export function CharmsPanel({ onCharmsLoaded, onAddCharm, isMobile = false }: Ch
                             <AccordionItem value={category.id} key={category.id}>
                                 <AccordionTrigger className="text-base font-headline">{category.name}</AccordionTrigger>
                                 <AccordionContent>
-                                    <div className={cn("grid gap-2 pt-2", inMobile ? "grid-cols-4" : "grid-cols-3")}>
+                                    <div className={cn("grid gap-2 pt-2", isMobile ? "grid-cols-4" : "grid-cols-3")}>
                                         {charmsByCategory[category.id].map((charm) => (
                                             <Dialog key={charm.id}>
                                                  <DialogTrigger asChild>
@@ -169,28 +168,7 @@ export function CharmsPanel({ onCharmsLoaded, onAddCharm, isMobile = false }: Ch
     );
 
     if (isMobile) {
-        return (
-            <div className="flex flex-col h-full">
-                <div className="p-4 border-b">
-                    <SheetHeader>
-                        <SheetTitle>{t('charms_title')}</SheetTitle>
-                    </SheetHeader>
-                </div>
-                <div className="p-4">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder={t('search_placeholder')}
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-9"
-                        />
-                    </div>
-                </div>
-                <Separator />
-                {renderCharmGrid(true)}
-            </div>
-        )
+        return renderCharmGrid();
     }
 
     return (
@@ -204,15 +182,15 @@ export function CharmsPanel({ onCharmsLoaded, onAddCharm, isMobile = false }: Ch
                     <Input
                         placeholder={t('search_placeholder')}
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={(e) => (e.target as any).value}
                         className="pl-9"
                     />
                 </div>
             </div>
             <Separator />
             <CardContent className="p-0 flex-grow">
-                <ScrollArea className="h-[calc(100vh-320px)]">
-                    {renderCharmGrid(false)}
+                <ScrollArea>
+                    {renderCharmGrid()}
                 </ScrollArea>
             </CardContent>
         </Card>

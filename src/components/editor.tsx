@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { Trash2, X, ArrowLeft, Gem, Sparkles } from 'lucide-react';
+import { Trash2, X, ArrowLeft, Gem, Sparkles, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NacreluneLogo } from './icons';
 import { useTranslations } from '@/hooks/use-translations';
@@ -19,6 +19,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { getCharmSuggestions } from '@/app/actions';
 import type { Suggestion, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { CharmsPanel } from './charms-panel';
+import { Input } from './ui/input';
 
 
 interface PlacedCharmComponentProps {
@@ -136,6 +137,9 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
   const [suggestions, setSuggestions] = useState<SuggestCharmPlacementOutput | null>(null);
   const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
   const [suggestionError, setSuggestionError] = useState<string | null>(null);
+
+  // State for charms panel search
+  const [charmsSearchTerm, setCharmsSearchTerm] = useState('');
 
 
   const interactionState = useRef({
@@ -385,6 +389,15 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     }, 500);
   };
 
+  const charmsPanelDesktop = useMemo(() => (
+    <CharmsPanel 
+        onCharmsLoaded={setCharms} 
+        onAddCharm={addCharmFromCharmList} 
+        isMobile={false}
+        searchTerm={charmsSearchTerm}
+    />
+  ), [addCharmFromCharmList, charmsSearchTerm]);
+
   return (
     <>
       <header className="p-4 border-b">
@@ -403,11 +416,9 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
         <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 h-full", isMobile && "grid-cols-1 gap-0")}>
           {/* Charms Panel */}
           {!isMobile && (
-            <CharmsPanel 
-                onCharmsLoaded={setCharms} 
-                onAddCharm={addCharmFromCharmList} 
-                isMobile={isMobile}
-            />
+             <div className="lg:col-span-3">
+                {charmsPanelDesktop}
+            </div>
           )}
 
           {/* Editor Canvas */}
@@ -515,11 +526,26 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="bottom" className="h-[80%] p-0 flex flex-col" onOpenAutoFocus={(e) => e.preventDefault()}>
+                    <SheetHeader className="p-4 border-b">
+                        <SheetTitle>{t('charms_title')}</SheetTitle>
+                    </SheetHeader>
+                    <div className="p-4 border-b">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder={t('search_placeholder')}
+                                value={charmsSearchTerm}
+                                onChange={(e) => setCharmsSearchTerm(e.target.value)}
+                                className="pl-9"
+                            />
+                        </div>
+                    </div>
                     <ScrollArea className="flex-grow">
                         <CharmsPanel 
                             onCharmsLoaded={setCharms} 
                             onAddCharm={addCharmFromCharmList} 
                             isMobile={true}
+                            searchTerm={charmsSearchTerm}
                         />
                     </ScrollArea>
                 </SheetContent>
@@ -552,6 +578,7 @@ export default function Editor({ model, jewelryType, onBack, locale }: EditorPro
     </>
   );
 }
+
 
 
 
