@@ -11,21 +11,24 @@ const JEWELRY_TYPES_INFO: Omit<JewelryType, 'models' | 'icon'>[] = [
   { id: 'earring', name: 'Earrings', description: "Stylish earrings to complete your look." },
 ];
 
-export default async function Home({ searchParams, params: { locale } }: {
+export default async function Home({ searchParams, params }: {
   searchParams: { [key: string]: string | string[] | undefined };
   params: { locale: string };
 }) {
   // Fetch all data on the server
+  const awaitedParams = await params;
+  const awaitedSearchParams = await searchParams;
+
   const jewelryTypesData = await getJewelryTypesAndModels(JEWELRY_TYPES_INFO);
   const charms = await getCharms();
-  const messages = await getMessages(locale);
+  const messages = await getMessages(awaitedParams.locale);
   
   return (
     <HomePageClient
-      searchParams={searchParams}
+      searchParams={awaitedSearchParams}
       jewelryTypes={jewelryTypesData}
       allCharms={charms}
-      locale={locale}
+      locale={awaitedParams.locale}
       messages={messages}
     />
   );

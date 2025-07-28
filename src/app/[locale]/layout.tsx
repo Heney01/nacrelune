@@ -8,11 +8,12 @@ import { getMessages } from '@/lib/translations';
 
 export default async function LocaleLayout({
   children,
-  params: { locale },
+  params,
 }: {
   children: ReactNode;
   params: { locale: string };
 }) {
+  const { locale } = params;
   const messages = await getMessages(locale);
 
   return (
