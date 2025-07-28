@@ -13,7 +13,7 @@ import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle }
 import { cn } from '@/lib/utils';
 import { NacreluneLogo } from './icons';
 import { useTranslations } from '@/hooks/use-translations';
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetClose } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getCharmSuggestions } from '@/app/actions';
 import type { Suggestion, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
@@ -22,17 +22,7 @@ import { Input } from './ui/input';
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-
+import { CartSheet } from './cart-sheet';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -145,6 +135,7 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
   // State for mobile sheets
   const [isCharmsSheetOpen, setIsCharmsSheetOpen] = useState(false);
   const [isSuggestionsSheetOpen, setIsSuggestionsSheetOpen] = useState(false);
+  const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
 
   // State for pan and zoom
   const [scale, setScale] = useState(1);
@@ -157,8 +148,6 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
 
   // State for charms panel search
   const [charmsSearchTerm, setCharmsSearchTerm] = useState('');
-
-  const [isItemAddedDialogOpen, setIsItemAddedDialogOpen] = useState(false);
 
   const isEditing = cartItemId !== null;
 
@@ -427,7 +416,7 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
         previewImage: '' // Placeholder, we'll generate this later
     }
     addToCart(newItem);
-    setIsItemAddedDialogOpen(true);
+    setIsCartSheetOpen(true);
   };
 
   const handleUpdateCart = () => {
@@ -445,19 +434,7 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
         title: t('item_updated_title'),
         description: t('item_updated_description', { modelName: model.name }),
     });
-    router.push(`/${locale}`); // Or maybe back to cart view
-  }
-
-  const handleProceedToCheckout = () => {
-    setIsItemAddedDialogOpen(false);
-    // Later, this will redirect to the cart/checkout page
-    // For now, let's redirect to home
-    router.push(`/${locale}`);
-  }
-
-  const handleCreateNew = () => {
-    setIsItemAddedDialogOpen(false);
-    router.push(`/${locale}`);
+    setIsCartSheetOpen(true);
   }
 
   const charmsPanelDesktop = useMemo(() => (
@@ -470,7 +447,7 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
   ), [allCharms, addCharmFromCharmList, charmsSearchTerm]);
 
   return (
-    <>
+    <CartSheet open={isCartSheetOpen} onOpenChange={setIsCartSheetOpen}>
       <header className="p-4 border-b">
           <div className="container mx-auto flex justify-between items-center">
             <Link href={`/${locale}`} className="flex items-center gap-2">
@@ -660,29 +637,6 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
             </Sheet>
           </div>
         )}
-
-        <AlertDialog open={isItemAddedDialogOpen} onOpenChange={setIsItemAddedDialogOpen}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>{t('item_added_dialog_title')}</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        {t('item_added_dialog_description')}
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogAction onClick={handleProceedToCheckout}>
-                        {t('item_added_dialog_action_checkout')}
-                    </AlertDialogAction>
-                    <AlertDialogCancel asChild>
-                       <Button variant="outline" onClick={handleCreateNew}>
-                            {t('item_added_dialog_action_new')}
-                       </Button>
-                    </AlertDialogCancel>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-    </>
+    </CartSheet>
   );
 }
-
-    

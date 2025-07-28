@@ -17,23 +17,23 @@ export function CartWidget() {
     setHasMounted(true);
   }, []);
 
+  const itemCount = cart.length;
+
   if (!hasMounted) {
     return (
-        <Button variant="ghost">
+        <Button variant="ghost" size="icon">
             <ShoppingCart className="h-6 w-6" />
             <span className="sr-only">{t('cart_title')}</span>
         </Button>
     );
   }
 
-  const itemCount = cart.length;
-
   return (
     <CartSheet>
-        <Button variant="ghost">
+        <Button variant="ghost" size="icon">
             <ShoppingCart className="h-6 w-6" />
             {itemCount > 0 && (
-                <span className="ml-2 bg-primary text-primary-foreground text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                <span className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center transform translate-x-1/4 -translate-y-1/4">
                     {itemCount}
                 </span>
             )}

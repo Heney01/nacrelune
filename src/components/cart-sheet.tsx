@@ -7,19 +7,20 @@ import { useTranslations } from '@/hooks/use-translations';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, ShoppingCart, Info } from 'lucide-react';
-import type { CartItem } from '@/lib/types';
-import { ReactNode } from 'react';
+import { Trash2, ShoppingCart } from 'lucide-react';
+import React, { ReactNode } from 'react';
 
 interface CartSheetProps {
-  children: ReactNode;
+  children?: ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function CartSheet({ children }: CartSheetProps) {
+export function CartSheet({ children, open, onOpenChange }: CartSheetProps) {
   const t = useTranslations('Editor');
   const { cart, removeFromCart, clearCart } = useCart();
 
-  const totalItems = cart.reduce((sum, item) => sum + 1, 0);
+  const totalItems = cart.length;
   
   // Simple sum of prices, assuming price is available.
   // In a real app, this would be more complex (currency, etc.)
@@ -29,11 +30,7 @@ export function CartSheet({ children }: CartSheetProps) {
     return sum + modelPrice + charmsPrice;
   }, 0);
 
-  return (
-    <Sheet>
-      <SheetTrigger asChild>
-        {children}
-      </SheetTrigger>
+  const content = (
       <SheetContent className="flex flex-col">
         <SheetHeader>
           <SheetTitle className="font-headline text-2xl">{t('cart_title')} ({totalItems})</SheetTitle>
@@ -104,6 +101,18 @@ export function CartSheet({ children }: CartSheetProps) {
           </>
         )}
       </SheetContent>
-    </Sheet>
   );
+
+  if (children) {
+    return (
+        <Sheet open={open} onOpenChange={onOpenChange}>
+            <SheetTrigger asChild>
+                {children}
+            </SheetTrigger>
+            {content}
+        </Sheet>
+    );
+  }
+
+  return <Sheet open={open} onOpenChange={onOpenChange}>{content}</Sheet>;
 }
