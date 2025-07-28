@@ -38,4 +38,9 @@ export default async function Home({
         jewelryTypes={jewelryTypes}
         allCharms={allCharms}
         locale={locale}
-        messages
+        messages={messages}
+      />
+      <Toaster />
+    </CartProvider>
+  );
+}
