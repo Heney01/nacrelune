@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import type { JewelryModel, JewelryType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,11 @@ interface ModelSelectionProps {
 
 export function ModelSelection({ selectedType }: ModelSelectionProps) {
     const t = useTranslations('HomePage');
+    const [loadingModelId, setLoadingModelId] = useState<string | null>(null);
+
+    const handleModelClick = (modelId: string) => {
+        setLoadingModelId(modelId);
+    };
 
     return (
         <>
@@ -42,7 +47,12 @@ export function ModelSelection({ selectedType }: ModelSelectionProps) {
                         
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                             {selectedType.models.map((model, index) => (
-                                <Link key={model.id} href={`?type=${selectedType.id}&model=${model.id}`} className="contents">
+                                <Link 
+                                    key={model.id} 
+                                    href={`?type=${selectedType.id}&model=${model.id}`} 
+                                    className="contents"
+                                    onClick={() => handleModelClick(model.id)}
+                                >
                                     <Card className="overflow-hidden group flex flex-col cursor-pointer">
                                         <div className="overflow-hidden relative">
                                             <Image 
@@ -54,6 +64,11 @@ export function ModelSelection({ selectedType }: ModelSelectionProps) {
                                                 data-ai-hint="jewelry"
                                                 priority={index < 4} // Prioritize loading for the first few images
                                             />
+                                            {loadingModelId === model.id && (
+                                                <div className="absolute inset-0 bg-white/50 flex items-center justify-center">
+                                                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                                                </div>
+                                            )}
                                             <div onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>
                                                 <Dialog>
                                                     <DialogTrigger asChild>
@@ -75,7 +90,9 @@ export function ModelSelection({ selectedType }: ModelSelectionProps) {
                                         </div>
                                         <CardContent className="p-4 flex-grow flex flex-col justify-between">
                                             <h3 className="text-lg font-headline flex-grow">{model.name}</h3>
-                                            <Button variant="outline" size="sm" className="w-full mt-4">{t('select_button')}</Button>
+                                            <Button variant="outline" size="sm" className="w-full mt-4" disabled={!!loadingModelId}>
+                                                {loadingModelId === model.id ? <Loader2 className="animate-spin" /> : t('select_button')}
+                                            </Button>
                                         </CardContent>
                                     </Card>
                                 </Link>
