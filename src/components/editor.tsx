@@ -564,7 +564,16 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
                       transformOrigin: '0 0',
                   }}
               >
-                  <Image src={model.editorImageUrl} alt={model.name} fill priority style={{ objectFit: 'contain' }} className="pointer-events-none" data-ai-hint="jewelry model" sizes="50vw" />
+                  <div 
+                    className="w-full h-full" 
+                    style={{
+                      backgroundImage: `url(${model.editorImageUrl})`,
+                      backgroundSize: 'contain',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'center',
+                    }}
+                    data-ai-hint="jewelry model"
+                  />
               </div>
               <div className="absolute top-0 left-0 w-full h-full" style={{ perspective: '1000px' }}>
                   <div
@@ -698,5 +707,3 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
     </>
   );
 }
-
-    
