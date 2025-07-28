@@ -31,10 +31,9 @@ interface PlacedCharmComponentProps {
     isSelected: boolean;
     onDragStart: (e: React.MouseEvent<HTMLDivElement> | TouchEvent, charmId: string) => void;
     onDelete: (charmId: string) => void;
-    onRotate: (e: WheelEvent, charmId: string) => void;
 }
   
-const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDelete, onRotate }: PlacedCharmComponentProps) => {
+const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDelete }: PlacedCharmComponentProps) => {
     const charmRef = useRef<HTMLDivElement>(null);
 
     const handleDelete = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -46,28 +45,19 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
     useEffect(() => {
         const element = charmRef.current;
         if (!element) return;
-
-        const handleWheel = (e: Event) => {
-            e.preventDefault();
-            onRotate(e as WheelEvent, placed.id);
-        }
         
         const handleTouchStart = (e: TouchEvent) => {
             onDragStart(e, placed.id);
         }
-
-        element.addEventListener('wheel', handleWheel, { passive: false });
+        
         element.addEventListener('touchstart', handleTouchStart, { passive: false });
-
 
         return () => {
             if(element) {
-                element.removeEventListener('wheel', handleWheel);
                 element.removeEventListener('touchstart', handleTouchStart);
             }
         };
-    }, [onRotate, onDragStart, placed.id]);
-
+    }, [onDragStart, placed.id]);
 
     return (
         <div
@@ -242,17 +232,6 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
     setPlacedCharms(prev => prev.filter(c => c.id !== id));
   }, []);
   
-  const handlePlacedCharmRotation = useCallback((e: WheelEvent, charmId: string) => {
-    const rotationAmount = e.deltaY * 0.1;
-    setPlacedCharms(prev =>
-      prev.map(pc =>
-        pc.id === charmId
-          ? { ...pc, rotation: (pc.rotation + rotationAmount) % 360 }
-          : pc
-      )
-    );
-  }, []);
-
   const handleGenerateSuggestions = async (preferences: string) => {
       setIsGeneratingSuggestions(true);
       setSuggestionError(null);
@@ -272,7 +251,6 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
       }
   };
 
-
   const handleDragStart = useCallback((e: React.MouseEvent | TouchEvent, charmId: string) => {
     if ('preventDefault' in e && e.cancelable) e.preventDefault();
     e.stopPropagation();
@@ -286,6 +264,26 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
     interactionState.dragStart = { x: point.clientX, y: point.clientY };
   }, [interactionState]);
 
+
+  const handleCanvasWheel = useCallback((e: WheelEvent) => {
+    if (!canvasWrapperRef.current) return;
+    e.preventDefault();
+
+    const zoomSensitivity = 0.001;
+    const newScale = scale - e.deltaY * zoomSensitivity;
+    const clampedScale = Math.min(Math.max(0.2, newScale), 5);
+
+    const canvasRect = canvasWrapperRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - canvasRect.left;
+    const mouseY = e.clientY - canvasRect.top;
+    
+    const currentPan = panRef.current;
+    const newPanX = mouseX - (mouseX - currentPan.x) * (clampedScale / scale);
+    const newPanY = mouseY - (mouseY - currentPan.y) * (clampedScale / scale);
+
+    setScale(clampedScale);
+    setPan({ x: newPanX, y: newPanY });
+  }, [scale]);
 
   useEffect(() => {
       const canvas = canvasWrapperRef.current;
@@ -346,10 +344,7 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
       };
 
       const handleWheel = (e: Event) => {
-          if (!(e.target as HTMLElement).closest('.charm-on-canvas')) {
-              e.preventDefault();
-              handleCanvasWheel(e as WheelEvent);
-          }
+        handleCanvasWheel(e as WheelEvent);
       };
       
       const handleTouchStart = (e: TouchEvent) => {
@@ -360,41 +355,23 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
       canvas.addEventListener('mousedown', handlePanStart);
       window.addEventListener('mousemove', handleMove);
       window.addEventListener('mouseup', handleInteractionEnd);
+      canvas.addEventListener('wheel', handleWheel, { passive: false });
 
       // Touch events
       canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
       window.addEventListener('touchmove', handleMove, { passive: false });
       window.addEventListener('touchend', handleInteractionEnd);
-      canvas.addEventListener('wheel', handleWheel, { passive: false });
       
       return () => {
         canvas.removeEventListener('mousedown', handlePanStart);
         window.removeEventListener('mousemove', handleMove);
         window.removeEventListener('mouseup', handleInteractionEnd);
+        canvas.removeEventListener('wheel', handleWheel);
         canvas.removeEventListener('touchstart', handleTouchStart);
         window.removeEventListener('touchmove', handleMove);
         window.removeEventListener('touchend', handleInteractionEnd);
-        canvas.removeEventListener('wheel', handleWheel);
       };
-  }, [interactionState]);
-
-  const handleCanvasWheel = (e: WheelEvent) => {
-    if (!canvasWrapperRef.current) return;
-
-    const zoomSensitivity = 0.001;
-    const newScale = scale - e.deltaY * zoomSensitivity;
-    const clampedScale = Math.min(Math.max(0.2, newScale), 5);
-
-    const canvasRect = canvasWrapperRef.current.getBoundingClientRect();
-    const mouseX = e.clientX - canvasRect.left;
-    const mouseY = e.clientY - canvasRect.top;
-    
-    const newPanX = mouseX - (mouseX - pan.x) * (clampedScale / scale);
-    const newPanY = mouseY - (mouseY - pan.y) * (clampedScale / scale);
-
-    setScale(clampedScale);
-    setPan({ x: newPanX, y: newPanY });
-  };
+  }, [interactionState, handleCanvasWheel]);
 
   const handleZoom = (direction: 'in' | 'out') => {
     const zoomFactor = 0.2;
@@ -593,7 +570,6 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
                             isSelected={selectedPlacedCharmId === placed.id}
                             onDragStart={handleDragStart}
                             onDelete={removeCharm}
-                            onRotate={handlePlacedCharmRotation}
                         />
                     ))}
                 </div>
