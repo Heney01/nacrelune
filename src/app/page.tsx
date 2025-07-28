@@ -15,6 +15,7 @@ export default async function Home({ searchParams, params }: {
   searchParams: { [key: string]: string | string[] | undefined };
   params: { locale: string };
 }) {
+  console.log('--- TRACE: Exécution de src/app/page.tsx ---');
   // Fetch all data on the server
   const awaitedParams = await params;
   const awaitedSearchParams = await searchParams;
