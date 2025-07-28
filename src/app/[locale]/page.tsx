@@ -15,20 +15,16 @@ export default async function Home({ searchParams, params }: {
   searchParams: { [key: string]: string | string[] | undefined };
   params: { locale: string };
 }) {
-  // Fetch all data on the server
-  const awaitedParams = await params;
-  const awaitedSearchParams = await searchParams;
-
   const jewelryTypesData = await getJewelryTypesAndModels(JEWELRY_TYPES_INFO);
   const charms = await getCharms();
-  const messages = await getMessages(awaitedParams.locale);
+  const messages = await getMessages(params.locale);
   
   return (
     <HomePageClient
-      searchParams={awaitedSearchParams}
+      searchParams={searchParams}
       jewelryTypes={jewelryTypesData}
       allCharms={charms}
-      locale={awaitedParams.locale}
+      locale={params.locale}
       messages={messages}
     />
   );
