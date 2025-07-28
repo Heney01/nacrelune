@@ -35,7 +35,7 @@ export function CartWidget() {
                     {itemCount}
                 </span>
             )}
-            <span className="sr-only">Your Cart</span>
+            <span className="sr-only">Votre panier</span>
         </Button>
     </CartSheet>
   );
