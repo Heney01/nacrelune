@@ -50,6 +50,7 @@
     "cart_empty_title": "Votre panier est vide",
     "cart_empty_description": "Trouvez la pièce parfaite pour commencer votre création.",
     "cart_remove_item": "Supprimer l'article",
-    "cart_total": "Total"
+    "cart_total": "Total",
+    "create_new_jewel_button": "Créer un nouveau bijou"
   }
 }

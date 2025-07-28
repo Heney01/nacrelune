@@ -2,13 +2,15 @@
 "use client";
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { useCart } from '@/hooks/use-cart';
 import { useTranslations } from '@/hooks/use-translations';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, ShoppingCart } from 'lucide-react';
+import { Trash2, ShoppingCart, PlusCircle } from 'lucide-react';
 import React, { ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 
 interface CartSheetProps {
   children?: ReactNode;
@@ -19,6 +21,8 @@ interface CartSheetProps {
 export function CartSheet({ children, open, onOpenChange }: CartSheetProps) {
   const t = useTranslations('Editor');
   const { cart, removeFromCart, clearCart } = useCart();
+  const pathname = usePathname();
+  const locale = pathname.split('/')[1] || 'en';
 
   const totalItems = cart.length;
   
@@ -40,9 +44,27 @@ export function CartSheet({ children, open, onOpenChange }: CartSheetProps) {
             <ShoppingCart className="w-16 h-16 mb-4" />
             <p className="font-bold text-lg">{t('cart_empty_title')}</p>
             <p className="text-sm">{t('cart_empty_description')}</p>
+             <SheetClose asChild>
+                <Button variant="outline" asChild className="mt-6">
+                    <Link href={`/${locale}`}>
+                        <PlusCircle />
+                        {t('create_new_jewel_button')}
+                    </Link>
+                </Button>
+            </SheetClose>
           </div>
         ) : (
           <>
+            <div className="p-4 border-b">
+                 <SheetClose asChild>
+                    <Button variant="outline" className="w-full" asChild>
+                         <Link href={`/${locale}`}>
+                            <PlusCircle />
+                            {t('create_new_jewel_button')}
+                        </Link>
+                    </Button>
+                </SheetClose>
+            </div>
             <ScrollArea className="flex-grow my-4 pr-4">
               <div className="space-y-4">
                 {cart.map((item) => (

@@ -50,6 +50,7 @@
     "cart_empty_title": "Your cart is empty",
     "cart_empty_description": "Find the perfect piece to start your creation.",
     "cart_remove_item": "Remove item",
-    "cart_total": "Total"
+    "cart_total": "Total",
+    "create_new_jewel_button": "Create a New Jewel"
   }
 }
