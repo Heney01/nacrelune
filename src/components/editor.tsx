@@ -150,6 +150,9 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
   // State for charms panel search
   const [charmsSearchTerm, setCharmsSearchTerm] = useState('');
 
+  // State for screenshot capture
+  const [isCapturing, setIsCapturing] = useState(false);
+  
   const isEditing = cartItemId !== null;
 
   useEffect(() => {
@@ -408,64 +411,83 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
       ));
     }, 500);
   };
-
-  const captureCanvas = async (): Promise<string> => {
-    return new Promise((resolve) => {
-        // Reset state for capture
-        setSelectedPlacedCharmId(null);
-        resetZoomAndPan();
-
-        // Wait a tick for the DOM to update with the reset state
-        setTimeout(async () => {
-            if (!canvasRef.current) {
-                resolve('');
-                return;
-            }
-            try {
-                const canvas = await html2canvas(canvasRef.current, { 
-                    backgroundColor: null, // for transparent background
-                    logging: false,
-                    useCORS: true,
-                    scale: 2 // for better quality
-                });
-                resolve(canvas.toDataURL('image/png'));
-            } catch (error) {
-                console.error("Error capturing canvas:", error);
-                resolve('');
-            }
-        }, 50); // A small delay is often enough
-    });
-}
   
-  const handleAddToCart = async () => {
-    const previewImage = await captureCanvas();
-    const newItem: Omit<CartItem, 'id'> = {
-        model,
-        jewelryType,
-        placedCharms,
-        previewImage: previewImage
-    }
-    addToCart(newItem);
-    setIsCartSheetOpen(true);
+  const triggerCapture = () => {
+    resetZoomAndPan();
+    setSelectedPlacedCharmId(null);
+    setIsCapturing(true);
+  }
+
+  const handleAddToCart = () => {
+    triggerCapture();
   };
 
-  const handleUpdateCart = async () => {
+  const handleUpdateCart = () => {
     if (!cartItemId) return;
-    const previewImage = await captureCanvas();
-    const updatedItem = {
-      id: cartItemId,
-      model,
-      jewelryType,
-      placedCharms,
-      previewImage: previewImage
-    };
-    updateCartItem(cartItemId, updatedItem);
-    toast({
-        title: t('item_updated_title'),
-        description: t('item_updated_description', { modelName: model.name }),
-    });
-    setIsCartSheetOpen(true);
+    triggerCapture();
   }
+
+  useEffect(() => {
+    if (isCapturing) {
+      const capture = async () => {
+        if (!canvasRef.current) {
+          setIsCapturing(false);
+          return;
+        }
+        try {
+          const canvas = await html2canvas(canvasRef.current, {
+            backgroundColor: null, // for transparent background
+            logging: false,
+            useCORS: true,
+            scale: 2 // for better quality
+          });
+          const previewImage = canvas.toDataURL('image/png');
+
+          if (isEditing && cartItemId) {
+              const updatedItem = {
+                  id: cartItemId,
+                  model,
+                  jewelryType,
+                  placedCharms,
+                  previewImage
+              };
+              updateCartItem(cartItemId, updatedItem);
+              toast({
+                  title: t('item_updated_title'),
+                  description: t('item_updated_description', { modelName: model.name }),
+              });
+          } else {
+              const newItem: Omit<CartItem, 'id'> = {
+                  model,
+                  jewelryType,
+                  placedCharms,
+                  previewImage: previewImage
+              }
+              addToCart(newItem);
+              toast({
+                  title: t('item_added_to_cart_title'),
+                  description: t('item_added_to_cart_description', { modelName: model.name }),
+              });
+          }
+
+          setIsCartSheetOpen(true);
+        } catch (error) {
+          console.error("Error capturing canvas:", error);
+          toast({
+              variant: 'destructive',
+              title: t('error_title'),
+              description: "Could not capture design image."
+          });
+        } finally {
+          setIsCapturing(false);
+        }
+      };
+
+      // The capture runs after the state has been updated and the component re-rendered.
+      capture();
+    }
+  }, [isCapturing, addToCart, updateCartItem, cartItemId, isEditing, jewelryType, model, placedCharms, t, toast]);
+
 
   const charmsPanelDesktop = useMemo(() => (
     <CharmsPanel 
@@ -514,12 +536,12 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
                     {t('clear_all_button')}
                   </Button>
                   {isEditing ? (
-                     <Button onClick={handleUpdateCart}>
+                     <Button onClick={handleUpdateCart} disabled={isCapturing}>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         {t('update_item_button')}
                     </Button>
                   ) : (
-                    <Button onClick={handleAddToCart}>
+                    <Button onClick={handleAddToCart} disabled={isCapturing}>
                         <ShoppingCart className="mr-2 h-4 w-4" />
                         {t('add_to_cart_button')}
                     </Button>

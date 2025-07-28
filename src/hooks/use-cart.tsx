@@ -66,8 +66,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setCart(prevCart => prevCart.filter(item => item.id !== itemId));
   };
 
-  const updateCartItem = (itemId: string, updatedItem: CartItem) => {
-    setCart(prevCart => prevCart.map(item => (item.id === itemId ? updatedItem : item)));
+  const updateCartItem = (itemId: string, updatedItem: Omit<CartItem, 'id'> & { id: string }) => {
+    setCart(prevCart => prevCart.map(item => (item.id === itemId ? { ...item, ...updatedItem } : item)));
   };
 
   const clearCart = () => {
