@@ -29,7 +29,4 @@ const nextConfig: NextConfig = {
       'https://*.cloudworkstations.dev',
       'https://*.firebase.studio',
     ],
-  },
-};
-
-export default nextConfig;
+  
