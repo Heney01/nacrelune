@@ -96,31 +96,22 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
         // Optimistic UI update
         dispatch({ type: 'DELETE', payload: { jewelryTypeId, modelId } });
 
-        try {
-            console.log("--- [CLIENT] Calling server action 'deleteModel' ---");
-            const result = await deleteModel(formData);
-            console.log("--- [CLIENT] Server action result:", result);
-
-            if (result?.success) {
-                toast({
-                    title: 'Succès',
-                    description: result.message,
-                });
-            } else {
-                toast({
-                    variant: 'destructive',
-                    title: 'Erreur',
-                    description: result?.message || 'Une erreur inconnue est survenue.',
-                });
-                // Note: You might want to revert the optimistic update here if the server fails
-            }
-        } catch (error) {
-             console.error("--- [CLIENT] Error calling server action:", error);
-             toast({
+        console.log("--- [CLIENT] Calling server action 'deleteModel' ---");
+        const result = await deleteModel(formData);
+        console.log("--- [CLIENT] Server action result:", result);
+        
+        if (result?.success) {
+            toast({
+                title: 'Succès',
+                description: result.message,
+            });
+        } else {
+            toast({
                 variant: 'destructive',
                 title: 'Erreur',
-                description: 'Une erreur de communication est survenue.',
+                description: result?.message || 'Une erreur inconnue est survenue.',
             });
+            // Note: You might want to revert the optimistic update here if the server fails
         }
     };
 
