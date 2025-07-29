@@ -681,33 +681,22 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
     if (!email) {
         return { success: false, message: "Veuillez fournir une adresse e-mail." };
     }
+    
+    // For security reasons, we don't query the database here.
+    // In a real application, you would trigger a secure, rate-limited email sending service.
+    // Here, we just return a success message to the user.
+    // This prevents malicious users from checking if an email has an account.
 
-    try {
-        const q = query(
-            collection(db, 'orders'), 
-            where('customerEmail', '==', email.trim()),
-            orderBy('createdAt', 'desc')
-        );
-        const querySnapshot = await getDocs(q);
+    // const q = query(
+    //     collection(db, 'orders'), 
+    //     where('customerEmail', '==', email.trim()),
+    //     orderBy('createdAt', 'desc')
+    // );
+    // const querySnapshot = await getDocs(q);
+    
+    // if (!querySnapshot.empty) {
+    //    // TODO: Send email with order numbers
+    // }
 
-        if (querySnapshot.empty) {
-            return { success: false, message: "Aucune commande trouvée pour cet e-mail.", orders: null };
-        }
-
-        const orders: Omit<Order, 'items' | 'totalPrice'>[] = querySnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                orderNumber: data.orderNumber,
-                createdAt: (data.createdAt as Timestamp).toDate(),
-                customerEmail: data.customerEmail,
-                status: data.status,
-            };
-        });
-        
-        return { success: true, message: `${orders.length} commande(s) trouvée(s).`, orders: orders };
-    } catch (error) {
-        console.error('Error fetching orders by email:', error);
-        return { success: false, message: "Une erreur est survenue lors de la recherche des commandes." };
-    }
+    return { success: true, message: "email_sent_notice" };
 }

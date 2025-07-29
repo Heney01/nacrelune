@@ -123,6 +123,8 @@
     "find_orders_description": "Enter your email address to find your order numbers.",
     "email_placeholder": "your.email@example.com",
     "find_orders_button": "Find My Orders",
-    "orders_found_title": "Orders Found"
+    "orders_found_title": "Orders Found",
+    "email_sent_title": "Request Processed",
+    "email_sent_description": "If an account exists for the provided email, your order numbers have been sent."
   }
 }

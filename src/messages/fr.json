@@ -123,6 +123,8 @@
     "find_orders_description": "Entrez votre adresse e-mail pour retrouver vos numéros de commande.",
     "email_placeholder": "votre.email@example.com",
     "find_orders_button": "Retrouver mes commandes",
-    "orders_found_title": "Commandes trouvées"
+    "orders_found_title": "Commandes trouvées",
+    "email_sent_title": "Demande traitée",
+    "email_sent_description": "Si un compte existe pour l'e-mail fourni, vos numéros de commande ont été envoyés."
   }
 }

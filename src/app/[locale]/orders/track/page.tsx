@@ -232,23 +232,13 @@ export default function TrackOrderPage() {
                         )}
                     </CardContent>
                 </form>
-                {emailState.success && emailState.orders && (
-                    <CardFooter className="flex-col items-start gap-4">
-                         <Alert>
-                            <Info className="h-4 w-4" />
-                            <AlertTitle>{tStatus('orders_found_title')}</AlertTitle>
+                {emailState.success && emailState.message === 'email_sent_notice' && (
+                     <CardFooter>
+                         <Alert variant="default" className="w-full">
+                            <Mail className="h-4 w-4" />
+                            <AlertTitle>{tStatus('email_sent_title')}</AlertTitle>
                             <AlertDescription>
-                                <ul className="mt-2 space-y-2">
-                                    {emailState.orders.map(order => (
-                                        <li key={order.id} className="flex justify-between items-center text-sm">
-                                           <div>
-                                                <span className="font-mono bg-muted p-1 rounded-md">{order.orderNumber}</span>
-                                                <span className="ml-4 text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</span>
-                                           </div>
-                                            <span className="font-medium">{tStatus(order.status)}</span>
-                                        </li>
-                                    ))}
-                                </ul>
+                                {tStatus('email_sent_description')}
                             </AlertDescription>
                         </Alert>
                     </CardFooter>
