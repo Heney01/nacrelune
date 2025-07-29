@@ -4,45 +4,51 @@ import { NextRequest, NextResponse } from 'next/server';
 const locales = ['en', 'fr'];
 const defaultLocale = 'fr';
 
-function getLocaleFromPathname(pathname: string): string {
-    const locale = pathname.split('/')[1];
-    if (locales.includes(locale)) {
-        return locale;
+function getLocale(request: NextRequest): string {
+  const acceptLanguage = request.headers.get('accept-language');
+  if (acceptLanguage) {
+    const languages = acceptLanguage.split(',').map(lang => lang.split(';')[0]);
+    for (const lang of languages) {
+      if (locales.includes(lang)) {
+        return lang;
+      }
     }
-    return defaultLocale;
+  }
+  
+  const pathnameLocale = request.nextUrl.pathname.split('/')[1];
+  if (locales.includes(pathnameLocale)) {
+    return pathnameLocale;
+  }
+  
+  return defaultLocale;
 }
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get('session');
 
+  // If there's no session cookie, redirect to the login page for the appropriate locale.
   if (!sessionCookie) {
-    const locale = getLocaleFromPathname(pathname);
+    const locale = getLocale(request);
     const loginUrl = new URL(`/${locale}/login`, request.url);
-    // Add a redirect query parameter if trying to access a protected route
-    if (pathname.includes('/admin')) {
-      loginUrl.searchParams.set('redirect', pathname);
-    }
+    
+    // Preserve the original path as a redirect parameter.
+    loginUrl.searchParams.set('redirect', pathname);
+    
     return NextResponse.redirect(loginUrl);
   }
 
+  // If the session is valid, continue to the requested page.
   return NextResponse.next();
 }
 
 export const config = {
   /*
-   * Match all request paths except for the ones starting with:
-   * - api (API routes)
-   * - _next/static (static files)
-   * - _next/image (image optimization files)
-   * - favicon.ico (favicon file)
-   *
-   * This ensures that the middleware ONLY runs on pages and not on static assets or API routes.
-   * We apply the protection logic inside the middleware itself.
+   * Match all request paths under /admin, but exclude static files, 
+   * image optimization files, and API routes. This prevents the middleware 
+   * from running on asset requests or internal Next.js requests,
+   * which is crucial for Server Actions to work correctly without being
+   * incorrectly redirected.
    */
-  matcher: [
-    '/admin/:path*',
-    '/en/admin/:path*',
-    '/fr/admin/:path*',
-  ],
+  matcher: '/((?!api|_next/static|_next/image|favicon.ico).*)',
 };
