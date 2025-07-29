@@ -1,7 +1,8 @@
 
 'use client';
 
-import { useState, useActionState, useEffect, useOptimistic } from 'react';
+import { useState, useEffect } from 'react';
+import { useFormState } from 'react-dom';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
@@ -35,7 +36,7 @@ type OptimisticUpdate = {
 const DeleteForm = ({ jewelryTypeId, model }: { jewelryTypeId: string, model: JewelryModel}) => {
     const { toast } = useToast();
     
-    const [state, formAction] = useActionState(deleteModel, { success: false, message: '' });
+    const [state, formAction] = useFormState(deleteModel, { success: false, message: '' });
 
     useEffect(() => {
         if(state.message) {
