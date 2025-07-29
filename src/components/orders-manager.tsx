@@ -134,8 +134,8 @@ const OrderRow = ({ order, locale, onStatusChange, t, tStatus, isPending }: {
                                             <h5 className="font-semibold mb-2 text-sm">Breloques à ajouter:</h5>
                                             {item.charms && item.charms.length > 0 ? (
                                                 <ul className="space-y-2">
-                                                    {item.charms.map(charm => (
-                                                        <li key={charm.id} className="flex items-center gap-3 text-sm">
+                                                    {item.charms.map((charm, charmIndex) => (
+                                                        <li key={`${charm.id}-${charmIndex}`} className="flex items-center gap-3 text-sm">
                                                              <Image 
                                                                 src={charm.imageUrl} 
                                                                 alt={charm.name}
