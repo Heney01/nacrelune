@@ -11,7 +11,6 @@ import { ModelSelection } from '@/components/model-selection';
 import type { JewelryType, Charm } from '@/lib/types';
 import Link from 'next/link';
 import { CartWidget } from './cart-widget';
-import { TestDeleteButton } from './test-delete-button';
 
 export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, locale }: {
     searchParams: { [key: string]: string | string[] | undefined };
@@ -53,7 +52,6 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
 
         <main className="flex-grow p-4 md:p-8">
           <div className="container mx-auto">
-            <TestDeleteButton />
             {selectedType ? (
                 <ModelSelection 
                     selectedType={selectedType}
