@@ -1,4 +1,5 @@
 
+
 {
   "HomePage": {
     "title": "Begin Your Creation",
@@ -98,7 +99,13 @@
     "shipping_carrier": "Shipping Carrier",
     "select_carrier_placeholder": "Select a carrier...",
     "tracking_number": "Tracking Number",
-    "confirm_shipping_button": "Confirm Shipping"
+    "confirm_shipping_button": "Confirm Shipping",
+    "cancel_order": "Cancel Order",
+    "cancel_order_dialog_title": "Cancel Order",
+    "cancel_order_dialog_description": "Please enter the reason for cancellation. An email will be sent to the customer informing them of the full refund.",
+    "cancellation_reason": "Reason for Cancellation",
+    "cancellation_reason_placeholder": "e.g., Item out of stock, quality issue...",
+    "confirm_cancellation_button": "Confirm Cancellation"
   },
   "Checkout": {
     "title": "Checkout",
@@ -132,6 +139,9 @@
     "en cours de préparation": "Preparing",
     "expédiée": "Shipped",
     "livrée": "Delivered",
+    "annulée": "Cancelled",
+    "status_cancelled_title": "Order Cancelled",
+    "status_cancelled_description": "This order has been cancelled. Please contact customer support if you have any questions.",
     "track_description": "Enter your order number to see its status.",
     "order_number_placeholder": "e.g., NAC-240726-AB12CD",
     "track_button": "Track Order",

@@ -1,5 +1,6 @@
 
 
+
 import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, DocumentReference, getDoc, doc, Timestamp, query, orderBy, where, documentId } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
@@ -226,7 +227,7 @@ export async function getOrders(): Promise<Order[]> {
             }
         }
         
-        const orders: Order[] = querySnapshot.docs.map(orderDoc => {
+        const orders: Order[] = await Promise.all(querySnapshot.docs.map(async(orderDoc) => {
             const data = orderDoc.data();
             
             const enrichedItems: OrderItem[] = (data.items || []).map((item: OrderItem) => {
@@ -239,6 +240,14 @@ export async function getOrders(): Promise<Order[]> {
                     charms: enrichedCharms,
                 };
             });
+            
+            const previewImageUrls = await Promise.all(
+                (data.items || []).map((item: OrderItem) => getUrl(item.previewImageUrl, 'https://placehold.co/400x400.png'))
+            );
+
+            enrichedItems.forEach((item, index) => {
+                item.previewImageUrl = previewImageUrls[index];
+            });
 
             return {
                 id: orderDoc.id,
@@ -250,8 +259,9 @@ export async function getOrders(): Promise<Order[]> {
                 items: enrichedItems,
                 shippingCarrier: data.shippingCarrier,
                 trackingNumber: data.trackingNumber,
+                cancellationReason: data.cancellationReason,
             };
-        });
+        }));
 
         return orders;
     } catch (error) {

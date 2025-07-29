@@ -1,11 +1,12 @@
 
+
 'use client';
 
 import React, { useState, useReducer, useTransition, Fragment } from 'react';
 import type { Order, OrderStatus, OrderItem, Charm } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from './ui/card';
-import { Package, Search, ChevronDown, ChevronUp, Truck } from 'lucide-react';
+import { Package, Search, ChevronDown, ChevronUp, Truck, FileX, Edit } from 'lucide-react';
 import { useTranslations } from '@/hooks/use-translations';
 import { Badge } from './ui/badge';
 import { updateOrderStatus, updateOrderItemStatus } from '@/app/actions';
@@ -15,6 +16,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { Button } from './ui/button';
 import { EllipsisVertical } from 'lucide-react';
@@ -26,6 +28,7 @@ import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Textarea } from './ui/textarea';
 
 interface OrdersManagerProps {
     initialOrders: Order[];
@@ -38,7 +41,12 @@ type State = Order[];
 
 type Action = {
     type: 'UPDATE_STATUS';
-    payload: { orderId: string; newStatus: OrderStatus, shippingInfo?: { carrier: string, trackingNumber: string} };
+    payload: { 
+        orderId: string; 
+        newStatus: OrderStatus, 
+        shippingInfo?: { carrier: string, trackingNumber: string},
+        cancellationReason?: string 
+    };
 } | {
     type: 'UPDATE_ITEM_STATUS';
     payload: { orderId: string; itemIndex: number; isCompleted: boolean };
@@ -54,6 +62,7 @@ const ordersReducer = (state: State, action: Action): State => {
                         status: action.payload.newStatus,
                         shippingCarrier: action.payload.shippingInfo?.carrier ?? order.shippingCarrier,
                         trackingNumber: action.payload.shippingInfo?.trackingNumber ?? order.trackingNumber,
+                        cancellationReason: action.payload.cancellationReason ?? order.cancellationReason
                       }
                     : order
             );
@@ -80,6 +89,7 @@ const statusVariants: { [key in OrderStatus]: string } = {
     'en cours de préparation': 'bg-yellow-100 text-yellow-800 border-yellow-200',
     'expédiée': 'bg-purple-100 text-purple-800 border-purple-200',
     'livrée': 'bg-green-100 text-green-800 border-green-200',
+    'annulée': 'bg-red-100 text-red-800 border-red-200',
 }
 
 const ShipOrderDialog = ({
@@ -95,8 +105,8 @@ const ShipOrderDialog = ({
     onConfirm: (trackingNumber: string, shippingCarrier: string) => void,
     t: (key: string, values?: any) => string
 }) => {
-    const [trackingNumber, setTrackingNumber] = useState('');
-    const [shippingCarrier, setShippingCarrier] = useState('');
+    const [trackingNumber, setTrackingNumber] = useState(order.trackingNumber || '');
+    const [shippingCarrier, setShippingCarrier] = useState(order.shippingCarrier || '');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -117,7 +127,7 @@ const ShipOrderDialog = ({
                     <div className="grid gap-4 py-4">
                         <div className="space-y-2">
                             <Label htmlFor="shippingCarrier">{t('shipping_carrier')}</Label>
-                            <Select onValueChange={setShippingCarrier} required>
+                            <Select onValueChange={setShippingCarrier} defaultValue={shippingCarrier} required>
                                 <SelectTrigger id="shippingCarrier">
                                     <SelectValue placeholder={t('select_carrier_placeholder')} />
                                 </SelectTrigger>
@@ -148,10 +158,58 @@ const ShipOrderDialog = ({
     );
 }
 
+const CancelOrderDialog = ({
+    isOpen,
+    onOpenChange,
+    onConfirm,
+    t
+}: {
+    isOpen: boolean,
+    onOpenChange: (isOpen: boolean) => void,
+    onConfirm: (reason: string) => void,
+    t: (key: string, values?: any) => string
+}) => {
+    const [reason, setReason] = useState('');
+    
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onConfirm(reason);
+        onOpenChange(false);
+    }
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <form onSubmit={handleSubmit}>
+                    <DialogHeader>
+                        <DialogTitle>{t('cancel_order_dialog_title')}</DialogTitle>
+                        <DialogDescription>{t('cancel_order_dialog_description')}</DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <Label htmlFor="cancellation-reason">{t('cancellation_reason')}</Label>
+                        <Textarea 
+                            id="cancellation-reason" 
+                            className="mt-2"
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                            placeholder={t('cancellation_reason_placeholder')}
+                            required
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{t('cancel')}</Button>
+                        <Button type="submit" variant="destructive">{t('confirm_cancellation_button')}</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 const OrderRow = ({ order, locale, onStatusChange, onItemStatusChange, t, tStatus, isPending }: {
     order: Order,
     locale: string,
-    onStatusChange: (orderId: string, status: OrderStatus, shippingInfo?: { carrier: string, trackingNumber: string}) => void,
+    onStatusChange: (orderId: string, status: OrderStatus, options?: { shippingInfo?: { carrier: string, trackingNumber: string }, cancellationReason?: string }) => void,
     onItemStatusChange: (orderId: string, itemIndex: number, isCompleted: boolean) => void,
     t: (key: string, values?: any) => string,
     tStatus: (key: string, values?: any) => string,
@@ -159,9 +217,14 @@ const OrderRow = ({ order, locale, onStatusChange, onItemStatusChange, t, tStatu
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [isShipDialogOpen, setIsShipDialogOpen] = useState(false);
+    const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
     
     const handleShipConfirm = (trackingNumber: string, shippingCarrier: string) => {
-        onStatusChange(order.id, 'expédiée', { carrier: shippingCarrier, trackingNumber });
+        onStatusChange(order.id, 'expédiée', { shippingInfo: { carrier: shippingCarrier, trackingNumber } });
+    }
+
+    const handleCancelConfirm = (reason: string) => {
+        onStatusChange(order.id, 'annulée', { cancellationReason: reason });
     }
 
     return (
@@ -199,11 +262,16 @@ const OrderRow = ({ order, locale, onStatusChange, onItemStatusChange, t, tStatu
                                                 onStatusChange(order.id, status)
                                             }
                                         }}
-                                        disabled={order.status === status}
+                                        disabled={order.status === status || order.status === 'annulée'}
                                     >
                                         {t('update_status_to', { status: tStatus(status) })}
                                     </DropdownMenuItem>
                                 ))}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => setIsCancelDialogOpen(true)} disabled={order.status === 'annulée'} className="text-destructive focus:text-destructive">
+                                    <FileX className="mr-2 h-4 w-4"/>
+                                    {t('cancel_order')}
+                                </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                         <Button variant="ghost" size="icon" className="ml-2">
@@ -220,18 +288,32 @@ const OrderRow = ({ order, locale, onStatusChange, onItemStatusChange, t, tStatu
                              {order.shippingCarrier && order.trackingNumber && (
                                 <div className="mb-6">
                                     <h5 className="font-semibold mb-2 text-md flex items-center gap-2"><Truck className="h-5 w-5 text-primary" /> Informations d'expédition</h5>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-background p-4 rounded-lg border">
-                                        <div>
-                                            <p className="text-sm font-medium text-muted-foreground">Transporteur</p>
-                                            <p>{order.shippingCarrier}</p>
+                                    <div className="flex items-start justify-between bg-background p-4 rounded-lg border">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
+                                            <div>
+                                                <p className="text-sm font-medium text-muted-foreground">Transporteur</p>
+                                                <p>{order.shippingCarrier}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-medium text-muted-foreground">Numéro de suivi</p>
+                                                <p className="font-mono">{order.trackingNumber}</p>
+                                            </div>
                                         </div>
-                                         <div>
-                                            <p className="text-sm font-medium text-muted-foreground">Numéro de suivi</p>
-                                            <p className="font-mono">{order.trackingNumber}</p>
-                                        </div>
+                                        <Button variant="outline" size="sm" onClick={() => setIsShipDialogOpen(true)}>
+                                            <Edit className="mr-2 h-4 w-4" /> Modifier
+                                        </Button>
                                     </div>
                                 </div>
                             )}
+                             {order.status === 'annulée' && order.cancellationReason && (
+                                <div className="mb-6">
+                                    <h5 className="font-semibold mb-2 text-md flex items-center gap-2"><FileX className="h-5 w-5 text-destructive" /> Commande Annulée</h5>
+                                    <div className="bg-background p-4 rounded-lg border">
+                                         <p className="text-sm font-medium text-muted-foreground">Motif de l'annulation</p>
+                                         <p className="italic">"{order.cancellationReason}"</p>
+                                    </div>
+                                </div>
+                             )}
                             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                                 {order.items.map((item, index) => (
                                     <Card key={index} className={cn("overflow-hidden", item.isCompleted && "bg-green-50 border-green-200")}>
@@ -248,6 +330,7 @@ const OrderRow = ({ order, locale, onStatusChange, onItemStatusChange, t, tStatu
                                                         onCheckedChange={(checked) => {
                                                             onItemStatusChange(order.id, index, !!checked)
                                                         }}
+                                                        disabled={order.status === 'annulée'}
                                                     />
                                                     <Label htmlFor={`completed-${order.id}-${index}`}>Terminé</Label>
                                                 </div>
@@ -256,7 +339,7 @@ const OrderRow = ({ order, locale, onStatusChange, onItemStatusChange, t, tStatu
                                         <CardContent>
                                             <Dialog>
                                                 <DialogTrigger asChild>
-                                                    <div className="bg-white p-2 rounded-md border mb-4 cursor-pointer">
+                                                    <div className="w-full max-w-48 mx-auto bg-white p-2 rounded-md border mb-4 cursor-pointer">
                                                         <Image 
                                                             src={item.previewImageUrl} 
                                                             alt={`Aperçu de ${item.modelName}`}
@@ -319,6 +402,12 @@ const OrderRow = ({ order, locale, onStatusChange, onItemStatusChange, t, tStatu
                 onConfirm={handleShipConfirm}
                 t={t}
             />
+             <CancelOrderDialog
+                isOpen={isCancelDialogOpen}
+                onOpenChange={setIsCancelDialogOpen}
+                onConfirm={handleCancelConfirm}
+                t={t}
+            />
         </Fragment>
     );
 };
@@ -335,20 +424,28 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
 
     const [searchTerm, setSearchTerm] = useState('');
 
-    const handleStatusChange = (orderId: string, status: OrderStatus, shippingInfo?: { carrier: string; trackingNumber: string; }) => {
+    const handleStatusChange = (orderId: string, status: OrderStatus, options?: { shippingInfo?: { carrier: string; trackingNumber: string; }, cancellationReason?: string}) => {
         const formData = new FormData();
         formData.append('orderId', orderId);
         formData.append('status', status);
         formData.append('locale', locale);
-        if (shippingInfo) {
-            formData.append('shippingCarrier', shippingInfo.carrier);
-            formData.append('trackingNumber', shippingInfo.trackingNumber);
+        if (options?.shippingInfo) {
+            formData.append('shippingCarrier', options.shippingInfo.carrier);
+            formData.append('trackingNumber', options.shippingInfo.trackingNumber);
+        }
+        if (options?.cancellationReason) {
+            formData.append('cancellationReason', options.cancellationReason);
         }
 
         startTransition(async () => {
             const result = await updateOrderStatus(formData);
             if (result.success) {
-                dispatch({ type: 'UPDATE_STATUS', payload: { orderId, newStatus: status, shippingInfo }});
+                dispatch({ type: 'UPDATE_STATUS', payload: { 
+                    orderId,
+                    newStatus: status, 
+                    shippingInfo: options?.shippingInfo,
+                    cancellationReason: options?.cancellationReason 
+                }});
                 toast({ title: 'Succès', description: result.message });
             } else {
                 toast({ title: 'Erreur', description: result.message, variant: 'destructive' });

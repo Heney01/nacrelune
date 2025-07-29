@@ -65,7 +65,7 @@ export interface GeneralPreferences {
   criticalThreshold: number;
 }
 
-export type OrderStatus = 'commandée' | 'en cours de préparation' | 'expédiée' | 'livrée';
+export type OrderStatus = 'commandée' | 'en cours de préparation' | 'expédiée' | 'livrée' | 'annulée';
 
 export interface OrderItem {
     modelId: string;
@@ -91,4 +91,5 @@ export interface Order {
     status: OrderStatus;
     shippingCarrier?: string;
     trackingNumber?: string;
+    cancellationReason?: string;
 }

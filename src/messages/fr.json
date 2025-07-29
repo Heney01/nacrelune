@@ -1,4 +1,5 @@
 
+
 {
   "HomePage": {
     "title": "Commencez Votre Création",
@@ -98,7 +99,13 @@
     "shipping_carrier": "Transporteur",
     "select_carrier_placeholder": "Sélectionnez un transporteur...",
     "tracking_number": "Numéro de suivi",
-    "confirm_shipping_button": "Confirmer l'expédition"
+    "confirm_shipping_button": "Confirmer l'expédition",
+    "cancel_order": "Annuler la commande",
+    "cancel_order_dialog_title": "Annuler la commande",
+    "cancel_order_dialog_description": "Veuillez saisir le motif de l'annulation. Un e-mail sera envoyé au client pour l'informer du remboursement intégral.",
+    "cancellation_reason": "Motif de l'annulation",
+    "cancellation_reason_placeholder": "ex: Article en rupture de stock, problème de qualité...",
+    "confirm_cancellation_button": "Confirmer l'annulation"
   },
   "Checkout": {
     "title": "Paiement",
@@ -132,6 +139,9 @@
     "en cours de préparation": "En préparation",
     "expédiée": "Expédiée",
     "livrée": "Livrée",
+    "annulée": "Annulée",
+    "status_cancelled_title": "Commande Annulée",
+    "status_cancelled_description": "Cette commande a été annulée. Veuillez contacter le service client si vous avez des questions.",
     "track_description": "Entrez votre numéro de commande pour voir son statut.",
     "order_number_placeholder": "ex: NAC-240726-AB12CD",
     "track_button": "Suivre la commande",

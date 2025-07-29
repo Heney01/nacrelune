@@ -1,5 +1,6 @@
 
 
+
 'use server';
 
 import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
@@ -723,6 +724,7 @@ export async function getOrders(): Promise<Order[]> {
                 items: data.items, // Items are not fully enriched here
                 shippingCarrier: data.shippingCarrier,
                 trackingNumber: data.trackingNumber,
+                cancellationReason: data.cancellationReason,
             };
         });
         return orders;
@@ -744,9 +746,7 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
     try {
         const orderRef = doc(db, 'orders', orderId);
         
-        const dataToUpdate: { status: OrderStatus; shippingCarrier?: string; trackingNumber?: string } = {
-            status: newStatus
-        };
+        let dataToUpdate: Partial<Order> = { status: newStatus };
 
         if (newStatus === 'expédiée') {
             const shippingCarrier = formData.get('shippingCarrier') as string;
@@ -756,6 +756,15 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
             }
             dataToUpdate.shippingCarrier = shippingCarrier;
             dataToUpdate.trackingNumber = trackingNumber;
+        }
+
+        if (newStatus === 'annulée') {
+            const cancellationReason = formData.get('cancellationReason') as string;
+            if (!cancellationReason) {
+                return { success: false, message: "Le motif de l'annulation est obligatoire." };
+            }
+            dataToUpdate.cancellationReason = cancellationReason;
+            // Here you would also trigger an email to the customer with the cancellationReason.
         }
 
         await updateDoc(orderRef, dataToUpdate);

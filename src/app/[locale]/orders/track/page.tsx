@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React from 'react';
@@ -50,12 +51,23 @@ function OrderStatusTracker({ status }: { status: OrderStatus }) {
     const statuses: OrderStatus[] = ['commandée', 'en cours de préparation', 'expédiée', 'livrée'];
     const statusIndex = statuses.indexOf(status);
 
-    const ICONS = {
+    const ICONS: Record<OrderStatus, React.ElementType> = {
         'commandée': PackageCheck,
         'en cours de préparation': Package,
         'expédiée': Truck,
-        'livrée': Home
+        'livrée': Home,
+        'annulée': AlertCircle,
     };
+
+    if (status === 'annulée') {
+         return (
+            <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>{t('status_cancelled_title')}</AlertTitle>
+                <AlertDescription>{t('status_cancelled_description')}</AlertDescription>
+            </Alert>
+        )
+    }
 
     return (
         <div className="flex justify-between items-start">
