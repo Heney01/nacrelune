@@ -10,9 +10,9 @@ import { ModelForm } from './model-form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { deleteModel } from '../actions';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { deleteModel } from '../actions';
 
 interface ModelsManagerProps {
     initialJewelryTypes: Omit<JewelryType, 'icon'>[];
@@ -62,7 +62,7 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
             console.log('deleteModel result string:', resultString);
 
             if (typeof resultString === 'string') {
-                 const result = JSON.parse(resultString);
+                const result = JSON.parse(resultString);
                 if (result.success) {
                     console.log('Delete successful, showing success toast');
                     toast({
@@ -75,7 +75,7 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
                     toast({
                         variant: 'destructive',
                         title: 'Erreur',
-                        description: result?.message || 'Une erreur inconnue est survenue.',
+                        description: result.message || 'Une erreur inconnue est survenue.',
                     });
                 }
             } else {
@@ -129,7 +129,7 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
                                    {jewelryType.models.map((model) => (
                                        <TableRow key={model.id}>
                                            <TableCell>
-                                               <Image src={model.displayImageUrl} alt={model.name} width={64} height={64} className="rounded-md object-cover bg-muted h-auto" />
+                                               <Image src={model.displayImageUrl} alt={model.name} width={64} height={64} className="rounded-md object-cover h-auto" />
                                            </TableCell>
                                            <TableCell className="font-medium">{model.name}</TableCell>
                                            <TableCell>{model.price}€</TableCell>

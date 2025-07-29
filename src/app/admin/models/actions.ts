@@ -186,45 +186,24 @@ export async function deleteModel(
   displayImageUrl: string, 
   editorImageUrl: string
 ): Promise<string> {
-    console.log('=== deleteModel SERVER ACTION START ===');
-    console.log('deleteModel called with parameters:', { jewelryTypeId, modelId, displayImageUrl, editorImageUrl });
-  
+  try {
     if (!jewelryTypeId || !modelId) {
-      const errorMsg = 'jewelryTypeId et modelId sont requis';
-      console.error('Validation error:', errorMsg);
-      return JSON.stringify({ success: false, message: errorMsg });
+      throw new Error('jewelryTypeId et modelId sont requis');
     }
-  
-    try {
-      console.log('Step 1: Deleting images from storage...');
-      // Use Promise.all to attempt deleting both images. 
-      // `false` on catch means we don't throw if one fails, letting Firestore deletion proceed.
-      await Promise.all([
-        deleteImage(displayImageUrl).catch(e => {
-            console.error("Failed to delete display image, but continuing.", e);
-            return false;
-        }),
-        deleteImage(editorImageUrl).catch(e => {
-            console.error("Failed to delete editor image, but continuing.", e);
-            return false;
-        }),
-      ]);
-  
-      console.log('Step 2: Deleting document from Firestore...');
-      const docRef = doc(db, jewelryTypeId, modelId);
-      await deleteDoc(docRef);
-      console.log("Document successfully deleted from Firestore.");
-  
-      console.log("Step 3: Revalidating paths...");
-      revalidatePath('/', 'layout');
-      revalidatePath('/admin/dashboard');
-      
-      console.log("=== deleteModel SERVER ACTION SUCCESS ===");
-      return JSON.stringify({ success: true, message: 'Modèle supprimé avec succès.' });
-        
-    } catch (error: any) {
-      console.error("=== ERROR in deleteModel SERVER ACTION ===", error);
-      const errorMessage = error.message || 'Erreur inconnue lors de la suppression';
-      return JSON.stringify({ success: false, message: `Erreur lors de la suppression: ${errorMessage}` });
-    }
+
+    await Promise.all([
+      deleteImage(displayImageUrl),
+      deleteImage(editorImageUrl),
+    ]);
+
+    const docRef = doc(db, jewelryTypeId, modelId);
+    await deleteDoc(docRef);
+    
+    revalidatePath('/', 'layout');
+    revalidatePath('/admin/dashboard');
+
+    return JSON.stringify({ success: true, message: 'Modèle supprimé avec succès.' });
+  } catch (error: any) {
+    return JSON.stringify({ success: false, message: `Erreur lors de la suppression: ${error.message}` });
+  }
 }
