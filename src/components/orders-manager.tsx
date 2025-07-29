@@ -96,25 +96,28 @@ const ShipOrderDialog = ({
     order,
     onConfirm,
     children,
-    t
+    t,
+    isOpen,
+    onOpenChange
 }: {
     order: Order,
     onConfirm: (trackingNumber: string, shippingCarrier: string) => void,
     children: React.ReactNode,
-    t: (key: string, values?: any) => string
+    t: (key: string, values?: any) => string,
+    isOpen: boolean,
+    onOpenChange: (open: boolean) => void
 }) => {
-    const [isOpen, setIsOpen] = useState(false);
     const [trackingNumber, setTrackingNumber] = useState(order.trackingNumber || '');
     const [shippingCarrier, setShippingCarrier] = useState(order.shippingCarrier || '');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         onConfirm(trackingNumber, shippingCarrier);
-        setIsOpen(false);
+        onOpenChange(false);
     }
     
     return (
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
              <DialogTrigger asChild>
                 {children}
             </DialogTrigger>
@@ -151,7 +154,7 @@ const ShipOrderDialog = ({
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>{t('cancel')}</Button>
+                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{t('cancel')}</Button>
                         <Button type="submit">{t('confirm_shipping_button')}</Button>
                     </DialogFooter>
                 </form>
@@ -210,16 +213,13 @@ const CancelOrderDialog = ({
     )
 }
 
-const OrderDetails = ({ order, onItemStatusChange, onStatusChange, t }: { 
+const OrderDetails = ({ order, onItemStatusChange, onStatusChange, t, onEditShipping }: { 
     order: Order, 
     onItemStatusChange: (orderId: string, itemIndex: number, isCompleted: boolean) => void,
     onStatusChange: (orderId: string, status: OrderStatus, options?: { shippingInfo?: { carrier: string, trackingNumber: string }, cancellationReason?: string }) => void,
-    t: (key: string, values?: any) => string
+    t: (key: string, values?: any) => string,
+    onEditShipping: () => void
 }) => {
-
-    const handleShipConfirm = (trackingNumber: string, shippingCarrier: string) => {
-        onStatusChange(order.id, 'expédiée', { shippingInfo: { carrier: shippingCarrier, trackingNumber } });
-    };
 
     return (
         <>
@@ -239,11 +239,9 @@ const OrderDetails = ({ order, onItemStatusChange, onStatusChange, t }: {
                                     <p className="font-mono">{order.trackingNumber}</p>
                                 </div>
                             </div>
-                           <ShipOrderDialog order={order} onConfirm={handleShipConfirm} t={t}>
-                                <Button variant="outline" size="sm">
-                                    <Edit className="mr-2 h-4 w-4" /> Modifier
-                                </Button>
-                           </ShipOrderDialog>
+                           <Button variant="outline" size="sm" onClick={onEditShipping}>
+                                <Edit className="mr-2 h-4 w-4" /> Modifier
+                            </Button>
                         </div>
                     </div>
                 )}
@@ -338,7 +336,7 @@ const OrderDetails = ({ order, onItemStatusChange, onStatusChange, t }: {
     )
 }
 
-const OrderRow = ({ order, isOpen, onToggle, onStatusChange, onItemStatusChange, t, tStatus, isPending }: {
+const OrderRow = ({ order, isOpen, onToggle, onStatusChange, onItemStatusChange, t, tStatus, isPending, onEditShipping }: {
     order: Order,
     isOpen: boolean,
     onToggle: () => void,
@@ -346,13 +344,10 @@ const OrderRow = ({ order, isOpen, onToggle, onStatusChange, onItemStatusChange,
     onItemStatusChange: (orderId: string, itemIndex: number, isCompleted: boolean) => void,
     t: (key: string, values?: any) => string,
     tStatus: (key: string, values?: any) => string,
-    isPending: boolean
+    isPending: boolean,
+    onEditShipping: () => void,
 }) => {
     const { toast } = useToast();
-    
-    const handleShipConfirm = (trackingNumber: string, shippingCarrier: string) => {
-        onStatusChange(order.id, 'expédiée', { shippingInfo: { carrier: shippingCarrier, trackingNumber } });
-    }
 
     const handleCancelConfirm = (reason: string) => {
         onStatusChange(order.id, 'annulée', { cancellationReason: reason });
@@ -399,22 +394,17 @@ const OrderRow = ({ order, isOpen, onToggle, onStatusChange, onItemStatusChange,
                                 {(['commandée', 'en cours de préparation', 'expédiée', 'livrée'] as OrderStatus[]).map(status => (
                                      <DropdownMenuItem 
                                         key={status} 
-                                        onClick={() => {
+                                        onSelect={(e) => {
+                                            e.preventDefault();
                                             if (status === 'expédiée') {
-                                                // The dialog is controlled externally, trigger it via a component that is not a child of the menu
+                                                onEditShipping();
                                             } else {
                                                 onStatusChange(order.id, status)
                                             }
                                         }}
                                         disabled={order.status === status || order.status === 'annulée'}
                                     >
-                                        {status === 'expédiée' ? (
-                                            <ShipOrderDialog order={order} onConfirm={handleShipConfirm} t={t}>
-                                                <span>{t('update_status_to', { status: tStatus(status) })}</span>
-                                            </ShipOrderDialog>
-                                        ) : (
-                                            t('update_status_to', { status: tStatus(status) })
-                                        )}
+                                      {t('update_status_to', { status: tStatus(status) })}
                                     </DropdownMenuItem>
                                 ))}
                                 <DropdownMenuSeparator />
@@ -435,7 +425,7 @@ const OrderRow = ({ order, isOpen, onToggle, onStatusChange, onItemStatusChange,
             {isOpen && (
                 <TableRow>
                     <TableCell colSpan={6} className="p-0">
-                       <OrderDetails order={order} onItemStatusChange={onItemStatusChange} onStatusChange={onStatusChange} t={t} />
+                       <OrderDetails order={order} onItemStatusChange={onItemStatusChange} onStatusChange={onStatusChange} t={t} onEditShipping={onEditShipping} />
                     </TableCell>
                 </TableRow>
             )}
@@ -458,6 +448,9 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
     const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
     const [openOrders, setOpenOrders] = useState<Set<string>>(new Set());
 
+    const [isShipDialogOpen, setIsShipDialogOpen] = useState(false);
+    const [selectedOrderForShipping, setSelectedOrderForShipping] = useState<Order | null>(null);
+
     const toggleOrder = (orderId: string) => {
         setOpenOrders(prev => {
             const newSet = new Set(prev);
@@ -468,6 +461,11 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
             }
             return newSet;
         });
+    };
+
+    const handleOpenShipDialog = (order: Order) => {
+        setSelectedOrderForShipping(order);
+        setIsShipDialogOpen(true);
     };
 
     const handleStatusChange = (orderId: string, status: OrderStatus, options?: { shippingInfo?: { carrier: string; trackingNumber: string; }, cancellationReason?: string}) => {
@@ -543,167 +541,196 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
         });
     }
 
-    return (
-        <Card>
-            <CardHeader>
-                 <CardTitle className="text-xl font-headline flex items-center gap-2">
-                    <Package /> {t('orders_title')}
-                </CardTitle>
-                <CardDescription>
-                    {t('orders_description')}
-                </CardDescription>
-                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 pt-4">
-                    <div className="relative w-full md:w-auto md:flex-grow md:max-w-xs">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder={t('search_placeholder')}
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-9"
-                        />
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                        <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as any)}>
-                            <SelectTrigger className="w-full sm:w-[180px]">
-                                <SelectValue placeholder={t('filter_by_status')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">{t('all_statuses')}</SelectItem>
-                                {ALL_STATUSES.map(status => (
-                                    <SelectItem key={status} value={status}>{tStatus(status)}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                         <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as any)}>
-                            <SelectTrigger className="w-full sm:w-[180px]">
-                                <SelectValue placeholder={t('sort_by_date')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="desc">{t('sort_newest')}</SelectItem>
-                                <SelectItem value="asc">{t('sort_oldest')}</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-            </CardHeader>
-            <CardContent>
-                {/* Desktop Table View */}
-                <div className="hidden md:block">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>{t('order_number')}</TableHead>
-                                <TableHead>{t('date')}</TableHead>
-                                <TableHead>{t('customer')}</TableHead>
-                                <TableHead>{t('total')}</TableHead>
-                                <TableHead>{t('status')}</TableHead>
-                                <TableHead className="text-right">{t('actions')}</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {processedOrders.length > 0 ? (
-                                processedOrders.map(order => (
-                                    <OrderRow 
-                                        key={order.id}
-                                        order={order}
-                                        isOpen={openOrders.has(order.id)}
-                                        onToggle={() => toggleOrder(order.id)}
-                                        onStatusChange={handleStatusChange}
-                                        onItemStatusChange={handleItemStatusChange}
-                                        t={t}
-                                        tStatus={tStatus}
-                                        isPending={isPending}
-                                    />
-                            ))
-                            ) : (
-                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center h-24">
-                                       {t('no_orders')}
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
+    const handleShipConfirm = (trackingNumber: string, shippingCarrier: string) => {
+        if (!selectedOrderForShipping) return;
+        handleStatusChange(selectedOrderForShipping.id, 'expédiée', { shippingInfo: { carrier: shippingCarrier, trackingNumber } });
+        setIsShipDialogOpen(false);
+        setSelectedOrderForShipping(null);
+    }
+    
+    const handleMobileShipClick = (order: Order) => {
+        setSelectedOrderForShipping(order);
+        setIsShipDialogOpen(true);
+    };
 
-                {/* Mobile Card View */}
-                <div className="md:hidden space-y-4">
-                     {processedOrders.length > 0 ? (
-                        processedOrders.map(order => (
-                            <Card key={order.id} className={cn("overflow-hidden", isPending && 'opacity-50')}>
-                                <div className="p-4 cursor-pointer" onClick={() => toggleOrder(order.id)}>
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <p className="font-bold">{order.orderNumber}</p>
-                                            <p className="text-sm text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</p>
-                                        </div>
-                                        <div onClick={e => e.stopPropagation()}>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                        <EllipsisVertical className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent>
-                                                    {(['commandée', 'en cours de préparation', 'expédiée', 'livrée'] as OrderStatus[]).map(status => (
-                                                        <DropdownMenuItem 
-                                                            key={status} 
-                                                            onClick={() => {
-                                                                if (status !== 'expédiée') {
-                                                                    handleStatusChange(order.id, status)
-                                                                }
-                                                            }}
-                                                            disabled={order.status === status || order.status === 'annulée'}
-                                                        >
-                                                            {status === 'expédiée' ? (
-                                                                <ShipOrderDialog order={order} onConfirm={(tracking, carrier) => handleStatusChange(order.id, 'expédiée', { shippingInfo: { carrier, trackingNumber: tracking }})} t={t}>
-                                                                    <span>{t('update_status_to', { status: tStatus(status) })}</span>
-                                                                </ShipOrderDialog>
-                                                            ) : (
-                                                                t('update_status_to', { status: tStatus(status) })
-                                                            )}
-                                                        </DropdownMenuItem>
-                                                    ))}
-                                                    <DropdownMenuSeparator />
-                                                    <CancelOrderDialog onConfirm={(reason) => handleStatusChange(order.id, 'annulée', {cancellationReason: reason})} t={t}>
-                                                        <DropdownMenuItem 
-                                                            onSelect={(e) => e.preventDefault()}
-                                                            disabled={order.status === 'annulée'} 
-                                                            className="text-destructive focus:text-destructive"
-                                                        >
-                                                            <FileX className="mr-2 h-4 w-4"/>
-                                                            {t('cancel_order')}
-                                                        </DropdownMenuItem>
-                                                    </CancelOrderDialog>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-                                    </div>
-                                    <div className="mt-4 flex flex-col items-start gap-2">
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-sm">{order.customerEmail}</p>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleCopyEmail(order.customerEmail); }}>
-                                                <Copy className="h-3 w-3" />
-                                            </Button>
-                                        </div>
-                                        <div className="w-full flex justify-between items-center">
-                                            <p className="font-bold text-lg">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(order.totalPrice)}</p>
-                                            <Badge variant="outline" className={cn(statusVariants[order.status])}>
-                                                {tStatus(order.status)}
-                                            </Badge>
-                                        </div>
-                                    </div>
-                                </div>
-                                {openOrders.has(order.id) && (
-                                    <OrderDetails order={order} onItemStatusChange={handleItemStatusChange} onStatusChange={handleStatusChange} t={t} />
+    return (
+        <>
+            <Card>
+                <CardHeader>
+                     <CardTitle className="text-xl font-headline flex items-center gap-2">
+                        <Package /> {t('orders_title')}
+                    </CardTitle>
+                    <CardDescription>
+                        {t('orders_description')}
+                    </CardDescription>
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 pt-4">
+                        <div className="relative w-full md:w-auto md:flex-grow md:max-w-xs">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder={t('search_placeholder')}
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-9"
+                            />
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as any)}>
+                                <SelectTrigger className="w-full sm:w-[180px]">
+                                    <SelectValue placeholder={t('filter_by_status')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">{t('all_statuses')}</SelectItem>
+                                    {ALL_STATUSES.map(status => (
+                                        <SelectItem key={status} value={status}>{tStatus(status)}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                             <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as any)}>
+                                <SelectTrigger className="w-full sm:w-[180px]">
+                                    <SelectValue placeholder={t('sort_by_date')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="desc">{t('sort_newest')}</SelectItem>
+                                    <SelectItem value="asc">{t('sort_oldest')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>{t('order_number')}</TableHead>
+                                    <TableHead>{t('date')}</TableHead>
+                                    <TableHead>{t('customer')}</TableHead>
+                                    <TableHead>{t('total')}</TableHead>
+                                    <TableHead>{t('status')}</TableHead>
+                                    <TableHead className="text-right">{t('actions')}</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {processedOrders.length > 0 ? (
+                                    processedOrders.map(order => (
+                                        <OrderRow 
+                                            key={order.id}
+                                            order={order}
+                                            isOpen={openOrders.has(order.id)}
+                                            onToggle={() => toggleOrder(order.id)}
+                                            onStatusChange={handleStatusChange}
+                                            onItemStatusChange={handleItemStatusChange}
+                                            t={t}
+                                            tStatus={tStatus}
+                                            isPending={isPending}
+                                            onEditShipping={() => handleOpenShipDialog(order)}
+                                        />
+                                ))
+                                ) : (
+                                     <TableRow>
+                                        <TableCell colSpan={6} className="text-center h-24">
+                                           {t('no_orders')}
+                                        </TableCell>
+                                    </TableRow>
                                 )}
-                            </Card>
-                        ))
-                    ) : (
-                        <p className="text-center text-muted-foreground py-10">{t('no_orders')}</p>
-                    )}
-                </div>
-            </CardContent>
-        </Card>
+                            </TableBody>
+                        </Table>
+                    </div>
+
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-4">
+                         {processedOrders.length > 0 ? (
+                            processedOrders.map(order => (
+                                <Card key={order.id} className={cn("overflow-hidden", isPending && 'opacity-50')}>
+                                    <div className="p-4 cursor-pointer" onClick={() => toggleOrder(order.id)}>
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <p className="font-bold">{order.orderNumber}</p>
+                                                <p className="text-sm text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</p>
+                                            </div>
+                                            <div onClick={e => e.stopPropagation()}>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                            <EllipsisVertical className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent>
+                                                        {(['commandée', 'en cours de préparation', 'expédiée', 'livrée'] as OrderStatus[]).map(status => (
+                                                            <DropdownMenuItem 
+                                                                key={status} 
+                                                                onSelect={(e) => {
+                                                                    e.preventDefault();
+                                                                    if (status === 'expédiée') {
+                                                                        handleMobileShipClick(order)
+                                                                    } else {
+                                                                        handleStatusChange(order.id, status)
+                                                                    }
+                                                                }}
+                                                                disabled={order.status === status || order.status === 'annulée'}
+                                                            >
+                                                              {t('update_status_to', { status: tStatus(status) })}
+                                                            </DropdownMenuItem>
+                                                        ))}
+                                                        <DropdownMenuSeparator />
+                                                        <CancelOrderDialog onConfirm={(reason) => handleStatusChange(order.id, 'annulée', {cancellationReason: reason})} t={t}>
+                                                            <DropdownMenuItem 
+                                                                onSelect={(e) => e.preventDefault()}
+                                                                disabled={order.status === 'annulée'} 
+                                                                className="text-destructive focus:text-destructive"
+                                                            >
+                                                                <FileX className="mr-2 h-4 w-4"/>
+                                                                {t('cancel_order')}
+                                                            </DropdownMenuItem>
+                                                        </CancelOrderDialog>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
+                                        </div>
+                                        <div className="mt-4 flex flex-col items-start gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-sm">{order.customerEmail}</p>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleCopyEmail(order.customerEmail); }}>
+                                                    <Copy className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                            <div className="w-full flex justify-between items-center">
+                                                <p className="font-bold text-lg">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(order.totalPrice)}</p>
+                                                <Badge variant="outline" className={cn(statusVariants[order.status])}>
+                                                    {tStatus(order.status)}
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {openOrders.has(order.id) && (
+                                        <OrderDetails 
+                                            order={order} 
+                                            onItemStatusChange={handleItemStatusChange} 
+                                            onStatusChange={handleStatusChange} 
+                                            t={t} 
+                                            onEditShipping={() => handleOpenShipDialog(order)}
+                                        />
+                                    )}
+                                </Card>
+                            ))
+                        ) : (
+                            <p className="text-center text-muted-foreground py-10">{t('no_orders')}</p>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+            {selectedOrderForShipping && (
+                <ShipOrderDialog
+                    order={selectedOrderForShipping}
+                    onConfirm={handleShipConfirm}
+                    t={t}
+                    isOpen={isShipDialogOpen}
+                    onOpenChange={setIsShipDialogOpen}
+                >
+                    <button className="hidden"></button>
+                </ShipOrderDialog>
+            )}
+        </>
     );
 }
