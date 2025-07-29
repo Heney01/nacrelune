@@ -180,7 +180,7 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{me
   }
 }
 
-export async function deleteModel(jewelryTypeId: string, modelId: string, displayImageUrl: string, editorImageUrl: string) {
+export async function deleteModel(jewelryTypeId: string, modelId: string, displayImageUrl: string, editorImageUrl: string): Promise<{ success: boolean; message: string; }> {
     try {
         console.log(`--- deleteModel action started for modelId: ${modelId} ---`);
         // First, delete the images from storage.
@@ -202,5 +202,3 @@ export async function deleteModel(jewelryTypeId: string, modelId: string, displa
         return { success: false, message: `Erreur lors de la suppression: ${e.message}` };
     }
 }
-
-    

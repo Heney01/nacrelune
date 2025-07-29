@@ -36,17 +36,25 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
     };
 
     const handleDeleteModel = async (jewelryType: Omit<JewelryType, 'models'|'icon'>, model: JewelryModel) => {
-        const result = await deleteModel(jewelryType.id, model.id, model.displayImageUrl, model.editorImageUrl);
-        if (result.success) {
-            toast({
-                title: 'Succès',
-                description: result.message,
-            });
-        } else {
-            toast({
+        try {
+            const result = await deleteModel(jewelryType.id, model.id, model.displayImageUrl, model.editorImageUrl);
+            if (result?.success) {
+                toast({
+                    title: 'Succès',
+                    description: result.message,
+                });
+            } else {
+                toast({
+                    variant: 'destructive',
+                    title: 'Erreur',
+                    description: result?.message || 'Une erreur inconnue est survenue.',
+                });
+            }
+        } catch (error) {
+             toast({
                 variant: 'destructive',
                 title: 'Erreur',
-                description: result.message,
+                description: 'Une erreur inattendue est survenue lors de la suppression.',
             });
         }
     };
@@ -142,4 +150,3 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
         </div>
     );
 }
-
