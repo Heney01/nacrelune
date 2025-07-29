@@ -181,29 +181,48 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{me
 }
 
 export async function deleteModel(
-  jewelryTypeId: string, 
-  modelId: string, 
+  jewelryTypeId: string,
+  modelId: string,
   displayImageUrl: string, 
   editorImageUrl: string
-): Promise<string> {
-  try {
+): Promise<{ success: boolean; message: string }> {
+    'use server';
+    console.log('=== deleteModel SERVER ACTION START ===');
+    console.log('deleteModel called with parameters:', { jewelryTypeId, modelId, displayImageUrl, editorImageUrl });
+
     if (!jewelryTypeId || !modelId) {
-      throw new Error('jewelryTypeId et modelId sont requis');
+        const errorMsg = 'jewelryTypeId et modelId sont requis pour la suppression.';
+        console.error(errorMsg);
+        return { success: false, message: errorMsg };
     }
 
-    await Promise.all([
-      deleteImage(displayImageUrl),
-      deleteImage(editorImageUrl),
-    ]);
+    try {
+        console.log('Attempting to delete images...');
+        await Promise.all([
+            deleteImage(displayImageUrl),
+            deleteImage(editorImageUrl),
+        ]);
+        console.log('Image deletion process completed.');
 
-    const docRef = doc(db, jewelryTypeId, modelId);
-    await deleteDoc(docRef);
-    
-    revalidatePath('/', 'layout');
-    revalidatePath('/admin/dashboard');
+        console.log(`Attempting to delete Firestore document: ${jewelryTypeId}/${modelId}`);
+        const docRef = doc(db, jewelryTypeId, modelId);
+        await deleteDoc(docRef);
+        console.log('Firestore document deleted successfully.');
 
-    return JSON.stringify({ success: true, message: 'Modèle supprimé avec succès.' });
-  } catch (error: any) {
-    return JSON.stringify({ success: false, message: `Erreur lors de la suppression: ${error.message}` });
-  }
+        console.log('Revalidating paths...');
+        revalidatePath('/', 'layout');
+        revalidatePath('/admin/dashboard');
+        console.log('Paths revalidated.');
+
+        const successMsg = 'Modèle supprimé avec succès.';
+        console.log(successMsg);
+        console.log('=== deleteModel SERVER ACTION END ===');
+        return { success: true, message: successMsg };
+
+    } catch (error: any) {
+        const errorMsg = `Erreur lors de la suppression du modèle: ${error.message}`;
+        console.error(errorMsg, error);
+        console.log('=== deleteModel SERVER ACTION END (with error) ===');
+        return { success: false, message: errorMsg };
+    }
 }

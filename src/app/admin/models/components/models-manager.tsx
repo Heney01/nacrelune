@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { deleteModel } from '../actions';
 
+
 interface ModelsManagerProps {
     initialJewelryTypes: Omit<JewelryType, 'icon'>[];
 }
@@ -53,33 +54,28 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
         
         try {
             console.log('Calling deleteModel action...');
-            const resultString = await deleteModel(
+            const result = await deleteModel(
                 jewelryType.id, 
                 model.id, 
                 model.displayImageUrl || '', 
                 model.editorImageUrl || ''
             );
-            console.log('deleteModel result string:', resultString);
+            console.log('deleteModel result:', result);
 
-            if (typeof resultString === 'string') {
-                const result = JSON.parse(resultString);
-                if (result.success) {
-                    console.log('Delete successful, showing success toast');
-                    toast({
-                        title: 'Succès',
-                        description: result.message,
-                    });
-                    router.refresh();
-                } else {
-                    console.error('Delete failed:', result);
-                    toast({
-                        variant: 'destructive',
-                        title: 'Erreur',
-                        description: result.message || 'Une erreur inconnue est survenue.',
-                    });
-                }
+            if (result?.success) {
+                console.log('Delete successful, showing success toast');
+                toast({
+                    title: 'Succès',
+                    description: result.message,
+                });
+                router.refresh();
             } else {
-                 throw new Error("La réponse du serveur n'est pas valide.");
+                 console.error('Delete failed:', result);
+                toast({
+                    variant: 'destructive',
+                    title: 'Erreur',
+                    description: result?.message || 'Une erreur inconnue est survenue.',
+                });
             }
         } catch (error) {
             console.error('Exception in handleDeleteModel:', error);
