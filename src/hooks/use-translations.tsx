@@ -21,15 +21,27 @@ export const useTranslations = (namespace: string) => {
     throw new Error('useTranslations must be used within a TranslationsProvider');
   }
 
-  return useCallback((key: string, values?: Record<string, any>) => {
-    let translation = get(messages, `${namespace}.${key}`) as string;
+  const t = useCallback((key: string, values?: Record<string, any>) => {
+    const messageKey = `${namespace}.${key}`;
+    let translation = get(messages, messageKey) as string;
 
     if (translation === undefined) {
-      console.warn(`Translation not found for key: ${namespace}.${key}`);
-      return `${namespace}.${key}`;
+      console.warn(`Translation not found for key: ${messageKey}`);
+      return messageKey;
     }
 
     if (values) {
+      // Handle ICU message formatting for currencies and numbers
+      if (translation.includes('{price, number,') && values.price !== undefined) {
+          const currency = translation.includes('::currency/USD') ? 'USD' : 'EUR';
+          const locale = translation.includes('::currency/USD') ? 'en-US' : 'fr-FR';
+          try {
+            return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(values.price);
+          } catch(e) {
+             return `${values.price}`;
+          }
+      }
+
       Object.keys(values).forEach(valueKey => {
         const regex = new RegExp(`{${valueKey}}`, 'g');
         translation = translation.replace(regex, values[valueKey]);
@@ -38,4 +50,6 @@ export const useTranslations = (namespace: string) => {
 
     return translation;
   }, [messages, namespace]);
+
+  return t;
 };
