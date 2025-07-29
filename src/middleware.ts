@@ -25,25 +25,15 @@ function getLocale(request: NextRequest): string {
 }
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // If it's a server action, let it pass.
-   if (request.headers.get('x-next-action')) {
-    return NextResponse.next();
-  }
-
-  // Handle /login page, no redirection needed.
-  if (pathname.startsWith('/login')) {
-    return NextResponse.next();
-  }
+  const pathname = request.nextUrl.pathname;
 
   // Handle admin area protection.
-  if (pathname.startsWith('/admin')) {
+  if (pathname.includes('/admin')) {
     const sessionCookie = request.cookies.get('session');
     if (!sessionCookie) {
-      return NextResponse.redirect(new URL('/login', request.url));
+      const locale = pathname.split('/')[1] || defaultLocale;
+      return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
     }
-    return NextResponse.next();
   }
 
   const pathnameHasLocale = locales.some(

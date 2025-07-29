@@ -28,20 +28,24 @@ const getFileNameFromUrl = (url: string) => {
             const pathRegex = /\/o\/(.*)/;
             const match = decodedPath.match(pathRegex);
             if (match && match[1]) {
-                return match[1];
+                return match[1].split('?')[0]; // Remove query params
             }
         }
     } catch (e) {
         // Not a valid URL
     }
     if (url.includes('placehold.co')) return null;
-    return url;
+    // Fallback for other URL structures or local paths during development
+    const pathParts = url.split('/');
+    const lastPart = pathParts[pathParts.length - 1];
+    return lastPart.split('?')[0];
 };
 
 export async function deleteModel(formData: FormData): Promise<{ success: boolean; message: string }> {
     console.log("--- [SERVER] deleteModel action called ---");
     const modelId = formData.get('modelId') as string;
     const jewelryTypeId = formData.get('jewelryTypeId') as string;
+    const locale = formData.get('locale') as string || 'fr'; // Default locale
     const displayImageUrl = formData.get('displayImageUrl') as string;
     const editorImageUrl = formData.get('editorImageUrl') as string;
 
@@ -77,7 +81,7 @@ export async function deleteModel(formData: FormData): Promise<{ success: boolea
             }
         }
         
-        revalidatePath('/admin/dashboard'); 
+        revalidatePath(`/${locale}/admin/dashboard`); 
         console.log("--- [SERVER] Path revalidated. Operation successful.");
         return { success: true, message: "Le modèle a été supprimé avec succès." };
 

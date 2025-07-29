@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 
 interface ModelsManagerProps {
     initialJewelryTypes: Omit<JewelryType, 'icon'>[];
+    locale: string;
 }
 
 type OptimisticUpdate = {
@@ -69,7 +70,7 @@ function jewelryTypesReducer(state: Omit<JewelryType, 'icon'>[], action: Optimis
 }
 
 
-export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
+export function ModelsManager({ initialJewelryTypes, locale }: ModelsManagerProps) {
     const { toast } = useToast();
     const [jewelryTypes, dispatch] = useReducer(jewelryTypesReducer, initialJewelryTypes);
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -150,6 +151,7 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
                                             <input type="hidden" name="jewelryTypeId" value={jewelryType.id} />
                                             <input type="hidden" name="displayImageUrl" value={model.displayImageUrl} />
                                             <input type="hidden" name="editorImageUrl" value={model.editorImageUrl} />
+                                            <input type="hidden" name="locale" value={locale} />
                                         </form>
                                         <TableRow>
                                             <TableCell>
@@ -220,4 +222,3 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
         </div>
     );
 }
-

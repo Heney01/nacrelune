@@ -9,6 +9,7 @@ import { redirect } from 'next/navigation';
 export async function login(prevState: any, formData: FormData) {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
+  const locale = formData.get('locale') as string || 'fr';
 
   if (!email || !password) {
     return { error: 'Veuillez fournir un email et un mot de passe.' };
@@ -45,11 +46,12 @@ export async function login(prevState: any, formData: FormData) {
     return { error: errorMessage };
   }
   
-  redirect('/admin/dashboard');
+  redirect(`/${locale}/admin/dashboard`);
 }
 
 
-export async function logout() {
+export async function logout(formData: FormData) {
+  const locale = formData.get('locale') as string || 'fr';
   cookies().delete('session');
-  redirect('/login');
+  redirect(`/${locale}/login`);
 }

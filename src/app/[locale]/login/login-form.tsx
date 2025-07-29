@@ -14,11 +14,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NacreluneLogo } from '@/components/icons';
-import { login } from '@/app/login/actions';
+import { login } from './actions';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useEffect } from 'react';
-import { redirect } from 'next/navigation';
+import { useParams } from 'next/navigation';
+
 
 const initialState = {
   error: null,
@@ -37,6 +38,8 @@ function LoginButton() {
 
 export function LoginForm() {
   const [state, formAction] = useFormState(login, initialState);
+  const params = useParams();
+  const locale = params.locale as string;
 
   useEffect(() => {
     if (state?.error === null) {
@@ -63,6 +66,7 @@ export function LoginForm() {
               <AlertDescription>{state.error}</AlertDescription>
             </Alert>
           )}
+          <input type="hidden" name="locale" value={locale} />
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input

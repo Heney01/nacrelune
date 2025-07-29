@@ -2,13 +2,14 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NacreluneLogo } from "@/components/icons";
 import { Button } from "@/components/ui/button";
-import { logout } from "@/app/login/actions";
+import { logout } from "@/app/[locale]/login/actions";
 import { ModelsManager } from "../models/components/models-manager";
 import { getJewelryTypesAndModels } from "@/lib/data";
 import { Gem, HandMetal, Ear, User, Wrench } from "lucide-react";
 import type { JewelryType } from "@/lib/types";
+import { TestDeleteButton } from "@/components/test-delete-button";
 
-export default async function AdminDashboard() {
+export default async function AdminDashboard({ params }: { params: { locale: string }}) {
   const JEWELRY_TYPES_INFO: Omit<JewelryType, 'models' | 'icon'>[] = [
     { id: 'necklace', name: "Colliers", description: "" },
     { id: 'bracelet', name: "Bracelets", description: "" },
@@ -23,9 +24,10 @@ export default async function AdminDashboard() {
           <NacreluneLogo className="h-8 w-auto" />
           <div className="ml-auto flex items-center space-x-4">
             <form action={logout}>
-              <Button variant="ghost">
-                Se déconnecter
-              </Button>
+                <input type="hidden" name="locale" value={params.locale} />
+                <Button variant="ghost">
+                    Se déconnecter
+                </Button>
             </form>
           </div>
         </div>
@@ -50,9 +52,10 @@ export default async function AdminDashboard() {
             </TabsTrigger>
           </TabsList>
           <TabsContent value="models" className="space-y-4">
-            <ModelsManager initialJewelryTypes={jewelryTypes} />
+            <ModelsManager initialJewelryTypes={jewelryTypes} locale={params.locale} />
           </TabsContent>
         </Tabs>
+        <TestDeleteButton />
       </div>
     </div>
   );
