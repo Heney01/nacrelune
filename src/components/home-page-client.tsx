@@ -6,12 +6,13 @@ import React from 'react';
 import Editor from '@/components/editor';
 import { NacreluneLogo } from '@/components/icons';
 import { useTranslations } from '@/hooks/use-translations';
-import { Gem, HandMetal, Ear } from 'lucide-react';
+import { Gem, HandMetal, Ear, Truck } from 'lucide-react';
 import { TypeSelection } from '@/components/type-selection';
 import { ModelSelection } from '@/components/model-selection';
 import type { JewelryType, Charm } from '@/lib/types';
 import Link from 'next/link';
 import { CartWidget } from './cart-widget';
+import { Button } from './ui/button';
 
 export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, locale }: {
     searchParams: { [key:string]: string | string[] | undefined };
@@ -46,6 +47,12 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
               <NacreluneLogo className="h-8 w-auto text-foreground" />
             </Link>
             <div className="flex items-center gap-2">
+               <Button asChild variant="ghost" size="icon">
+                  <Link href={`/${locale}/orders/track`}>
+                    <Truck className="h-6 w-6" />
+                    <span className="sr-only">{t('track_order_link')}</span>
+                  </Link>
+                </Button>
               <CartWidget />
             </div>
           </div>
@@ -70,10 +77,6 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
              <div className="flex justify-center items-center gap-4 text-xs text-muted-foreground/80">
                  <Link href={`/${locale}/login`} className="hover:underline">
                     {t('admin_area_link')}
-                </Link>
-                 <span>&bull;</span>
-                 <Link href={`/${locale}/orders/track`} className="hover:underline">
-                    {t('track_order_link')}
                 </Link>
             </div>
           </div>

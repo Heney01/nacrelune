@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React from 'react';
@@ -8,13 +9,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getOrderDetailsByNumber } from '@/app/actions';
 import { useTranslations } from '@/hooks/use-translations';
-import { Loader2, PackageCheck, Truck, Home, Package, AlertCircle, WandSparkles } from 'lucide-react';
+import { Loader2, PackageCheck, Truck, Home, Package, AlertCircle, WandSparkles, ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { Order, OrderItem, OrderStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
 
 const initialState = { success: false, message: '', order: null };
 
@@ -144,9 +147,19 @@ function OrderDetails({ order }: { order: Order }) {
 export default function TrackOrderPage() {
     const [state, formAction] = useFormState(getOrderDetailsByNumber, initialState);
     const t = useTranslations('HomePage');
+    const params = useParams();
+    const locale = params.locale as string;
 
     return (
         <div className="container mx-auto py-12 px-4 max-w-2xl">
+            <div className="flex justify-start mb-8">
+                <Button variant="ghost" asChild>
+                    <Link href={`/${locale}`}>
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        {t('back_button')}
+                    </Link>
+                </Button>
+            </div>
             <Card>
                 <CardHeader>
                     <CardTitle className="text-center text-2xl font-headline">{t('track_order_link')}</CardTitle>
