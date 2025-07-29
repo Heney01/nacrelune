@@ -15,7 +15,8 @@
     "model_selection_subtitle": "Select a beautiful {jewelryTypeName} model as the foundation for your custom design.",
     "back_button": "Back",
     "select_button": "Select",
-    "footer_text": "© {year} Nacrelune. All rights reserved."
+    "footer_text": "© {year} Nacrelune. All rights reserved.",
+    "admin_area_link": "Administrator Area"
   },
   "Editor": {
     "charms_title": "Charms",

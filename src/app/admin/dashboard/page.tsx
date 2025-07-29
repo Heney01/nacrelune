@@ -1,39 +1,59 @@
 
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { logout } from "@/app/login/actions";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NacreluneLogo } from "@/components/icons";
+import { Button } from "@/components/ui/button";
+import { logout } from "@/app/login/actions";
+import { ModelsManager } from "../models/components/models-manager";
+import { getJewelryTypesAndModels } from "@/lib/data";
+import { Gem, HandMetal, Ear, User, Wrench } from "lucide-react";
+import type { JewelryType } from "@/lib/types";
 
-export default function AdminDashboard() {
+export default async function AdminDashboard() {
+  const JEWELRY_TYPES_INFO: Omit<JewelryType, 'models' | 'icon'>[] = [
+    { id: 'necklace', name: "Colliers", description: "" },
+    { id: 'bracelet', name: "Bracelets", description: "" },
+    { id: 'earring', name: "Boucles d'oreilles", description: "" },
+  ];
+  const jewelryTypes = await getJewelryTypesAndModels(JEWELRY_TYPES_INFO);
+  
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-            <div className="mx-auto mb-4">
-                <NacreluneLogo className="h-10 w-auto" />
-            </div>
-            <CardTitle>Bienvenue !</CardTitle>
-            <CardDescription>Vous êtes connecté à l'espace administrateur.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <p className="text-center text-sm text-muted-foreground">
-                Cet espace est en cours de construction. Revenez bientôt pour découvrir de nouvelles fonctionnalités de gestion.
-            </p>
-        </CardContent>
-        <CardContent>
+    <div className="flex-col md:flex">
+      <div className="border-b">
+        <div className="flex h-16 items-center px-4">
+          <NacreluneLogo className="h-8 w-auto" />
+          <div className="ml-auto flex items-center space-x-4">
             <form action={logout}>
-                <Button variant="outline" className="w-full">
+              <Button variant="ghost">
                 Se déconnecter
-                </Button>
+              </Button>
             </form>
-        </CardContent>
-      </Card>
+          </div>
+        </div>
+      </div>
+      <div className="flex-1 space-y-4 p-8 pt-6">
+        <div className="flex items-center justify-between space-y-2">
+          <h2 className="text-3xl font-bold tracking-tight">Tableau de bord</h2>
+        </div>
+        <Tabs defaultValue="models" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="models">
+              <Gem className="mr-2 h-4 w-4" />
+              Gérer les modèles
+            </TabsTrigger>
+            <TabsTrigger value="charms" disabled>
+              <Wrench className="mr-2 h-4 w-4" />
+              Gérer les breloques
+            </TabsTrigger>
+            <TabsTrigger value="users" disabled>
+                <User className="mr-2 h-4 w-4" />
+                Gérer les utilisateurs
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="models" className="space-y-4">
+            <ModelsManager initialJewelryTypes={jewelryTypes} />
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }

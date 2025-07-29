@@ -15,7 +15,8 @@
     "model_selection_subtitle": "Sélectionnez un magnifique modèle de {jewelryTypeName} comme base pour votre création personnalisée.",
     "back_button": "Retour",
     "select_button": "Sélectionner",
-    "footer_text": "© {year} Nacrelune. Tous droits réservés."
+    "footer_text": "© {year} Nacrelune. Tous droits réservés.",
+    "admin_area_link": "Espace Administrateur"
   },
   "Editor": {
     "charms_title": "Breloques",
