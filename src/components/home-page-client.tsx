@@ -5,13 +5,12 @@ import React from 'react';
 import Editor from '@/components/editor';
 import { NacreluneLogo } from '@/components/icons';
 import { useTranslations } from '@/hooks/use-translations';
-import { Gem, HandMetal, Ear, User } from 'lucide-react';
+import { Gem, HandMetal, Ear } from 'lucide-react';
 import { TypeSelection } from '@/components/type-selection';
 import { ModelSelection } from '@/components/model-selection';
-import type { JewelryType, JewelryModel, Charm } from '@/lib/types';
+import type { JewelryType, Charm } from '@/lib/types';
 import Link from 'next/link';
 import { CartWidget } from './cart-widget';
-import { Button } from './ui/button';
 
 export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, locale }: {
     searchParams: { [key: string]: string | string[] | undefined };
@@ -47,12 +46,6 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
             </Link>
             <div className="flex items-center gap-2">
               <CartWidget />
-              <Button variant="ghost" size="icon" asChild>
-                <Link href="/login">
-                  <User className="h-6 w-6" />
-                  <span className="sr-only">Se connecter</span>
-                </Link>
-              </Button>
             </div>
           </div>
         </header>
@@ -71,8 +64,11 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
         </main>
         
         <footer className="p-4 border-t mt-auto bg-white">
-          <div className="container mx-auto text-center text-muted-foreground text-sm">
-            {t('footer_text', { year: new Date().getFullYear() })}
+          <div className="container mx-auto text-center text-muted-foreground text-sm space-y-2">
+            <p>{t('footer_text', { year: new Date().getFullYear() })}</p>
+            <Link href="/login" className="text-xs hover:underline text-muted-foreground/80">
+              {t('admin_area_link')}
+            </Link>
           </div>
         </footer>
       </div>

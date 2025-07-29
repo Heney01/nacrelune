@@ -15,15 +15,14 @@
     "model_selection_subtitle": "Select a beautiful {jewelryTypeName} model as the foundation for your custom design.",
     "back_button": "Back",
     "select_button": "Select",
-    "footer_text": "© {year} Nacrelune. All rights reserved."
+    "footer_text": "© {year} Nacrelune. All rights reserved.",
+    "admin_area_link": "Administrator Area"
   },
   "Editor": {
     "charms_title": "Charms",
     "search_placeholder": "Search charms...",
     "add_to_design_button": "Add to Design",
     "customize_title": "Customize Your {modelName}",
-    "clear_all_button": "Clear All",
-    "purchase_button": "Purchase",
     "add_to_cart_button": "Add to Cart",
     "update_item_button": "Update Item",
     "added_charms_title": "Added Charms ({count})",
@@ -37,20 +36,31 @@
     "error_generating_suggestions": "An error occurred while generating suggestions. Please try again.",
     "suggestions_placeholder_title": "Your creative suggestions will appear here.",
     "recommended_badge": "Recommended",
-    "error_title": "Oops! Something went wrong.",
-    "item_added_to_cart_title": "Added to Cart",
-    "item_added_to_cart_description": "{modelName} has been added to your cart.",
-    "item_updated_title": "Item Updated",
-    "item_updated_description": "Your design for {modelName} has been updated in the cart.",
-    "cart_title": "Your Cart",
-    "cart_empty_title": "Your cart is empty",
-    "cart_empty_description": "Find the perfect piece to start your creation.",
-    "cart_remove_item": "Remove item",
-    "cart_total": "Total",
+    "toast_error_title": "Oops! Something went wrong.",
+    "toast_item_added_title": "Added to Cart",
+    "toast_item_added_description": "{modelName} has been added to your cart.",
+    "toast_item_updated_title": "Item Updated",
+    "toast_item_updated_description": "Your design for {modelName} has been updated in the cart."
+  },
+  "Cart": {
+    "title": "Your Cart",
+    "item_count": "({count})",
+    "empty_title": "Your cart is empty",
+    "empty_description": "Find the perfect piece to start your creation.",
+    "remove_item": "Remove item",
+    "total": "Total",
     "create_new_jewel_button": "Create a New Jewel",
-    "view_charms_action": "View Charms",
-    "cart_preview_title": "Preview of {modelName}",
-    "cart_preview_description": "Here is a preview of your custom creation.",
-    "item_price": "${price}"
+    "view_charms_action": "View Charms ({count})",
+    "preview_title": "Preview of {modelName}",
+    "preview_description": "Here is a preview of your custom creation.",
+    "checkout_button": "Checkout",
+    "price": "{price, number, ::currency/USD}"
+  },
+  "CharmsPanel": {
+    "title": "Charms",
+    "search_placeholder": "Search charms...",
+    "add_to_design_button": "Add to Design",
+    "loading_error": "Error loading charm categories",
+    "loading": "Loading..."
   }
 }
