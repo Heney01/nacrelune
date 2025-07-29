@@ -1,13 +1,11 @@
-import { configureGenkit } from 'genkit';
-import { config } from 'dotenv';
+import {genkit} from 'genkit';
+import {config} from 'dotenv';
 config();
 
-import { googleAI } from '@genkit-ai/googleai';
+import {googleAI} from '@genkit-ai/googleai';
 
-configureGenkit({
+genkit({
   plugins: [googleAI()],
-  logLevel: 'debug',
-  enableTracingAndMetrics: true,
 });
 
 import './flows/charm-placement-suggestions.ts';
