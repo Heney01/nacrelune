@@ -137,6 +137,12 @@ export function ModelForm({ isOpen, onOpenChange, jewelryType, model, onSave, lo
                             </div>
                         </div>
 
+                        <div className="space-y-2">
+                            <Label htmlFor="reorderUrl">URL de commande</Label>
+                            <Input id="reorderUrl" name="reorderUrl" defaultValue={model?.reorderUrl || ''} />
+                        </div>
+
+
                         <ImagePicker name="displayImage" label="Image de présentation" defaultUrl={model?.displayImageUrl} />
                         <ImagePicker name="editorImage" label="Image pour l'éditeur" defaultUrl={model?.editorImageUrl} />
                     </div>

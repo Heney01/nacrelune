@@ -131,6 +131,11 @@ export function CharmForm({ isOpen, onOpenChange, charm, allCategories, onSave, 
                             </div>
                         </div>
 
+                        <div className="space-y-2">
+                            <Label htmlFor="reorderUrl">URL de commande</Label>
+                            <Input id="reorderUrl" name="reorderUrl" defaultValue={charm?.reorderUrl || ''} />
+                        </div>
+
                          <div className="space-y-2">
                             <Label>Catégories</Label>
                              <ScrollArea className="h-32 w-full rounded-md border p-4">

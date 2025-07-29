@@ -1,6 +1,6 @@
 
 import { db, storage } from '@/lib/firebase';
-import { collection, getDocs, DocumentReference, getDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, DocumentReference, getDoc, doc, Timestamp } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 import type { JewelryModel, JewelryType, Charm, CharmCategory, GeneralPreferences } from '@/lib/types';
 
@@ -19,6 +19,10 @@ const getUrl = async (path: string, fallback: string) => {
     }
     return fallback;
 };
+
+const toDate = (timestamp: Timestamp | null | undefined): Date | null => {
+    return timestamp ? timestamp.toDate() : null;
+}
 
 
 export async function getJewelryTypesAndModels(
@@ -54,6 +58,8 @@ export async function getJewelryTypesAndModels(
                     snapPath: data.snapPath || '',
                     price: data.price || 0,
                     quantity: data.quantity || 0,
+                    reorderUrl: data.reorderUrl || '',
+                    lastOrderedAt: toDate(data.lastOrderedAt),
                 } as JewelryModel;
             });
             
@@ -86,6 +92,8 @@ export async function getCharms(): Promise<Charm[]> {
                 categoryIds: categoryRefs,
                 price: data.price || 0,
                 quantity: data.quantity || 0,
+                reorderUrl: data.reorderUrl || '',
+                lastOrderedAt: toDate(data.lastOrderedAt),
             } as Charm;
         });
 
@@ -154,6 +162,8 @@ export async function getFullCharmData(): Promise<{ charms: (Charm & { categoryN
                 categoryIds: categoryIds,
                 price: data.price || 0,
                 quantity: data.quantity || 0,
+                reorderUrl: data.reorderUrl || '',
+                lastOrderedAt: toDate(data.lastOrderedAt),
                 // The concept of a single categoryName is no longer accurate.
                 // We'll keep the property for compatibility but it may need to be handled differently in the UI.
                 categoryName: categoryIds.length > 0 ? categoriesMap.get(categoryIds[0]) || 'Uncategorized' : 'Uncategorized',

@@ -5,7 +5,7 @@
 import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { revalidatePath } from 'next/cache';
 import { db, storage } from '@/lib/firebase';
-import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
@@ -122,6 +122,7 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
     const name = formData.get('name') as string;
     const price = parseFloat(formData.get('price') as string);
     const quantity = parseInt(formData.get('quantity') as string, 10);
+    const reorderUrl = formData.get('reorderUrl') as string;
     const locale = formData.get('locale') as string || 'fr';
 
     const displayImageData = formData.get('displayImage') as string;
@@ -138,12 +139,13 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
         const displayImageUrl = await uploadImage(displayImageData, originalDisplayImageUrl, jewelryTypeId);
         const editorImageUrl = await uploadImage(editorImageData, originalEditorImageUrl, jewelryTypeId);
 
-        const modelData = {
+        const modelData: Omit<JewelryModel, 'id' | 'lastOrderedAt'> = {
             name,
             price,
             quantity,
             displayImageUrl,
-            editorImageUrl
+            editorImageUrl,
+            reorderUrl,
         };
 
         let savedModel: JewelryModel;
@@ -152,11 +154,12 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
             // Update
             const modelRef = doc(db, jewelryTypeId, modelId);
             await updateDoc(modelRef, modelData);
-            savedModel = { id: modelId, ...modelData };
+            const docSnap = await getDoc(modelRef);
+            savedModel = { id: modelId, ...docSnap.data() } as JewelryModel;
         } else {
             // Create
             const docRef = await addDoc(collection(db, jewelryTypeId), modelData);
-            savedModel = { id: docRef.id, ...modelData };
+            savedModel = { id: docRef.id, ...modelData, lastOrderedAt: null };
         }
 
         revalidatePath(`/${locale}/admin/dashboard`);
@@ -311,6 +314,7 @@ export async function saveCharm(prevState: any, formData: FormData): Promise<{ s
     const price = parseFloat(formData.get('price') as string);
     const quantity = parseInt(formData.get('quantity') as string, 10);
     const categoryIds = formData.getAll('categoryIds') as string[];
+    const reorderUrl = formData.get('reorderUrl') as string;
     const locale = formData.get('locale') as string || 'fr';
     const imageData = formData.get('image') as string;
     const originalImageUrl = formData.get('originalImageUrl') as string || '';
@@ -323,13 +327,14 @@ export async function saveCharm(prevState: any, formData: FormData): Promise<{ s
         const categoryRefs = categoryIds.map(id => doc(db, 'charmCategories', id));
         const imageUrl = await uploadImage(imageData, originalImageUrl, `charms/${name.replace(/\s+/g, '_')}`);
         
-        const charmData = {
+        const charmData: Omit<Charm, 'id' | 'lastOrderedAt'> = {
             name,
             description,
             price,
             quantity,
             categoryIds: categoryIds, // Store array of string IDs
-            imageUrl
+            imageUrl,
+            reorderUrl,
         };
         
         let savedCharmData: any;
@@ -337,10 +342,11 @@ export async function saveCharm(prevState: any, formData: FormData): Promise<{ s
         if (charmId) {
             const charmRef = doc(db, 'charms', charmId);
             await updateDoc(charmRef, charmData);
-            savedCharmData = { id: charmId, ...charmData };
+            const docSnap = await getDoc(charmRef);
+            savedCharmData = { id: charmId, ...docSnap.data() };
         } else {
             const docRef = await addDoc(collection(db, 'charms'), charmData);
-            savedCharmData = { id: docRef.id, ...charmData };
+            savedCharmData = { id: docRef.id, ...charmData, lastOrderedAt: null };
         }
         
         const firstCategoryDoc = await getDoc(categoryRefs[0]);
@@ -433,5 +439,31 @@ export async function savePreferences(prevState: any, formData: FormData): Promi
     } catch (error) {
         console.error("Error saving preferences:", error);
         return { success: false, message: "Une erreur est survenue lors de l'enregistrement des préférences." };
+    }
+}
+
+// --- Order Actions ---
+
+export async function markAsOrdered(formData: FormData): Promise<{ success: boolean; message: string }> {
+    const itemId = formData.get('itemId') as string;
+    const itemType = formData.get('itemType') as string; // 'charms' or a jewelryTypeId like 'necklace'
+    const locale = formData.get('locale') as string || 'fr';
+
+    if (!itemId || !itemType) {
+        return { success: false, message: "Informations manquantes." };
+    }
+
+    try {
+        const itemRef = doc(db, itemType, itemId);
+        await updateDoc(itemRef, {
+            lastOrderedAt: serverTimestamp()
+        });
+
+        revalidatePath(`/${locale}/admin/dashboard`);
+        return { success: true, message: "L'article a été marqué comme commandé." };
+
+    } catch (error) {
+        console.error("Error marking item as ordered:", error);
+        return { success: false, message: "Une erreur est survenue." };
     }
 }

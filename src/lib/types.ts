@@ -18,6 +18,8 @@ export interface Charm {
   categories?: DocumentReference[]; // Raw from firestore
   price?: number;
   quantity?: number;
+  reorderUrl?: string;
+  lastOrderedAt?: Date | null;
 }
 
 export interface JewelryModel {
@@ -28,6 +30,8 @@ export interface JewelryModel {
   snapPath?: string;
   price?: number;
   quantity?: number;
+  reorderUrl?: string;
+  lastOrderedAt?: Date | null;
 }
 
 export interface JewelryType {

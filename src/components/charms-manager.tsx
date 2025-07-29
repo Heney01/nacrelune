@@ -1,10 +1,10 @@
 
 'use client';
 
-import React, { useState, useReducer, useTransition, useMemo } from 'react';
+import React, { useState, useReducer, useTransition, useMemo, FormEvent } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Tag, WandSparkles, GripVertical, ZoomIn, AlertTriangle } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Tag, WandSparkles, GripVertical, ZoomIn, AlertTriangle, ShoppingCart, Info } from "lucide-react";
 import type { Charm, CharmCategory, GeneralPreferences } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
@@ -31,7 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardHeader, CardTitle } from './ui/card';
 import { CharmCategoryForm } from './charm-category-form';
 import { CharmForm } from './charm-form';
-import { deleteCharmCategory, deleteCharm } from '@/app/actions';
+import { deleteCharmCategory, deleteCharm, markAsOrdered } from '@/app/actions';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
@@ -59,6 +59,9 @@ type Action = {
 } | {
     type: 'DELETE_CHARM';
     payload: { charmId: string };
+} | {
+    type: 'MARK_ORDERED',
+    payload: { charmId: string; }
 };
 
 function charmsReducer(state: State, action: Action): State {
@@ -100,6 +103,13 @@ function charmsReducer(state: State, action: Action): State {
             return {
                 ...state,
                 charms: state.charms.filter(c => c.id !== action.payload.charmId)
+            };
+        case 'MARK_ORDERED':
+             return {
+                ...state,
+                charms: state.charms.map(c =>
+                    c.id === action.payload.charmId ? { ...c, lastOrderedAt: new Date() } : c
+                )
             };
         default:
             return state;
@@ -173,6 +183,27 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
         toast({ title: result.success ? 'Succès' : 'Erreur', description: result.message, variant: result.success ? 'default' : 'destructive' });
     }
     
+    const handleOrderAction = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const charmId = formData.get('itemId') as string;
+        const reorderUrl = formData.get('reorderUrl') as string;
+
+        startTransition(() => {
+            dispatch({ type: 'MARK_ORDERED', payload: { charmId } });
+            if (reorderUrl) {
+                window.open(reorderUrl, '_blank');
+            }
+        });
+
+        const result = await markAsOrdered(formData);
+        if (result?.success) {
+            toast({ title: 'Succès', description: result.message });
+        } else {
+            toast({ variant: 'destructive', title: 'Erreur', description: result.message });
+        }
+    }
+
     const charmsByCategoryId = useMemo(() => {
         const acc: Record<string, (Charm & { categoryName?: string; })[]> = {};
         charms.forEach(charm => {
@@ -199,28 +230,35 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
         return 'none';
     };
 
-    const getItemAlertState = (quantity: number | undefined): 'critical' | 'alert' | 'none' => {
-        const q = quantity ?? Infinity;
+    const getItemAlertState = (charm: Charm): 'reordered' | 'critical' | 'alert' | 'none' => {
+        const q = charm.quantity ?? Infinity;
         if (q <= preferences.criticalThreshold) return 'critical';
         if (q <= preferences.alertThreshold) return 'alert';
+        if (charm.lastOrderedAt) return 'reordered';
         return 'none';
     }
 
-    const AlertIcon = ({ state, message }: { state: 'critical' | 'alert', message: string }) => (
-        <TooltipProvider>
-            <Tooltip>
-                <TooltipTrigger>
-                    <AlertTriangle className={cn(
-                        'h-5 w-5',
-                        state === 'critical' ? 'text-red-500' : 'text-yellow-500'
-                    )} />
-                </TooltipTrigger>
-                <TooltipContent>
-                    <p>{message}</p>
-                </TooltipContent>
-            </Tooltip>
-        </TooltipProvider>
-    );
+     const AlertIcon = ({ state, message }: { state: 'critical' | 'alert' | 'reordered', message: string }) => {
+        const stateClasses = {
+            critical: 'text-red-500',
+            alert: 'text-yellow-500',
+            reordered: 'text-blue-500'
+        };
+        const Icon = state === 'reordered' ? Info : AlertTriangle;
+
+        return (
+             <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger>
+                        <Icon className={cn('h-5 w-5', stateClasses[state])} />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>{message}</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        )
+    };
 
     return (
         <>
@@ -305,7 +343,7 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                             </TableHeader>
                                             <TableBody>
                                                 {(charmsByCategoryId[category.id] || []).map((charm) => {
-                                                    const itemAlertState = getItemAlertState(charm.quantity);
+                                                    const itemAlertState = getItemAlertState(charm);
                                                     return (
                                                         <TableRow key={charm.id}>
                                                             <TableCell>
@@ -331,12 +369,33 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                                             <TableCell>
                                                                 <div className="flex items-center gap-2">
                                                                     {itemAlertState !== 'none' && (
-                                                                        <AlertIcon state={itemAlertState} message={itemAlertState === 'critical' ? 'Stock critique !' : 'Stock bas'} />
+                                                                         <AlertIcon state={itemAlertState} message={
+                                                                            itemAlertState === 'critical' ? 'Stock critique !' : 
+                                                                            itemAlertState === 'alert' ? 'Stock bas' :
+                                                                            `Commandé le ${charm.lastOrderedAt?.toLocaleDateString()}`
+                                                                        } />
                                                                     )}
                                                                     {charm.quantity}
                                                                 </div>
                                                             </TableCell>
-                                                            <TableCell className="text-right">
+                                                            <TableCell className="text-right space-x-1">
+                                                                <form onSubmit={handleOrderAction} className="inline-block">
+                                                                    <input type="hidden" name="itemId" value={charm.id} />
+                                                                    <input type="hidden" name="itemType" value="charms" />
+                                                                    <input type="hidden" name="reorderUrl" value={charm.reorderUrl || ''} />
+                                                                    <TooltipProvider>
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger asChild>
+                                                                                <Button type="submit" variant="ghost" size="icon" disabled={!charm.reorderUrl}>
+                                                                                    <ShoppingCart className="h-4 w-4" />
+                                                                                </Button>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent>
+                                                                                <p>Passer une commande</p>
+                                                                            </TooltipContent>
+                                                                        </Tooltip>
+                                                                    </TooltipProvider>
+                                                                </form>
                                                                 <Button variant="ghost" size="icon" onClick={() => handleEditCharmClick(charm)}><Edit className="h-4 w-4" /></Button>
                                                                 <AlertDialog>
                                                                     <AlertDialogTrigger asChild>

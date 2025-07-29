@@ -1,10 +1,10 @@
 
 'use client';
 
-import React, { useState, useReducer, useTransition, useMemo } from 'react';
+import React, { useState, useReducer, useTransition, useMemo, FormEvent } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, ZoomIn, AlertTriangle } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ZoomIn, AlertTriangle, ShoppingCart, Info } from "lucide-react";
 import type { JewelryType, JewelryModel, GeneralPreferences } from "@/lib/types";
 import { ModelForm } from './model-form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -28,7 +28,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { deleteModel } from '@/app/actions';
+import { deleteModel, markAsOrdered } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -56,6 +56,12 @@ type OptimisticUpdate = {
     payload: {
         jewelryTypeId: string;
         model: JewelryModel;
+    }
+} | {
+    type: 'MARK_ORDERED',
+    payload: {
+        jewelryTypeId: string;
+        modelId: string;
     }
 }
 
@@ -92,6 +98,18 @@ function jewelryTypesReducer(state: Omit<JewelryType, 'icon'>[], action: Optimis
                     return {
                         ...jt,
                         models: jt.models.map(m => m.id === action.payload.model.id ? action.payload.model : m)
+                    };
+                }
+                return jt;
+            });
+        case 'MARK_ORDERED':
+            return state.map(jt => {
+                if (jt.id === action.payload.jewelryTypeId) {
+                    return {
+                        ...jt,
+                        models: jt.models.map(m =>
+                            m.id === action.payload.modelId ? { ...m, lastOrderedAt: new Date() } : m
+                        )
                     };
                 }
                 return jt;
@@ -159,6 +177,28 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
         }
     };
 
+    const handleOrderAction = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const modelId = formData.get('itemId') as string;
+        const jewelryTypeId = formData.get('itemType') as string;
+        const reorderUrl = formData.get('reorderUrl') as string;
+
+        startTransition(() => {
+            dispatch({ type: 'MARK_ORDERED', payload: { jewelryTypeId, modelId } });
+            if (reorderUrl) {
+                window.open(reorderUrl, '_blank');
+            }
+        });
+
+        const result = await markAsOrdered(formData);
+        if (result?.success) {
+            toast({ title: 'Succès', description: result.message });
+        } else {
+            toast({ variant: 'destructive', title: 'Erreur', description: result.message });
+        }
+    }
+
     const getCategoryAlertState = (models: JewelryModel[]): 'critical' | 'alert' | 'none' => {
         if (models.some(m => (m.quantity ?? Infinity) <= preferences.criticalThreshold)) {
             return 'critical';
@@ -169,29 +209,35 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
         return 'none';
     };
     
-    const getItemAlertState = (quantity: number | undefined): 'critical' | 'alert' | 'none' => {
-        const q = quantity ?? Infinity;
+    const getItemAlertState = (model: JewelryModel): 'reordered' | 'critical' | 'alert' | 'none' => {
+        const q = model.quantity ?? Infinity;
         if (q <= preferences.criticalThreshold) return 'critical';
         if (q <= preferences.alertThreshold) return 'alert';
+        if (model.lastOrderedAt) return 'reordered';
         return 'none';
     }
 
-    const AlertIcon = ({ state, message }: { state: 'critical' | 'alert', message: string }) => (
-        <TooltipProvider>
-            <Tooltip>
-                <TooltipTrigger>
-                    <AlertTriangle className={cn(
-                        'h-5 w-5',
-                        state === 'critical' ? 'text-red-500' : 'text-yellow-500'
-                    )} />
-                </TooltipTrigger>
-                <TooltipContent>
-                    <p>{message}</p>
-                </TooltipContent>
-            </Tooltip>
-        </TooltipProvider>
-    );
+    const AlertIcon = ({ state, message }: { state: 'critical' | 'alert' | 'reordered', message: string }) => {
+        const stateClasses = {
+            critical: 'text-red-500',
+            alert: 'text-yellow-500',
+            reordered: 'text-blue-500'
+        };
+        const Icon = state === 'reordered' ? Info : AlertTriangle;
 
+        return (
+             <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger>
+                        <Icon className={cn('h-5 w-5', stateClasses[state])} />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>{message}</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        )
+    };
     
     return (
         <div className="p-4 bg-card rounded-lg border">
@@ -201,7 +247,7 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                     return (
                         <AccordionItem value={jewelryType.id} key={jewelryType.id}>
                             <div className="flex justify-between items-center w-full py-4">
-                                <AccordionTrigger className="text-xl font-headline flex-1 py-0">
+                                <AccordionTrigger className="text-xl font-headline flex-1 py-0 hover:no-underline">
                                     <div className="flex items-center gap-2">
                                         {alertState !== 'none' && (
                                             <AlertIcon state={alertState} message={alertState === 'critical' ? "Un ou plusieurs modèles ont un stock critique." : "Un ou plusieurs modèles ont un stock bas."} />
@@ -234,7 +280,7 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                 </TableHeader>
                                 <TableBody>
                                     {jewelryType.models.map((model) => {
-                                        const itemAlertState = getItemAlertState(model.quantity);
+                                        const itemAlertState = getItemAlertState(model);
                                         return (
                                             <TableRow key={model.id} className={isPending ? 'opacity-50' : ''}>
                                                 <TableCell>
@@ -260,12 +306,33 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
                                                         {itemAlertState !== 'none' && (
-                                                            <AlertIcon state={itemAlertState} message={itemAlertState === 'critical' ? 'Stock critique !' : 'Stock bas'} />
+                                                            <AlertIcon state={itemAlertState} message={
+                                                                itemAlertState === 'critical' ? 'Stock critique !' : 
+                                                                itemAlertState === 'alert' ? 'Stock bas' :
+                                                                `Commandé le ${model.lastOrderedAt?.toLocaleDateString()}`
+                                                            } />
                                                         )}
                                                         {model.quantity}
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="text-right">
+                                                <TableCell className="text-right space-x-1">
+                                                    <form onSubmit={handleOrderAction} className="inline-block">
+                                                        <input type="hidden" name="itemId" value={model.id} />
+                                                        <input type="hidden" name="itemType" value={jewelryType.id} />
+                                                        <input type="hidden" name="reorderUrl" value={model.reorderUrl || ''} />
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button type="submit" variant="ghost" size="icon" disabled={!model.reorderUrl}>
+                                                                        <ShoppingCart className="h-4 w-4" />
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Passer une commande</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    </form>
                                                     <Button 
                                                         variant="ghost" 
                                                         size="icon" 
