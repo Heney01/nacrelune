@@ -4,12 +4,30 @@
 import React, { useState, useReducer, useTransition } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ZoomIn } from "lucide-react";
 import type { JewelryType, JewelryModel } from "@/lib/types";
 import { ModelForm } from './model-form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { 
+    AlertDialog, 
+    AlertDialogAction, 
+    AlertDialogCancel, 
+    AlertDialogContent, 
+    AlertDialogDescription, 
+    AlertDialogFooter, 
+    AlertDialogHeader, 
+    AlertDialogTitle, 
+    AlertDialogTrigger 
+} from '@/components/ui/alert-dialog';
+import { 
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { deleteModel } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 
@@ -166,6 +184,7 @@ export function ModelsManager({ initialJewelryTypes, locale }: ModelsManagerProp
                                        <TableHead className="w-24">Image</TableHead>
                                        <TableHead>Nom</TableHead>
                                        <TableHead>Prix</TableHead>
+                                       <TableHead>Stock</TableHead>
                                        <TableHead className="text-right">Actions</TableHead>
                                    </TableRow>
                                </TableHeader>
@@ -173,10 +192,26 @@ export function ModelsManager({ initialJewelryTypes, locale }: ModelsManagerProp
                                    {jewelryType.models.map((model) => (
                                         <TableRow key={model.id} className={isPending ? 'opacity-50' : ''}>
                                             <TableCell>
-                                                <Image src={model.displayImageUrl} alt={model.name} width={64} height={64} className="w-full h-auto object-cover rounded-md" />
+                                                 <Dialog>
+                                                    <DialogTrigger asChild>
+                                                        <div className="relative w-16 h-16 cursor-pointer group">
+                                                            <Image src={model.displayImageUrl} alt={model.name} width={64} height={64} className="w-16 h-16 object-cover rounded-md group-hover:opacity-75" />
+                                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                                <ZoomIn className="text-white h-6 w-6" />
+                                                            </div>
+                                                        </div>
+                                                    </DialogTrigger>
+                                                    <DialogContent>
+                                                        <DialogHeader>
+                                                            <DialogTitle>{model.name}</DialogTitle>
+                                                        </DialogHeader>
+                                                        <Image src={model.displayImageUrl} alt={model.name} width={400} height={400} className="w-full h-auto object-contain rounded-lg" />
+                                                    </DialogContent>
+                                                </Dialog>
                                             </TableCell>
                                             <TableCell className="font-medium">{model.name}</TableCell>
                                             <TableCell>{model.price}€</TableCell>
+                                            <TableCell>{model.quantity}</TableCell>
                                             <TableCell className="text-right">
                                                 <Button 
                                                     variant="ghost" 

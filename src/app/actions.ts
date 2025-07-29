@@ -120,6 +120,7 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
     const jewelryTypeId = formData.get('jewelryTypeId') as string;
     const name = formData.get('name') as string;
     const price = parseFloat(formData.get('price') as string);
+    const quantity = parseInt(formData.get('quantity') as string, 10);
     const locale = formData.get('locale') as string || 'fr';
 
     const displayImageData = formData.get('displayImage') as string;
@@ -128,7 +129,7 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
     const originalDisplayImageUrl = formData.get('originalDisplayImageUrl') as string || '';
     const originalEditorImageUrl = formData.get('originalEditorImageUrl') as string || '';
 
-    if (!jewelryTypeId || !name || isNaN(price)) {
+    if (!jewelryTypeId || !name || isNaN(price) || isNaN(quantity)) {
         return { success: false, message: "Les champs obligatoires sont manquants ou invalides." };
     }
 
@@ -139,6 +140,7 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
         const modelData = {
             name,
             price,
+            quantity,
             displayImageUrl,
             editorImageUrl
         };
@@ -306,13 +308,14 @@ export async function saveCharm(prevState: any, formData: FormData): Promise<{ s
     const name = formData.get('name') as string;
     const description = formData.get('description') as string;
     const price = parseFloat(formData.get('price') as string);
+    const quantity = parseInt(formData.get('quantity') as string, 10);
     const categoryIds = formData.getAll('categoryIds') as string[];
     const locale = formData.get('locale') as string || 'fr';
     const imageData = formData.get('image') as string;
     const originalImageUrl = formData.get('originalImageUrl') as string || '';
 
-    if (!name || isNaN(price) || !categoryIds || categoryIds.length === 0) {
-        return { success: false, message: "Les champs obligatoires (nom, prix, au moins une catégorie) sont manquants ou invalides." };
+    if (!name || isNaN(price) || isNaN(quantity) || !categoryIds || categoryIds.length === 0) {
+        return { success: false, message: "Les champs obligatoires (nom, prix, quantité, au moins une catégorie) sont manquants ou invalides." };
     }
 
     try {
@@ -323,6 +326,7 @@ export async function saveCharm(prevState: any, formData: FormData): Promise<{ s
             name,
             description,
             price,
+            quantity,
             categoryIds: categoryIds, // Store array of string IDs
             imageUrl
         };

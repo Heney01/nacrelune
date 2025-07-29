@@ -115,14 +115,19 @@ export function CharmForm({ isOpen, onOpenChange, charm, allCategories, onSave, 
                         <input type="hidden" name="locale" value={locale} />
                         <input type="hidden" name="originalImageUrl" value={charm?.imageUrl || ''} />
 
+                        <div className="space-y-2">
+                            <Label htmlFor="name">Nom de la breloque</Label>
+                            <Input id="name" name="name" defaultValue={charm?.name || ''} required />
+                        </div>
+
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="name">Nom de la breloque</Label>
-                                <Input id="name" name="name" defaultValue={charm?.name || ''} required />
-                            </div>
                              <div className="space-y-2">
                                 <Label htmlFor="price">Prix (€)</Label>
                                 <Input id="price" name="price" type="number" step="0.01" defaultValue={charm?.price || ''} required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="quantity">Quantité en stock</Label>
+                                <Input id="quantity" name="quantity" type="number" defaultValue={charm?.quantity || 0} required />
                             </div>
                         </div>
 

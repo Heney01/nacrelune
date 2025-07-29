@@ -4,11 +4,29 @@
 import React, { useState, useReducer, useTransition, useMemo } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Tag, WandSparkles, GripVertical } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Tag, WandSparkles, GripVertical, ZoomIn } from "lucide-react";
 import type { Charm, CharmCategory } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { 
+    AlertDialog, 
+    AlertDialogAction, 
+    AlertDialogCancel, 
+    AlertDialogContent, 
+    AlertDialogDescription, 
+    AlertDialogFooter, 
+    AlertDialogHeader, 
+    AlertDialogTitle, 
+    AlertDialogTrigger 
+} from '@/components/ui/alert-dialog';
+import { 
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardHeader, CardTitle } from './ui/card';
 import { CharmCategoryForm } from './charm-category-form';
@@ -238,15 +256,34 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale }:
                                                 <TableHead className="w-24">Image</TableHead>
                                                 <TableHead>Nom</TableHead>
                                                 <TableHead>Prix</TableHead>
+                                                <TableHead>Stock</TableHead>
                                                 <TableHead className="text-right">Actions</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {(charmsByCategoryId[category.id] || []).map((charm) => (
                                                 <TableRow key={charm.id}>
-                                                    <TableCell><Image src={charm.imageUrl} alt={charm.name} width={64} height={64} className="w-12 h-12 object-cover rounded-md bg-white p-1 border" /></TableCell>
+                                                    <TableCell>
+                                                        <Dialog>
+                                                            <DialogTrigger asChild>
+                                                                <div className="relative w-16 h-16 cursor-pointer group">
+                                                                    <Image src={charm.imageUrl} alt={charm.name} width={64} height={64} className="w-16 h-16 object-cover rounded-md bg-white p-1 border group-hover:opacity-75" />
+                                                                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                                        <ZoomIn className="text-white h-6 w-6" />
+                                                                    </div>
+                                                                </div>
+                                                            </DialogTrigger>
+                                                            <DialogContent>
+                                                                <DialogHeader>
+                                                                    <DialogTitle>{charm.name}</DialogTitle>
+                                                                </DialogHeader>
+                                                                <Image src={charm.imageUrl} alt={charm.name} width={400} height={400} className="w-full h-auto object-contain rounded-lg" />
+                                                            </DialogContent>
+                                                        </Dialog>
+                                                    </TableCell>
                                                     <TableCell className="font-medium">{charm.name}</TableCell>
                                                     <TableCell>{charm.price}€</TableCell>
+                                                    <TableCell>{charm.quantity}</TableCell>
                                                     <TableCell className="text-right">
                                                         <Button variant="ghost" size="icon" onClick={() => handleEditCharmClick(charm)}><Edit className="h-4 w-4" /></Button>
                                                         <AlertDialog>

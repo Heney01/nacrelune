@@ -97,7 +97,7 @@ export function ModelForm({ isOpen, onOpenChange, jewelryType, model, onSave, lo
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[425px]" key={key}>
+            <DialogContent className="sm:max-w-md" key={key}>
                  <form action={formAction}>
                     <DialogHeader>
                         <DialogTitle>{model ? "Modifier le modèle" : "Ajouter un nouveau modèle"}</DialogTitle>
@@ -126,9 +126,15 @@ export function ModelForm({ isOpen, onOpenChange, jewelryType, model, onSave, lo
                             <Input id="name" name="name" defaultValue={model?.name || ''} required />
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="price">Prix (€)</Label>
-                            <Input id="price" name="price" type="number" step="0.01" defaultValue={model?.price || ''} required />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="price">Prix (€)</Label>
+                                <Input id="price" name="price" type="number" step="0.01" defaultValue={model?.price || ''} required />
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="quantity">Quantité en stock</Label>
+                                <Input id="quantity" name="quantity" type="number" defaultValue={model?.quantity || 0} required />
+                            </div>
                         </div>
 
                         <ImagePicker name="displayImage" label="Image de présentation" defaultUrl={model?.displayImageUrl} />

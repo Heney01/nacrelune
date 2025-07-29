@@ -17,6 +17,7 @@ export interface Charm {
   categoryIds: string[];
   categories?: DocumentReference[]; // Raw from firestore
   price?: number;
+  quantity?: number;
 }
 
 export interface JewelryModel {
@@ -26,6 +27,7 @@ export interface JewelryModel {
   editorImageUrl: string;
   snapPath?: string;
   price?: number;
+  quantity?: number;
 }
 
 export interface JewelryType {
