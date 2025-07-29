@@ -4,13 +4,13 @@
 import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { revalidatePath } from 'next/cache';
 import { db, storage } from '@/lib/firebase';
-import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where } from 'firebase/firestore';
 import { ref, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
-import type { JewelryModel } from '@/lib/types';
+import type { JewelryModel, CharmCategory, Charm } from '@/lib/types';
 
 
 export async function getCharmSuggestions(
@@ -27,6 +27,7 @@ export async function getCharmSuggestions(
 }
 
 const getFileNameFromUrl = (url: string) => {
+    if (!url) return null;
     try {
         const urlObj = new URL(url);
         if (urlObj.hostname === 'firebasestorage.googleapis.com') {
@@ -47,6 +48,21 @@ const getFileNameFromUrl = (url: string) => {
     return lastPart.split('?')[0];
 };
 
+const deleteFileFromStorage = async (fileUrl: string) => {
+    const filePath = getFileNameFromUrl(fileUrl);
+    if (filePath) {
+        try {
+            const fileRef = ref(storage, filePath);
+            await deleteObject(fileRef);
+        } catch (err: any) {
+             if (err.code !== 'storage/object-not-found') {
+                console.error("Failed to delete file from storage:", err);
+                throw err;
+            }
+        }
+    }
+};
+
 export async function deleteModel(formData: FormData): Promise<{ success: boolean; message: string }> {
     const modelId = formData.get('modelId') as string;
     const jewelryTypeId = formData.get('jewelryTypeId') as string;
@@ -61,44 +77,33 @@ export async function deleteModel(formData: FormData): Promise<{ success: boolea
     try {
         await deleteDoc(doc(db, jewelryTypeId, modelId));
 
-        const filesToDelete = [
-            getFileNameFromUrl(displayImageUrl),
-            getFileNameFromUrl(editorImageUrl)
-        ].filter(Boolean);
-
-        for (const filePath of filesToDelete) {
-             if (filePath) {
-                const fileRef = ref(storage, filePath);
-                await deleteObject(fileRef).catch(err => {
-                    // It's okay if the object doesn't exist, we just want to ensure it's gone
-                    if (err.code !== 'storage/object-not-found') {
-                        throw err;
-                    }
-                });
-            }
-        }
+        await Promise.allSettled([
+            deleteFileFromStorage(displayImageUrl),
+            deleteFileFromStorage(editorImageUrl)
+        ]);
         
         revalidatePath(`/${locale}/admin/dashboard`);
         return { success: true, message: "Le modèle a été supprimé avec succès." };
 
     } catch (error: any) {
-        let errorMessage = "Une erreur est survenue lors de la suppression du modèle.";
-        if (error.code === 'storage/object-not-found') {
-            errorMessage = "Le document a été supprimé, mais une ou plusieurs images associées n'ont pas été trouvées dans le stockage.";
-        }
-        
-        return { success: false, message: errorMessage };
+        return { success: false, message: "Une erreur est survenue lors de la suppression du modèle." };
     }
 }
 
-async function uploadImage(imageDataJson: string, existingUrl: string, jewelryTypeId: string): Promise<string> {
+async function uploadImage(imageDataJson: string | null, existingUrl: string, storagePath: string): Promise<string> {
     if (!imageDataJson) return existingUrl;
     
     try {
         const imageData = JSON.parse(imageDataJson);
         if (typeof imageData === 'object' && imageData?.dataUrl && imageData?.name) {
             const { dataUrl, name } = imageData;
-            const storageRef = ref(storage, `${jewelryTypeId}/${Date.now()}_${name}`);
+            
+            // Delete old image if it exists and is different
+            if (existingUrl && getFileNameFromUrl(existingUrl)) {
+                 await deleteFileFromStorage(existingUrl);
+            }
+
+            const storageRef = ref(storage, `${storagePath}/${Date.now()}_${name}`);
             const uploadResult = await uploadString(storageRef, dataUrl, 'data_url');
             return await getDownloadURL(uploadResult.ref);
         }
@@ -213,4 +218,166 @@ export async function logout(formData: FormData) {
   const locale = formData.get('locale') as string || 'fr';
   cookies().delete('session');
   redirect(`/${locale}/login`);
+}
+
+// --- Charm Category Actions ---
+
+export async function saveCharmCategory(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; category?: CharmCategory }> {
+    const categoryId = formData.get('categoryId') as string | null;
+    const name = formData.get('name') as string;
+    const description = formData.get('description') as string;
+    const locale = formData.get('locale') as string || 'fr';
+    const imageData = formData.get('image') as string;
+    const originalImageUrl = formData.get('originalImageUrl') as string || '';
+
+    if (!name) {
+        return { success: false, message: "Le nom de la catégorie est obligatoire." };
+    }
+
+    try {
+        const imageUrl = await uploadImage(imageData, originalImageUrl, 'charmCategories');
+
+        const categoryData = { name, description, imageUrl };
+        let savedCategory: CharmCategory;
+
+        if (categoryId) {
+            const categoryRef = doc(db, 'charmCategories', categoryId);
+            await updateDoc(categoryRef, categoryData);
+            savedCategory = { id: categoryId, ...categoryData };
+        } else {
+            const docRef = await addDoc(collection(db, 'charmCategories'), categoryData);
+            savedCategory = { id: docRef.id, ...categoryData };
+        }
+
+        revalidatePath(`/${locale}/admin/dashboard`);
+        return { success: true, message: `La catégorie a été ${categoryId ? 'mise à jour' : 'créée'} avec succès.`, category: savedCategory };
+    } catch (error) {
+        console.error("Error saving charm category:", error);
+        return { success: false, message: "Une erreur est survenue lors de l'enregistrement de la catégorie." };
+    }
+}
+
+export async function deleteCharmCategory(formData: FormData): Promise<{ success: boolean; message: string }> {
+    const categoryId = formData.get('categoryId') as string;
+    const imageUrl = formData.get('imageUrl') as string;
+    const locale = formData.get('locale') as string || 'fr';
+
+    if (!categoryId) {
+        return { success: false, message: "ID de catégorie manquant." };
+    }
+
+    try {
+        const batch = writeBatch(db);
+
+        // Delete the category document
+        const categoryRef = doc(db, 'charmCategories', categoryId);
+        batch.delete(categoryRef);
+
+        // Find and delete all charms in this category
+        const charmsQuery = query(collection(db, 'charms'), where('category', '==', categoryRef));
+        const charmsSnapshot = await getDocs(charmsQuery);
+        
+        const charmImageDeletions: Promise<any>[] = [];
+        charmsSnapshot.forEach(charmDoc => {
+            batch.delete(charmDoc.ref);
+            const charmData = charmDoc.data();
+            if(charmData.imageUrl) {
+                charmImageDeletions.push(deleteFileFromStorage(charmData.imageUrl));
+            }
+        });
+
+        // Commit all Firestore writes
+        await batch.commit();
+
+        // Delete all images from storage
+        await Promise.allSettled([
+            ...charmImageDeletions,
+            deleteFileFromStorage(imageUrl)
+        ]);
+
+        revalidatePath(`/${locale}/admin/dashboard`);
+        return { success: true, message: "La catégorie et toutes ses breloques ont été supprimées." };
+    } catch (error) {
+        console.error("Error deleting charm category:", error);
+        return { success: false, message: "Une erreur est survenue lors de la suppression." };
+    }
+}
+
+
+// --- Charm Actions ---
+
+export async function saveCharm(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; charm?: Charm & { categoryName?: string } }> {
+    const charmId = formData.get('charmId') as string | null;
+    const name = formData.get('name') as string;
+    const description = formData.get('description') as string;
+    const price = parseFloat(formData.get('price') as string);
+    const categoryId = formData.get('categoryId') as string;
+    const locale = formData.get('locale') as string || 'fr';
+    const imageData = formData.get('image') as string;
+    const originalImageUrl = formData.get('originalImageUrl') as string || '';
+
+    if (!name || isNaN(price) || !categoryId) {
+        return { success: false, message: "Les champs obligatoires sont manquants ou invalides." };
+    }
+
+    try {
+        const categoryRef = doc(db, 'charmCategories', categoryId);
+        const imageUrl = await uploadImage(imageData, originalImageUrl, `charms/${categoryId}`);
+        
+        const charmData = {
+            name,
+            description,
+            price,
+            category: categoryRef,
+            imageUrl
+        };
+
+        let savedCharm: Charm;
+
+        if (charmId) {
+            const charmRef = doc(db, 'charms', charmId);
+            await updateDoc(charmRef, charmData);
+            savedCharm = { id: charmId, categoryId, ...charmData, category: categoryRef };
+        } else {
+            const docRef = await addDoc(collection(db, 'charms'), charmData);
+            savedCharm = { id: docRef.id, categoryId, ...charmData, category: categoryRef };
+        }
+
+        const categoryDoc = await getDoc(categoryRef);
+        const categoryName = categoryDoc.exists() ? categoryDoc.data().name : 'Inconnue';
+
+        revalidatePath(`/${locale}/admin/dashboard`);
+        return { 
+            success: true, 
+            message: `La breloque a été ${charmId ? 'mise à jour' : 'créée'} avec succès.`,
+            charm: { ...savedCharm, categoryName }
+        };
+
+    } catch (error) {
+        console.error("Error saving charm:", error);
+        return { success: false, message: "Une erreur est survenue lors de l'enregistrement de la breloque." };
+    }
+}
+
+
+export async function deleteCharm(formData: FormData): Promise<{ success: boolean; message: string }> {
+    const charmId = formData.get('charmId') as string;
+    const imageUrl = formData.get('imageUrl') as string;
+    const locale = formData.get('locale') as string || 'fr';
+
+    if (!charmId) {
+        return { success: false, message: "ID de breloque manquant." };
+    }
+
+    try {
+        await deleteDoc(doc(db, 'charms', charmId));
+        await deleteFileFromStorage(imageUrl);
+
+        revalidatePath(`/${locale}/admin/dashboard`);
+        return { success: true, message: "La breloque a été supprimée." };
+
+    } catch (error) {
+        console.error("Error deleting charm:", error);
+        return { success: false, message: "Une erreur est survenue lors de la suppression." };
+    }
 }

@@ -1,23 +1,58 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { NacreluneLogo } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { logout } from "@/app/actions";
 import { ModelsManager } from "@/components/models-manager";
+import { CharmsManager } from "@/components/charms-manager";
 import { Gem, User, Wrench, ChevronRight, ArrowLeft } from "lucide-react";
-import type { JewelryType } from "@/lib/types";
+import type { JewelryType, Charm, CharmCategory } from "@/lib/types";
 import Link from "next/link";
+import { Loader2 } from 'lucide-react';
+
 
 interface AdminDashboardProps {
-    initialJewelryTypes: Omit<JewelryType, 'icon'>[];
     locale: string;
 }
 
-function AdminDashboardClient({ initialJewelryTypes, locale }: AdminDashboardProps) {
+function AdminDashboardClient({ locale }: AdminDashboardProps) {
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [initialData, setInitialData] = useState<{
+    jewelryTypes: Omit<JewelryType, 'icon'>[],
+    charms: (Charm & { categoryName?: string; })[],
+    charmCategories: CharmCategory[]
+  } | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/admin-data`);
+        if (!res.ok) throw new Error('Failed to fetch admin data');
+        const data = await res.json();
+        setInitialData(data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (loading || !initialData) {
+      return (
+        <div className="flex justify-center items-center h-screen">
+          <Loader2 className="h-16 w-16 animate-spin text-primary" />
+        </div>
+      );
+  }
+
+  const { jewelryTypes, charms, charmCategories } = initialData;
 
   const adminSections = [
     {
@@ -25,16 +60,16 @@ function AdminDashboardClient({ initialJewelryTypes, locale }: AdminDashboardPro
       title: 'Gérer les modèles',
       description: 'Ajouter, modifier ou supprimer les types de bijoux.',
       icon: Gem,
-      component: <ModelsManager initialJewelryTypes={initialJewelryTypes} locale={locale} />,
+      component: <ModelsManager initialJewelryTypes={jewelryTypes} locale={locale} />,
       disabled: false,
     },
     {
       value: 'charms',
       title: 'Gérer les breloques',
-      description: 'Gérer la collection de breloques disponibles.',
+      description: 'Gérer la collection de breloques et leurs catégories.',
       icon: Wrench,
-      component: null,
-      disabled: true,
+      component: <CharmsManager initialCharms={charms} initialCharmCategories={charmCategories} locale={locale} />,
+      disabled: false,
     },
     {
       value: 'users',
@@ -120,16 +155,6 @@ function AdminDashboardClient({ initialJewelryTypes, locale }: AdminDashboardPro
 }
 
 
-// We keep the server component to fetch data initially
-import { getJewelryTypesAndModels } from "@/lib/data";
-
-export default async function AdminDashboard({ params }: { params: { locale: string }}) {
-  const JEWELRY_TYPES_INFO: Omit<JewelryType, 'models' | 'icon'>[] = [
-    { id: 'necklace', name: "Colliers", description: "" },
-    { id: 'bracelet', name: "Bracelets", description: "" },
-    { id: 'earring', name: "Boucles d'oreilles", description: "" },
-  ];
-  const jewelryTypes = await getJewelryTypesAndModels(JEWELRY_TYPES_INFO);
-  
-  return <AdminDashboardClient initialJewelryTypes={jewelryTypes} locale={params.locale} />;
+export default function AdminDashboard({ params }: { params: { locale: string }}) {
+  return <AdminDashboardClient locale={params.locale} />;
 }

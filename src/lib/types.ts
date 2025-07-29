@@ -1,5 +1,7 @@
 
 
+import { DocumentReference } from 'firebase/firestore';
+
 export interface CharmCategory {
   id: string;
   name: string;
@@ -13,6 +15,7 @@ export interface Charm {
   imageUrl: string;
   description: string;
   categoryId: string;
+  category?: DocumentReference; // Raw from firestore
   price?: number;
 }
 
