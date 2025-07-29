@@ -9,9 +9,9 @@ export function getStaticParams() {
 export async function getMessages(locale: string) {
   const finalLocale: Locale = availableLocales.includes(locale as Locale) ? locale as Locale : 'en';
   try {
-    return (await import(`../../messages/${finalLocale}.json`)).default;
+    return (await import(`../messages/${finalLocale}.json`)).default;
   } catch (error) {
     console.error(`Could not load messages for locale: ${finalLocale}`, error);
-    return (await import(`../../messages/en.json`)).default;
+    return (await import(`../messages/en.json`)).default;
   }
 }
