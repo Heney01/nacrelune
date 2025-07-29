@@ -69,8 +69,7 @@ const OrderRow = ({ order, locale, onStatusChange, t, tStatus, isPending }: {
         <Fragment>
             <TableRow 
                 key={order.id} 
-                className={cn(isPending && 'opacity-50', "cursor-pointer")}
-                onClick={() => setIsOpen(!isOpen)}
+                className={cn(isPending && 'opacity-50')}
             >
                 <TableCell className="font-medium">{order.orderNumber}</TableCell>
                 <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
@@ -81,7 +80,7 @@ const OrderRow = ({ order, locale, onStatusChange, t, tStatus, isPending }: {
                         {tStatus(order.status)}
                     </Badge>
                 </TableCell>
-                <TableCell className="text-right" onClick={e => e.stopPropagation()}>
+                <TableCell className="text-right">
                     <div className="flex justify-end items-center">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -101,7 +100,7 @@ const OrderRow = ({ order, locale, onStatusChange, t, tStatus, isPending }: {
                                 ))}
                             </DropdownMenuContent>
                         </DropdownMenu>
-                        <Button variant="ghost" size="icon" className="ml-2">
+                        <Button variant="ghost" size="icon" className="ml-2" onClick={() => setIsOpen(!isOpen)}>
                              {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </Button>
                     </div>
