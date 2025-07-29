@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useReducer, useEffect, useOptimistic } from 'react';
+import { useState, useReducer } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
@@ -93,10 +93,9 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
         const jewelryTypeId = formData.get('jewelryTypeId') as string;
         const modelId = formData.get('modelId') as string;
 
-        // Optimistic UI update
         dispatch({ type: 'DELETE', payload: { jewelryTypeId, modelId } });
 
-        const result = await deleteModel(null, formData);
+        const result = await deleteModel(formData);
 
         if (result?.success) {
             toast({
@@ -104,9 +103,6 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
                 description: result.message,
             });
         } else {
-             // If the server action fails, we might need to revert the optimistic update.
-             // For simplicity, we'll just show an error toast.
-             // A more robust solution would re-add the item to the list.
             toast({
                 variant: 'destructive',
                 title: 'Erreur',

@@ -42,8 +42,7 @@ const getFileNameFromUrl = (url: string) => {
     return url;
 };
 
-
-export async function deleteModel(prevState: any, formData: FormData): Promise<{ success: boolean; message: string }> {
+export async function deleteModel(formData: FormData): Promise<{ success: boolean; message: string }> {
     const modelId = formData.get('modelId') as string;
     const jewelryTypeId = formData.get('jewelryTypeId') as string;
     const displayImageUrl = formData.get('displayImageUrl') as string;
