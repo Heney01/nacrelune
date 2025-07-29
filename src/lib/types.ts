@@ -70,11 +70,13 @@ export type OrderStatus = 'commandée' | 'en cours de préparation' | 'expédié
 export interface OrderItem {
     modelId: string;
     modelName: string;
+    jewelryTypeId: string;
     jewelryTypeName: string;
     charmIds: string[];
     price: number;
     previewImageUrl: string;
     // Enriched data on the client:
+    modelImageUrl?: string;
     charms?: Charm[];
 }
 

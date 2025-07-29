@@ -98,8 +98,11 @@ function OrderDetails({ order }: { order: Order }) {
                         {order.items.map((item, index) => (
                             <AccordionItem value={`item-${index}`} key={index} className="border rounded-lg">
                                 <AccordionTrigger className="p-4 hover:no-underline">
-                                    <div className="flex justify-between w-full items-center">
-                                        <div className="text-left">
+                                    <div className="flex justify-between w-full items-center gap-4">
+                                        {item.modelImageUrl && (
+                                            <Image src={item.modelImageUrl} alt={item.modelName} width={64} height={64} className="rounded-md border bg-white p-1" data-ai-hint="jewelry model"/>
+                                        )}
+                                        <div className="text-left flex-grow">
                                             <p className="font-semibold">{item.modelName}</p>
                                             <p className="text-sm text-muted-foreground">{item.jewelryTypeName}</p>
                                         </div>

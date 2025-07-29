@@ -551,6 +551,7 @@ export async function createOrder(cartItems: CartItem[], email: string): Promise
             return {
                 modelId: item.model.id,
                 modelName: item.model.name,
+                jewelryTypeId: item.jewelryType.id,
                 jewelryTypeName: item.jewelryType.name,
                 charmIds: item.placedCharms.map(pc => pc.charm.id),
                 price: itemPrice,
@@ -611,19 +612,42 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
             const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', uniqueCharmIds));
             const charmsSnapshot = await getDocs(charmsQuery);
             for (const charmDoc of charmsSnapshot.docs) {
-                const charmData = charmDoc.data() as Charm;
-                charmsMap.set(charmDoc.id, {
-                    ...charmData,
-                    id: charmDoc.id,
-                    imageUrl: await getDownloadURL(ref(storage, charmData.imageUrl))
-                });
+                const charmData = charmDoc.data() as Omit<Charm, 'id'>;
+                charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id });
             }
         }
         
+        // Fetch all required models
+        const modelPromises = orderData.items.map((item: OrderItem) => getDoc(doc(db, item.jewelryTypeId, item.modelId)));
+        const modelSnapshots = await Promise.all(modelPromises);
+        const modelsMap = new Map<string, JewelryModel>();
+        for (let i = 0; i < modelSnapshots.length; i++) {
+            const modelSnap = modelSnapshots[i];
+            const item = orderData.items[i];
+            if (modelSnap.exists()) {
+                modelsMap.set(item.modelId, { id: modelSnap.id, ...modelSnap.data() } as JewelryModel);
+            }
+        }
+
         // Enrich order items with full charm details
-        const enrichedItems: OrderItem[] = orderData.items.map((item: OrderItem) => ({
-            ...item,
-            charms: item.charmIds.map(id => charmsMap.get(id)).filter(Boolean) as Charm[],
+        const enrichedItems: OrderItem[] = await Promise.all(orderData.items.map(async (item: OrderItem) => {
+            const model = modelsMap.get(item.modelId);
+            const modelImageUrl = model ? await getDownloadURL(ref(storage, model.displayImageUrl)).catch(() => 'https://placehold.co/400x400.png') : 'https://placehold.co/400x400.png';
+            
+            const enrichedCharms = await Promise.all(
+                item.charmIds.map(async id => {
+                    const charm = charmsMap.get(id);
+                    if (!charm) return null;
+                    const imageUrl = await getDownloadURL(ref(storage, charm.imageUrl)).catch(() => 'https://placehold.co/100x100.png');
+                    return { ...charm, imageUrl };
+                })
+            );
+
+            return {
+                ...item,
+                modelImageUrl,
+                charms: enrichedCharms.filter(Boolean) as Charm[],
+            };
         }));
         
         const order: Order = {
