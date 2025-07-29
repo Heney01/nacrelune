@@ -52,8 +52,8 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
             <DialogDescription>{t('description')}</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="mt-6 flex flex-col flex-grow overflow-hidden">
-            <ScrollArea className="flex-grow pr-4 -mr-4">
-                <div className="space-y-6">
+            <ScrollArea className="flex-grow -mx-6">
+                <div className="space-y-6 px-6">
                 <div>
                     <h3 className="text-lg font-medium">{t('shipping_info')}</h3>
                     <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
