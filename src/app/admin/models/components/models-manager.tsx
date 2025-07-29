@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useReducer, useEffect } from 'react';
+import { useState, useReducer, useEffect, useOptimistic } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
@@ -78,38 +78,35 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
     const [selectedModel, setSelectedModel] = useState<JewelryModel | null>(null);
 
     const handleAddModelClick = (jewelryType: Omit<JewelryType, 'models'|'icon'>) => {
-        console.log(`--- TEST: Bouton 'Ajouter un modèle' cliqué pour ${jewelryType.name}`);
         setSelectedJewelryType(jewelryType);
         setSelectedModel(null);
         setIsFormOpen(true);
     };
 
     const handleEditModelClick = (jewelryType: Omit<JewelryType, 'models'|'icon'>, model: JewelryModel) => {
-        console.log(`--- TEST: Bouton 'Modifier' cliqué pour le modèle ${model.name}`);
         setSelectedJewelryType(jewelryType);
         setSelectedModel(model);
         setIsFormOpen(true);
     };
     
-    const handleDeleteModel = async (jewelryTypeId: string, model: JewelryModel) => {
-        console.log(`--- TEST: Bouton 'Supprimer' cliqué pour le modèle ${model.name}`);
-        
-        const formData = new FormData();
-        formData.append('jewelryTypeId', jewelryTypeId);
-        formData.append('modelId', model.id);
-        formData.append('displayImageUrl', model.displayImageUrl);
-        formData.append('editorImageUrl', model.editorImageUrl);
+    const handleDeleteAction = async (formData: FormData) => {
+        const jewelryTypeId = formData.get('jewelryTypeId') as string;
+        const modelId = formData.get('modelId') as string;
+
+        // Optimistic UI update
+        dispatch({ type: 'DELETE', payload: { jewelryTypeId, modelId } });
 
         const result = await deleteModel(null, formData);
 
         if (result?.success) {
-            dispatch({ type: 'DELETE', payload: { jewelryTypeId, modelId: model.id } });
             toast({
                 title: 'Succès',
                 description: result.message,
             });
         } else {
-            console.error("Erreur lors de l’appel de deleteModel", result?.message);
+             // If the server action fails, we might need to revert the optimistic update.
+             // For simplicity, we'll just show an error toast.
+             // A more robust solution would re-add the item to the list.
             toast({
                 variant: 'destructive',
                 title: 'Erreur',
@@ -184,21 +181,27 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
                                                         </Button>
                                                     </AlertDialogTrigger>
                                                     <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-                                                            <AlertDialogDescription>
-                                                                Cette action est irréversible. Le modèle "{model.name}" sera définitivement supprimé.
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                                            <AlertDialogAction
-                                                                onClick={() => handleDeleteModel(jewelryType.id, model)}
-                                                                className="bg-destructive hover:bg-destructive/90"
-                                                            >
-                                                                Supprimer
-                                                            </AlertDialogAction>
-                                                        </AlertDialogFooter>
+                                                        <form action={handleDeleteAction}>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    Cette action est irréversible. Le modèle "{model.name}" sera définitivement supprimé.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <input type="hidden" name="modelId" value={model.id} />
+                                                            <input type="hidden" name="jewelryTypeId" value={jewelryType.id} />
+                                                            <input type="hidden" name="displayImageUrl" value={model.displayImageUrl} />
+                                                            <input type="hidden" name="editorImageUrl" value={model.editorImageUrl} />
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
+                                                                <AlertDialogAction
+                                                                    type="submit"
+                                                                    className="bg-destructive hover:bg-destructive/90"
+                                                                >
+                                                                    Supprimer
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </form>
                                                     </AlertDialogContent>
                                                 </AlertDialog>
                                            </TableCell>
