@@ -148,8 +148,3 @@ export async function logout(formData: FormData) {
   cookies().delete('session');
   redirect(`/${locale}/login`);
 }
-
-export async function debugAction(formData: FormData): Promise<void> {
-    const source = formData.get('source') as string;
-    console.log(`--- [SERVER] debugAction called from: ${source} ---`);
-}
