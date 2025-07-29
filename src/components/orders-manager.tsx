@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState, useReducer, useTransition, Fragment } from 'react';
+import React, { useState, useReducer, useTransition, Fragment, useMemo } from 'react';
 import type { Order, OrderStatus, OrderItem, Charm } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from './ui/card';
@@ -116,6 +116,11 @@ const ShipOrderDialog = ({
     
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                    <Edit className="mr-2 h-4 w-4" /> Modifier
+                </Button>
+            </DialogTrigger>
             <DialogContent>
                 <form onSubmit={handleSubmit}>
                     <DialogHeader>
@@ -212,7 +217,6 @@ const OrderDetails = ({ order, onItemStatusChange, onStatusChange }: {
     onStatusChange: (orderId: string, status: OrderStatus, options?: { shippingInfo?: { carrier: string, trackingNumber: string }, cancellationReason?: string }) => void
 }) => {
     const t = useTranslations('Admin');
-    const [isShipDialogOpen, setIsShipDialogOpen] = useState(false);
 
     const handleShipConfirm = (trackingNumber: string, shippingCarrier: string) => {
         onStatusChange(order.id, 'expédiée', { shippingInfo: { carrier: shippingCarrier, trackingNumber } });
@@ -236,9 +240,7 @@ const OrderDetails = ({ order, onItemStatusChange, onStatusChange }: {
                                     <p className="font-mono">{order.trackingNumber}</p>
                                 </div>
                             </div>
-                            <Button variant="outline" size="sm" onClick={() => setIsShipDialogOpen(true)}>
-                                <Edit className="mr-2 h-4 w-4" /> Modifier
-                            </Button>
+                           <ShipOrderDialog order={order} isOpen={false} onOpenChange={()=>{}} onConfirm={handleShipConfirm} t={t} />
                         </div>
                     </div>
                 )}
@@ -329,13 +331,6 @@ const OrderDetails = ({ order, onItemStatusChange, onStatusChange }: {
                     ))}
                 </div>
             </div>
-            <ShipOrderDialog
-                order={order}
-                isOpen={isShipDialogOpen}
-                onOpenChange={setIsShipDialogOpen}
-                onConfirm={handleShipConfirm}
-                t={t}
-            />
         </>
     )
 }
@@ -408,7 +403,7 @@ const OrderRow = ({ order, locale, onStatusChange, onItemStatusChange, t, tStatu
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
-                        <Button variant="ghost" size="icon" className="ml-2">
+                        <Button variant="ghost" size="icon" className="ml-2" onClick={() => setIsOpen(!isOpen)}>
                              {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </Button>
                     </div>
@@ -449,7 +444,8 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
     const { orders } = { orders: state };
 
     const [searchTerm, setSearchTerm] = useState('');
-    const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+    const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
+    const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
     const handleStatusChange = (orderId: string, status: OrderStatus, options?: { shippingInfo?: { carrier: string; trackingNumber: string; }, cancellationReason?: string}) => {
         const formData = new FormData();
@@ -497,10 +493,25 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
         });
     }
     
-    const filteredOrders = orders.filter(order => 
-        order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.customerEmail.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const processedOrders = useMemo(() => {
+        return orders
+            .filter(order => {
+                if (statusFilter !== 'all' && order.status !== statusFilter) {
+                    return false;
+                }
+                if (searchTerm && !order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) && !order.customerEmail.toLowerCase().includes(searchTerm.toLowerCase())) {
+                    return false;
+                }
+                return true;
+            })
+            .sort((a, b) => {
+                const dateA = new Date(a.createdAt).getTime();
+                const dateB = new Date(b.createdAt).getTime();
+                return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+            });
+    }, [orders, searchTerm, statusFilter, sortOrder]);
+    
+    const ALL_STATUSES: OrderStatus[] = ['commandée', 'en cours de préparation', 'expédiée', 'livrée', 'annulée'];
 
     return (
         <Card>
@@ -508,18 +519,40 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
                  <CardTitle className="text-xl font-headline flex items-center gap-2">
                     <Package /> {t('orders_title')}
                 </CardTitle>
-                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                    <CardDescription>
-                        {t('orders_description')}
-                    </CardDescription>
-                     <div className="relative w-full md:w-auto md:max-w-xs">
+                <CardDescription>
+                    {t('orders_description')}
+                </CardDescription>
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 pt-4">
+                    <div className="relative w-full md:w-auto md:flex-grow md:max-w-xs">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                            placeholder="Rechercher par N° ou email..."
+                            placeholder={t('search_placeholder')}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="pl-9"
                         />
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                        <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as any)}>
+                            <SelectTrigger className="w-full sm:w-[180px]">
+                                <SelectValue placeholder={t('filter_by_status')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">{t('all_statuses')}</SelectItem>
+                                {ALL_STATUSES.map(status => (
+                                    <SelectItem key={status} value={status}>{tStatus(status)}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                         <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as any)}>
+                            <SelectTrigger className="w-full sm:w-[180px]">
+                                <SelectValue placeholder={t('sort_by_date')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="desc">{t('sort_newest')}</SelectItem>
+                                <SelectItem value="asc">{t('sort_oldest')}</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
             </CardHeader>
@@ -538,8 +571,8 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredOrders.length > 0 ? (
-                                filteredOrders.map(order => (
+                            {processedOrders.length > 0 ? (
+                                processedOrders.map(order => (
                                     <OrderRow 
                                         key={order.id}
                                         order={order}
@@ -564,15 +597,18 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
 
                 {/* Mobile Card View */}
                 <div className="md:hidden space-y-4">
-                     {filteredOrders.length > 0 ? (
-                        filteredOrders.map(order => (
+                     {processedOrders.length > 0 ? (
+                        processedOrders.map(order => (
                             <Card key={order.id} className={cn("overflow-hidden", isPending && 'opacity-50')}>
-                                <div 
-                                    className="p-4 cursor-pointer" 
-                                    onClick={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
-                                >
+                                <div className="p-4" onClick={() => {
+                                    const tr = document.getElementById(`order-row-${order.id}`);
+                                    tr?.click();
+                                }}>
                                     <div className="flex justify-between items-start">
-                                        <div>
+                                        <div onClick={() => {
+                                            const row = document.querySelector<HTMLButtonElement>(`#order-row-${order.id}`);
+                                            if (row) row.click();
+                                        }}>
                                             <p className="font-bold">{order.orderNumber}</p>
                                             <p className="text-sm text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</p>
                                         </div>
@@ -624,9 +660,6 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
                                         </Badge>
                                     </div>
                                 </div>
-                                {expandedOrder === order.id && (
-                                     <OrderDetails order={order} onItemStatusChange={handleItemStatusChange} onStatusChange={handleStatusChange} />
-                                )}
                             </Card>
                         ))
                     ) : (

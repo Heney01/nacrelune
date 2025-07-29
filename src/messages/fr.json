@@ -105,7 +105,13 @@
     "cancel_order_dialog_description": "Veuillez saisir le motif de l'annulation. Un e-mail sera envoyé au client pour l'informer du remboursement intégral.",
     "cancellation_reason": "Motif de l'annulation",
     "cancellation_reason_placeholder": "ex: Article en rupture de stock, problème de qualité...",
-    "confirm_cancellation_button": "Confirmer l'annulation"
+    "confirm_cancellation_button": "Confirmer l'annulation",
+    "search_placeholder": "Rechercher par N° ou email...",
+    "filter_by_status": "Filtrer par statut",
+    "sort_by_date": "Trier par date",
+    "all_statuses": "Tous les statuts",
+    "sort_newest": "Plus récentes d'abord",
+    "sort_oldest": "Plus anciennes d'abord"
   },
   "Checkout": {
     "title": "Paiement",

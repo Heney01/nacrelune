@@ -105,7 +105,13 @@
     "cancel_order_dialog_description": "Please enter the reason for cancellation. An email will be sent to the customer informing them of the full refund.",
     "cancellation_reason": "Reason for Cancellation",
     "cancellation_reason_placeholder": "e.g., Item out of stock, quality issue...",
-    "confirm_cancellation_button": "Confirm Cancellation"
+    "confirm_cancellation_button": "Confirm Cancellation",
+    "search_placeholder": "Search by order # or email...",
+    "filter_by_status": "Filter by status",
+    "sort_by_date": "Sort by date",
+    "all_statuses": "All Statuses",
+    "sort_newest": "Newest First",
+    "sort_oldest": "Oldest First"
   },
   "Checkout": {
     "title": "Checkout",
