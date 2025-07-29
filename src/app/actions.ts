@@ -700,3 +700,53 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
 
     return { success: true, message: "email_sent_notice" };
 }
+
+
+// --- Admin Order Actions ---
+
+export async function getOrders(): Promise<Order[]> {
+    try {
+        const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
+        const querySnapshot = await getDocs(q);
+
+        const orders: Order[] = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                orderNumber: data.orderNumber,
+                createdAt: (data.createdAt as Timestamp).toDate(),
+                customerEmail: data.customerEmail,
+                totalPrice: data.totalPrice,
+                status: data.status,
+                items: data.items, // Items are not fully enriched here
+            };
+        });
+        return orders;
+    } catch (error) {
+        console.error("Error fetching orders:", error);
+        return [];
+    }
+}
+
+export async function updateOrderStatus(formData: FormData): Promise<{ success: boolean; message: string }> {
+    const orderId = formData.get('orderId') as string;
+    const newStatus = formData.get('status') as OrderStatus;
+    const locale = formData.get('locale') as string || 'fr';
+
+    if (!orderId || !newStatus) {
+        return { success: false, message: "Informations manquantes." };
+    }
+
+    try {
+        const orderRef = doc(db, 'orders', orderId);
+        await updateDoc(orderRef, { status: newStatus });
+
+        revalidatePath(`/${locale}/admin/dashboard`);
+        // Potentially revalidate the specific order page if it exists
+        // revalidatePath(`/${locale}/admin/orders/${orderId}`);
+        return { success: true, message: "Le statut de la commande a été mis à jour." };
+    } catch (error) {
+        console.error("Error updating order status:", error);
+        return { success: false, message: "Une erreur est survenue." };
+    }
+}

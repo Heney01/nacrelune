@@ -9,8 +9,9 @@ import { logout } from "@/app/actions";
 import { ModelsManager } from "@/components/models-manager";
 import { CharmsManager } from "@/components/charms-manager";
 import { PreferencesManager } from "@/components/preferences-manager";
-import { Gem, User, Wrench, ChevronRight, ArrowLeft, Settings, AlertTriangle } from "lucide-react";
-import type { JewelryType, Charm, CharmCategory, GeneralPreferences } from "@/lib/types";
+import { OrdersManager } from "@/components/orders-manager";
+import { Gem, User, Wrench, ChevronRight, ArrowLeft, Settings, AlertTriangle, Package } from "lucide-react";
+import type { JewelryType, Charm, CharmCategory, GeneralPreferences, Order } from "@/lib/types";
 import Link from "next/link";
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -71,7 +72,8 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
     jewelryTypes: Omit<JewelryType, 'icon'>[],
     charms: (Charm & { categoryName?: string; })[],
     charmCategories: CharmCategory[],
-    preferences: GeneralPreferences
+    preferences: GeneralPreferences,
+    orders: Order[],
   } | null>(null);
 
   useEffect(() => {
@@ -99,7 +101,7 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
       );
   }
 
-  const { jewelryTypes, charms, charmCategories, preferences } = initialData;
+  const { jewelryTypes, charms, charmCategories, preferences, orders } = initialData;
   
   const modelsAlertState = getModelsAlertState(jewelryTypes, preferences);
   const charmsAlertState = getCharmsAlertState(charms, preferences);
@@ -122,6 +124,15 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
       component: <CharmsManager initialCharms={charms} initialCharmCategories={charmCategories} locale={locale} preferences={preferences} />,
       disabled: false,
       alertState: charmsAlertState,
+    },
+    {
+      value: 'orders',
+      title: 'Gérer les commandes',
+      description: 'Consulter et gérer les commandes des clients.',
+      icon: Package,
+      component: <OrdersManager initialOrders={orders} locale={locale} />,
+      disabled: false,
+      alertState: 'none',
     },
     {
       value: 'preferences',

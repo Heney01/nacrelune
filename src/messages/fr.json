@@ -81,7 +81,18 @@
     "stock_ok": "Stock OK",
     "order_management": "Gestion de commande",
     "restock": "Réapprovisionner",
-    "restocked_quantity": "Quantité reçue"
+    "restocked_quantity": "Quantité reçue",
+    "orders_title": "Gestion des Commandes",
+    "orders_description": "Visualisez et gérez toutes les commandes des clients.",
+    "order_number": "N° de commande",
+    "date": "Date",
+    "customer": "Client",
+    "total": "Total",
+    "status": "Statut",
+    "actions": "Actions",
+    "view_order": "Voir la commande",
+    "update_status_to": "Mettre à jour le statut vers : {status}",
+    "no_orders": "Aucune commande trouvée."
   },
   "Checkout": {
     "title": "Paiement",
