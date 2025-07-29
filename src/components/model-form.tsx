@@ -67,7 +67,7 @@ function SubmitButton({ isEditing }: { isEditing: boolean }) {
     const { pending } = useFormStatus();
     return (
         <Button type="submit" disabled={pending}>
-            {pending && <Loader2 className="animate-spin" />}
+            {pending && <Loader2 className="animate-spin mr-2" />}
             {isEditing ? 'Mettre à jour' : 'Enregistrer'}
         </Button>
     )
