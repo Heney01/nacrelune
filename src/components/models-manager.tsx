@@ -140,7 +140,7 @@ export function ModelsManager({ initialJewelryTypes, locale }: ModelsManagerProp
     
     return (
         <div className="p-4 bg-card rounded-lg border">
-            <Accordion type="multiple" defaultValue={initialJewelryTypes.map(jt => jt.id)} className="w-full">
+            <Accordion type="multiple" className="w-full">
                 {jewelryTypes.map((jewelryType) => (
                     <AccordionItem value={jewelryType.id} key={jewelryType.id}>
                         <div className="flex justify-between items-center w-full py-4">
