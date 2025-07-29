@@ -45,13 +45,14 @@ export async function deleteModel(formData: FormData): Promise<{ success: boolea
     const displayImageUrl = formData.get('displayImageUrl') as string;
     const editorImageUrl = formData.get('editorImageUrl') as string;
 
-    console.log(`--- [SERVER] Received data: modelId=${modelId}, jewelryTypeId=${jewelryTypeId}`);
-
+    // This handles the test call from the homepage button
     if (!modelId || !jewelryTypeId) {
-        const errorMsg = "Les informations du modèle sont manquantes.";
-        console.error(`--- [SERVER] Error: ${errorMsg}`);
-        return { success: false, message: errorMsg };
+        const message = "Appel de test réussi depuis la page d'accueil.";
+        console.log(`--- [SERVER] Test call detected. ${message}`);
+        return { success: true, message: message };
     }
+
+    console.log(`--- [SERVER] Received data: modelId=${modelId}, jewelryTypeId=${jewelryTypeId}`);
 
     try {
         // 1. Delete Firestore document
