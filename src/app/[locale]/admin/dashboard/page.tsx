@@ -1,7 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NacreluneLogo } from "@/components/icons";
 import { Button } from "@/components/ui/button";
-import { logout } from "@/app/[locale]/login/actions";
+import { logout } from "@/app/actions";
 import { ModelsManager } from "@/components/models-manager";
 import { getJewelryTypesAndModels } from "@/lib/data";
 import { Gem, HandMetal, Ear, User, Wrench } from "lucide-react";
