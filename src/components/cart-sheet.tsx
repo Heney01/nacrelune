@@ -22,7 +22,7 @@ import {
 import { useTranslations } from '@/hooks/use-translations';
 import { useParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { createOrder } from '@/app/actions';
+import { createOrder, SerializableCartItem } from '@/app/actions';
 import { CheckoutDialog } from './checkout-dialog';
 import { SuccessDialog } from './success-dialog';
 import type { CartItem } from '@/lib/types';
@@ -81,8 +81,15 @@ export function CartSheet({ children, open, onOpenChange }: {
     setIsProcessing(true);
     try {
       // Compress images before sending to the server action
-      const compressedCartPromises = cart.map(async (item): Promise<CartItem> => ({
-        ...item,
+      const compressedCartPromises = cart.map(async (item): Promise<SerializableCartItem> => ({
+        id: item.id,
+        model: item.model,
+        jewelryType: {
+          id: item.jewelryType.id,
+          name: item.jewelryType.name,
+          description: item.jewelryType.description
+        },
+        placedCharms: item.placedCharms,
         previewImage: await compressImage(item.previewImage),
       }));
 

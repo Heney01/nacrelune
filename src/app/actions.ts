@@ -1,6 +1,7 @@
 
 
 
+
 'use server';
 
 import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
@@ -12,7 +13,7 @@ import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
-import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem } from '@/lib/types';
+import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm } from '@/lib/types';
 
 
 export async function getCharmSuggestions(
@@ -454,6 +455,17 @@ function generateOrderNumber(): string {
   return `NAC-${year}${month}${day}-${randomPart}`;
 }
 
+export type SerializableCartItem = {
+    id: string;
+    model: JewelryModel;
+    jewelryType: {
+        id: 'necklace' | 'bracelet' | 'earring';
+        name: string;
+        description: string;
+    };
+    placedCharms: PlacedCharm[];
+    previewImage: string;
+};
 
 export async function markAsOrdered(formData: FormData): Promise<{ success: boolean; message: string }> {
     const itemId = formData.get('itemId') as string;
@@ -524,7 +536,7 @@ export async function markAsRestocked(formData: FormData): Promise<{ success: bo
 }
 
 
-export async function createOrder(cartItems: CartItem[], email: string): Promise<{ success: boolean; message: string; orderNumber?: string, email?: string }> {
+export async function createOrder(cartItems: SerializableCartItem[], email: string): Promise<{ success: boolean; message: string; orderNumber?: string, email?: string }> {
     if (!cartItems || cartItems.length === 0) {
         return { success: false, message: 'Le panier est vide.' };
     }
