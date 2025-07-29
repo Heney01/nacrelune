@@ -546,7 +546,7 @@ export async function createOrder(cartItems: CartItem[], email: string): Promise
             return sum + modelPrice + charmsPrice;
         }, 0);
 
-        const orderItems = cartItems.map((item, index) => {
+        const orderItems: Omit<OrderItem, 'modelImageUrl' | 'charms'>[] = cartItems.map((item, index) => {
              const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
             return {
                 modelId: item.model.id,
@@ -555,7 +555,8 @@ export async function createOrder(cartItems: CartItem[], email: string): Promise
                 jewelryTypeName: item.jewelryType.name,
                 charmIds: item.placedCharms.map(pc => pc.charm.id),
                 price: itemPrice,
-                previewImageUrl: previewImageUrls[index] // Get the corresponding uploaded image URL
+                previewImageUrl: previewImageUrls[index], // Get the corresponding uploaded image URL
+                isCompleted: false, // Initialize as not completed
             };
         });
         
@@ -670,7 +671,6 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
         
         return { success: true, message: "Commande trouvée.", order: order };
     } catch (error) {
-        console.error('Error fetching order:', error);
         return { success: false, message: "Une erreur est survenue lors de la recherche de la commande." };
     }
 }
@@ -748,5 +748,42 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
     } catch (error) {
         console.error("Error updating order status:", error);
         return { success: false, message: "Une erreur est survenue." };
+    }
+}
+
+export async function updateOrderItemStatus(formData: FormData): Promise<{ success: boolean; message: string }> {
+    const orderId = formData.get('orderId') as string;
+    const itemIndex = parseInt(formData.get('itemIndex') as string, 10);
+    const isCompleted = formData.get('isCompleted') === 'true';
+
+    if (!orderId || isNaN(itemIndex)) {
+        return { success: false, message: "Informations manquantes." };
+    }
+
+    try {
+        const orderRef = doc(db, 'orders', orderId);
+        
+        await runTransaction(db, async (transaction) => {
+            const orderDoc = await transaction.get(orderRef);
+            if (!orderDoc.exists()) {
+                throw new Error("La commande n'existe pas.");
+            }
+            
+            const orderData = orderDoc.data();
+            const items = orderData.items as OrderItem[];
+
+            if (itemIndex < 0 || itemIndex >= items.length) {
+                 throw new Error("Index de l'article invalide.");
+            }
+
+            items[itemIndex].isCompleted = isCompleted;
+            
+            transaction.update(orderRef, { items: items });
+        });
+
+        revalidatePath(`/fr/admin/dashboard`);
+        return { success: true, message: "Statut de l'article mis à jour." };
+    } catch (error: any) {
+        return { success: false, message: error.message || "Une erreur est survenue." };
     }
 }

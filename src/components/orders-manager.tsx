@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useReducer, useTransition, Fragment } from 'react';
@@ -8,7 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from './ui/
 import { Package, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTranslations } from '@/hooks/use-translations';
 import { Badge } from './ui/badge';
-import { updateOrderStatus } from '@/app/actions';
+import { updateOrderStatus, updateOrderItemStatus } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
@@ -22,6 +23,8 @@ import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
 import { Separator } from './ui/separator';
 import Image from 'next/image';
+import { Checkbox } from './ui/checkbox';
+import { Label } from './ui/label';
 
 interface OrdersManagerProps {
     initialOrders: Order[];
@@ -33,6 +36,9 @@ type State = Order[];
 type Action = {
     type: 'UPDATE_STATUS';
     payload: { orderId: string; newStatus: OrderStatus };
+} | {
+    type: 'UPDATE_ITEM_STATUS';
+    payload: { orderId: string; itemIndex: number; isCompleted: boolean };
 };
 
 const ordersReducer = (state: State, action: Action): State => {
@@ -41,6 +47,19 @@ const ordersReducer = (state: State, action: Action): State => {
             return state.map(order => 
                 order.id === action.payload.orderId 
                     ? { ...order, status: action.payload.newStatus }
+                    : order
+            );
+        case 'UPDATE_ITEM_STATUS':
+            return state.map(order => 
+                order.id === action.payload.orderId 
+                    ? { 
+                        ...order,
+                        items: order.items.map((item, index) => 
+                            index === action.payload.itemIndex
+                                ? { ...item, isCompleted: action.payload.isCompleted }
+                                : item
+                        )
+                      }
                     : order
             );
         default:
@@ -55,10 +74,11 @@ const statusVariants: { [key in OrderStatus]: string } = {
     'livrée': 'bg-green-100 text-green-800 border-green-200',
 }
 
-const OrderRow = ({ order, locale, onStatusChange, t, tStatus, isPending }: {
+const OrderRow = ({ order, locale, onStatusChange, onItemStatusChange, t, tStatus, isPending }: {
     order: Order,
     locale: string,
     onStatusChange: (orderId: string, status: OrderStatus) => void,
+    onItemStatusChange: (orderId: string, itemIndex: number, isCompleted: boolean) => void,
     t: (key: string, values?: any) => string,
     tStatus: (key: string, values?: any) => string,
     isPending: boolean
@@ -114,10 +134,24 @@ const OrderRow = ({ order, locale, onStatusChange, t, tStatus, isPending }: {
                             <h4 className="text-lg font-semibold mb-4">Atelier de confection - Commande {order.orderNumber}</h4>
                             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                                 {order.items.map((item, index) => (
-                                    <Card key={index} className="overflow-hidden">
+                                    <Card key={index} className={cn("overflow-hidden", item.isCompleted && "bg-green-50 border-green-200")}>
                                         <CardHeader>
-                                            <CardTitle className="text-base">{item.modelName}</CardTitle>
-                                            <CardDescription>{item.jewelryTypeName}</CardDescription>
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <CardTitle className="text-base">{item.modelName}</CardTitle>
+                                                    <CardDescription>Réf: {item.modelId}</CardDescription>
+                                                </div>
+                                                <div className="flex items-center space-x-2">
+                                                    <Checkbox
+                                                        id={`completed-${order.id}-${index}`}
+                                                        checked={item.isCompleted}
+                                                        onCheckedChange={(checked) => {
+                                                            onItemStatusChange(order.id, index, !!checked)
+                                                        }}
+                                                    />
+                                                    <Label htmlFor={`completed-${order.id}-${index}`}>Terminé</Label>
+                                                </div>
+                                            </div>
                                         </CardHeader>
                                         <CardContent>
                                             <div className="bg-white p-2 rounded-md border mb-4">
@@ -144,7 +178,10 @@ const OrderRow = ({ order, locale, onStatusChange, t, tStatus, isPending }: {
                                                                 height={32} 
                                                                 className="w-8 h-8 object-contain rounded border bg-white p-0.5" 
                                                             />
-                                                            <span>{charm.name}</span>
+                                                            <div className="flex-grow">
+                                                                <span>{charm.name}</span>
+                                                                <p className="text-xs text-muted-foreground">Réf: {charm.id}</p>
+                                                            </div>
                                                         </li>
                                                     ))}
                                                 </ul>
@@ -186,6 +223,23 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
             if (result.success) {
                 dispatch({ type: 'UPDATE_STATUS', payload: { orderId, newStatus: status }});
                 toast({ title: 'Succès', description: result.message });
+            } else {
+                toast({ title: 'Erreur', description: result.message, variant: 'destructive' });
+            }
+        });
+    }
+
+    const handleItemStatusChange = (orderId: string, itemIndex: number, isCompleted: boolean) => {
+         const formData = new FormData();
+        formData.append('orderId', orderId);
+        formData.append('itemIndex', itemIndex.toString());
+        formData.append('isCompleted', isCompleted.toString());
+
+        startTransition(async () => {
+            const result = await updateOrderItemStatus(formData);
+             if (result.success) {
+                dispatch({ type: 'UPDATE_ITEM_STATUS', payload: { orderId, itemIndex, isCompleted }});
+                toast({ description: result.message });
             } else {
                 toast({ title: 'Erreur', description: result.message, variant: 'destructive' });
             }
@@ -238,6 +292,7 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
                                     order={order}
                                     locale={locale}
                                     onStatusChange={handleStatusChange}
+                                    onItemStatusChange={handleItemStatusChange}
                                     t={t}
                                     tStatus={tStatus}
                                     isPending={isPending}

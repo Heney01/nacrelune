@@ -75,6 +75,7 @@ export interface OrderItem {
     charmIds: string[];
     price: number;
     previewImageUrl: string;
+    isCompleted: boolean;
     // Enriched data on the client:
     modelImageUrl?: string;
     charms?: Charm[];
