@@ -1,43 +1,31 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { match } from '@formatjs/intl-localematcher';
-import Negotiator from 'negotiator';
 
 const locales = ['en', 'fr'];
 const defaultLocale = 'fr';
 
-function getLocale(request: NextRequest): string {
-  const negotiatorHeaders: Record<string, string> = {};
-  request.headers.forEach((value, key) => (negotiatorHeaders[key] = value));
-
-  let languages;
-  try {
-      languages = new Negotiator({ headers: negotiatorHeaders }).languages();
-  } catch (error) {
-      return defaultLocale;
-  }
-  
-  try {
-    return match(languages, locales, defaultLocale);
-  } catch (e) {
+function getLocaleFromPathname(pathname: string): string {
+    const locale = pathname.split('/')[1];
+    if (locales.includes(locale)) {
+        return locale;
+    }
     return defaultLocale;
-  }
 }
 
 export function middleware(request: NextRequest) {
-  console.log(`--- [MIDDLEWARE] Triggered for path: ${request.nextUrl.pathname}, method: ${request.method}`);
-  const pathname = request.nextUrl.pathname;
-
-  // Handle admin area protection.
-  // This part only runs for paths matched by the config below.
+  const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get('session');
+
   if (!sessionCookie) {
-    console.log("--- [MIDDLEWARE] No session cookie found. Redirecting to login.");
-    const locale = pathname.split('/')[1] || defaultLocale;
-    return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
+    const locale = getLocaleFromPathname(pathname);
+    const loginUrl = new URL(`/${locale}/login`, request.url);
+    // Add a redirect query parameter if trying to access a protected route
+    if (pathname.includes('/admin')) {
+      loginUrl.searchParams.set('redirect', pathname);
+    }
+    return NextResponse.redirect(loginUrl);
   }
-  
-  console.log("--- [MIDDLEWARE] Session cookie found. Allowing request.");
+
   return NextResponse.next();
 }
 
@@ -48,11 +36,13 @@ export const config = {
    * - _next/static (static files)
    * - _next/image (image optimization files)
    * - favicon.ico (favicon file)
-   * - login page itself
-   * - and all non-admin pages
    *
-   * This is a more explicit way to protect routes and avoids interfering
-   * with Next.js internal requests or non-admin pages.
+   * This ensures that the middleware ONLY runs on pages and not on static assets or API routes.
+   * We apply the protection logic inside the middleware itself.
    */
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|login).*)?/admin/:path*'],
+  matcher: [
+    '/admin/:path*',
+    '/en/admin/:path*',
+    '/fr/admin/:path*',
+  ],
 };
