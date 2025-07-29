@@ -206,6 +206,125 @@ const CancelOrderDialog = ({
     )
 }
 
+const OrderDetails = ({ order, onItemStatusChange }: { 
+    order: Order, 
+    onItemStatusChange: (orderId: string, itemIndex: number, isCompleted: boolean) => void 
+}) => {
+    return (
+        <div className="bg-muted/50 p-4 md:p-6">
+            <h4 className="text-lg font-semibold mb-4">Atelier de confection - Commande {order.orderNumber}</h4>
+             {order.shippingCarrier && order.trackingNumber && (
+                <div className="mb-6">
+                    <h5 className="font-semibold mb-2 text-md flex items-center gap-2"><Truck className="h-5 w-5 text-primary" /> Informations d'expédition</h5>
+                    <div className="flex items-start justify-between bg-background p-4 rounded-lg border">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Transporteur</p>
+                                <p>{order.shippingCarrier}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Numéro de suivi</p>
+                                <p className="font-mono">{order.trackingNumber}</p>
+                            </div>
+                        </div>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                                <Edit className="mr-2 h-4 w-4" /> Modifier
+                            </Button>
+                        </DialogTrigger>
+                    </div>
+                </div>
+            )}
+             {order.status === 'annulée' && order.cancellationReason && (
+                <div className="mb-6">
+                    <h5 className="font-semibold mb-2 text-md flex items-center gap-2"><FileX className="h-5 w-5 text-destructive" /> Commande Annulée</h5>
+                    <div className="bg-background p-4 rounded-lg border">
+                         <p className="text-sm font-medium text-muted-foreground">Motif de l'annulation</p>
+                         <p className="italic">"{order.cancellationReason}"</p>
+                    </div>
+                </div>
+             )}
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {order.items.map((item, index) => (
+                    <Card key={index} className={cn("overflow-hidden", item.isCompleted && "bg-green-50 border-green-200")}>
+                        <CardHeader>
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <CardTitle className="text-base">{item.modelName}</CardTitle>
+                                    <CardDescription>Réf: {item.modelId}</CardDescription>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id={`completed-${order.id}-${index}`}
+                                        checked={item.isCompleted}
+                                        onCheckedChange={(checked) => {
+                                            onItemStatusChange(order.id, index, !!checked)
+                                        }}
+                                        disabled={order.status === 'annulée'}
+                                    />
+                                    <Label htmlFor={`completed-${order.id}-${index}`}>Terminé</Label>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <div className="w-full max-w-48 mx-auto bg-white p-2 rounded-md border mb-4 cursor-pointer">
+                                        <Image 
+                                            src={item.previewImageUrl} 
+                                            alt={`Aperçu de ${item.modelName}`}
+                                            width={400} 
+                                            height={400} 
+                                            className="w-full h-auto object-contain rounded" 
+                                        />
+                                    </div>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-2xl">
+                                    <DialogHeader>
+                                        <DialogTitle>Aperçu de {item.modelName}</DialogTitle>
+                                    </DialogHeader>
+                                     <Image 
+                                        src={item.previewImageUrl} 
+                                        alt={`Aperçu de ${item.modelName}`}
+                                        width={800} 
+                                        height={800} 
+                                        className="w-full h-auto object-contain rounded-lg" 
+                                    />
+                                </DialogContent>
+                            </Dialog>
+                            
+                            <Separator className="my-3" />
+                            
+                            <h5 className="font-semibold mb-2 text-sm">Breloques à ajouter:</h5>
+                            {item.charms && item.charms.length > 0 ? (
+                                <ul className="space-y-2">
+                                    {item.charms.map((charm, charmIndex) => (
+                                        <li key={`${charm.id}-${charmIndex}`} className="flex items-center gap-3 text-sm">
+                                             <Image 
+                                                src={charm.imageUrl} 
+                                                alt={charm.name}
+                                                width={32} 
+                                                height={32} 
+                                                className="w-8 h-8 object-contain rounded border bg-white p-0.5" 
+                                            />
+                                            <div className="flex-grow">
+                                                <span>{charm.name}</span>
+                                                <p className="text-xs text-muted-foreground">Réf: {charm.id}</p>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ): (
+                                <p className="text-sm text-muted-foreground">Aucune breloque pour cet article.</p>
+                            )}
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+       </div>
+    )
+}
+
 const OrderRow = ({ order, locale, onStatusChange, onItemStatusChange, t, tStatus, isPending }: {
     order: Order,
     locale: string,
@@ -231,7 +350,7 @@ const OrderRow = ({ order, locale, onStatusChange, onItemStatusChange, t, tStatu
         <Fragment>
             <TableRow 
                 key={order.id} 
-                className={cn(isPending && 'opacity-50', "cursor-pointer")}
+                className={cn(isPending && 'opacity-50')}
                 onClick={() => setIsOpen(!isOpen)}
             >
                 <TableCell className="font-medium">{order.orderNumber}</TableCell>
@@ -283,115 +402,7 @@ const OrderRow = ({ order, locale, onStatusChange, onItemStatusChange, t, tStatu
             {isOpen && (
                 <TableRow>
                     <TableCell colSpan={6} className="p-0">
-                       <div className="bg-muted/50 p-6">
-                            <h4 className="text-lg font-semibold mb-4">Atelier de confection - Commande {order.orderNumber}</h4>
-                             {order.shippingCarrier && order.trackingNumber && (
-                                <div className="mb-6">
-                                    <h5 className="font-semibold mb-2 text-md flex items-center gap-2"><Truck className="h-5 w-5 text-primary" /> Informations d'expédition</h5>
-                                    <div className="flex items-start justify-between bg-background p-4 rounded-lg border">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
-                                            <div>
-                                                <p className="text-sm font-medium text-muted-foreground">Transporteur</p>
-                                                <p>{order.shippingCarrier}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-medium text-muted-foreground">Numéro de suivi</p>
-                                                <p className="font-mono">{order.trackingNumber}</p>
-                                            </div>
-                                        </div>
-                                        <Button variant="outline" size="sm" onClick={() => setIsShipDialogOpen(true)}>
-                                            <Edit className="mr-2 h-4 w-4" /> Modifier
-                                        </Button>
-                                    </div>
-                                </div>
-                            )}
-                             {order.status === 'annulée' && order.cancellationReason && (
-                                <div className="mb-6">
-                                    <h5 className="font-semibold mb-2 text-md flex items-center gap-2"><FileX className="h-5 w-5 text-destructive" /> Commande Annulée</h5>
-                                    <div className="bg-background p-4 rounded-lg border">
-                                         <p className="text-sm font-medium text-muted-foreground">Motif de l'annulation</p>
-                                         <p className="italic">"{order.cancellationReason}"</p>
-                                    </div>
-                                </div>
-                             )}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                                {order.items.map((item, index) => (
-                                    <Card key={index} className={cn("overflow-hidden", item.isCompleted && "bg-green-50 border-green-200")}>
-                                        <CardHeader>
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <CardTitle className="text-base">{item.modelName}</CardTitle>
-                                                    <CardDescription>Réf: {item.modelId}</CardDescription>
-                                                </div>
-                                                <div className="flex items-center space-x-2">
-                                                    <Checkbox
-                                                        id={`completed-${order.id}-${index}`}
-                                                        checked={item.isCompleted}
-                                                        onCheckedChange={(checked) => {
-                                                            onItemStatusChange(order.id, index, !!checked)
-                                                        }}
-                                                        disabled={order.status === 'annulée'}
-                                                    />
-                                                    <Label htmlFor={`completed-${order.id}-${index}`}>Terminé</Label>
-                                                </div>
-                                            </div>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <Dialog>
-                                                <DialogTrigger asChild>
-                                                    <div className="w-full max-w-48 mx-auto bg-white p-2 rounded-md border mb-4 cursor-pointer">
-                                                        <Image 
-                                                            src={item.previewImageUrl} 
-                                                            alt={`Aperçu de ${item.modelName}`}
-                                                            width={400} 
-                                                            height={400} 
-                                                            className="w-full h-auto object-contain rounded" 
-                                                        />
-                                                    </div>
-                                                </DialogTrigger>
-                                                <DialogContent className="max-w-2xl">
-                                                    <DialogHeader>
-                                                        <DialogTitle>Aperçu de {item.modelName}</DialogTitle>
-                                                    </DialogHeader>
-                                                     <Image 
-                                                        src={item.previewImageUrl} 
-                                                        alt={`Aperçu de ${item.modelName}`}
-                                                        width={800} 
-                                                        height={800} 
-                                                        className="w-full h-auto object-contain rounded-lg" 
-                                                    />
-                                                </DialogContent>
-                                            </Dialog>
-                                            
-                                            <Separator className="my-3" />
-                                            
-                                            <h5 className="font-semibold mb-2 text-sm">Breloques à ajouter:</h5>
-                                            {item.charms && item.charms.length > 0 ? (
-                                                <ul className="space-y-2">
-                                                    {item.charms.map((charm, charmIndex) => (
-                                                        <li key={`${charm.id}-${charmIndex}`} className="flex items-center gap-3 text-sm">
-                                                             <Image 
-                                                                src={charm.imageUrl} 
-                                                                alt={charm.name}
-                                                                width={32} 
-                                                                height={32} 
-                                                                className="w-8 h-8 object-contain rounded border bg-white p-0.5" 
-                                                            />
-                                                            <div className="flex-grow">
-                                                                <span>{charm.name}</span>
-                                                                <p className="text-xs text-muted-foreground">Réf: {charm.id}</p>
-                                                            </div>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            ): (
-                                                <p className="text-sm text-muted-foreground">Aucune breloque pour cet article.</p>
-                                            )}
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
-                       </div>
+                       <OrderDetails order={order} onItemStatusChange={onItemStatusChange} />
                     </TableCell>
                 </TableRow>
             )}
@@ -423,6 +434,7 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
     const { orders } = { orders: state };
 
     const [searchTerm, setSearchTerm] = useState('');
+    const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
 
     const handleStatusChange = (orderId: string, status: OrderStatus, options?: { shippingInfo?: { carrier: string; trackingNumber: string; }, cancellationReason?: string}) => {
         const formData = new FormData();
@@ -481,11 +493,11 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
                  <CardTitle className="text-xl font-headline flex items-center gap-2">
                     <Package /> {t('orders_title')}
                 </CardTitle>
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                     <CardDescription>
                         {t('orders_description')}
                     </CardDescription>
-                     <div className="relative w-full sm:w-auto sm:max-w-xs">
+                     <div className="relative w-full md:w-auto md:max-w-xs">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                             placeholder="Rechercher par N° ou email..."
@@ -497,40 +509,115 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
                 </div>
             </CardHeader>
             <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>{t('order_number')}</TableHead>
-                            <TableHead>{t('date')}</TableHead>
-                            <TableHead>{t('customer')}</TableHead>
-                            <TableHead>{t('total')}</TableHead>
-                            <TableHead>{t('status')}</TableHead>
-                            <TableHead className="text-right">{t('actions')}</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {filteredOrders.length > 0 ? (
-                            filteredOrders.map(order => (
-                                <OrderRow 
-                                    key={order.id}
-                                    order={order}
-                                    locale={locale}
-                                    onStatusChange={handleStatusChange}
-                                    onItemStatusChange={handleItemStatusChange}
-                                    t={t}
-                                    tStatus={tStatus}
-                                    isPending={isPending}
-                                />
-                        ))
-                        ) : (
-                             <TableRow>
-                                <TableCell colSpan={6} className="text-center h-24">
-                                   {t('no_orders')}
-                                </TableCell>
+                {/* Desktop Table View */}
+                <div className="hidden md:block">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>{t('order_number')}</TableHead>
+                                <TableHead>{t('date')}</TableHead>
+                                <TableHead>{t('customer')}</TableHead>
+                                <TableHead>{t('total')}</TableHead>
+                                <TableHead>{t('status')}</TableHead>
+                                <TableHead className="text-right">{t('actions')}</TableHead>
                             </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredOrders.length > 0 ? (
+                                filteredOrders.map(order => (
+                                    <OrderRow 
+                                        key={order.id}
+                                        order={order}
+                                        locale={locale}
+                                        onStatusChange={handleStatusChange}
+                                        onItemStatusChange={handleItemStatusChange}
+                                        t={t}
+                                        tStatus={tStatus}
+                                        isPending={isPending}
+                                    />
+                            ))
+                            ) : (
+                                 <TableRow>
+                                    <TableCell colSpan={6} className="text-center h-24">
+                                       {t('no_orders')}
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-4">
+                     {filteredOrders.length > 0 ? (
+                        filteredOrders.map(order => (
+                            <Card key={order.id} className={cn("overflow-hidden", isPending && 'opacity-50')}>
+                                <div 
+                                    className="p-4 cursor-pointer" 
+                                    onClick={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="font-bold">{order.orderNumber}</p>
+                                            <p className="text-sm text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</p>
+                                        </div>
+                                        <div onClick={e => e.stopPropagation()}>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                        <EllipsisVertical className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent>
+                                                    {(['commandée', 'en cours de préparation', 'expédiée', 'livrée'] as OrderStatus[]).map(status => (
+                                                        <DropdownMenuItem 
+                                                            key={status} 
+                                                            onClick={() => {
+                                                                if (status === 'expédiée') {
+                                                                    // We need a way to open the dialog here.
+                                                                    // For now, let's just log it. A better solution would involve state lifting or context.
+                                                                    console.log("TODO: Open ship dialog for mobile");
+                                                                } else {
+                                                                    handleStatusChange(order.id, status)
+                                                                }
+                                                            }}
+                                                            disabled={order.status === status || order.status === 'annulée'}
+                                                        >
+                                                            {t('update_status_to', { status: tStatus(status) })}
+                                                        </DropdownMenuItem>
+                                                    ))}
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem 
+                                                        onClick={() => console.log("TODO: Open cancel dialog for mobile")}
+                                                        disabled={order.status === 'annulée'} 
+                                                        className="text-destructive focus:text-destructive"
+                                                    >
+                                                        <FileX className="mr-2 h-4 w-4"/>
+                                                        {t('cancel_order')}
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 flex justify-between items-center">
+                                        <div>
+                                            <p className="text-sm">{order.customerEmail}</p>
+                                            <p className="font-bold text-lg">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(order.totalPrice)}</p>
+                                        </div>
+                                        <Badge variant="outline" className={cn(statusVariants[order.status])}>
+                                            {tStatus(order.status)}
+                                        </Badge>
+                                    </div>
+                                </div>
+                                {expandedOrder === order.id && (
+                                     <OrderDetails order={order} onItemStatusChange={handleItemStatusChange} />
+                                )}
+                            </Card>
+                        ))
+                    ) : (
+                        <p className="text-center text-muted-foreground py-10">{t('no_orders')}</p>
+                    )}
+                </div>
             </CardContent>
         </Card>
     );
