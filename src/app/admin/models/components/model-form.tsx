@@ -24,7 +24,11 @@ const initialState = { message: null, errors: {} };
 function SubmitButton() {
     const { pending } = useFormStatus();
     return (
-        <Button type="submit" disabled={pending}>
+        <Button 
+            type="submit" 
+            disabled={pending}
+            onClick={() => console.log("Submit button clicked on client.")}
+        >
             {pending ? <Loader2 className="animate-spin" /> : "Enregistrer"}
         </Button>
     );
