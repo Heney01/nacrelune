@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useReducer } from 'react';
+import React, { useState, useReducer, useTransition } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
@@ -25,12 +25,19 @@ type OptimisticUpdate = {
         modelId: string;
     }
 } | {
-    type: 'ADD' | 'UPDATE';
+    type: 'ADD';
+    payload: {
+        jewelryTypeId: string;
+        model: JewelryModel;
+    }
+} | {
+    type: 'UPDATE';
     payload: {
         jewelryTypeId: string;
         model: JewelryModel;
     }
 }
+
 
 function jewelryTypesReducer(state: Omit<JewelryType, 'icon'>[], action: OptimisticUpdate): Omit<JewelryType, 'icon'>[] {
     switch (action.type) {
@@ -47,6 +54,10 @@ function jewelryTypesReducer(state: Omit<JewelryType, 'icon'>[], action: Optimis
         case 'ADD':
             return state.map(jt => {
                 if (jt.id === action.payload.jewelryTypeId) {
+                    // Avoid adding duplicates during optimistic update
+                    if (jt.models.some(m => m.id === action.payload.model.id)) {
+                        return jt;
+                    }
                     return {
                         ...jt,
                         models: [...jt.models, action.payload.model]
@@ -72,7 +83,9 @@ function jewelryTypesReducer(state: Omit<JewelryType, 'icon'>[], action: Optimis
 
 export function ModelsManager({ initialJewelryTypes, locale }: ModelsManagerProps) {
     const { toast } = useToast();
+    const [isPending, startTransition] = useTransition();
     const [jewelryTypes, dispatch] = useReducer(jewelryTypesReducer, initialJewelryTypes);
+    
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [selectedJewelryType, setSelectedJewelryType] = useState<Omit<JewelryType, 'models'|'icon'>>(initialJewelryTypes[0]);
     const [selectedModel, setSelectedModel] = useState<JewelryModel | null>(null);
@@ -89,11 +102,41 @@ export function ModelsManager({ initialJewelryTypes, locale }: ModelsManagerProp
         setIsFormOpen(true);
     };
 
-    const handleSaveModel = (modelData: any) => {
-        console.log(`--- TEST: handleSaveModel appelé avec ${JSON.stringify(modelData)}`);
-        // Ici, vous appellerez votre action serveur pour sauvegarder les données
-        setIsFormOpen(false);
+    const handleSaveModel = (model: JewelryModel) => {
+        const isEditing = jewelryTypes.some(jt => jt.id === selectedJewelryType.id && jt.models.some(m => m.id === model.id));
+        
+        startTransition(() => {
+            dispatch({
+                type: isEditing ? 'UPDATE' : 'ADD',
+                payload: {
+                    jewelryTypeId: selectedJewelryType.id,
+                    model: model
+                }
+            });
+        });
+        toast({
+            title: 'Succès',
+            description: `Le modèle "${model.name}" a été ${isEditing ? 'mis à jour' : 'créé'}.`
+        });
     }
+
+    const handleDeleteAction = async (formData: FormData) => {
+        const modelId = formData.get('modelId') as string;
+        const jewelryTypeId = formData.get('jewelryTypeId') as string;
+        
+        startTransition(() => {
+            dispatch({ type: 'DELETE', payload: { jewelryTypeId, modelId } });
+        });
+
+        const result = await deleteModel(formData);
+
+        if (result?.success) {
+            toast({ title: 'Succès', description: result.message });
+        } else {
+            toast({ variant: 'destructive', title: 'Erreur', description: result?.message || 'Une erreur inconnue est survenue.' });
+            // Here you could revert the state if needed, but revalidation should fix it.
+        }
+    };
     
     return (
         <div className="p-4 bg-card rounded-lg border">
@@ -128,9 +171,9 @@ export function ModelsManager({ initialJewelryTypes, locale }: ModelsManagerProp
                                </TableHeader>
                                <TableBody>
                                    {jewelryType.models.map((model) => (
-                                        <TableRow key={model.id}>
+                                        <TableRow key={model.id} className={isPending ? 'opacity-50' : ''}>
                                             <TableCell>
-                                                <Image src={model.displayImageUrl} alt={model.name} width={64} height={64} className="rounded-md object-cover w-full h-auto" />
+                                                <Image src={model.displayImageUrl} alt={model.name} width={64} height={64} className="w-full h-auto object-cover rounded-md" />
                                             </TableCell>
                                             <TableCell className="font-medium">{model.name}</TableCell>
                                             <TableCell>{model.price}€</TableCell>
@@ -154,22 +197,7 @@ export function ModelsManager({ initialJewelryTypes, locale }: ModelsManagerProp
                                                          </Button>
                                                      </AlertDialogTrigger>
                                                      <AlertDialogContent>
-                                                         <form
-                                                            action={async (formData) => {
-                                                                console.log(`--- [CLIENT] Submitting form for model ${model.id}`);
-                                                                dispatch({ type: 'DELETE', payload: { jewelryTypeId: jewelryType.id, modelId: model.id } });
-
-                                                                const result = await deleteModel(formData);
-
-                                                                console.log("--- [CLIENT] Server action result:", result);
-                                                                if (result?.success) {
-                                                                    toast({ title: 'Succès', description: result.message });
-                                                                } else {
-                                                                    toast({ variant: 'destructive', title: 'Erreur', description: result?.message || 'Une erreur inconnue est survenue.' });
-                                                                    // Note: You might want to revert the optimistic update here if the server fails
-                                                                }
-                                                            }}
-                                                          >
+                                                         <form action={handleDeleteAction}>
                                                             <input type="hidden" name="modelId" value={model.id} />
                                                             <input type="hidden" name="jewelryTypeId" value={jewelryType.id} />
                                                             <input type="hidden" name="displayImageUrl" value={model.displayImageUrl} />
@@ -212,6 +240,7 @@ export function ModelsManager({ initialJewelryTypes, locale }: ModelsManagerProp
                     jewelryType={selectedJewelryType} 
                     model={selectedModel}
                     onSave={handleSaveModel}
+                    locale={locale}
                 />
             )}
         </div>

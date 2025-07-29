@@ -4,12 +4,14 @@
 import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { revalidatePath } from 'next/cache';
 import { db, storage } from '@/lib/firebase';
-import { doc, deleteDoc } from 'firebase/firestore';
-import { ref, deleteObject } from 'firebase/storage';
+import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc } from 'firebase/firestore';
+import { ref, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
+import type { JewelryModel } from '@/lib/types';
+
 
 export async function getCharmSuggestions(
   input: SuggestCharmPlacementInput
@@ -48,53 +50,117 @@ const getFileNameFromUrl = (url: string) => {
 export async function deleteModel(formData: FormData): Promise<{ success: boolean; message: string }> {
     const modelId = formData.get('modelId') as string;
     const jewelryTypeId = formData.get('jewelryTypeId') as string;
-    const locale = formData.get('locale') as string || 'fr'; // Default locale
+    const locale = formData.get('locale') as string || 'fr';
     const displayImageUrl = formData.get('displayImageUrl') as string;
     const editorImageUrl = formData.get('editorImageUrl') as string;
     
-    console.log(`--- [SERVER] deleteModel called for modelId: ${modelId}`);
-
     if (!modelId || !jewelryTypeId) {
-        console.error("--- [SERVER] Missing modelId or jewelryTypeId.");
         return { success: false, message: "Informations manquantes pour la suppression." };
     }
 
     try {
-        // 1. Delete Firestore document
-        console.log(`--- [SERVER] Attempting to delete Firestore doc: ${jewelryTypeId}/${modelId}`);
         await deleteDoc(doc(db, jewelryTypeId, modelId));
-        console.log("--- [SERVER] Firestore document deleted successfully.");
 
-        // 2. Delete images from Storage
         const filesToDelete = [
             getFileNameFromUrl(displayImageUrl),
             getFileNameFromUrl(editorImageUrl)
         ].filter(Boolean);
 
-        console.log(`--- [SERVER] Files to delete from Storage:`, filesToDelete);
-
         for (const filePath of filesToDelete) {
              if (filePath) {
-                console.log(`--- [SERVER] Attempting to delete file from Storage: ${filePath}`);
                 const fileRef = ref(storage, filePath);
-                await deleteObject(fileRef);
-                console.log(`--- [SERVER] File deleted: ${filePath}`);
+                await deleteObject(fileRef).catch(err => {
+                    // It's okay if the object doesn't exist, we just want to ensure it's gone
+                    if (err.code !== 'storage/object-not-found') {
+                        throw err;
+                    }
+                });
             }
         }
         
-        revalidatePath(`/${locale}/admin/dashboard`); 
-        console.log("--- [SERVER] Path revalidated. Operation successful.");
+        revalidatePath(`/${locale}/admin/dashboard`);
         return { success: true, message: "Le modèle a été supprimé avec succès." };
 
     } catch (error: any) {
-        console.error("--- [SERVER] Error during model deletion: ", error);
-        
         let errorMessage = "Une erreur est survenue lors de la suppression du modèle.";
         if (error.code === 'storage/object-not-found') {
             errorMessage = "Le document a été supprimé, mais une ou plusieurs images associées n'ont pas été trouvées dans le stockage.";
         }
         
         return { success: false, message: errorMessage };
+    }
+}
+
+async function uploadImage(imageDataJson: string, existingUrl: string, jewelryTypeId: string): Promise<string> {
+    if (!imageDataJson) return existingUrl;
+    
+    try {
+        const imageData = JSON.parse(imageDataJson);
+        if (typeof imageData === 'object' && imageData?.dataUrl && imageData?.name) {
+            const { dataUrl, name } = imageData;
+            const storageRef = ref(storage, `${jewelryTypeId}/${Date.now()}_${name}`);
+            const uploadResult = await uploadString(storageRef, dataUrl, 'data_url');
+            return await getDownloadURL(uploadResult.ref);
+        }
+    } catch (e) {
+        // Not a new upload, it's just the URL string
+    }
+    
+    // If it's not a new upload object, return the original URL
+    return existingUrl;
+}
+
+export async function saveModel(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; model?: JewelryModel }> {
+    const modelId = formData.get('modelId') as string | null;
+    const jewelryTypeId = formData.get('jewelryTypeId') as string;
+    const name = formData.get('name') as string;
+    const price = parseFloat(formData.get('price') as string);
+    const locale = formData.get('locale') as string || 'fr';
+
+    const displayImageData = formData.get('displayImage') as string;
+    const editorImageData = formData.get('editorImage') as string;
+    
+    const originalDisplayImageUrl = formData.get('originalDisplayImageUrl') as string || '';
+    const originalEditorImageUrl = formData.get('originalEditorImageUrl') as string || '';
+
+    if (!jewelryTypeId || !name || isNaN(price)) {
+        return { success: false, message: "Les champs obligatoires sont manquants ou invalides." };
+    }
+
+    try {
+        const displayImageUrl = await uploadImage(displayImageData, originalDisplayImageUrl, jewelryTypeId);
+        const editorImageUrl = await uploadImage(editorImageData, originalEditorImageUrl, jewelryTypeId);
+
+        const modelData = {
+            name,
+            price,
+            displayImageUrl,
+            editorImageUrl
+        };
+
+        let savedModel: JewelryModel;
+
+        if (modelId) {
+            // Update
+            const modelRef = doc(db, jewelryTypeId, modelId);
+            await updateDoc(modelRef, modelData);
+            savedModel = { id: modelId, ...modelData };
+        } else {
+            // Create
+            const docRef = await addDoc(collection(db, jewelryTypeId), modelData);
+            savedModel = { id: docRef.id, ...modelData };
+        }
+
+        revalidatePath(`/${locale}/admin/dashboard`);
+        return { 
+            success: true, 
+            message: `Le modèle a été ${modelId ? 'mis à jour' : 'créé'} avec succès.`,
+            model: savedModel
+        };
+
+    } catch (error: any) {
+        console.error("Error saving model:", error);
+        return { success: false, message: "Une erreur est survenue lors de l'enregistrement du modèle." };
     }
 }
 
