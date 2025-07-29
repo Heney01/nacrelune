@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { logout } from "@/app/actions";
 import { ModelsManager } from "@/components/models-manager";
 import { CharmsManager } from "@/components/charms-manager";
-import { Gem, User, Wrench, ChevronRight, ArrowLeft } from "lucide-react";
-import type { JewelryType, Charm, CharmCategory } from "@/lib/types";
+import { PreferencesManager } from "@/components/preferences-manager";
+import { Gem, User, Wrench, ChevronRight, ArrowLeft, Settings } from "lucide-react";
+import type { JewelryType, Charm, CharmCategory, GeneralPreferences } from "@/lib/types";
 import Link from "next/link";
 import { Loader2 } from 'lucide-react';
 
@@ -24,7 +25,8 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
   const [initialData, setInitialData] = useState<{
     jewelryTypes: Omit<JewelryType, 'icon'>[],
     charms: (Charm & { categoryName?: string; })[],
-    charmCategories: CharmCategory[]
+    charmCategories: CharmCategory[],
+    preferences: GeneralPreferences
   } | null>(null);
 
   useEffect(() => {
@@ -52,7 +54,7 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
       );
   }
 
-  const { jewelryTypes, charms, charmCategories } = initialData;
+  const { jewelryTypes, charms, charmCategories, preferences } = initialData;
 
   const adminSections = [
     {
@@ -69,6 +71,14 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
       description: 'Gérer la collection de breloques et leurs catégories.',
       icon: Wrench,
       component: <CharmsManager initialCharms={charms} initialCharmCategories={charmCategories} locale={locale} />,
+      disabled: false,
+    },
+    {
+      value: 'preferences',
+      title: 'Gérer les préférences',
+      description: 'Définir les seuils et autres paramètres généraux.',
+      icon: Settings,
+      component: <PreferencesManager initialPreferences={preferences} locale={locale} />,
       disabled: false,
     },
     {

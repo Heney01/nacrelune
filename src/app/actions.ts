@@ -1,16 +1,17 @@
 
+
 'use server';
 
 import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { revalidatePath } from 'next/cache';
 import { db, storage } from '@/lib/firebase';
-import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, DocumentReference } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc } from 'firebase/firestore';
 import { ref, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
-import type { JewelryModel, CharmCategory, Charm } from '@/lib/types';
+import type { JewelryModel, CharmCategory, Charm, GeneralPreferences } from '@/lib/types';
 
 
 export async function getCharmSuggestions(
@@ -383,5 +384,54 @@ export async function deleteCharm(formData: FormData): Promise<{ success: boolea
     } catch (error) {
         console.error("Error deleting charm:", error);
         return { success: false, message: "Une erreur est survenue lors de la suppression." };
+    }
+}
+
+// --- Preferences Actions ---
+
+export async function getPreferences(): Promise<GeneralPreferences> {
+    try {
+        const docRef = doc(db, 'preferences', 'general');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            return docSnap.data() as GeneralPreferences;
+        } else {
+            // Return default values if not set
+            return { alertThreshold: 10, criticalThreshold: 5 };
+        }
+    } catch (error) {
+        console.error("Error fetching preferences:", error);
+        throw new Error("Impossible de récupérer les préférences.");
+    }
+}
+
+export async function savePreferences(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; preferences?: GeneralPreferences }> {
+    const alertThreshold = parseInt(formData.get('alertThreshold') as string, 10);
+    const criticalThreshold = parseInt(formData.get('criticalThreshold') as string, 10);
+    const locale = formData.get('locale') as string || 'fr';
+
+    if (isNaN(alertThreshold) || isNaN(criticalThreshold)) {
+        return { success: false, message: "Les valeurs doivent être des nombres." };
+    }
+    
+    if (criticalThreshold >= alertThreshold) {
+        return { success: false, message: "Le seuil critique doit être inférieur au seuil d'alerte." };
+    }
+
+    try {
+        const preferencesData = { alertThreshold, criticalThreshold };
+        const docRef = doc(db, 'preferences', 'general');
+        await setDoc(docRef, preferencesData);
+
+        revalidatePath(`/${locale}/admin/dashboard`);
+        return { 
+            success: true, 
+            message: "Les préférences ont été mises à jour avec succès.",
+            preferences: preferencesData
+        };
+
+    } catch (error) {
+        console.error("Error saving preferences:", error);
+        return { success: false, message: "Une erreur est survenue lors de l'enregistrement des préférences." };
     }
 }

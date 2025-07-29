@@ -1,6 +1,6 @@
 
-import { getJewelryTypesAndModels, getFullCharmData } from '@/lib/data';
-import type { JewelryType, Charm, CharmCategory } from '@/lib/types';
+import { getJewelryTypesAndModels, getFullCharmData, getPreferences } from '@/lib/data';
+import type { JewelryType, Charm, CharmCategory, GeneralPreferences } from '@/lib/types';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -13,15 +13,17 @@ export async function GET(request: Request) {
             { id: 'earring', name: "Boucles d'oreilles", description: "" },
         ];
 
-        const [jewelryTypes, { charms, charmCategories }] = await Promise.all([
+        const [jewelryTypes, { charms, charmCategories }, preferences] = await Promise.all([
             getJewelryTypesAndModels(JEWELRY_TYPES_INFO),
-            getFullCharmData()
+            getFullCharmData(),
+            getPreferences()
         ]);
         
         return NextResponse.json({
             jewelryTypes,
             charms,
-            charmCategories
+            charmCategories,
+            preferences
         });
 
     } catch (error) {

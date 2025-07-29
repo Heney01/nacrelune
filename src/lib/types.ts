@@ -53,3 +53,8 @@ export interface CartItem {
     placedCharms: PlacedCharm[];
     previewImage: string; // URL to a generated preview of the final design
 }
+
+export interface GeneralPreferences {
+  alertThreshold: number;
+  criticalThreshold: number;
+}

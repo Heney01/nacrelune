@@ -1,8 +1,8 @@
 
 import { db, storage } from '@/lib/firebase';
-import { collection, getDocs, DocumentReference, getDoc } from 'firebase/firestore';
+import { collection, getDocs, DocumentReference, getDoc, doc } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
-import type { JewelryModel, JewelryType, Charm, CharmCategory } from '@/lib/types';
+import type { JewelryModel, JewelryType, Charm, CharmCategory, GeneralPreferences } from '@/lib/types';
 
 const getUrl = async (path: string, fallback: string) => {
     if (path && (path.startsWith('http://') || path.startsWith('https://'))) {
@@ -165,5 +165,23 @@ export async function getFullCharmData(): Promise<{ charms: (Charm & { categoryN
     } catch (error) {
         console.error("Error fetching full charm data: ", error);
         return { charms: [], charmCategories: [] };
+    }
+}
+
+
+export async function getPreferences(): Promise<GeneralPreferences> {
+    try {
+        const docRef = doc(db, 'preferences', 'general');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            return docSnap.data() as GeneralPreferences;
+        } else {
+            // Return default values if not set
+            return { alertThreshold: 10, criticalThreshold: 5 };
+        }
+    } catch (error) {
+        console.error("Error fetching preferences:", error);
+        // In case of error, return default values to avoid breaking the app
+        return { alertThreshold: 10, criticalThreshold: 5 };
     }
 }
