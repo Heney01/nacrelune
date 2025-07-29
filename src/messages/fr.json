@@ -18,7 +18,8 @@
     "select_button": "Sélectionner",
     "footer_text": "© {year} Nacrelune. Tous droits réservés.",
     "admin_area_link": "Espace Administrateur",
-    "track_order_link": "Suivre ma commande"
+    "track_order_link": "Suivre ma commande",
+    "contact_support_link": "Contacter le support"
   },
   "Editor": {
     "charms_title": "Breloques",

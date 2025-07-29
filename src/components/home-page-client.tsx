@@ -1,6 +1,6 @@
 
 
-"use client";
+'use client';
 
 import React from 'react';
 import Editor from '@/components/editor';
@@ -78,6 +78,9 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
                  <Link href={`/${locale}/login`} className="hover:underline">
                     {t('admin_area_link')}
                 </Link>
+                <a href="mailto:support@nacrelune.com" className="hover:underline">
+                    {t('contact_support_link')}
+                </a>
             </div>
           </div>
         </footer>

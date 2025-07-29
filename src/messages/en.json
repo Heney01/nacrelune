@@ -18,7 +18,8 @@
     "select_button": "Select",
     "footer_text": "© {year} Nacrelune. All rights reserved.",
     "admin_area_link": "Administrator Area",
-    "track_order_link": "Track My Order"
+    "track_order_link": "Track My Order",
+    "contact_support_link": "Contact Support"
   },
   "Editor": {
     "charms_title": "Charms",
