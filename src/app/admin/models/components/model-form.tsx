@@ -32,16 +32,17 @@ function SubmitButton() {
 
 const ImagePicker = ({ name, label, defaultUrl }: { name: string; label: string; defaultUrl?: string }) => {
     const [preview, setPreview] = useState<string | null>(defaultUrl || null);
-    const [fileData, setFileData] = useState<{dataUrl: string, name: string} | null>(null);
+    const [fileData, setFileData] = useState<{dataUrl: string, name: string} | string | null>(defaultUrl || null);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {
-                setPreview(reader.result as string);
+                const dataUrl = reader.result as string;
+                setPreview(dataUrl);
                 setFileData({
-                    dataUrl: reader.result as string,
+                    dataUrl: dataUrl,
                     name: file.name
                 });
             };
@@ -76,10 +77,11 @@ export function ModelForm({ isOpen, onOpenChange, jewelryType, model }: ModelFor
     }, []);
 
     useEffect(() => {
-        if (state.message?.includes('succès')) {
+        // Check if state and state.message exist before accessing them
+        if (state?.message?.includes('succès')) {
             onOpenChange(false);
         }
-    }, [state.message, onOpenChange]);
+    }, [state, onOpenChange]);
     
     if (!isMounted) return null;
     
@@ -129,4 +131,3 @@ export function ModelForm({ isOpen, onOpenChange, jewelryType, model }: ModelFor
         </Dialog>
     );
 }
-
