@@ -68,6 +68,18 @@ type Action = {
     payload: { charmId: string; }
 };
 
+const safeToLocaleDateString = (date: any) => {
+    if (!date) return '';
+    if (date instanceof Date) {
+        return date.toLocaleDateString();
+    }
+    // Handle Firestore Timestamp
+    if (typeof date === 'object' && date.seconds) {
+        return new Date(date.seconds * 1000).toLocaleDateString();
+    }
+    return '';
+}
+
 function charmsReducer(state: State, action: Action): State {
     switch (action.type) {
         case 'ADD_CATEGORY':
@@ -304,7 +316,7 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                                                          <AlertIcon state={itemAlertState} message={
                                                                             itemAlertState === 'critical' ? t('stock_critical', { threshold: preferences.criticalThreshold }) : 
                                                                             itemAlertState === 'alert' ? t('stock_low', { threshold: preferences.alertThreshold }) :
-                                                                            t('stock_reordered', { date: charm.lastOrderedAt?.toLocaleDateString() })
+                                                                            t('stock_reordered', { date: safeToLocaleDateString(charm.lastOrderedAt) })
                                                                         } />
                                                                     )}
                                                                     {charm.quantity}
@@ -396,3 +408,5 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
         </>
     );
 }
+
+    

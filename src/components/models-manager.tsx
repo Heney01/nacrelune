@@ -56,6 +56,17 @@ type OptimisticUpdate = {
     payload: { jewelryTypeId: string; modelId: string; }
 }
 
+const safeToLocaleDateString = (date: any) => {
+    if (!date) return '';
+    if (date instanceof Date) {
+        return date.toLocaleDateString();
+    }
+    // Handle Firestore Timestamp
+    if (typeof date === 'object' && date.seconds) {
+        return new Date(date.seconds * 1000).toLocaleDateString();
+    }
+    return '';
+}
 
 function jewelryTypesReducer(state: State, action: OptimisticUpdate): State {
     switch (action.type) {
@@ -245,7 +256,7 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                                             <AlertIcon state={itemAlertState} message={
                                                                 itemAlertState === 'critical' ? t('stock_critical', { threshold: preferences.criticalThreshold }) : 
                                                                 itemAlertState === 'alert' ? t('stock_low', { threshold: preferences.alertThreshold }) :
-                                                                t('stock_reordered', { date: model.lastOrderedAt?.toLocaleDateString() })
+                                                                t('stock_reordered', { date: safeToLocaleDateString(model.lastOrderedAt) })
                                                             } />
                                                         )}
                                                         {model.quantity}
@@ -339,3 +350,5 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
         </div>
     );
 }
+
+    
