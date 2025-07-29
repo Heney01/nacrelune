@@ -10,10 +10,6 @@ import { ModelForm } from './model-form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
-import { deleteModel } from '../actions';
-
 
 interface ModelsManagerProps {
     initialJewelryTypes: Omit<JewelryType, 'icon'>[];
@@ -23,71 +19,23 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [selectedJewelryType, setSelectedJewelryType] = useState<Omit<JewelryType, 'models'|'icon'>>(initialJewelryTypes[0]);
     const [selectedModel, setSelectedModel] = useState<JewelryModel | null>(null);
-    const [isDeleting, setIsDeleting] = useState<string | null>(null);
-    const { toast } = useToast();
-    const router = useRouter();
 
     const handleAddModelClick = (jewelryType: Omit<JewelryType, 'models'|'icon'>) => {
+        console.log(`--- TEST: Bouton 'Ajouter un modèle' cliqué pour ${jewelryType.name}`);
         setSelectedJewelryType(jewelryType);
         setSelectedModel(null);
         setIsFormOpen(true);
     };
 
     const handleEditModelClick = (jewelryType: Omit<JewelryType, 'models'|'icon'>, model: JewelryModel) => {
+        console.log(`--- TEST: Bouton 'Modifier' cliqué pour le modèle ${model.name}`);
         setSelectedJewelryType(jewelryType);
         setSelectedModel(model);
         setIsFormOpen(true);
     };
 
-    const handleDeleteModel = async (jewelryType: Omit<JewelryType, 'models'|'icon'>, model: JewelryModel) => {
-        console.log('=== handleDeleteModel START ===');
-        console.log('handleDeleteModel called with:', { 
-            jewelryTypeId: jewelryType.id, 
-            modelId: model.id,
-            modelName: model.name,
-            displayImageUrl: model.displayImageUrl,
-            editorImageUrl: model.editorImageUrl
-        });
-        
-        if (isDeleting === model.id) return;
-        setIsDeleting(model.id);
-        
-        try {
-            console.log('Calling deleteModel action...');
-            const result = await deleteModel(
-                jewelryType.id, 
-                model.id, 
-                model.displayImageUrl || '', 
-                model.editorImageUrl || ''
-            );
-            console.log('deleteModel result:', result);
-
-            if (result?.success) {
-                console.log('Delete successful, showing success toast');
-                toast({
-                    title: 'Succès',
-                    description: result.message,
-                });
-                router.refresh();
-            } else {
-                 console.error('Delete failed:', result);
-                toast({
-                    variant: 'destructive',
-                    title: 'Erreur',
-                    description: result?.message || 'Une erreur inconnue est survenue.',
-                });
-            }
-        } catch (error) {
-            console.error('Exception in handleDeleteModel:', error);
-            toast({
-                variant: 'destructive',
-                title: 'Erreur',
-                description: `Une erreur inattendue est survenue: ${error instanceof Error ? error.message : 'Erreur inconnue'}`,
-            });
-        } finally {
-            setIsDeleting(null);
-            console.log('=== handleDeleteModel END ===');
-        }
+    const handleDeleteModel = (model: JewelryModel) => {
+        console.log(`--- TEST: Bouton 'Supprimer' cliqué pour le modèle ${model.name}`);
     };
 
     return (
@@ -134,7 +82,6 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
                                                    variant="ghost" 
                                                    size="icon" 
                                                    onClick={() => handleEditModelClick(jewelryType, model)}
-                                                   disabled={isDeleting === model.id}
                                                >
                                                    <Edit className="h-4 w-4" />
                                                </Button>
@@ -145,7 +92,6 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
                                                             variant="ghost" 
                                                             size="icon" 
                                                             className="text-destructive hover:text-destructive"
-                                                            disabled={isDeleting === model.id}
                                                         >
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>
@@ -161,10 +107,9 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
                                                             <AlertDialogCancel>Annuler</AlertDialogCancel>
                                                             <AlertDialogAction
                                                                 className="bg-destructive hover:bg-destructive/90"
-                                                                disabled={isDeleting === model.id}
-                                                                onClick={() => handleDeleteModel(jewelryType, model)}
+                                                                onClick={() => handleDeleteModel(model)}
                                                             >
-                                                                {isDeleting === model.id ? 'Suppression...' : 'Supprimer'}
+                                                                Supprimer
                                                             </AlertDialogAction>
                                                         </AlertDialogFooter>
                                                     </AlertDialogContent>
