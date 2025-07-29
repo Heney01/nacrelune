@@ -1,3 +1,4 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NacreluneLogo } from "@/components/icons";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { ModelsManager } from "@/components/models-manager";
 import { getJewelryTypesAndModels } from "@/lib/data";
 import { Gem, HandMetal, Ear, User, Wrench } from "lucide-react";
 import type { JewelryType } from "@/lib/types";
+import { DebugButton } from "@/components/debug-button";
 
 export default async function AdminDashboard({ params }: { params: { locale: string }}) {
   const JEWELRY_TYPES_INFO: Omit<JewelryType, 'models' | 'icon'>[] = [
@@ -17,6 +19,7 @@ export default async function AdminDashboard({ params }: { params: { locale: str
   
   return (
     <div className="bg-muted/40 min-h-screen">
+      <DebugButton source="Admin Dashboard" />
       <div className="flex-col md:flex">
         <div className="border-b">
           <div className="flex h-16 items-center px-4">

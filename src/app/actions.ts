@@ -46,21 +46,18 @@ const getFileNameFromUrl = (url: string) => {
 };
 
 export async function deleteModel(formData: FormData): Promise<{ success: boolean; message: string }> {
-    console.log("--- [SERVER] deleteModel action called ---");
     const modelId = formData.get('modelId') as string;
     const jewelryTypeId = formData.get('jewelryTypeId') as string;
     const locale = formData.get('locale') as string || 'fr'; // Default locale
     const displayImageUrl = formData.get('displayImageUrl') as string;
     const editorImageUrl = formData.get('editorImageUrl') as string;
+    
+    console.log(`--- [SERVER] deleteModel called for modelId: ${modelId}`);
 
-    // This handles the test call from the homepage button
     if (!modelId || !jewelryTypeId) {
-        const message = "Appel de test réussi depuis la page d'accueil.";
-        console.log(`--- [SERVER] Test call detected. ${message}`);
-        return { success: true, message: message };
+        console.error("--- [SERVER] Missing modelId or jewelryTypeId.");
+        return { success: false, message: "Informations manquantes pour la suppression." };
     }
-
-    console.log(`--- [SERVER] Received data: modelId=${modelId}, jewelryTypeId=${jewelryTypeId}`);
 
     try {
         // 1. Delete Firestore document
@@ -150,4 +147,9 @@ export async function logout(formData: FormData) {
   const locale = formData.get('locale') as string || 'fr';
   cookies().delete('session');
   redirect(`/${locale}/login`);
+}
+
+export async function debugAction(formData: FormData): Promise<void> {
+    const source = formData.get('source') as string;
+    console.log(`--- [SERVER] debugAction called from: ${source} ---`);
 }
