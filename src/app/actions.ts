@@ -590,25 +590,21 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
     if (!orderNumber) {
         return { success: false, message: "Veuillez fournir un numéro de commande." };
     }
-    console.log(`[DEBUG] Searching for order number: ${orderNumber}`);
 
     try {
         const q = query(collection(db, 'orders'), where('orderNumber', '==', orderNumber.trim()));
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
-            console.log(`[DEBUG] No order found for number: ${orderNumber}`);
             return { success: false, message: "Aucune commande trouvée avec ce numéro.", order: null };
         }
 
         const orderDoc = querySnapshot.docs[0];
         const orderData = orderDoc.data();
-        console.log('[DEBUG] Order data found:', orderData);
 
         // Get all unique charm IDs from all items in the order
         const allCharmIds = orderData.items.flatMap((item: OrderItem) => item.charmIds);
-        const uniqueCharmIds = [...new Set(allCharmIds)].filter(id => id);
-        console.log('[DEBUG] Unique charm IDs:', uniqueCharmIds);
+        const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
         // Fetch all required charms in a single query
         let charmsMap = new Map<string, Charm>();
@@ -620,19 +616,19 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
                 charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id });
             }
         }
-        console.log('[DEBUG] Charms map populated:', charmsMap);
         
         // Fetch all required models
         const modelIds = orderData.items.map((item: OrderItem) => item.modelId);
-        const uniqueModelIds = [...new Set(modelIds)];
+        const uniqueModelIds = Array.from(new Set(modelIds));
         const modelsMap = new Map<string, JewelryModel>();
         
         if (uniqueModelIds.length > 0) {
-            const jewelryTypeIds = [...new Set(orderData.items.map((item: any) => item.jewelryTypeId))];
-            console.log('[DEBUG] Unique jewelryType IDs:', jewelryTypeIds);
+            const jewelryTypeIds = Array.from(new Set(
+                orderData.items.map((item: any) => item.jewelryTypeId).filter(Boolean)
+            ));
             
-            const modelPromises = jewelryTypeIds.map(typeId => 
-                getDocs(query(collection(db, typeId), where(documentId(), 'in', uniqueModelIds)))
+            const modelPromises = jewelryTypeIds.map((typeId) => 
+                getDocs(query(collection(db, typeId as string), where(documentId(), 'in', uniqueModelIds)))
             );
             
             const modelSnapshots = await Promise.all(modelPromises);
@@ -645,27 +641,21 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
                  }
             }
         }
-        console.log('[DEBUG] Models map populated:', modelsMap);
 
-
-        // Enrich order items with full charm details
+        // Enrich order items with full charm and model details
         const enrichedItems: OrderItem[] = await Promise.all(orderData.items.map(async (item: OrderItem) => {
             const model = modelsMap.get(item.modelId);
-            const modelImageUrl = model ? model.displayImageUrl : 'https://placehold.co/400x400.png';
             
-            const enrichedCharms = await Promise.all(
-                (item.charmIds || []).map(async id => {
-                    const charm = charmsMap.get(id);
-                    if (!charm) return null;
-                    const imageUrl = await getDownloadURL(ref(storage, charm.imageUrl)).catch(() => 'https://placehold.co/100x100.png');
-                    return { ...charm, imageUrl };
-                })
-            );
+            const enrichedCharms = (item.charmIds || []).map(id => {
+                const charm = charmsMap.get(id);
+                // The full charm object with its imageUrl is already fetched, no need for another getDownloadURL call here.
+                return charm;
+            }).filter((c): c is Charm => !!c);
 
             return {
                 ...item,
-                modelImageUrl,
-                charms: enrichedCharms.filter(Boolean) as Charm[],
+                modelImageUrl: model?.displayImageUrl,
+                charms: enrichedCharms,
             };
         }));
         
@@ -679,7 +669,6 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
             status: orderData.status,
         };
         
-        console.log('[DEBUG] Final enriched order:', order);
         return { success: true, message: "Commande trouvée.", order: order };
     } catch (error) {
         console.error('Error fetching order:', error);
