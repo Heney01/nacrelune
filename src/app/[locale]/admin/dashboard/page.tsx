@@ -13,11 +13,56 @@ import { Gem, User, Wrench, ChevronRight, ArrowLeft, Settings, AlertTriangle } f
 import type { JewelryType, Charm, CharmCategory, GeneralPreferences } from "@/lib/types";
 import Link from "next/link";
 import { Loader2 } from 'lucide-react';
-
+import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface AdminDashboardProps {
     locale: string;
 }
+
+const getModelsAlertState = (
+    jewelryTypes: Omit<JewelryType, 'icon'>[], 
+    preferences: GeneralPreferences
+): 'critical' | 'alert' | 'none' => {
+    const allModels = jewelryTypes.flatMap(jt => jt.models);
+    if (allModels.some(m => (m.quantity ?? Infinity) <= preferences.criticalThreshold)) {
+        return 'critical';
+    }
+    if (allModels.some(m => (m.quantity ?? Infinity) <= preferences.alertThreshold)) {
+        return 'alert';
+    }
+    return 'none';
+};
+
+const getCharmsAlertState = (
+    charms: Charm[], 
+    preferences: GeneralPreferences
+): 'critical' | 'alert' | 'none' => {
+    if (charms.some(c => (c.quantity ?? Infinity) <= preferences.criticalThreshold)) {
+        return 'critical';
+    }
+    if (charms.some(c => (c.quantity ?? Infinity) <= preferences.alertThreshold)) {
+        return 'alert';
+    }
+    return 'none';
+};
+
+const AlertIcon = ({ state, message }: { state: 'critical' | 'alert', message: string }) => (
+    <TooltipProvider>
+        <Tooltip>
+            <TooltipTrigger>
+                <AlertTriangle className={cn(
+                    'h-5 w-5',
+                    state === 'critical' ? 'text-red-500' : 'text-yellow-500'
+                )} />
+            </TooltipTrigger>
+            <TooltipContent>
+                <p>{message}</p>
+            </TooltipContent>
+        </Tooltip>
+    </TooltipProvider>
+);
+
 
 function AdminDashboardClient({ locale }: AdminDashboardProps) {
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
@@ -55,6 +100,9 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
   }
 
   const { jewelryTypes, charms, charmCategories, preferences } = initialData;
+  
+  const modelsAlertState = getModelsAlertState(jewelryTypes, preferences);
+  const charmsAlertState = getCharmsAlertState(charms, preferences);
 
   const adminSections = [
     {
@@ -64,6 +112,7 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
       icon: Gem,
       component: <ModelsManager initialJewelryTypes={jewelryTypes} locale={locale} preferences={preferences} />,
       disabled: false,
+      alertState: modelsAlertState,
     },
     {
       value: 'charms',
@@ -72,6 +121,7 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
       icon: Wrench,
       component: <CharmsManager initialCharms={charms} initialCharmCategories={charmCategories} locale={locale} preferences={preferences} />,
       disabled: false,
+      alertState: charmsAlertState,
     },
     {
       value: 'preferences',
@@ -80,6 +130,7 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
       icon: Settings,
       component: <PreferencesManager initialPreferences={preferences} locale={locale} />,
       disabled: false,
+      alertState: 'none',
     },
     {
       value: 'users',
@@ -88,6 +139,7 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
       icon: User,
       component: null,
       disabled: true,
+      alertState: 'none',
     },
   ];
 
@@ -133,7 +185,12 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
                             >
                                 <div>
                                     <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                        <CardTitle className="text-lg font-medium">{section.title}</CardTitle>
+                                        <CardTitle className="text-lg font-medium flex items-center gap-2">
+                                            {section.alertState !== 'none' && (
+                                                <AlertIcon state={section.alertState} message="Un ou plusieurs articles ont un stock bas ou critique." />
+                                            )}
+                                            {section.title}
+                                        </CardTitle>
                                         <section.icon className="h-5 w-5 text-muted-foreground" />
                                     </CardHeader>
                                     <CardContent>
