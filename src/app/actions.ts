@@ -590,21 +590,25 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
     if (!orderNumber) {
         return { success: false, message: "Veuillez fournir un numéro de commande." };
     }
+    console.log(`[DEBUG] Searching for order number: ${orderNumber}`);
 
     try {
         const q = query(collection(db, 'orders'), where('orderNumber', '==', orderNumber.trim()));
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
+            console.log(`[DEBUG] No order found for number: ${orderNumber}`);
             return { success: false, message: "Aucune commande trouvée avec ce numéro.", order: null };
         }
 
         const orderDoc = querySnapshot.docs[0];
         const orderData = orderDoc.data();
+        console.log('[DEBUG] Order data found:', orderData);
 
         // Get all unique charm IDs from all items in the order
         const allCharmIds = orderData.items.flatMap((item: OrderItem) => item.charmIds);
         const uniqueCharmIds = [...new Set(allCharmIds)].filter(id => id);
+        console.log('[DEBUG] Unique charm IDs:', uniqueCharmIds);
 
         // Fetch all required charms in a single query
         let charmsMap = new Map<string, Charm>();
@@ -616,6 +620,7 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
                 charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id });
             }
         }
+        console.log('[DEBUG] Charms map populated:', charmsMap);
         
         // Fetch all required models
         const modelIds = orderData.items.map((item: OrderItem) => item.modelId);
@@ -623,21 +628,24 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
         const modelsMap = new Map<string, JewelryModel>();
         
         if (uniqueModelIds.length > 0) {
-            // We need to query across multiple collections ('necklace', 'bracelet', etc.)
             const jewelryTypeIds = [...new Set(orderData.items.map((item: any) => item.jewelryTypeId))];
+            console.log('[DEBUG] Unique jewelryType IDs:', jewelryTypeIds);
             
-            const modelPromises = jewelryTypeIds.map(typeId => getDocs(query(collection(db, typeId), where(documentId(), 'in', uniqueModelIds))));
+            const modelPromises = jewelryTypeIds.map(typeId => 
+                getDocs(query(collection(db, typeId), where(documentId(), 'in', uniqueModelIds)))
+            );
             
             const modelSnapshots = await Promise.all(modelPromises);
             
-            modelSnapshots.flat().forEach(snap => {
-                 snap.docs.forEach(modelDoc => {
+            for (const snap of modelSnapshots) {
+                 for (const modelDoc of snap.docs) {
                     if (modelDoc.exists()) {
                          modelsMap.set(modelDoc.id, { id: modelDoc.id, ...modelDoc.data() } as JewelryModel);
                     }
-                 })
-            });
+                 }
+            }
         }
+        console.log('[DEBUG] Models map populated:', modelsMap);
 
 
         // Enrich order items with full charm details
@@ -671,11 +679,10 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
             status: orderData.status,
         };
         
+        console.log('[DEBUG] Final enriched order:', order);
         return { success: true, message: "Commande trouvée.", order: order };
     } catch (error) {
         console.error('Error fetching order:', error);
         return { success: false, message: "Une erreur est survenue lors de la recherche de la commande." };
     }
 }
-
-    
