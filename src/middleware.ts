@@ -25,16 +25,19 @@ function getLocale(request: NextRequest): string {
 }
 
 export function middleware(request: NextRequest) {
+  console.log(`--- [MIDDLEWARE] Triggered for path: ${request.nextUrl.pathname}, method: ${request.method}`);
   const pathname = request.nextUrl.pathname;
 
   // Handle admin area protection.
   // This part only runs for paths matched by the config below.
   const sessionCookie = request.cookies.get('session');
   if (!sessionCookie) {
+    console.log("--- [MIDDLEWARE] No session cookie found. Redirecting to login.");
     const locale = pathname.split('/')[1] || defaultLocale;
     return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
   }
-
+  
+  console.log("--- [MIDDLEWARE] Session cookie found. Allowing request.");
   return NextResponse.next();
 }
 

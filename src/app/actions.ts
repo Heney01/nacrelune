@@ -48,6 +48,7 @@ const getFileNameFromUrl = (url: string) => {
 };
 
 export async function deleteModel(formData: FormData): Promise<{ success: boolean; message: string }> {
+    console.log("--- [ACTION] deleteModel called.");
     const modelId = formData.get('modelId') as string;
     const jewelryTypeId = formData.get('jewelryTypeId') as string;
     const locale = formData.get('locale') as string || 'fr';
@@ -111,6 +112,7 @@ async function uploadImage(imageDataJson: string, existingUrl: string, jewelryTy
 }
 
 export async function saveModel(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; model?: JewelryModel }> {
+    console.log("--- [ACTION] saveModel called.");
     const modelId = formData.get('modelId') as string | null;
     const jewelryTypeId = formData.get('jewelryTypeId') as string;
     const name = formData.get('name') as string;
@@ -166,6 +168,7 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
 
 
 export async function login(prevState: any, formData: FormData) {
+  console.log("--- [ACTION] login called.");
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
   const locale = formData.get('locale') as string || 'fr';
@@ -186,6 +189,7 @@ export async function login(prevState: any, formData: FormData) {
       maxAge: 60 * 60 * 24, // 1 day
       path: '/',
     });
+     console.log("--- [ACTION] Session cookie set.");
 
   } catch (error: any) {
     let errorMessage = "Une erreur inconnue est survenue.";
@@ -210,7 +214,9 @@ export async function login(prevState: any, formData: FormData) {
 
 
 export async function logout(formData: FormData) {
+  console.log("--- [ACTION] logout called.");
   const locale = formData.get('locale') as string || 'fr';
   cookies().delete('session');
+  console.log("--- [ACTION] Session cookie deleted.");
   redirect(`/${locale}/login`);
 }
