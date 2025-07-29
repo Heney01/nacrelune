@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useReducer, useEffect } from 'react';
+import { useState, useReducer } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
@@ -87,34 +87,6 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
         setSelectedModel(model);
         setIsFormOpen(true);
     };
-    
-    const handleDeleteAction = async (formData: FormData) => {
-        console.log("--- [CLIENT] handleDeleteAction triggered ---");
-        const jewelryTypeId = formData.get('jewelryTypeId') as string;
-        const modelId = formData.get('modelId') as string;
-
-        // Optimistic UI update
-        dispatch({ type: 'DELETE', payload: { jewelryTypeId, modelId } });
-
-        console.log("--- [CLIENT] Calling server action 'deleteModel' ---");
-        const result = await deleteModel(formData);
-        console.log("--- [CLIENT] Server action result:", result);
-        
-        if (result?.success) {
-            toast({
-                title: 'Succès',
-                description: result.message,
-            });
-        } else {
-            toast({
-                variant: 'destructive',
-                title: 'Erreur',
-                description: result?.message || 'Une erreur inconnue est survenue.',
-            });
-            // Note: You might want to revert the optimistic update here if the server fails
-        }
-    };
-
 
     const handleSaveModel = (modelData: any) => {
         console.log(`--- TEST: handleSaveModel appelé avec ${JSON.stringify(modelData)}`);
@@ -155,57 +127,77 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
                                </TableHeader>
                                <TableBody>
                                    {jewelryType.models.map((model) => (
-                                       <TableRow key={model.id}>
-                                           <TableCell>
-                                               <Image src={model.displayImageUrl} alt={model.name} width={64} height={64} className="rounded-md object-cover h-auto" />
-                                           </TableCell>
-                                           <TableCell className="font-medium">{model.name}</TableCell>
-                                           <TableCell>{model.price}€</TableCell>
-                                           <TableCell className="text-right">
-                                               <Button 
-                                                   variant="ghost" 
-                                                   size="icon" 
-                                                   onClick={() => handleEditModelClick(jewelryType, model)}
-                                               >
-                                                   <Edit className="h-4 w-4" />
-                                               </Button>
-                                               
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button 
-                                                            variant="ghost" 
-                                                            size="icon" 
-                                                            className="text-destructive hover:text-destructive"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <form action={handleDeleteAction}>
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-                                                                <AlertDialogDescription>
-                                                                    Cette action est irréversible. Le modèle "{model.name}" sera définitivement supprimé.
-                                                                </AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <input type="hidden" name="modelId" value={model.id} />
-                                                            <input type="hidden" name="jewelryTypeId" value={jewelryType.id} />
-                                                            <input type="hidden" name="displayImageUrl" value={model.displayImageUrl} />
-                                                            <input type="hidden" name="editorImageUrl" value={model.editorImageUrl} />
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
-                                                                <AlertDialogAction
-                                                                    type="submit"
-                                                                    className="bg-destructive hover:bg-destructive/90"
-                                                                >
-                                                                    Supprimer
-                                                                </AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </form>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                           </TableCell>
-                                       </TableRow>
+                                    <React.Fragment key={model.id}>
+                                        <form
+                                            id={`delete-form-${model.id}`}
+                                            action={async (formData) => {
+                                                console.log(`--- [CLIENT] Submitting form for model ${model.id}`);
+                                                dispatch({ type: 'DELETE', payload: { jewelryTypeId: jewelryType.id, modelId: model.id } });
+
+                                                const result = await deleteModel(formData);
+
+                                                console.log("--- [CLIENT] Server action result:", result);
+                                                if (result?.success) {
+                                                    toast({ title: 'Succès', description: result.message });
+                                                } else {
+                                                    toast({ variant: 'destructive', title: 'Erreur', description: result?.message || 'Une erreur inconnue est survenue.' });
+                                                    // Note: You might want to revert the optimistic update here if the server fails
+                                                }
+                                            }}
+                                            className="contents"
+                                        >
+                                            <input type="hidden" name="modelId" value={model.id} />
+                                            <input type="hidden" name="jewelryTypeId" value={jewelryType.id} />
+                                            <input type="hidden" name="displayImageUrl" value={model.displayImageUrl} />
+                                            <input type="hidden" name="editorImageUrl" value={model.editorImageUrl} />
+                                        </form>
+                                        <TableRow>
+                                            <TableCell>
+                                                <Image src={model.displayImageUrl} alt={model.name} width={64} height={64} className="rounded-md object-cover h-auto" />
+                                            </TableCell>
+                                            <TableCell className="font-medium">{model.name}</TableCell>
+                                            <TableCell>{model.price}€</TableCell>
+                                            <TableCell className="text-right">
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    onClick={() => handleEditModelClick(jewelryType, model)}
+                                                >
+                                                    <Edit className="h-4 w-4" />
+                                                </Button>
+                                                
+                                                 <AlertDialog>
+                                                     <AlertDialogTrigger asChild>
+                                                         <Button 
+                                                             variant="ghost" 
+                                                             size="icon" 
+                                                             className="text-destructive hover:text-destructive"
+                                                         >
+                                                             <Trash2 className="h-4 w-4" />
+                                                         </Button>
+                                                     </AlertDialogTrigger>
+                                                     <AlertDialogContent>
+                                                         <AlertDialogHeader>
+                                                             <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                                                             <AlertDialogDescription>
+                                                                 Cette action est irréversible. Le modèle "{model.name}" sera définitivement supprimé.
+                                                             </AlertDialogDescription>
+                                                         </AlertDialogHeader>
+                                                         <AlertDialogFooter>
+                                                             <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
+                                                             <AlertDialogAction
+                                                                 type="submit"
+                                                                 form={`delete-form-${model.id}`}
+                                                                 className="bg-destructive hover:bg-destructive/90"
+                                                             >
+                                                                 Supprimer
+                                                             </AlertDialogAction>
+                                                         </AlertDialogFooter>
+                                                     </AlertDialogContent>
+                                                 </AlertDialog>
+                                            </TableCell>
+                                        </TableRow>
+                                    </React.Fragment>
                                    ))}
                                </TableBody>
                            </Table>
@@ -228,3 +220,4 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
         </div>
     );
 }
+
