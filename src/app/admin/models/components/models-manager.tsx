@@ -1,8 +1,8 @@
 
+
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useFormState } from 'react-dom';
+import { useState, useReducer, useEffect } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
@@ -32,48 +32,47 @@ type OptimisticUpdate = {
     }
 }
 
-
-const DeleteForm = ({ jewelryTypeId, model }: { jewelryTypeId: string, model: JewelryModel}) => {
-    const { toast } = useToast();
-    
-    const [state, formAction] = useFormState(deleteModel, { success: false, message: '' });
-
-    useEffect(() => {
-        if(state.message) {
-            if (state.success) {
-                toast({
-                    title: 'Succès',
-                    description: state.message,
-                });
-            } else {
-                toast({
-                    variant: 'destructive',
-                    title: 'Erreur',
-                    description: state.message,
-                });
-            }
-        }
-    }, [state, toast]);
-
-    return (
-        <form action={formAction}>
-            <input type="hidden" name="jewelryTypeId" value={jewelryTypeId} />
-            <input type="hidden" name="modelId" value={model.id} />
-            <input type="hidden" name="displayImageUrl" value={model.displayImageUrl} />
-            <input type="hidden" name="editorImageUrl" value={model.editorImageUrl} />
-            <AlertDialogAction
-                type="submit"
-                className="bg-destructive hover:bg-destructive/90"
-            >
-                Supprimer
-            </AlertDialogAction>
-        </form>
-    )
+function jewelryTypesReducer(state: Omit<JewelryType, 'icon'>[], action: OptimisticUpdate): Omit<JewelryType, 'icon'>[] {
+    switch (action.type) {
+        case 'DELETE':
+            return state.map(jt => {
+                if (jt.id === action.payload.jewelryTypeId) {
+                    return {
+                        ...jt,
+                        models: jt.models.filter(m => m.id !== action.payload.modelId)
+                    };
+                }
+                return jt;
+            });
+        case 'ADD':
+            return state.map(jt => {
+                if (jt.id === action.payload.jewelryTypeId) {
+                    return {
+                        ...jt,
+                        models: [...jt.models, action.payload.model]
+                    };
+                }
+                return jt;
+            });
+        case 'UPDATE':
+             return state.map(jt => {
+                if (jt.id === action.payload.jewelryTypeId) {
+                    return {
+                        ...jt,
+                        models: jt.models.map(m => m.id === action.payload.model.id ? action.payload.model : m)
+                    };
+                }
+                return jt;
+            });
+        default:
+            return state;
+    }
 }
+
 
 export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
     const { toast } = useToast();
-    const [jewelryTypes, setJewelryTypes] = useState(initialJewelryTypes);
+    const [jewelryTypes, dispatch] = useReducer(jewelryTypesReducer, initialJewelryTypes);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [selectedJewelryType, setSelectedJewelryType] = useState<Omit<JewelryType, 'models'|'icon'>>(initialJewelryTypes[0]);
     const [selectedModel, setSelectedModel] = useState<JewelryModel | null>(null);
@@ -91,7 +90,41 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
         setSelectedModel(model);
         setIsFormOpen(true);
     };
+    
+    const handleDeleteModel = async (jewelryTypeId: string, model: JewelryModel) => {
+        console.log(`--- TEST: Bouton 'Supprimer' cliqué pour le modèle ${model.name}`);
+        
+        const formData = new FormData();
+        formData.append('jewelryTypeId', jewelryTypeId);
+        formData.append('modelId', model.id);
+        formData.append('displayImageUrl', model.displayImageUrl);
+        formData.append('editorImageUrl', model.editorImageUrl);
 
+        const result = await deleteModel(null, formData);
+
+        if (result?.success) {
+            dispatch({ type: 'DELETE', payload: { jewelryTypeId, modelId: model.id } });
+            toast({
+                title: 'Succès',
+                description: result.message,
+            });
+        } else {
+            console.error("Erreur lors de l’appel de deleteModel", result?.message);
+            toast({
+                variant: 'destructive',
+                title: 'Erreur',
+                description: result?.message || 'Une erreur inconnue est survenue.',
+            });
+        }
+    };
+
+
+    const handleSaveModel = (modelData: any) => {
+        console.log(`--- TEST: handleSaveModel appelé avec ${JSON.stringify(modelData)}`);
+        // Ici, vous appellerez votre action serveur pour sauvegarder les données
+        setIsFormOpen(false);
+    }
+    
     return (
         <div className="p-4 bg-card rounded-lg border">
             <Accordion type="multiple" defaultValue={initialJewelryTypes.map(jt => jt.id)} className="w-full">
@@ -159,7 +192,12 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter>
                                                             <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                                            <DeleteForm jewelryTypeId={jewelryType.id} model={model} />
+                                                            <AlertDialogAction
+                                                                onClick={() => handleDeleteModel(jewelryType.id, model)}
+                                                                className="bg-destructive hover:bg-destructive/90"
+                                                            >
+                                                                Supprimer
+                                                            </AlertDialogAction>
                                                         </AlertDialogFooter>
                                                     </AlertDialogContent>
                                                 </AlertDialog>
@@ -180,7 +218,8 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
                     isOpen={isFormOpen} 
                     onOpenChange={setIsFormOpen} 
                     jewelryType={selectedJewelryType} 
-                    model={selectedModel} 
+                    model={selectedModel}
+                    onSave={handleSaveModel}
                 />
             )}
         </div>

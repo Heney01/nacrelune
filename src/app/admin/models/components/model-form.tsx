@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -15,6 +16,7 @@ interface ModelFormProps {
     onOpenChange: (isOpen: boolean) => void;
     jewelryType: Omit<JewelryType, 'models' | 'icon'>;
     model?: JewelryModel | null;
+    onSave: (modelData: any) => void;
 }
 
 const ImagePicker = ({ name, label, defaultUrl }: { name: string; label: string; defaultUrl?: string }) => {
@@ -55,7 +57,7 @@ const ImagePicker = ({ name, label, defaultUrl }: { name: string; label: string;
     );
 };
 
-export function ModelForm({ isOpen, onOpenChange, jewelryType, model }: ModelFormProps) {
+export function ModelForm({ isOpen, onOpenChange, jewelryType, model, onSave }: ModelFormProps) {
     const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
@@ -64,6 +66,12 @@ export function ModelForm({ isOpen, onOpenChange, jewelryType, model }: ModelFor
 
     const handleSave = () => {
         console.log(`--- TEST: Bouton 'Enregistrer' cliqué pour le modèle ${model ? model.name : 'nouveau'}`);
+        // This is a placeholder for demonstration.
+        // In a real scenario, you'd gather form data here.
+        onSave({ 
+            id: model?.id, 
+            name: 'Test Model', // Replace with actual form data
+        });
         onOpenChange(false);
     }
     
