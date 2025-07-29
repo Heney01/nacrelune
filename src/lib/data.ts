@@ -5,17 +5,21 @@ import { ref, getDownloadURL } from 'firebase/storage';
 import type { JewelryModel, JewelryType, Charm, CharmCategory } from '@/lib/types';
 
 const getUrl = async (path: string, fallback: string) => {
+    if (path && (path.startsWith('http://') || path.startsWith('https://'))) {
+        return path; // It's already a full URL
+    }
     if (path && !path.startsWith('http')) {
         try {
             const storageRef = ref(storage, path);
             return await getDownloadURL(storageRef);
         } catch (error) {
-            console.error("Error getting download URL: ", error);
+            console.error(`Error getting download URL for path "${path}":`, error);
             return fallback;
         }
     }
-    return path || fallback;
+    return fallback;
 };
+
 
 export async function getJewelryTypesAndModels(
     baseTypes: Omit<JewelryType, 'models' | 'icon'>[]

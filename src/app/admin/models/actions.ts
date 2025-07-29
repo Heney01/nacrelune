@@ -3,7 +3,7 @@
 
 import { z } from 'zod';
 import { db, storage } from '@/lib/firebase';
-import { collection, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, deleteDoc, getDoc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { revalidatePath } from 'next/cache';
 
@@ -21,6 +21,7 @@ const ModelSchema = z.object({
 });
 
 function getFileName(filePath: string) {
+    if (!filePath) return null;
     try {
         const url = new URL(filePath);
         // Firebase Storage URLs have the file path encoded in the pathname
@@ -34,19 +35,32 @@ function getFileName(filePath: string) {
     } catch (e) {
         // Not a URL, might be a direct path
     }
-    return filePath;
+    return filePath.includes('/') ? filePath : null; // Return null if it's not a path-like string
 }
 
+async function deleteImage(imageUrl: string) {
+    const imagePath = getFileName(imageUrl);
+    if (imagePath) {
+        try {
+            const imageRef = ref(storage, imagePath);
+            await deleteObject(imageRef);
+        } catch (storageError: any) {
+            if (storageError.code !== 'storage/object-not-found') {
+                console.error(`Failed to delete image ${imagePath}:`, storageError);
+                throw storageError; // Re-throw other errors
+            }
+            console.warn(`Image not found for deletion, skipping: ${imagePath}`);
+        }
+    }
+}
 
-async function uploadImage(file: { dataUrl: string, name: string }, folder: string) {
+async function uploadImage(file: { dataUrl: string, name: string } | string | null, folder: string) {
     if (typeof file === 'string') return file;
     if (!file || !file.dataUrl) return null;
 
     const storageRef = ref(storage, `${folder}/${Date.now()}_${file.name}`);
     await uploadString(storageRef, file.dataUrl, 'data_url');
-    const downloadUrl = await getDownloadURL(storageRef);
-    
-    // Return the storage path, not the full URL
+    // We store the full path, not the download URL, to make deletion easier.
     return storageRef.fullPath;
 }
 
@@ -70,6 +84,14 @@ export async function saveModel(prevState: any, formData: FormData) {
   const { id, jewelryType, displayImage, editorImage, ...modelData } = validatedFields.data;
   
   try {
+    let oldData: any = null;
+    if (id) {
+        const docSnap = await getDoc(doc(db, jewelryType, id));
+        if (docSnap.exists()) {
+            oldData = docSnap.data();
+        }
+    }
+
     const displayImagePath = await uploadImage(displayImage, `${jewelryType}/display`);
     const editorImagePath = await uploadImage(editorImage, `${jewelryType}/editor`);
 
@@ -77,8 +99,18 @@ export async function saveModel(prevState: any, formData: FormData) {
       ...modelData,
     };
 
-    if (displayImagePath) dataToSave.displayImageUrl = displayImagePath;
-    if (editorImagePath) dataToSave.editorImageUrl = editorImagePath;
+    if (displayImagePath) {
+        dataToSave.displayImageUrl = displayImagePath;
+        if (oldData?.displayImageUrl) {
+            await deleteImage(oldData.displayImageUrl);
+        }
+    }
+    if (editorImagePath) {
+        dataToSave.editorImageUrl = editorImagePath;
+         if (oldData?.editorImageUrl) {
+            await deleteImage(oldData.editorImageUrl);
+        }
+    }
 
     if (id) {
       // Update
@@ -103,24 +135,8 @@ export async function deleteModel(jewelryTypeId: string, modelId: string, displa
         await deleteDoc(doc(db, jewelryTypeId, modelId));
 
         // Delete images from storage
-        if (displayImageUrl) {
-             try {
-                const displayImageRef = ref(storage, getFileName(displayImageUrl));
-                await deleteObject(displayImageRef);
-            } catch (storageError: any) {
-                if (storageError.code !== 'storage/object-not-found') throw storageError;
-                console.warn(`Display image not found for deletion: ${displayImageUrl}`);
-            }
-        }
-        if (editorImageUrl) {
-            try {
-                const editorImageRef = ref(storage, getFileName(editorImageUrl));
-                await deleteObject(editorImageRef);
-            } catch (storageError: any) {
-                if (storageError.code !== 'storage/object-not-found') throw storageError;
-                 console.warn(`Editor image not found for deletion: ${editorImageUrl}`);
-            }
-        }
+        await deleteImage(displayImageUrl);
+        await deleteImage(editorImageUrl);
 
         revalidatePath('/admin/dashboard');
         return { success: true, message: 'Modèle supprimé avec succès.' };
