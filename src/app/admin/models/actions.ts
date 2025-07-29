@@ -69,7 +69,10 @@ async function uploadImage(file: { dataUrl: string, name: string } | string | nu
     if (typeof file === 'string') return file;
     
     // If file is null or has no dataUrl, it means no new image was uploaded.
-    if (!file || !file.dataUrl) return null;
+    if (!file || !file.dataUrl) {
+         // But if there was an old image, we must keep it.
+        return oldImageUrl || null;
+    }
 
     // A new image was uploaded, so delete the old one if it exists.
     if (oldImageUrl) {
@@ -135,7 +138,8 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{me
       // Create
       await addDoc(collection(db, jewelryType), dataToSave);
     }
-
+    
+    revalidatePath('/', 'layout');
     revalidatePath('/admin/dashboard');
     return { message: 'Modèle enregistré avec succès.', errors: {} };
 
@@ -154,6 +158,7 @@ export async function deleteModel(jewelryTypeId: string, modelId: string, displa
         // Then, delete the document from Firestore.
         await deleteDoc(doc(db, jewelryTypeId, modelId));
 
+        revalidatePath('/', 'layout');
         revalidatePath('/admin/dashboard');
         return { success: true, message: 'Modèle supprimé avec succès.' };
     } catch (e: any) {
