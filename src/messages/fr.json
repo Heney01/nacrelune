@@ -54,7 +54,10 @@
     "preview_title": "Aperçu de {modelName}",
     "preview_description": "Voici un aperçu de votre création personnalisée.",
     "checkout_button": "Acheter",
-    "price": "{price, number, ::currency/EUR}"
+    "price": "{price, number, ::currency/EUR}",
+    "checkout_success_title": "Commande passée !",
+    "checkout_success_description": "Votre commande a été passée avec succès.",
+    "checkout_error_title": "Erreur de commande"
   },
   "CharmsPanel": {
     "title": "Breloques",

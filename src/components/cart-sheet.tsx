@@ -7,8 +7,8 @@ import { useCart } from '@/hooks/use-cart';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, ShoppingCart, PlusCircle } from 'lucide-react';
-import React, { ReactNode } from 'react';
+import { Trash2, ShoppingCart, PlusCircle, Loader2 } from 'lucide-react';
+import React, { ReactNode, useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Card } from './ui/card';
 import {
@@ -21,16 +21,20 @@ import {
 } from '@/components/ui/dialog';
 import { useTranslations } from '@/hooks/use-translations';
 import { useParams } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import { createOrder } from '@/app/actions';
 
 export function CartSheet({ children, open, onOpenChange }: {
   children?: ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
-  const { cart, removeFromCart } = useCart();
+  const { cart, removeFromCart, clearCart } = useCart();
   const t = useTranslations('Cart');
   const params = useParams();
   const locale = params.locale as string;
+  const { toast } = useToast();
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const totalItems = cart.length;
   
@@ -42,6 +46,30 @@ export function CartSheet({ children, open, onOpenChange }: {
 
   const formatPrice = (price: number) => {
     return t('price', { price });
+  };
+  
+  const handleCheckout = async () => {
+    setIsProcessing(true);
+    try {
+      const result = await createOrder(cart);
+      if (result.success) {
+        toast({
+          title: t('checkout_success_title'),
+          description: result.message,
+        });
+        clearCart();
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: t('checkout_error_title'),
+        description: error.message || "Une erreur inattendue est survenue.",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -128,6 +156,7 @@ export function CartSheet({ children, open, onOpenChange }: {
                           size="icon"
                           className="h-8 w-8 flex-shrink-0"
                           onClick={() => removeFromCart(item.id)}
+                          disabled={isProcessing}
                         >
                           <Trash2 className="h-4 w-4" />
                           <span className="sr-only">{t('remove_item')}</span>
@@ -166,11 +195,9 @@ export function CartSheet({ children, open, onOpenChange }: {
                   <span>{t('total')}</span>
                   <span>{formatPrice(totalPrice)}</span>
                 </div>
-                <SheetClose asChild>
-                  <Button className="w-full" disabled>
-                    {t('checkout_button')}
+                  <Button className="w-full" disabled={totalItems === 0 || isProcessing} onClick={handleCheckout}>
+                     {isProcessing ? <Loader2 className="animate-spin" /> : t('checkout_button')}
                   </Button>
-                </SheetClose>
               </div>
             </SheetFooter>
           </>

@@ -5,13 +5,13 @@
 import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { revalidatePath } from 'next/cache';
 import { db, storage } from '@/lib/firebase';
-import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction, Timestamp } from 'firebase/firestore';
 import { ref, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
-import type { JewelryModel, CharmCategory, Charm, GeneralPreferences } from '@/lib/types';
+import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem } from '@/lib/types';
 
 
 export async function getCharmSuggestions(
@@ -509,5 +509,57 @@ export async function markAsRestocked(formData: FormData): Promise<{ success: bo
     } catch (error) {
         console.error("Error marking item as restocked:", error);
         return { success: false, message: "Une erreur est survenue." };
+    }
+}
+
+
+export async function createOrder(cartItems: CartItem[]): Promise<{ success: boolean; message: string }> {
+    if (!cartItems || cartItems.length === 0) {
+        return { success: false, message: 'Le panier est vide.' };
+    }
+
+    try {
+        // Step 1: Upload all preview images to Firebase Storage
+        const uploadPromises = cartItems.map(async (item) => {
+            const storageRef = ref(storage, `order_previews/${item.id}-${Date.now()}.png`);
+            // The previewImage is a base64 data URL, so we use uploadString
+            const uploadResult = await uploadString(storageRef, item.previewImage, 'data_url');
+            return getDownloadURL(uploadResult.ref);
+        });
+
+        const previewImageUrls = await Promise.all(uploadPromises);
+
+        // Step 2: Prepare the order data for Firestore
+        const totalOrderPrice = cartItems.reduce((sum, item) => {
+            const modelPrice = item.model.price || 0;
+            const charmsPrice = item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+            return sum + modelPrice + charmsPrice;
+        }, 0);
+
+        const orderItems = cartItems.map((item, index) => {
+             const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+            return {
+                modelId: item.model.id,
+                modelName: item.model.name,
+                jewelryTypeName: item.jewelryType.name,
+                charmIds: item.placedCharms.map(pc => pc.charm.id),
+                price: itemPrice,
+                previewImageUrl: previewImageUrls[index] // Get the corresponding uploaded image URL
+            };
+        });
+        
+        const orderData = {
+            createdAt: serverTimestamp(),
+            totalPrice: totalOrderPrice,
+            items: orderItems,
+        };
+
+        // Step 3: Create the order document in Firestore
+        await addDoc(collection(db, 'orders'), orderData);
+        
+        return { success: true, message: 'Votre commande a été passée avec succès !' };
+    } catch (error) {
+        console.error("Error creating order:", error);
+        return { success: false, message: "Une erreur est survenue lors du passage de la commande." };
     }
 }

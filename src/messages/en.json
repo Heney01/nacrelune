@@ -54,7 +54,10 @@
     "preview_title": "Preview of {modelName}",
     "preview_description": "Here is a preview of your custom creation.",
     "checkout_button": "Checkout",
-    "price": "{price, number, ::currency/USD}"
+    "price": "{price, number, ::currency/USD}",
+    "checkout_success_title": "Order Placed!",
+    "checkout_success_description": "Your order has been successfully placed.",
+    "checkout_error_title": "Order Error"
   },
   "CharmsPanel": {
     "title": "Charms",
