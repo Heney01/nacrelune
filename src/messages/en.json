@@ -125,6 +125,6 @@
     "find_orders_button": "Find My Orders",
     "orders_found_title": "Orders Found",
     "email_sent_title": "Request Processed",
-    "email_sent_description": "If an account exists for the provided email, your order numbers have been sent."
+    "email_sent_description": "If any orders are associated with this email address, an email with your order numbers has been sent."
   }
 }

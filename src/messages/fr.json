@@ -125,6 +125,6 @@
     "find_orders_button": "Retrouver mes commandes",
     "orders_found_title": "Commandes trouvées",
     "email_sent_title": "Demande traitée",
-    "email_sent_description": "Si un compte existe pour l'e-mail fourni, vos numéros de commande ont été envoyés."
+    "email_sent_description": "Si des commandes sont associées à cette adresse e-mail, un e-mail contenant vos numéros de commande vous a été envoyé."
   }
 }
