@@ -28,37 +28,28 @@ export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Handle admin area protection.
-  if (pathname.includes('/admin')) {
-    const sessionCookie = request.cookies.get('session');
-    if (!sessionCookie) {
-      const locale = pathname.split('/')[1] || defaultLocale;
-      return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
-    }
+  // This part only runs for paths matched by the config below.
+  const sessionCookie = request.cookies.get('session');
+  if (!sessionCookie) {
+    const locale = pathname.split('/')[1] || defaultLocale;
+    return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
   }
 
-  const pathnameHasLocale = locales.some(
-    (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
-  );
-
-  if (pathnameHasLocale) {
-    return NextResponse.next();
-  }
-  
-  // Ignore Next.js-specific paths and static files.
-  if (pathname.startsWith('/_next') || pathname.includes('.') || pathname.startsWith('/api')) {
-    return NextResponse.next();
-  }
-
-  // Redirect to the default locale.
-  const locale = getLocale(request);
-  request.nextUrl.pathname = `/${locale}${pathname}`;
-  
-  return NextResponse.redirect(request.nextUrl);
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    // Exclude static files and API paths.
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
-  ],
+  /*
+   * Match all request paths except for the ones starting with:
+   * - api (API routes)
+   * - _next/static (static files)
+   * - _next/image (image optimization files)
+   * - favicon.ico (favicon file)
+   * - login page itself
+   * - and all non-admin pages
+   *
+   * This is a more explicit way to protect routes and avoids interfering
+   * with Next.js internal requests or non-admin pages.
+   */
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|login).*)?/admin/:path*'],
 };
