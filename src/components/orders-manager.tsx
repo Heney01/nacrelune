@@ -97,12 +97,14 @@ const ShipOrderDialog = ({
     isOpen,
     onOpenChange,
     onConfirm,
+    children,
     t
 }: {
     order: Order,
     isOpen: boolean,
     onOpenChange: (isOpen: boolean) => void,
     onConfirm: (trackingNumber: string, shippingCarrier: string) => void,
+    children: React.ReactNode,
     t: (key: string, values?: any) => string
 }) => {
     const [trackingNumber, setTrackingNumber] = useState(order.trackingNumber || '');
@@ -117,9 +119,7 @@ const ShipOrderDialog = ({
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                    <Edit className="mr-2 h-4 w-4" /> Modifier
-                </Button>
+                {children}
             </DialogTrigger>
             <DialogContent>
                 <form onSubmit={handleSubmit}>
@@ -167,11 +167,13 @@ const CancelOrderDialog = ({
     isOpen,
     onOpenChange,
     onConfirm,
+    children,
     t
 }: {
     isOpen: boolean,
     onOpenChange: (isOpen: boolean) => void,
     onConfirm: (reason: string) => void,
+    children: React.ReactNode,
     t: (key: string, values?: any) => string
 }) => {
     const [reason, setReason] = useState('');
@@ -184,6 +186,9 @@ const CancelOrderDialog = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
+             <DialogTrigger asChild>
+                {children}
+            </DialogTrigger>
             <DialogContent>
                 <form onSubmit={handleSubmit}>
                     <DialogHeader>
@@ -217,6 +222,7 @@ const OrderDetails = ({ order, onItemStatusChange, onStatusChange }: {
     onStatusChange: (orderId: string, status: OrderStatus, options?: { shippingInfo?: { carrier: string, trackingNumber: string }, cancellationReason?: string }) => void
 }) => {
     const t = useTranslations('Admin');
+    const [isShipDialogOpen, setIsShipDialogOpen] = useState(false);
 
     const handleShipConfirm = (trackingNumber: string, shippingCarrier: string) => {
         onStatusChange(order.id, 'expédiée', { shippingInfo: { carrier: shippingCarrier, trackingNumber } });
@@ -240,7 +246,11 @@ const OrderDetails = ({ order, onItemStatusChange, onStatusChange }: {
                                     <p className="font-mono">{order.trackingNumber}</p>
                                 </div>
                             </div>
-                           <ShipOrderDialog order={order} isOpen={false} onOpenChange={()=>{}} onConfirm={handleShipConfirm} t={t} />
+                           <ShipOrderDialog order={order} isOpen={isShipDialogOpen} onOpenChange={setIsShipDialogOpen} onConfirm={handleShipConfirm} t={t}>
+                                <Button variant="outline" size="sm">
+                                    <Edit className="mr-2 h-4 w-4" /> Modifier
+                                </Button>
+                           </ShipOrderDialog>
                         </div>
                     </div>
                 )}
@@ -402,7 +412,7 @@ const OrderRow = ({ order, isOpen, onToggle, onStatusChange, onItemStatusChange,
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
-                        <Button variant="ghost" size="icon" className="ml-2" onClick={onToggle}>
+                        <Button variant="ghost" size="icon" className="ml-2">
                              {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </Button>
                     </div>
@@ -421,13 +431,17 @@ const OrderRow = ({ order, isOpen, onToggle, onStatusChange, onItemStatusChange,
                 onOpenChange={setIsShipDialogOpen}
                 onConfirm={handleShipConfirm}
                 t={t}
-            />
+            >
+              <></>
+            </ShipOrderDialog>
              <CancelOrderDialog
                 isOpen={isCancelDialogOpen}
                 onOpenChange={setIsCancelDialogOpen}
                 onConfirm={handleCancelConfirm}
                 t={t}
-            />
+            >
+              <></>
+            </CancelOrderDialog>
         </Fragment>
     );
 };
@@ -612,8 +626,8 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
                 <div className="md:hidden space-y-4">
                      {processedOrders.length > 0 ? (
                         processedOrders.map(order => (
-                            <Card key={order.id} className={cn("overflow-hidden", isPending && 'opacity-50')} onClick={() => toggleOrder(order.id)}>
-                                <div className="p-4">
+                            <Card key={order.id} className={cn("overflow-hidden", isPending && 'opacity-50')}>
+                                <div className="p-4 cursor-pointer" onClick={() => toggleOrder(order.id)}>
                                     <div className="flex justify-between items-start">
                                         <div>
                                             <p className="font-bold">{order.orderNumber}</p>
