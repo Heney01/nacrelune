@@ -16,9 +16,10 @@ const ModelSchema = z.object({
     z.number().positive("Le prix doit être un nombre positif.")
   ),
   jewelryType: z.enum(['necklace', 'bracelet', 'earring']),
-  displayImage: z.any(),
-  editorImage: z.any(),
+  displayImage: z.any().transform((val) => (typeof val === 'string' ? JSON.parse(val) : val)),
+  editorImage: z.any().transform((val) => (typeof val === 'string' ? JSON.parse(val) : val)),
 });
+
 
 function getFileNameFromUrl(url: string): string | null {
     if (!url) return null;
@@ -96,22 +97,21 @@ async function uploadImage(file: { dataUrl: string, name: string } | string | nu
     return url;
 }
 
-export async function saveModel(prevState: any, formData: FormData): Promise<{message: string | null; errors: any}> {
+export async function saveModel(prevState: any, formData: FormData): Promise<{message: string | null; errors?: any}> {
   console.log("--- saveModel action started ---");
   
-  const rawFormData = Object.fromEntries(formData.entries());
+  const rawFormData = {
+    id: formData.get('id'),
+    name: formData.get('name'),
+    price: formData.get('price'),
+    jewelryType: formData.get('jewelryType'),
+    displayImage: formData.get('displayImage'),
+    editorImage: formData.get('editorImage'),
+  };
   console.log("Raw form data:", rawFormData);
 
-  const validatedFields = ModelSchema.safeParse({
-    id: formData.get('id') as string | undefined,
-    name: formData.get('name') as string,
-    price: formData.get('price') as string,
-    jewelryType: formData.get('jewelryType') as 'necklace' | 'bracelet' | 'earring',
-    displayImage: JSON.parse(formData.get('displayImage') as string),
-    editorImage: JSON.parse(formData.get('editorImage') as string),
-  });
+  const validatedFields = ModelSchema.safeParse(rawFormData);
   
-  console.log("Validation successful:", validatedFields.success);
   if (!validatedFields.success) {
     console.error("Validation errors:", validatedFields.error.flatten().fieldErrors);
     return {
@@ -119,6 +119,7 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{me
       message: 'Erreur de validation.',
     };
   }
+  console.log("Validation successful. Validated data:", validatedFields.data);
   
   const { id, jewelryType, displayImage, editorImage, ...modelData } = validatedFields.data;
   console.log(`Operation type: ${id ? 'UPDATE' : 'CREATE'}. Model ID: ${id || 'N/A'}`);
@@ -170,11 +171,11 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{me
     revalidatePath('/', 'layout');
     revalidatePath('/admin/dashboard');
     console.log("--- saveModel action finished successfully ---");
-    return { message: 'Modèle enregistré avec succès.', errors: {} };
+    return { message: 'Modèle enregistré avec succès.'};
 
   } catch (e: any) {
     console.error("--- Error in saveModel action ---", e);
-    return { message: `Erreur du serveur: ${e.message}`, errors: {} };
+    return { message: `Erreur du serveur: ${e.message}` };
   }
 }
 
