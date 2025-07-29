@@ -38,7 +38,7 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
     const handleDeleteModel = async (jewelryType: Omit<JewelryType, 'models'|'icon'>, model: JewelryModel) => {
         try {
             const result = await deleteModel(jewelryType.id, model.id, model.displayImageUrl, model.editorImageUrl);
-            if (result?.success) {
+             if (result?.success) {
                 toast({
                     title: 'Succès',
                     description: result.message,
@@ -64,22 +64,22 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
             <Accordion type="multiple" defaultValue={initialJewelryTypes.map(jt => jt.id)} className="w-full">
                 {initialJewelryTypes.map((jewelryType) => (
                     <AccordionItem value={jewelryType.id} key={jewelryType.id}>
-                        <AccordionTrigger className="text-xl font-headline">
-                            <div className="flex justify-between items-center w-full">
-                                <span>{jewelryType.name}</span>
-                                <Button
-                                    size="sm"
-                                    className="mr-4"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleAddModelClick(jewelryType);
-                                    }}
-                                >
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    Ajouter un modèle
-                                </Button>
-                            </div>
-                        </AccordionTrigger>
+                        <div className="flex justify-between items-center w-full py-4">
+                            <AccordionTrigger className="text-xl font-headline flex-1 py-0">
+                                {jewelryType.name}
+                            </AccordionTrigger>
+                            <Button
+                                size="sm"
+                                className="mr-4"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAddModelClick(jewelryType);
+                                }}
+                            >
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Ajouter un modèle
+                            </Button>
+                        </div>
                         <AccordionContent>
                            <Table>
                                <TableHeader>

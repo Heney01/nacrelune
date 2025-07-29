@@ -32,7 +32,7 @@ export function LoginForm() {
     const formData = new FormData(event.currentTarget);
     const result = await login(formData);
 
-    if (result.error) {
+    if (result?.error) {
       setError(result.error);
       setLoading(false);
     } else {
