@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useReducer, useTransition, useMemo, FormEvent } from 'react';
@@ -35,6 +36,8 @@ import { deleteCharmCategory, deleteCharm, markAsOrdered, markAsRestocked } from
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { useTranslations } from '@/hooks/use-translations';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 
 interface CharmsManagerProps {
     initialCharms: (Charm & { categoryName?: string })[];
@@ -65,17 +68,18 @@ type Action = {
     payload: { charmId: string; }
 } | {
     type: 'MARK_RESTOCKED',
-    payload: { charmId: string; }
+    payload: { charmId: string; newQuantity: number; }
 };
 
 const safeToLocaleDateString = (date: any) => {
     if (!date) return '';
-    if (date instanceof Date) {
-        return date.toLocaleDateString();
-    }
     // Handle Firestore Timestamp
     if (typeof date === 'object' && date.seconds) {
         return new Date(date.seconds * 1000).toLocaleDateString();
+    }
+    // Handle JS Date
+    if (date instanceof Date) {
+        return date.toLocaleDateString();
     }
     return '';
 }
@@ -118,11 +122,84 @@ function charmsReducer(state: State, action: Action): State {
         case 'MARK_RESTOCKED':
             return {
                 ...state,
-                charms: state.charms.map(c => c.id === action.payload.charmId ? { ...c, lastOrderedAt: null, restockedAt: new Date() } : c )
+                charms: state.charms.map(c => c.id === action.payload.charmId ? { ...c, lastOrderedAt: null, restockedAt: new Date(), quantity: action.payload.newQuantity } : c )
             };
         default:
             return state;
     }
+}
+
+function ReorderDialog({ charm, locale, onOrder, onRestock, t }: {
+    charm: Charm,
+    locale: string,
+    onOrder: (formData: FormData) => void,
+    onRestock: (formData: FormData) => void,
+    t: (key: string, values?: any) => string
+}) {
+    const [restockedQuantity, setRestockedQuantity] = useState(1);
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleOrder = () => {
+        const formData = new FormData();
+        formData.append('itemId', charm.id);
+        formData.append('itemType', 'charms');
+        formData.append('locale', locale);
+        onOrder(formData);
+        setIsOpen(false);
+    }
+    
+    const handleRestock = () => {
+        const formData = new FormData();
+        formData.append('itemId', charm.id);
+        formData.append('itemType', 'charms');
+        formData.append('locale', locale);
+        formData.append('restockedQuantity', String(restockedQuantity));
+        onRestock(formData);
+        setIsOpen(false);
+    }
+
+    return (
+        <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
+            <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon">
+                    <ShoppingCart className="h-4 w-4" />
+                </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>{t('reorder_dialog_title', {itemName: charm.name})}</AlertDialogTitle>
+                    <AlertDialogDescription>{t('reorder_dialog_description')}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="flex flex-col gap-4 my-4">
+                    <Button variant="outline" asChild disabled={!charm.reorderUrl}>
+                        <a href={charm.reorderUrl || ''} target="_blank" rel="noopener noreferrer">{t('open_reorder_url')}</a>
+                    </Button>
+                    <Button onClick={handleOrder} variant="secondary" className="w-full">{t('mark_as_ordered')}</Button>
+                    
+                    <div className="flex items-center gap-2">
+                        <hr className="flex-grow" />
+                        <span>{t('restock')}</span>
+                        <hr className="flex-grow" />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="restock-quantity">{t('restocked_quantity')}</Label>
+                        <Input 
+                            id="restock-quantity"
+                            type="number" 
+                            value={restockedQuantity} 
+                            onChange={(e) => setRestockedQuantity(parseInt(e.target.value, 10))}
+                            min="1"
+                        />
+                    </div>
+                     <Button onClick={handleRestock} className="w-full">{t('mark_as_restocked')}</Button>
+                </div>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
 }
 
 export function CharmsManager({ initialCharms, initialCharmCategories, locale, preferences }: CharmsManagerProps) {
@@ -195,26 +272,16 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
 
     const handleRestockAction = (formData: FormData) => {
         const charmId = formData.get('itemId') as string;
-        startTransition(() => { dispatch({ type: 'MARK_RESTOCKED', payload: { charmId } }); });
+        const restockedQuantity = parseInt(formData.get('restockedQuantity') as string, 10);
+        
         markAsRestocked(formData).then(result => {
-            toast({ title: result.success ? 'Succès' : 'Erreur', description: result.message, variant: result.success ? 'default' : 'destructive' });
+            if(result.success && result.newQuantity !== undefined) {
+                startTransition(() => { dispatch({ type: 'MARK_RESTOCKED', payload: { charmId, newQuantity: result.newQuantity! } }); });
+                toast({ title: 'Succès', description: result.message });
+            } else {
+                toast({ title: 'Erreur', description: result.message, variant: 'destructive' });
+            }
         });
-    }
-
-    const createOrderAction = (charm: Charm) => {
-        const formData = new FormData();
-        formData.append('itemId', charm.id);
-        formData.append('itemType', 'charms');
-        formData.append('locale', locale);
-        handleOrderAction(formData);
-    }
-    
-    const createRestockAction = (charm: Charm) => {
-        const formData = new FormData();
-        formData.append('itemId', charm.id);
-        formData.append('itemType', 'charms');
-        formData.append('locale', locale);
-        handleRestockAction(formData);
     }
 
     const charmsByCategoryId = useMemo(() => {
@@ -232,8 +299,8 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
 
     const getCategoryAlertState = (categoryId: string): 'critical' | 'alert' | 'none' => {
         const categoryCharms = charmsByCategoryId[categoryId] || [];
-        if (categoryCharms.some(c => (c.quantity ?? Infinity) <= preferences.criticalThreshold)) return 'critical';
-        if (categoryCharms.some(c => (c.quantity ?? Infinity) <= preferences.alertThreshold)) return 'alert';
+        if (categoryCharms.some(c => (c.quantity ?? Infinity) <= preferences.criticalThreshold && c.lastOrderedAt === null)) return 'critical';
+        if (categoryCharms.some(c => (c.quantity ?? Infinity) <= preferences.alertThreshold && c.lastOrderedAt === null)) return 'alert';
         return 'none';
     };
 
@@ -339,33 +406,13 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                                                 </div>
                                                             </TableCell>
                                                             <TableCell className="text-right space-x-1">
-                                                                <AlertDialog>
-                                                                    <AlertDialogTrigger asChild>
-                                                                        <Button variant="ghost" size="icon">
-                                                                            <ShoppingCart className="h-4 w-4" />
-                                                                        </Button>
-                                                                    </AlertDialogTrigger>
-                                                                    <AlertDialogContent>
-                                                                        <AlertDialogHeader>
-                                                                            <AlertDialogTitle>{t('reorder_dialog_title', {itemName: charm.name})}</AlertDialogTitle>
-                                                                            <AlertDialogDescription>{t('reorder_dialog_description')}</AlertDialogDescription>
-                                                                        </AlertDialogHeader>
-                                                                        <div className="flex flex-col gap-4 mt-4">
-                                                                            <Button variant="outline" asChild disabled={!charm.reorderUrl}>
-                                                                                <a href={charm.reorderUrl || ''} target="_blank" rel="noopener noreferrer">{t('open_reorder_url')}</a>
-                                                                            </Button>
-                                                                            <form action={() => createOrderAction(charm)}>
-                                                                                <AlertDialogAction type="submit" className="w-full">{t('mark_as_ordered')}</AlertDialogAction>
-                                                                            </form>
-                                                                            <form action={() => createRestockAction(charm)}>
-                                                                                 <Button type="submit" variant="secondary" className="w-full" onClick={(e) => (e.target as HTMLButtonElement).closest('[role="dialog"]')?.remove()}>{t('mark_as_restocked')}</Button>
-                                                                            </form>
-                                                                        </div>
-                                                                        <AlertDialogFooter className="mt-4">
-                                                                            <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-                                                                        </AlertDialogFooter>
-                                                                    </AlertDialogContent>
-                                                                </AlertDialog>
+                                                                <ReorderDialog
+                                                                    charm={charm}
+                                                                    locale={locale}
+                                                                    onOrder={handleOrderAction}
+                                                                    onRestock={handleRestockAction}
+                                                                    t={t}
+                                                                />
                                                                 <Button variant="ghost" size="icon" onClick={() => handleEditCharmClick(charm)}><Edit className="h-4 w-4" /></Button>
                                                                 <AlertDialog>
                                                                     <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>

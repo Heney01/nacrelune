@@ -5,7 +5,7 @@
 import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { revalidatePath } from 'next/cache';
 import { db, storage } from '@/lib/firebase';
-import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { ref, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
@@ -469,24 +469,43 @@ export async function markAsOrdered(formData: FormData): Promise<{ success: bool
     }
 }
 
-export async function markAsRestocked(formData: FormData): Promise<{ success: boolean; message: string }> {
+export async function markAsRestocked(formData: FormData): Promise<{ success: boolean; message: string; newQuantity?: number }> {
     const itemId = formData.get('itemId') as string;
     const itemType = formData.get('itemType') as string;
     const locale = formData.get('locale') as string || 'fr';
+    const restockedQuantity = parseInt(formData.get('restockedQuantity') as string, 10);
 
-    if (!itemId || !itemType) {
-        return { success: false, message: "Informations manquantes." };
+    if (!itemId || !itemType || isNaN(restockedQuantity) || restockedQuantity <= 0) {
+        return { success: false, message: "Informations manquantes ou quantité invalide." };
     }
 
     try {
         const itemRef = doc(db, itemType, itemId);
-        await updateDoc(itemRef, {
-            lastOrderedAt: null,
-            restockedAt: serverTimestamp(),
+
+        const newQuantity = await runTransaction(db, async (transaction) => {
+            const itemDoc = await transaction.get(itemRef);
+            if (!itemDoc.exists()) {
+                throw new Error("L'article n'existe pas !");
+            }
+
+            const currentQuantity = itemDoc.data().quantity || 0;
+            const updatedQuantity = currentQuantity + restockedQuantity;
+
+            transaction.update(itemRef, {
+                quantity: updatedQuantity,
+                lastOrderedAt: null,
+                restockedAt: serverTimestamp(),
+            });
+
+            return updatedQuantity;
         });
-        
+
         revalidatePath(`/${locale}/admin/dashboard`);
-        return { success: true, message: "L'article a été marqué comme réapprovisionné." };
+        return { 
+            success: true, 
+            message: "L'article a été marqué comme réapprovisionné et le stock mis à jour.",
+            newQuantity: newQuantity
+        };
     } catch (error) {
         console.error("Error marking item as restocked:", error);
         return { success: false, message: "Une erreur est survenue." };

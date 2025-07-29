@@ -74,6 +74,8 @@
     "stock_low": "Low stock (<= {threshold})",
     "stock_reordered": "Reordered on {date}",
     "stock_ok": "Stock OK",
-    "order_management": "Order Management"
+    "order_management": "Order Management",
+    "restock": "Restock",
+    "restocked_quantity": "Quantity Received"
   }
 }

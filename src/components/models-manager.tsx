@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useReducer, useTransition, useMemo, FormEvent } from 'react';
@@ -33,6 +34,8 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { useTranslations } from '@/hooks/use-translations';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 
 interface ModelsManagerProps {
     initialJewelryTypes: Omit<JewelryType, 'icon'>[];
@@ -53,17 +56,16 @@ type OptimisticUpdate = {
     payload: { jewelryTypeId: string; modelId: string; }
 } | {
     type: 'MARK_RESTOCKED',
-    payload: { jewelryTypeId: string; modelId: string; }
+    payload: { jewelryTypeId: string; modelId: string; newQuantity: number; }
 }
 
 const safeToLocaleDateString = (date: any) => {
     if (!date) return '';
-    if (date instanceof Date) {
-        return date.toLocaleDateString();
-    }
-    // Handle Firestore Timestamp
     if (typeof date === 'object' && date.seconds) {
         return new Date(date.seconds * 1000).toLocaleDateString();
+    }
+    if (date instanceof Date) {
+        return date.toLocaleDateString();
     }
     return '';
 }
@@ -92,7 +94,7 @@ function jewelryTypesReducer(state: State, action: OptimisticUpdate): State {
             );
          case 'MARK_RESTOCKED':
             return state.map(jt => jt.id === action.payload.jewelryTypeId
-                ? { ...jt, models: jt.models.map(m => m.id === action.payload.modelId ? { ...m, lastOrderedAt: null, restockedAt: new Date() } : m) }
+                ? { ...jt, models: jt.models.map(m => m.id === action.payload.modelId ? { ...m, lastOrderedAt: null, restockedAt: new Date(), quantity: action.payload.newQuantity } : m) }
                 : jt
             );
         default:
@@ -100,6 +102,79 @@ function jewelryTypesReducer(state: State, action: OptimisticUpdate): State {
     }
 }
 
+function ReorderDialog({ model, jewelryTypeId, locale, onOrder, onRestock, t }: {
+    model: JewelryModel,
+    jewelryTypeId: string,
+    locale: string,
+    onOrder: (formData: FormData) => void,
+    onRestock: (formData: FormData) => void,
+    t: (key: string, values?: any) => string
+}) {
+    const [restockedQuantity, setRestockedQuantity] = useState(1);
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleOrder = () => {
+        const formData = new FormData();
+        formData.append('itemId', model.id);
+        formData.append('itemType', jewelryTypeId);
+        formData.append('locale', locale);
+        onOrder(formData);
+        setIsOpen(false);
+    }
+    
+    const handleRestock = () => {
+        const formData = new FormData();
+        formData.append('itemId', model.id);
+        formData.append('itemType', jewelryTypeId);
+        formData.append('locale', locale);
+        formData.append('restockedQuantity', String(restockedQuantity));
+        onRestock(formData);
+        setIsOpen(false);
+    }
+
+    return (
+        <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
+            <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon">
+                    <ShoppingCart className="h-4 w-4" />
+                </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>{t('reorder_dialog_title', {itemName: model.name})}</AlertDialogTitle>
+                    <AlertDialogDescription>{t('reorder_dialog_description')}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="flex flex-col gap-4 my-4">
+                    <Button variant="outline" asChild disabled={!model.reorderUrl}>
+                        <a href={model.reorderUrl || ''} target="_blank" rel="noopener noreferrer">{t('open_reorder_url')}</a>
+                    </Button>
+                    <Button onClick={handleOrder} variant="secondary" className="w-full">{t('mark_as_ordered')}</Button>
+                    
+                    <div className="flex items-center gap-2">
+                        <hr className="flex-grow" />
+                        <span>{t('restock')}</span>
+                        <hr className="flex-grow" />
+                    </div>
+                    
+                    <div className="space-y-2">
+                        <Label htmlFor="restock-quantity">{t('restocked_quantity')}</Label>
+                        <Input 
+                            id="restock-quantity"
+                            type="number" 
+                            value={restockedQuantity} 
+                            onChange={(e) => setRestockedQuantity(parseInt(e.target.value, 10))}
+                            min="1"
+                        />
+                    </div>
+                     <Button onClick={handleRestock} className="w-full">{t('mark_as_restocked')}</Button>
+                </div>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+}
 
 export function ModelsManager({ initialJewelryTypes, locale, preferences }: ModelsManagerProps) {
     const { toast } = useToast();
@@ -156,33 +231,22 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
     const handleRestockAction = (formData: FormData) => {
         const modelId = formData.get('itemId') as string;
         const jewelryTypeId = formData.get('itemType') as string;
-        startTransition(() => {
-            dispatch({ type: 'MARK_RESTOCKED', payload: { jewelryTypeId, modelId } });
-        });
+        
         markAsRestocked(formData).then(result => {
-            toast({ title: result.success ? 'Succès' : 'Erreur', description: result.message, variant: result.success ? 'default' : 'destructive' });
+            if (result.success && result.newQuantity !== undefined) {
+                startTransition(() => {
+                    dispatch({ type: 'MARK_RESTOCKED', payload: { jewelryTypeId, modelId, newQuantity: result.newQuantity! } });
+                });
+                 toast({ title: 'Succès', description: result.message });
+            } else {
+                 toast({ title: 'Erreur', description: result.message, variant: 'destructive' });
+            }
         });
-    }
-
-    const createOrderAction = (model: JewelryModel, jewelryTypeId: string) => {
-        const formData = new FormData();
-        formData.append('itemId', model.id);
-        formData.append('itemType', jewelryTypeId);
-        formData.append('locale', locale);
-        handleOrderAction(formData);
-    }
-    
-    const createRestockAction = (model: JewelryModel, jewelryTypeId: string) => {
-        const formData = new FormData();
-        formData.append('itemId', model.id);
-        formData.append('itemType', jewelryTypeId);
-        formData.append('locale', locale);
-        handleRestockAction(formData);
     }
 
     const getCategoryAlertState = (models: JewelryModel[]): 'critical' | 'alert' | 'none' => {
-        if (models.some(m => (m.quantity ?? Infinity) <= preferences.criticalThreshold)) return 'critical';
-        if (models.some(m => (m.quantity ?? Infinity) <= preferences.alertThreshold)) return 'alert';
+        if (models.some(m => (m.quantity ?? Infinity) <= preferences.criticalThreshold && m.lastOrderedAt === null)) return 'critical';
+        if (models.some(m => (m.quantity ?? Infinity) <= preferences.alertThreshold && m.lastOrderedAt === null)) return 'alert';
         return 'none';
     };
     
@@ -279,33 +343,14 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-right space-x-1">
-                                                    <AlertDialog>
-                                                        <AlertDialogTrigger asChild>
-                                                            <Button variant="ghost" size="icon">
-                                                                <ShoppingCart className="h-4 w-4" />
-                                                            </Button>
-                                                        </AlertDialogTrigger>
-                                                        <AlertDialogContent>
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle>{t('reorder_dialog_title', {itemName: model.name})}</AlertDialogTitle>
-                                                                <AlertDialogDescription>{t('reorder_dialog_description')}</AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <div className="flex flex-col gap-4 mt-4">
-                                                                <Button variant="outline" asChild disabled={!model.reorderUrl}>
-                                                                    <a href={model.reorderUrl || ''} target="_blank" rel="noopener noreferrer">{t('open_reorder_url')}</a>
-                                                                </Button>
-                                                                <form action={() => createOrderAction(model, jewelryType.id)}>
-                                                                    <AlertDialogAction type="submit" className="w-full">{t('mark_as_ordered')}</AlertDialogAction>
-                                                                </form>
-                                                                <form action={() => createRestockAction(model, jewelryType.id)}>
-                                                                    <Button type="submit" variant="secondary" className="w-full" onClick={(e) => (e.target as HTMLButtonElement).closest('[role="dialog"]')?.remove()}>{t('mark_as_restocked')}</Button>
-                                                                </form>
-                                                            </div>
-                                                            <AlertDialogFooter className="mt-4">
-                                                                <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
+                                                    <ReorderDialog 
+                                                        model={model}
+                                                        jewelryTypeId={jewelryType.id}
+                                                        locale={locale}
+                                                        onOrder={handleOrderAction}
+                                                        onRestock={handleRestockAction}
+                                                        t={t}
+                                                    />
                                                     <Button variant="ghost" size="icon" onClick={() => handleEditModelClick(jewelryType, model)}>
                                                         <Edit className="h-4 w-4" />
                                                     </Button>
@@ -358,5 +403,3 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
         </div>
     );
 }
-
-    
