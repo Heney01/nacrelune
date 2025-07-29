@@ -10,7 +10,7 @@ import { ModelsManager } from "@/components/models-manager";
 import { CharmsManager } from "@/components/charms-manager";
 import { PreferencesManager } from "@/components/preferences-manager";
 import { OrdersManager } from "@/components/orders-manager";
-import { Gem, User, Wrench, ChevronRight, ArrowLeft, Settings, AlertTriangle, Package, PackageCheck, CookingPot } from "lucide-react";
+import { Gem, User, Wrench, ChevronRight, ArrowLeft, Settings, AlertTriangle, Package, PackageCheck, CookingPot, Truck } from "lucide-react";
 import type { JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderStatus } from "@/lib/types";
 import Link from "next/link";
 import { Loader2 } from 'lucide-react';
@@ -298,5 +298,3 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
 export default function AdminDashboard({ params }: { params: { locale: string }}) {
   return <AdminDashboardClient locale={params.locale} />;
 }
-
-    
