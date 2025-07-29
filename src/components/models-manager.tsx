@@ -128,34 +128,9 @@ export function ModelsManager({ initialJewelryTypes, locale }: ModelsManagerProp
                                </TableHeader>
                                <TableBody>
                                    {jewelryType.models.map((model) => (
-                                    <React.Fragment key={model.id}>
-                                        <form
-                                            id={`delete-form-${model.id}`}
-                                            action={async (formData) => {
-                                                console.log(`--- [CLIENT] Submitting form for model ${model.id}`);
-                                                dispatch({ type: 'DELETE', payload: { jewelryTypeId: jewelryType.id, modelId: model.id } });
-
-                                                const result = await deleteModel(formData);
-
-                                                console.log("--- [CLIENT] Server action result:", result);
-                                                if (result?.success) {
-                                                    toast({ title: 'Succès', description: result.message });
-                                                } else {
-                                                    toast({ variant: 'destructive', title: 'Erreur', description: result?.message || 'Une erreur inconnue est survenue.' });
-                                                    // Note: You might want to revert the optimistic update here if the server fails
-                                                }
-                                            }}
-                                            className="contents"
-                                        >
-                                            <input type="hidden" name="modelId" value={model.id} />
-                                            <input type="hidden" name="jewelryTypeId" value={jewelryType.id} />
-                                            <input type="hidden" name="displayImageUrl" value={model.displayImageUrl} />
-                                            <input type="hidden" name="editorImageUrl" value={model.editorImageUrl} />
-                                            <input type="hidden" name="locale" value={locale} />
-                                        </form>
-                                        <TableRow>
+                                        <TableRow key={model.id}>
                                             <TableCell>
-                                                <Image src={model.displayImageUrl} alt={model.name} width={64} height={64} className="rounded-md object-cover h-auto" />
+                                                <Image src={model.displayImageUrl} alt={model.name} width={64} height={64} className="rounded-md object-cover w-full h-auto" />
                                             </TableCell>
                                             <TableCell className="font-medium">{model.name}</TableCell>
                                             <TableCell>{model.price}€</TableCell>
@@ -179,27 +154,47 @@ export function ModelsManager({ initialJewelryTypes, locale }: ModelsManagerProp
                                                          </Button>
                                                      </AlertDialogTrigger>
                                                      <AlertDialogContent>
-                                                         <AlertDialogHeader>
-                                                             <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-                                                             <AlertDialogDescription>
-                                                                 Cette action est irréversible. Le modèle "{model.name}" sera définitivement supprimé.
-                                                             </AlertDialogDescription>
-                                                         </AlertDialogHeader>
-                                                         <AlertDialogFooter>
-                                                             <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
-                                                             <AlertDialogAction
-                                                                 type="submit"
-                                                                 form={`delete-form-${model.id}`}
-                                                                 className="bg-destructive hover:bg-destructive/90"
-                                                             >
-                                                                 Supprimer
-                                                             </AlertDialogAction>
-                                                         </AlertDialogFooter>
+                                                         <form
+                                                            action={async (formData) => {
+                                                                console.log(`--- [CLIENT] Submitting form for model ${model.id}`);
+                                                                dispatch({ type: 'DELETE', payload: { jewelryTypeId: jewelryType.id, modelId: model.id } });
+
+                                                                const result = await deleteModel(formData);
+
+                                                                console.log("--- [CLIENT] Server action result:", result);
+                                                                if (result?.success) {
+                                                                    toast({ title: 'Succès', description: result.message });
+                                                                } else {
+                                                                    toast({ variant: 'destructive', title: 'Erreur', description: result?.message || 'Une erreur inconnue est survenue.' });
+                                                                    // Note: You might want to revert the optimistic update here if the server fails
+                                                                }
+                                                            }}
+                                                          >
+                                                            <input type="hidden" name="modelId" value={model.id} />
+                                                            <input type="hidden" name="jewelryTypeId" value={jewelryType.id} />
+                                                            <input type="hidden" name="displayImageUrl" value={model.displayImageUrl} />
+                                                            <input type="hidden" name="editorImageUrl" value={model.editorImageUrl} />
+                                                            <input type="hidden" name="locale" value={locale} />
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    Cette action est irréversible. Le modèle "{model.name}" sera définitivement supprimé.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
+                                                                <AlertDialogAction
+                                                                    type="submit"
+                                                                    className="bg-destructive hover:bg-destructive/90"
+                                                                >
+                                                                    Supprimer
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                         </form>
                                                      </AlertDialogContent>
                                                  </AlertDialog>
                                             </TableCell>
                                         </TableRow>
-                                    </React.Fragment>
                                    ))}
                                </TableBody>
                            </Table>
