@@ -1,8 +1,9 @@
 
+
 import { db, storage } from '@/lib/firebase';
-import { collection, getDocs, DocumentReference, getDoc, doc, Timestamp, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, DocumentReference, getDoc, doc, Timestamp, query, orderBy, where, documentId } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
-import type { JewelryModel, JewelryType, Charm, CharmCategory, GeneralPreferences, Order } from '@/lib/types';
+import type { JewelryModel, JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderItem } from '@/lib/types';
 
 const getUrl = async (path: string, fallback: string) => {
     if (path && (path.startsWith('http://') || path.startsWith('https://'))) {
@@ -205,18 +206,51 @@ export async function getOrders(): Promise<Order[]> {
         const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
         const querySnapshot = await getDocs(q);
 
-        const orders: Order[] = querySnapshot.docs.map(doc => {
-            const data = doc.data();
+        if (querySnapshot.empty) {
+            return [];
+        }
+
+        // Get all unique charm IDs from all orders first
+        const allCharmIds = querySnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => item.charmIds) || []);
+        const uniqueCharmIds = [...new Set(allCharmIds)].filter(id => id);
+
+        // Fetch all required charms in a single query
+        let charmsMap = new Map<string, Charm>();
+        if (uniqueCharmIds.length > 0) {
+            const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', uniqueCharmIds));
+            const charmsSnapshot = await getDocs(charmsQuery);
+            for (const charmDoc of charmsSnapshot.docs) {
+                const charmData = charmDoc.data() as Omit<Charm, 'id'>;
+                const imageUrl = await getUrl(charmData.imageUrl, 'https://placehold.co/100x100.png');
+                charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id, imageUrl });
+            }
+        }
+        
+        const orders: Order[] = querySnapshot.docs.map(orderDoc => {
+            const data = orderDoc.data();
+            
+            const enrichedItems: OrderItem[] = (data.items || []).map((item: OrderItem) => {
+                const enrichedCharms = (item.charmIds || [])
+                    .map(id => charmsMap.get(id))
+                    .filter((c): c is Charm => !!c); // Filter out undefined charms
+
+                return {
+                    ...item,
+                    charms: enrichedCharms,
+                };
+            });
+
             return {
-                id: doc.id,
+                id: orderDoc.id,
                 orderNumber: data.orderNumber,
                 createdAt: (data.createdAt as Timestamp).toDate(),
                 customerEmail: data.customerEmail,
                 totalPrice: data.totalPrice,
                 status: data.status,
-                items: data.items, // Items are not fully enriched here
+                items: enrichedItems,
             };
         });
+
         return orders;
     } catch (error) {
         console.error("Error fetching orders:", error);
