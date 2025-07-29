@@ -6,7 +6,6 @@ import { ModelsManager } from "@/components/models-manager";
 import { getJewelryTypesAndModels } from "@/lib/data";
 import { Gem, HandMetal, Ear, User, Wrench } from "lucide-react";
 import type { JewelryType } from "@/lib/types";
-import { TestDeleteButton } from "@/components/test-delete-button";
 
 export default async function AdminDashboard({ params }: { params: { locale: string }}) {
   const JEWELRY_TYPES_INFO: Omit<JewelryType, 'models' | 'icon'>[] = [
@@ -55,7 +54,6 @@ export default async function AdminDashboard({ params }: { params: { locale: str
               <ModelsManager initialJewelryTypes={jewelryTypes} locale={params.locale} />
             </TabsContent>
           </Tabs>
-          <TestDeleteButton />
         </div>
       </div>
     </div>
