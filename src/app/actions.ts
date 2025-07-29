@@ -11,7 +11,7 @@ import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
-import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus } from '@/lib/types';
+import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order } from '@/lib/types';
 
 
 export async function getCharmSuggestions(
@@ -444,6 +444,16 @@ export async function savePreferences(prevState: any, formData: FormData): Promi
 
 // --- Order Actions ---
 
+function generateOrderNumber(): string {
+  const date = new Date();
+  const year = date.getFullYear().toString().slice(-2);
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `NAC-${year}${month}${day}-${randomPart}`;
+}
+
+
 export async function markAsOrdered(formData: FormData): Promise<{ success: boolean; message: string }> {
     const itemId = formData.get('itemId') as string;
     const itemType = formData.get('itemType') as string; // 'charms' or a jewelryTypeId like 'necklace'
@@ -513,7 +523,7 @@ export async function markAsRestocked(formData: FormData): Promise<{ success: bo
 }
 
 
-export async function createOrder(cartItems: CartItem[]): Promise<{ success: boolean; message: string }> {
+export async function createOrder(cartItems: CartItem[], email: string): Promise<{ success: boolean; message: string; orderNumber?: string, email?: string }> {
     if (!cartItems || cartItems.length === 0) {
         return { success: false, message: 'Le panier est vide.' };
     }
@@ -549,18 +559,24 @@ export async function createOrder(cartItems: CartItem[]): Promise<{ success: boo
         });
         
         const initialStatus: OrderStatus = 'commandée';
+        const orderNumber = generateOrderNumber();
         
-        const orderData = {
-            createdAt: serverTimestamp(),
+        const orderData: Omit<Order, 'id' | 'createdAt'> = {
+            orderNumber,
+            customerEmail: email,
             totalPrice: totalOrderPrice,
             items: orderItems,
             status: initialStatus,
         };
 
         // Step 3: Create the order document in Firestore
-        await addDoc(collection(db, 'orders'), orderData);
+        const finalOrderData = {
+            ...orderData,
+            createdAt: serverTimestamp(),
+        }
+        await addDoc(collection(db, 'orders'), finalOrderData);
         
-        return { success: true, message: 'Votre commande a été passée avec succès !' };
+        return { success: true, message: 'Votre commande a été passée avec succès !', orderNumber, email };
     } catch (error) {
         console.error("Error creating order:", error);
         return { success: false, message: "Une erreur est survenue lors du passage de la commande." };

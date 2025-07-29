@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useCart } from '@/hooks/use-cart';
 import { useTranslations } from '@/hooks/use-translations';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import Image from 'next/image';
 interface CheckoutDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onConfirm: () => void;
+  onConfirm: (email: string) => void;
   isProcessing: boolean;
 }
 
@@ -24,6 +24,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
   const t = useTranslations('Checkout');
   const tCart = useTranslations('Cart');
   const { cart } = useCart();
+  const [email, setEmail] = useState('marie.dubois@example.com');
 
   const subtotal = cart.reduce((sum, item) => {
     const modelPrice = item.model.price || 0;
@@ -37,11 +38,16 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
   const formatPrice = (price: number) => {
     return tCart('price', { price });
   };
+  
+  const handleConfirm = (e: React.FormEvent) => {
+    e.preventDefault();
+    onConfirm(email);
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl grid-cols-1 md:grid-cols-2 grid p-0">
-        <div className="p-6 flex flex-col">
+        <form onSubmit={handleConfirm} className="p-6 flex flex-col">
           <DialogHeader>
             <DialogTitle className="text-2xl font-headline">{t('title')}</DialogTitle>
             <DialogDescription>{t('description')}</DialogDescription>
@@ -55,6 +61,10 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
                     <div className="space-y-2">
                         <Label htmlFor="name">{t('full_name')}</Label>
                         <Input id="name" defaultValue="Marie Dubois" required />
+                    </div>
+                     <div className="space-y-2 sm:col-span-2">
+                        <Label htmlFor="email-address">{t('email_address')}</Label>
+                        <Input id="email-address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                     </div>
                     <div className="space-y-2 sm:col-span-2">
                         <Label htmlFor="address">{t('address')}</Label>
@@ -100,7 +110,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
                 </div>
             </ScrollArea>
             <DialogFooter className="mt-6 pt-6 border-t">
-              <Button type="button" className="w-full" disabled={isProcessing} onClick={onConfirm}>
+              <Button type="submit" className="w-full" disabled={isProcessing}>
                 {isProcessing ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -112,7 +122,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
               </Button>
             </DialogFooter>
           </div>
-        </div>
+        </form>
         <aside className="hidden md:flex flex-col bg-muted/50 p-6">
             <h3 className="text-lg font-medium">{t('order_summary')}</h3>
             <ScrollArea className="mt-6 flex-grow -mx-6 px-6">

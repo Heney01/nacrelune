@@ -102,6 +102,11 @@
     "total": "Total",
     "shipping_cost_free": "Gratuite",
     "confirm_order_button": "Confirmer la commande",
-    "processing_button": "Traitement en cours..."
+    "processing_button": "Traitement en cours...",
+    "email_address": "Adresse e-mail",
+    "success_title": "Merci pour votre commande !",
+    "success_order_number": "Votre numéro de commande",
+    "success_description": "Un résumé de votre commande a été envoyé à {email}. Vous serez notifié(e) lorsque votre création sera expédiée.",
+    "success_close_button": "Fermer"
   }
 }

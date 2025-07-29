@@ -24,6 +24,7 @@ import { useParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { createOrder } from '@/app/actions';
 import { CheckoutDialog } from './checkout-dialog';
+import { SuccessDialog } from './success-dialog';
 import type { CartItem } from '@/lib/types';
 
 
@@ -62,6 +63,7 @@ export function CartSheet({ children, open, onOpenChange }: {
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [successData, setSuccessData] = useState<{orderNumber: string, email: string} | null>(null);
 
   const totalItems = cart.length;
   
@@ -75,7 +77,7 @@ export function CartSheet({ children, open, onOpenChange }: {
     return t('price', { price });
   };
   
-  const handleCheckout = async () => {
+  const handleCheckout = async (email: string) => {
     setIsProcessing(true);
     try {
       // Compress images before sending to the server action
@@ -86,15 +88,12 @@ export function CartSheet({ children, open, onOpenChange }: {
 
       const compressedCart = await Promise.all(compressedCartPromises);
 
-      const result = await createOrder(compressedCart);
+      const result = await createOrder(compressedCart, email);
       
-      if (result.success) {
-        toast({
-          title: t('checkout_success_title'),
-          description: result.message,
-        });
+      if (result.success && result.orderNumber && result.email) {
         clearCart();
         setIsCheckoutOpen(false); // Close checkout dialog on success
+        setSuccessData({orderNumber: result.orderNumber, email: result.email});
       } else {
         throw new Error(result.message);
       }
@@ -248,8 +247,14 @@ export function CartSheet({ children, open, onOpenChange }: {
         onConfirm={handleCheckout}
         isProcessing={isProcessing}
     />
+    {successData && (
+        <SuccessDialog
+            isOpen={!!successData}
+            onOpenChange={() => setSuccessData(null)}
+            orderNumber={successData.orderNumber}
+            email={successData.email}
+        />
+    )}
     </>
   );
 }
-
-    

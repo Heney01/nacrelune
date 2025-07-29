@@ -78,7 +78,9 @@ export interface OrderItem {
 
 export interface Order {
     id: string;
+    orderNumber: string;
     createdAt: Date;
+    customerEmail: string;
     totalPrice: number;
     items: OrderItem[];
     status: OrderStatus;
