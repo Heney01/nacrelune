@@ -24,6 +24,31 @@ import { useParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { createOrder } from '@/app/actions';
 import { CheckoutDialog } from './checkout-dialog';
+import type { CartItem } from '@/lib/types';
+
+
+// Helper to compress a base64 PNG to a base64 JPEG
+const compressImage = (base64Png: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    img.src = base64Png;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        return reject(new Error('Could not get canvas context'));
+      }
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL('image/jpeg', 0.7)); // 70% quality
+    };
+    img.onerror = (error) => {
+      reject(error);
+    };
+  });
+};
+
 
 export function CartSheet({ children, open, onOpenChange }: {
   children?: ReactNode;
@@ -53,7 +78,16 @@ export function CartSheet({ children, open, onOpenChange }: {
   const handleCheckout = async () => {
     setIsProcessing(true);
     try {
-      const result = await createOrder(cart);
+      // Compress images before sending to the server action
+      const compressedCartPromises = cart.map(async (item): Promise<CartItem> => ({
+        ...item,
+        previewImage: await compressImage(item.previewImage),
+      }));
+
+      const compressedCart = await Promise.all(compressedCartPromises);
+
+      const result = await createOrder(compressedCart);
+      
       if (result.success) {
         toast({
           title: t('checkout_success_title'),
@@ -217,3 +251,5 @@ export function CartSheet({ children, open, onOpenChange }: {
     </>
   );
 }
+
+    

@@ -445,7 +445,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
             useCORS: true,
             scale: 2
           });
-          const previewImage = canvas.toDataURL('image/jpeg', 0.7);
+          const previewImage = canvas.toDataURL('image/png');
 
           if (isEditing && cartItemId) {
               const updatedItem = {
@@ -694,5 +694,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     </>
   );
 }
+
+    
 
     
