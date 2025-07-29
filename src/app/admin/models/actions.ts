@@ -21,7 +21,9 @@ const ModelSchema = z.object({
 });
 
 function getFileNameFromUrl(url: string): string | null {
-    if (!url) return null;
+    if (!url || !url.includes('firebasestorage.googleapis.com')) {
+        return null;
+    }
     try {
         const urlObject = new URL(url);
         // Firebase Storage URLs have the file path encoded in the pathname
@@ -29,16 +31,15 @@ function getFileNameFromUrl(url: string): string | null {
         const decodedPath = decodeURIComponent(urlObject.pathname);
         const parts = decodedPath.split('/o/');
         if (parts.length > 1) {
-            return parts[1];
+            // Remove any leading slashes if they exist
+            return parts[1].startsWith('/') ? parts[1].substring(1) : parts[1];
         }
     } catch (e) {
-        // Not a full URL, might be just the path
-        if (url.includes('/')) {
-            return url;
-        }
+        console.error(`Could not parse URL object from: ${url}`, e);
     }
     return null;
 }
+
 
 async function deleteImage(imageUrl: string) {
     if (!imageUrl) {
@@ -61,7 +62,7 @@ async function deleteImage(imageUrl: string) {
         // It's not critical if the image doesn't exist, so we only log other errors.
         if (storageError.code !== 'storage/object-not-found') {
             console.error(`Failed to delete image ${imagePath}:`, storageError);
-            throw storageError;
+            throw storageError; // Re-throw to be caught by the calling function
         }
          console.warn(`Image not found for deletion, skipping: ${imagePath}`);
     }
@@ -185,39 +186,45 @@ export async function deleteModel(
   displayImageUrl: string, 
   editorImageUrl: string
 ): Promise<string> {
-  console.log('=== deleteModel SERVER ACTION START ===');
-  console.log('deleteModel called with parameters:', { jewelryTypeId, modelId });
-
-  if (!jewelryTypeId || !modelId) {
-    const errorMsg = 'jewelryTypeId et modelId sont requis';
-    console.error('Validation error:', errorMsg);
-    return JSON.stringify({ success: false, message: errorMsg });
-  }
-
-  try {
-    console.log('Step 1: Deleting images from storage...');
-    if (displayImageUrl) {
-      await deleteImage(displayImageUrl);
+    console.log('=== deleteModel SERVER ACTION START ===');
+    console.log('deleteModel called with parameters:', { jewelryTypeId, modelId, displayImageUrl, editorImageUrl });
+  
+    if (!jewelryTypeId || !modelId) {
+      const errorMsg = 'jewelryTypeId et modelId sont requis';
+      console.error('Validation error:', errorMsg);
+      return JSON.stringify({ success: false, message: errorMsg });
     }
-    if (editorImageUrl) {
-      await deleteImage(editorImageUrl);
-    }
-
-    console.log('Step 2: Deleting document from Firestore...');
-    const docRef = doc(db, jewelryTypeId, modelId);
-    await deleteDoc(docRef);
-    console.log("Document successfully deleted from Firestore.");
-
-    console.log("Step 3: Revalidating paths...");
-    revalidatePath('/', 'layout');
-    revalidatePath('/admin/dashboard');
-    
-    console.log("=== deleteModel SERVER ACTION SUCCESS ===");
-    return JSON.stringify({ success: true, message: 'Modèle supprimé avec succès.' });
+  
+    try {
+      console.log('Step 1: Deleting images from storage...');
+      // Use Promise.all to attempt deleting both images. 
+      // `false` on catch means we don't throw if one fails, letting Firestore deletion proceed.
+      await Promise.all([
+        deleteImage(displayImageUrl).catch(e => {
+            console.error("Failed to delete display image, but continuing.", e);
+            return false;
+        }),
+        deleteImage(editorImageUrl).catch(e => {
+            console.error("Failed to delete editor image, but continuing.", e);
+            return false;
+        }),
+      ]);
+  
+      console.log('Step 2: Deleting document from Firestore...');
+      const docRef = doc(db, jewelryTypeId, modelId);
+      await deleteDoc(docRef);
+      console.log("Document successfully deleted from Firestore.");
+  
+      console.log("Step 3: Revalidating paths...");
+      revalidatePath('/', 'layout');
+      revalidatePath('/admin/dashboard');
       
-  } catch (error: any) {
-    console.error("=== ERROR in deleteModel SERVER ACTION ===", error);
-    const errorMessage = error.message || 'Erreur inconnue lors de la suppression';
-    return JSON.stringify({ success: false, message: `Erreur lors de la suppression: ${errorMessage}` });
-  }
+      console.log("=== deleteModel SERVER ACTION SUCCESS ===");
+      return JSON.stringify({ success: true, message: 'Modèle supprimé avec succès.' });
+        
+    } catch (error: any) {
+      console.error("=== ERROR in deleteModel SERVER ACTION ===", error);
+      const errorMessage = error.message || 'Erreur inconnue lors de la suppression';
+      return JSON.stringify({ success: false, message: `Erreur lors de la suppression: ${errorMessage}` });
+    }
 }
