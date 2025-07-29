@@ -46,14 +46,14 @@ export function ModelSelection({ selectedType, locale }: ModelSelectionProps) {
                                 <Link 
                                     href={`/${locale}/?type=${selectedType.id}&model=${model.id}`} 
                                     onClick={() => handleModelClick(model.id)}
-                                    className="contents"
+                                    className="block relative w-full h-64"
                                 >
                                     <Image 
                                         src={model.displayImageUrl} 
                                         alt={model.name} 
-                                        width={400} 
-                                        height={400} 
-                                        className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300" 
+                                        fill
+                                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                        className="object-cover group-hover:scale-105 transition-transform duration-300" 
                                         data-ai-hint="jewelry"
                                         priority={index < 4}
                                     />
@@ -63,24 +63,21 @@ export function ModelSelection({ selectedType, locale }: ModelSelectionProps) {
                                         </div>
                                     )}
                                 </Link>
-                                <div onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>
-                                    <Dialog>
-                                        <DialogTrigger asChild>
-                                            <Button variant="secondary" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <ZoomIn className="h-5 w-5" />
-                                            </Button>
-                                        </DialogTrigger>
-                                        <DialogContent className="max-w-3xl">
-                                            <DialogHeader>
-                                                <DialogTitle>{model.name}</DialogTitle>
-                                                <DialogDescription>
-                                                    Vue agrandie du modèle {model.name}.
-                                                </DialogDescription>
-                                            </DialogHeader>
-                                            <Image src={model.displayImageUrl} alt={model.name} width={800} height={800} className="w-full h-auto object-contain rounded-lg" data-ai-hint="jewelry model" sizes="100vw"/>
-                                        </DialogContent>
-                                    </Dialog>
-                                </div>
+                                <Dialog>
+                                    <DialogTrigger asChild>
+                                        <Button variant="secondary" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <ZoomIn className="h-5 w-5" />
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-3xl">
+                                        <DialogHeader>
+                                            <DialogTitle>{model.name}</DialogTitle>
+                                        </DialogHeader>
+                                        <div className="mt-4 grid place-items-center">
+                                            <Image src={model.displayImageUrl} alt={model.name} width={800} height={800} className="w-full h-auto object-contain rounded-lg max-w-full max-h-[80vh]" data-ai-hint="jewelry model" sizes="100vw"/>
+                                        </div>
+                                    </DialogContent>
+                                </Dialog>
                             </div>
                             <CardContent className="p-4 flex-grow flex flex-col justify-between">
                                 <h3 className="text-lg font-headline flex-grow">{model.name}</h3>

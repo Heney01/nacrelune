@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useReducer, useTransition, useMemo, FormEvent } from 'react';
@@ -67,8 +66,12 @@ const safeToLocaleDateString = (date: any) => {
         return new Date(date.seconds * 1000).toLocaleDateString();
     }
     // Handle JS Date or ISO string
-    if (date instanceof Date || typeof date === 'string') {
-        return new Date(date).toLocaleDateString();
+    if (date instanceof Date || typeof date === 'string' || typeof date === 'number') {
+        try {
+            return new Date(date).toLocaleDateString();
+        } catch (e) {
+            return '';
+        }
     }
     return '';
 }
@@ -116,7 +119,8 @@ function ReorderDialog({ model, jewelryTypeId, locale, onOrder, onRestock, t }: 
     const [restockedQuantity, setRestockedQuantity] = useState(1);
     const [isOpen, setIsOpen] = useState(false);
 
-    const handleOrderSubmit = () => {
+    const handleOrderSubmit = (e: FormEvent) => {
+        e.preventDefault();
         const formData = new FormData();
         formData.append('itemId', model.id);
         formData.append('itemType', jewelryTypeId);
@@ -125,7 +129,8 @@ function ReorderDialog({ model, jewelryTypeId, locale, onOrder, onRestock, t }: 
         setIsOpen(false);
     }
     
-    const handleRestockSubmit = () => {
+    const handleRestockSubmit = (e: FormEvent) => {
+        e.preventDefault();
         const formData = new FormData();
         formData.append('itemId', model.id);
         formData.append('itemType', jewelryTypeId);
@@ -151,7 +156,9 @@ function ReorderDialog({ model, jewelryTypeId, locale, onOrder, onRestock, t }: 
                     <Button variant="outline" asChild disabled={!model.reorderUrl}>
                         <a href={model.reorderUrl || ''} target="_blank" rel="noopener noreferrer">{t('open_reorder_url')}</a>
                     </Button>
-                    <Button onClick={handleOrderSubmit} variant="secondary" className="w-full">{t('mark_as_ordered')}</Button>
+                    <form onSubmit={handleOrderSubmit}>
+                        <Button type="submit" variant="secondary" className="w-full">{t('mark_as_ordered')}</Button>
+                    </form>
                     
                     <div className="flex items-center gap-2">
                         <hr className="flex-grow" />
@@ -159,17 +166,19 @@ function ReorderDialog({ model, jewelryTypeId, locale, onOrder, onRestock, t }: 
                         <hr className="flex-grow" />
                     </div>
                     
-                    <div className="space-y-2">
-                        <Label htmlFor="restock-quantity">{t('restocked_quantity')}</Label>
-                        <Input 
-                            id="restock-quantity"
-                            type="number" 
-                            value={restockedQuantity} 
-                            onChange={(e) => setRestockedQuantity(parseInt(e.target.value, 10))}
-                            min="1"
-                        />
-                    </div>
-                     <Button onClick={handleRestockSubmit} className="w-full">{t('mark_as_restocked')}</Button>
+                    <form onSubmit={handleRestockSubmit} className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="restock-quantity">{t('restocked_quantity')}</Label>
+                            <Input 
+                                id="restock-quantity"
+                                type="number" 
+                                value={restockedQuantity} 
+                                onChange={(e) => setRestockedQuantity(parseInt(e.target.value, 10) || 1)}
+                                min="1"
+                            />
+                        </div>
+                        <Button type="submit" className="w-full">{t('mark_as_restocked')}</Button>
+                    </form>
                 </div>
                 <AlertDialogFooter>
                     <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
@@ -397,7 +406,20 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                         return (
                                             <Card key={model.id} className="p-4">
                                                 <div className="flex gap-4">
-                                                    <Image src={model.displayImageUrl} alt={model.name} width={64} height={64} className="w-16 h-16 object-cover rounded-md" />
+                                                    <Dialog>
+                                                        <DialogTrigger asChild>
+                                                            <div className="relative w-16 h-16 cursor-pointer group flex-shrink-0">
+                                                                <Image src={model.displayImageUrl} alt={model.name} width={64} height={64} className="w-16 h-16 object-cover rounded-md group-hover:opacity-75" />
+                                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                                    <ZoomIn className="text-white h-6 w-6" />
+                                                                </div>
+                                                            </div>
+                                                        </DialogTrigger>
+                                                        <DialogContent>
+                                                            <DialogHeader><DialogTitle>{model.name}</DialogTitle></DialogHeader>
+                                                            <Image src={model.displayImageUrl} alt={model.name} width={400} height={400} className="w-full h-auto object-contain rounded-lg" />
+                                                        </DialogContent>
+                                                    </Dialog>
                                                     <div className="flex-grow space-y-1">
                                                         <h4 className="font-bold">{model.name}</h4>
                                                         <p>Prix: {model.price}€</p>
