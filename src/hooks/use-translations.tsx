@@ -53,3 +53,4 @@ export const useTranslations = (namespace: string) => {
 
   return t;
 };
+
