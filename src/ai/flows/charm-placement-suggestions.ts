@@ -11,7 +11,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
-import { defineTool } from 'genkit';
 
 
 const SuggestCharmPlacementInputSchema = z.object({
@@ -41,7 +40,7 @@ const SuggestCharmPlacementOutputSchema = z.object({
 });
 export type SuggestCharmPlacementOutput = z.infer<typeof SuggestCharmPlacementOutputSchema>;
 
-const shouldIntegrateCharmTool = defineTool({
+const shouldIntegrateCharmTool = ai.defineTool({
   name: 'shouldIntegrateCharm',
   description: 'Determines whether a given charm suggestion should be contextually relevant.',
   inputSchema: z.object({
@@ -64,7 +63,7 @@ export async function suggestCharmPlacement(input: SuggestCharmPlacementInput): 
   return suggestCharmPlacementFlow(input);
 }
 
-const suggestCharmPlacementFlow = ai.flow(
+const suggestCharmPlacementFlow = ai.defineFlow(
   {
     name: 'suggestCharmPlacementFlow',
     inputSchema: SuggestCharmPlacementInputSchema,
@@ -99,7 +98,7 @@ Suggest placements for a few of the available charms. For each suggestion, provi
       }
     });
 
-    const output = llmResponse.output();
+    const output = llmResponse.output;
     if (!output) {
       throw new Error('No output from prompt');
     }
