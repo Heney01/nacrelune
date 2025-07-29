@@ -4,7 +4,7 @@
 import React, { useState, useReducer, useTransition, useMemo, FormEvent } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, ZoomIn, AlertTriangle, ShoppingCart, Info } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ZoomIn, AlertTriangle, ShoppingCart, Info, Search } from "lucide-react";
 import type { JewelryType, JewelryModel, GeneralPreferences } from "@/lib/types";
 import { ModelForm } from './model-form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -35,7 +35,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 import { useTranslations } from '@/hooks/use-translations';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Card } from './ui/card';
+import { Card, CardTitle } from './ui/card';
 
 interface ModelsManagerProps {
     initialJewelryTypes: Omit<JewelryType, 'icon'>[];
@@ -119,8 +119,7 @@ function ReorderDialog({ model, jewelryTypeId, locale, onOrder, onRestock, t }: 
     const [restockedQuantity, setRestockedQuantity] = useState(1);
     const [isOpen, setIsOpen] = useState(false);
 
-    const handleOrderSubmit = (e: FormEvent) => {
-        e.preventDefault();
+    const handleOrderSubmit = () => {
         const formData = new FormData();
         formData.append('itemId', model.id);
         formData.append('itemType', jewelryTypeId);
@@ -131,11 +130,10 @@ function ReorderDialog({ model, jewelryTypeId, locale, onOrder, onRestock, t }: 
     
     const handleRestockSubmit = (e: FormEvent) => {
         e.preventDefault();
-        const formData = new FormData();
+        const formData = new FormData(e.currentTarget);
         formData.append('itemId', model.id);
         formData.append('itemType', jewelryTypeId);
         formData.append('locale', locale);
-        formData.append('restockedQuantity', String(restockedQuantity));
         onRestock(formData);
         setIsOpen(false);
     }
@@ -156,9 +154,7 @@ function ReorderDialog({ model, jewelryTypeId, locale, onOrder, onRestock, t }: 
                     <Button variant="outline" asChild disabled={!model.reorderUrl}>
                         <a href={model.reorderUrl || ''} target="_blank" rel="noopener noreferrer">{t('open_reorder_url')}</a>
                     </Button>
-                    <form onSubmit={handleOrderSubmit}>
-                        <Button type="submit" variant="secondary" className="w-full">{t('mark_as_ordered')}</Button>
-                    </form>
+                    <AlertDialogAction onClick={handleOrderSubmit} className="w-full">{t('mark_as_ordered')}</AlertDialogAction>
                     
                     <div className="flex items-center gap-2">
                         <hr className="flex-grow" />
@@ -171,8 +167,9 @@ function ReorderDialog({ model, jewelryTypeId, locale, onOrder, onRestock, t }: 
                             <Label htmlFor="restock-quantity">{t('restocked_quantity')}</Label>
                             <Input 
                                 id="restock-quantity"
+                                name="restockedQuantity"
                                 type="number" 
-                                value={restockedQuantity} 
+                                defaultValue={restockedQuantity} 
                                 onChange={(e) => setRestockedQuantity(parseInt(e.target.value, 10) || 1)}
                                 min="1"
                             />
@@ -197,6 +194,11 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [selectedJewelryType, setSelectedJewelryType] = useState<Omit<JewelryType, 'models'|'icon'>>(initialJewelryTypes[0]);
     const [selectedModel, setSelectedModel] = useState<JewelryModel | null>(null);
+    const [searchTerms, setSearchTerms] = useState<Record<string, string>>({});
+
+    const handleSearchChange = (jewelryTypeId: string, term: string) => {
+        setSearchTerms(prev => ({ ...prev, [jewelryTypeId]: term }));
+    };
 
     const handleAddModelClick = (jewelryType: Omit<JewelryType, 'models'|'icon'>) => {
         setSelectedJewelryType(jewelryType);
@@ -256,6 +258,17 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
         });
     }
 
+    const filteredJewelryTypes = useMemo(() => {
+        return jewelryTypes.map(jt => {
+            const searchTerm = searchTerms[jt.id] || '';
+            if (!searchTerm) return jt;
+            return {
+                ...jt,
+                models: jt.models.filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase()))
+            };
+        });
+    }, [jewelryTypes, searchTerms]);
+
     const getCategoryAlertState = (models: JewelryModel[]): 'critical' | 'alert' | 'none' => {
         if (models.some(m => (m.quantity ?? Infinity) <= preferences.criticalThreshold && !m.lastOrderedAt)) return 'critical';
         if (models.some(m => (m.quantity ?? Infinity) <= preferences.alertThreshold && !m.lastOrderedAt)) return 'alert';
@@ -292,26 +305,36 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
     
     return (
         <div className="p-4 bg-card rounded-lg border">
-            <Accordion type="multiple" className="w-full">
-                {jewelryTypes.map((jewelryType) => {
+            <Accordion type="multiple" className="w-full" defaultValue={jewelryTypes.map(jt => jt.id)}>
+                {filteredJewelryTypes.map((jewelryType) => {
                     const alertState = getCategoryAlertState(jewelryType.models);
                     return (
                         <AccordionItem value={jewelryType.id} key={jewelryType.id}>
-                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full py-4 gap-2">
-                                <AccordionTrigger className="text-xl font-headline flex-1 py-0 hover:no-underline">
-                                    <div className="flex items-center gap-2">
-                                        {alertState !== 'none' && (
-                                            <AlertIcon state={alertState} message={alertState === 'critical' ? "Un ou plusieurs modèles ont un stock critique." : "Un ou plusieurs modèles ont un stock bas."} />
-                                        )}
-                                        {jewelryType.name}
-                                    </div>
-                                </AccordionTrigger>
-                                <Button size="sm" className="sm:mr-4 w-full sm:w-auto" onClick={(e) => { e.stopPropagation(); handleAddModelClick(jewelryType); }}>
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    Ajouter un modèle
-                                </Button>
-                            </div>
+                            <AccordionTrigger className="text-xl font-headline flex-1 py-4 hover:no-underline [&>svg]:hidden">
+                                <div className="flex items-center gap-2 w-full pr-6">
+                                    {alertState !== 'none' && (
+                                        <AlertIcon state={alertState} message={alertState === 'critical' ? "Un ou plusieurs modèles ont un stock critique." : "Un ou plusieurs modèles ont un stock bas."} />
+                                    )}
+                                    {jewelryType.name}
+                                </div>
+                            </AccordionTrigger>
                             <AccordionContent>
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+                                     <div className="relative w-full sm:w-auto sm:flex-grow max-w-xs">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            placeholder="Rechercher un modèle..."
+                                            value={searchTerms[jewelryType.id] || ''}
+                                            onChange={(e) => handleSearchChange(jewelryType.id, e.target.value)}
+                                            className="pl-9"
+                                        />
+                                    </div>
+                                    <Button size="sm" className="w-full sm:w-auto" onClick={(e) => { e.stopPropagation(); handleAddModelClick(jewelryType); }}>
+                                        <PlusCircle className="mr-2 h-4 w-4" />
+                                        Ajouter un modèle
+                                    </Button>
+                                </div>
+
                                 {/* Desktop View */}
                                 <div className="hidden md:block">
                                     <Table>
@@ -332,8 +355,8 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                                         <TableCell>
                                                             <Dialog><DialogTrigger asChild>
                                                                 <div className="relative w-16 h-16 cursor-pointer group">
-                                                                    <Image src={model.displayImageUrl} alt={model.name} width={64} height={64} className="w-16 h-16 object-cover rounded-md group-hover:opacity-75" />
-                                                                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                                    <Image src={model.displayImageUrl} alt={model.name} fill className="w-16 h-16 object-cover rounded-md group-hover:opacity-75" />
+                                                                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
                                                                         <ZoomIn className="text-white h-6 w-6" />
                                                                     </div>
                                                                 </div>
@@ -406,20 +429,17 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                         return (
                                             <Card key={model.id} className="p-4">
                                                 <div className="flex gap-4">
-                                                    <Dialog>
-                                                        <DialogTrigger asChild>
-                                                            <div className="relative w-16 h-16 cursor-pointer group flex-shrink-0">
-                                                                <Image src={model.displayImageUrl} alt={model.name} width={64} height={64} className="w-16 h-16 object-cover rounded-md group-hover:opacity-75" />
-                                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                                                    <ZoomIn className="text-white h-6 w-6" />
-                                                                </div>
+                                                    <Dialog><DialogTrigger asChild>
+                                                        <div className="relative w-16 h-16 cursor-pointer group flex-shrink-0">
+                                                            <Image src={model.displayImageUrl} alt={model.name} fill className="object-cover rounded-md group-hover:opacity-75" />
+                                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
+                                                                <ZoomIn className="text-white h-6 w-6" />
                                                             </div>
-                                                        </DialogTrigger>
-                                                        <DialogContent>
-                                                            <DialogHeader><DialogTitle>{model.name}</DialogTitle></DialogHeader>
-                                                            <Image src={model.displayImageUrl} alt={model.name} width={400} height={400} className="w-full h-auto object-contain rounded-lg" />
-                                                        </DialogContent>
-                                                    </Dialog>
+                                                        </div>
+                                                    </DialogTrigger><DialogContent>
+                                                        <DialogHeader><DialogTitle>{model.name}</DialogTitle></DialogHeader>
+                                                        <Image src={model.displayImageUrl} alt={model.name} width={400} height={400} className="w-full h-auto object-contain rounded-lg" />
+                                                    </DialogContent></Dialog>
                                                     <div className="flex-grow space-y-1">
                                                         <h4 className="font-bold">{model.name}</h4>
                                                         <p>Prix: {model.price}€</p>

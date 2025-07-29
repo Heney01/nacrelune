@@ -4,7 +4,7 @@
 import React, { useState, useReducer, useTransition, useMemo, FormEvent } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Tag, WandSparkles, ZoomIn, AlertTriangle, ShoppingCart, Info } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Tag, WandSparkles, ZoomIn, AlertTriangle, ShoppingCart, Info, Search } from "lucide-react";
 import type { Charm, CharmCategory, GeneralPreferences } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
@@ -142,8 +142,7 @@ function ReorderDialog({ charm, locale, onOrder, onRestock, t }: {
     const [restockedQuantity, setRestockedQuantity] = useState(1);
     const [isOpen, setIsOpen] = useState(false);
 
-    const handleOrderSubmit = (e: FormEvent) => {
-        e.preventDefault();
+    const handleOrderSubmit = () => {
         const formData = new FormData();
         formData.append('itemId', charm.id);
         formData.append('itemType', 'charms');
@@ -154,11 +153,10 @@ function ReorderDialog({ charm, locale, onOrder, onRestock, t }: {
     
     const handleRestockSubmit = (e: FormEvent) => {
         e.preventDefault();
-        const formData = new FormData();
+        const formData = new FormData(e.currentTarget);
         formData.append('itemId', charm.id);
         formData.append('itemType', 'charms');
         formData.append('locale', locale);
-        formData.append('restockedQuantity', String(restockedQuantity));
         onRestock(formData);
         setIsOpen(false);
     }
@@ -179,9 +177,7 @@ function ReorderDialog({ charm, locale, onOrder, onRestock, t }: {
                     <Button variant="outline" asChild disabled={!charm.reorderUrl}>
                         <a href={charm.reorderUrl || ''} target="_blank" rel="noopener noreferrer">{t('open_reorder_url')}</a>
                     </Button>
-                    <form onSubmit={handleOrderSubmit}>
-                        <Button type="submit" variant="secondary" className="w-full">{t('mark_as_ordered')}</Button>
-                    </form>
+                    <AlertDialogAction onClick={handleOrderSubmit} className="w-full">{t('mark_as_ordered')}</AlertDialogAction>
                     
                     <div className="flex items-center gap-2">
                         <hr className="flex-grow" />
@@ -193,8 +189,9 @@ function ReorderDialog({ charm, locale, onOrder, onRestock, t }: {
                             <Label htmlFor="restock-quantity">{t('restocked_quantity')}</Label>
                             <Input 
                                 id="restock-quantity"
+                                name="restockedQuantity"
                                 type="number" 
-                                value={restockedQuantity} 
+                                defaultValue={restockedQuantity}
                                 onChange={(e) => setRestockedQuantity(parseInt(e.target.value, 10) || 1)}
                                 min="1"
                             />
@@ -217,6 +214,8 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
     
     const [state, dispatch] = useReducer(charmsReducer, { charms: initialCharms, categories: initialCharmCategories });
     const { charms, categories } = state;
+
+    const [searchTerm, setSearchTerm] = useState('');
 
     const [isCategoryFormOpen, setIsCategoryFormOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<CharmCategory | null>(null);
@@ -291,9 +290,16 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
         });
     }
 
+    const filteredCharms = useMemo(() => {
+        if (!searchTerm) return charms;
+        return charms.filter(charm =>
+            charm.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [charms, searchTerm]);
+
     const charmsByCategoryId = useMemo(() => {
         const acc: Record<string, (Charm & { categoryName?: string; })[]> = {};
-        charms.forEach(charm => {
+        filteredCharms.forEach(charm => {
             if (charm.categoryIds) {
                 charm.categoryIds.forEach(catId => {
                     if (!acc[catId]) acc[catId] = [];
@@ -302,7 +308,7 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
             }
         });
         return acc;
-    }, [charms]);
+    }, [filteredCharms]);
 
     const getCategoryAlertState = (categoryId: string): 'critical' | 'alert' | 'none' => {
         const categoryCharms = charmsByCategoryId[categoryId] || [];
@@ -335,7 +341,18 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                 <CardTitle className="text-xl font-headline flex items-center gap-2">
                     <Tag/> Gestion des Breloques & Catégories
                 </CardTitle>
-                <Button size="sm" onClick={handleAddCategoryClick} className="w-full sm:w-auto"><PlusCircle className="mr-2 h-4 w-4" />Ajouter une catégorie</Button>
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <div className="relative">
+                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                       <Input 
+                           placeholder="Rechercher une breloque..."
+                           value={searchTerm}
+                           onChange={(e) => setSearchTerm(e.target.value)}
+                           className="pl-9 w-full sm:w-auto"
+                       />
+                    </div>
+                    <Button size="sm" onClick={handleAddCategoryClick} className="w-full sm:w-auto"><PlusCircle className="mr-2 h-4 w-4" />Ajouter une catégorie</Button>
+                </div>
             </div>
 
             <div className="p-4 bg-card rounded-lg border">
@@ -343,6 +360,9 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                     {categories.map((category) => {
                         const alertState = getCategoryAlertState(category.id);
                         const categoryCharms = charmsByCategoryId[category.id] || [];
+                        
+                        if (categoryCharms.length === 0 && searchTerm) return null;
+
                         return (
                             <AccordionItem value={category.id} key={category.id}>
                                 <AccordionTrigger className="text-xl font-headline flex-1 py-4 hover:no-underline [&>svg]:hidden">
@@ -351,7 +371,20 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                             {alertState !== 'none' && (
                                                 <AlertIcon state={alertState} message={alertState === 'critical' ? "Un ou plusieurs articles ont un stock critique." : "Un ou plusieurs articles ont un stock bas."} />
                                             )}
-                                            <Image src={category.imageUrl || 'https://placehold.co/100x100.png'} alt={category.name} width={40} height={40} className="rounded-md"/>
+                                            <Dialog>
+                                                <DialogTrigger asChild>
+                                                    <div className="relative w-10 h-10 cursor-pointer group flex-shrink-0">
+                                                        <Image src={category.imageUrl || 'https://placehold.co/100x100.png'} alt={category.name} fill className="rounded-md object-cover group-hover:opacity-75"/>
+                                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
+                                                            <ZoomIn className="text-white h-5 w-5" />
+                                                        </div>
+                                                    </div>
+                                                </DialogTrigger>
+                                                <DialogContent>
+                                                    <DialogHeader><DialogTitle>{category.name}</DialogTitle></DialogHeader>
+                                                    <Image src={category.imageUrl || 'https://placehold.co/400x400.png'} alt={category.name} width={400} height={400} className="w-full h-auto object-contain rounded-lg" />
+                                                </DialogContent>
+                                            </Dialog>
                                             <span className='mr-auto'>{category.name}</span>
                                         </div>
                                         <div className="flex items-center gap-2 self-end sm:self-center">
@@ -393,7 +426,7 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                                                     <Dialog><DialogTrigger asChild>
                                                                         <div className="relative w-16 h-16 cursor-pointer group">
                                                                             <Image src={charm.imageUrl} alt={charm.name} width={64} height={64} className="w-16 h-16 object-cover rounded-md bg-white p-1 border group-hover:opacity-75" />
-                                                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100"><ZoomIn className="text-white h-6 w-6" /></div>
+                                                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-md"><ZoomIn className="text-white h-6 w-6" /></div>
                                                                         </div>
                                                                     </DialogTrigger><DialogContent>
                                                                         <DialogHeader><DialogTitle>{charm.name}</DialogTitle></DialogHeader>
@@ -453,20 +486,17 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                                 return (
                                                     <Card key={charm.id} className="p-4">
                                                         <div className="flex gap-4">
-                                                            <Dialog>
-                                                                <DialogTrigger asChild>
-                                                                    <div className="relative w-16 h-16 cursor-pointer group flex-shrink-0">
-                                                                        <Image src={charm.imageUrl} alt={charm.name} width={64} height={64} className="w-16 h-16 object-cover rounded-md group-hover:opacity-75" />
-                                                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                                                            <ZoomIn className="text-white h-6 w-6" />
-                                                                        </div>
+                                                            <Dialog><DialogTrigger asChild>
+                                                                <div className="relative w-16 h-16 cursor-pointer group flex-shrink-0">
+                                                                    <Image src={charm.imageUrl} alt={charm.name} width={64} height={64} className="w-16 h-16 object-cover rounded-md group-hover:opacity-75" />
+                                                                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
+                                                                        <ZoomIn className="text-white h-6 w-6" />
                                                                     </div>
-                                                                </DialogTrigger>
-                                                                <DialogContent>
-                                                                    <DialogHeader><DialogTitle>{charm.name}</DialogTitle></DialogHeader>
-                                                                    <Image src={charm.imageUrl} alt={charm.name} width={400} height={400} className="w-full h-auto object-contain rounded-lg" />
-                                                                </DialogContent>
-                                                            </Dialog>
+                                                                </div>
+                                                            </DialogTrigger><DialogContent>
+                                                                <DialogHeader><DialogTitle>{charm.name}</DialogTitle></DialogHeader>
+                                                                <Image src={charm.imageUrl} alt={charm.name} width={400} height={400} className="w-full h-auto object-contain rounded-lg" />
+                                                            </DialogContent></Dialog>
                                                             <div className="flex-grow space-y-1">
                                                                 <h4 className="font-bold">{charm.name}</h4>
                                                                 <p>Prix: {charm.price}€</p>
