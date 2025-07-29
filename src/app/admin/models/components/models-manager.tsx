@@ -10,7 +10,7 @@ import { ModelForm } from './model-form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { deleteModel } from '../actions';
+import { deleteModel } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 
 interface ModelsManagerProps {
