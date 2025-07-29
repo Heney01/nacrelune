@@ -10,7 +10,7 @@ import { ModelsManager } from "@/components/models-manager";
 import { CharmsManager } from "@/components/charms-manager";
 import { PreferencesManager } from "@/components/preferences-manager";
 import { OrdersManager } from "@/components/orders-manager";
-import { Gem, User, Wrench, ChevronRight, ArrowLeft, Settings, AlertTriangle, Package, PackageCheck, CookingPot, Truck } from "lucide-react";
+import { Gem, User, Wrench, ChevronRight, ArrowLeft, Settings, AlertTriangle, Package, PackageCheck, CookingPot, Truck, Home } from "lucide-react";
 import type { JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderStatus } from "@/lib/types";
 import Link from "next/link";
 import { Loader2 } from 'lucide-react';
@@ -217,6 +217,12 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
           <div className="flex h-16 items-center px-4">
             <NacreluneLogo className="h-8 w-auto" />
             <div className="ml-auto flex items-center space-x-4">
+               <Button variant="ghost" asChild>
+                <Link href={`/${locale}`} className="flex items-center">
+                    <Home className="mr-2 h-4 w-4" />
+                    Boutique
+                </Link>
+              </Button>
               <form action={logout}>
                   <input type="hidden" name="locale" value={locale} />
                   <Button variant="ghost">
