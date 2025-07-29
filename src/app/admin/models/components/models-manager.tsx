@@ -1,8 +1,7 @@
 
-
 'use client';
 
-import { useState, useReducer } from 'react';
+import { useState, useReducer, useEffect } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
@@ -90,23 +89,37 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
     };
     
     const handleDeleteAction = async (formData: FormData) => {
+        console.log("--- [CLIENT] handleDeleteAction triggered ---");
         const jewelryTypeId = formData.get('jewelryTypeId') as string;
         const modelId = formData.get('modelId') as string;
 
+        // Optimistic UI update
         dispatch({ type: 'DELETE', payload: { jewelryTypeId, modelId } });
 
-        const result = await deleteModel(formData);
+        try {
+            console.log("--- [CLIENT] Calling server action 'deleteModel' ---");
+            const result = await deleteModel(formData);
+            console.log("--- [CLIENT] Server action result:", result);
 
-        if (result?.success) {
-            toast({
-                title: 'Succès',
-                description: result.message,
-            });
-        } else {
-            toast({
+            if (result?.success) {
+                toast({
+                    title: 'Succès',
+                    description: result.message,
+                });
+            } else {
+                toast({
+                    variant: 'destructive',
+                    title: 'Erreur',
+                    description: result?.message || 'Une erreur inconnue est survenue.',
+                });
+                // Note: You might want to revert the optimistic update here if the server fails
+            }
+        } catch (error) {
+             console.error("--- [CLIENT] Error calling server action:", error);
+             toast({
                 variant: 'destructive',
                 title: 'Erreur',
-                description: result?.message || 'Une erreur inconnue est survenue.',
+                description: 'Une erreur de communication est survenue.',
             });
         }
     };

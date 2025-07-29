@@ -23,10 +23,7 @@ export async function getCharmSuggestions(
 const getFileNameFromUrl = (url: string) => {
     try {
         const urlObj = new URL(url);
-        // Firebase Storage URLs in the format: https://firebasestorage.googleapis.com/v0/b/your-bucket.appspot.com/o/path%2Fto%2Ffile.jpg?alt=media&token=...
         if (urlObj.hostname === 'firebasestorage.googleapis.com') {
-             // The pathname is like /v0/b/your-bucket/o/path%2Fto%2Ffile.jpg
-            // We need to decode it and extract the path after the '/o/'
             const decodedPath = decodeURIComponent(urlObj.pathname);
             const pathRegex = /\/o\/(.*)/;
             const match = decodedPath.match(pathRegex);
@@ -35,45 +32,56 @@ const getFileNameFromUrl = (url: string) => {
             }
         }
     } catch (e) {
-        // Not a valid URL, might be a path already
+        // Not a valid URL
     }
-    // If it's not a full URL, assume it's a path, but don't return placeholder paths
     if (url.includes('placehold.co')) return null;
     return url;
 };
 
 export async function deleteModel(formData: FormData): Promise<{ success: boolean; message: string }> {
+    console.log("--- [SERVER] deleteModel action called ---");
     const modelId = formData.get('modelId') as string;
     const jewelryTypeId = formData.get('jewelryTypeId') as string;
     const displayImageUrl = formData.get('displayImageUrl') as string;
     const editorImageUrl = formData.get('editorImageUrl') as string;
 
+    console.log(`--- [SERVER] Received data: modelId=${modelId}, jewelryTypeId=${jewelryTypeId}`);
+
     if (!modelId || !jewelryTypeId) {
-        return { success: false, message: "Les informations du modèle sont manquantes." };
+        const errorMsg = "Les informations du modèle sont manquantes.";
+        console.error(`--- [SERVER] Error: ${errorMsg}`);
+        return { success: false, message: errorMsg };
     }
 
     try {
         // 1. Delete Firestore document
+        console.log(`--- [SERVER] Attempting to delete Firestore doc: ${jewelryTypeId}/${modelId}`);
         await deleteDoc(doc(db, jewelryTypeId, modelId));
-        
+        console.log("--- [SERVER] Firestore document deleted successfully.");
+
         // 2. Delete images from Storage
         const filesToDelete = [
             getFileNameFromUrl(displayImageUrl),
             getFileNameFromUrl(editorImageUrl)
-        ].filter(Boolean); // filter out null/undefined values
+        ].filter(Boolean);
+
+        console.log(`--- [SERVER] Files to delete from Storage:`, filesToDelete);
 
         for (const filePath of filesToDelete) {
              if (filePath) {
+                console.log(`--- [SERVER] Attempting to delete file from Storage: ${filePath}`);
                 const fileRef = ref(storage, filePath);
                 await deleteObject(fileRef);
+                console.log(`--- [SERVER] File deleted: ${filePath}`);
             }
         }
         
         revalidatePath('/admin/dashboard'); 
+        console.log("--- [SERVER] Path revalidated. Operation successful.");
         return { success: true, message: "Le modèle a été supprimé avec succès." };
 
     } catch (error: any) {
-        console.error("Erreur lors de la suppression du modèle: ", error);
+        console.error("--- [SERVER] Error during model deletion: ", error);
         
         let errorMessage = "Une erreur est survenue lors de la suppression du modèle.";
         if (error.code === 'storage/object-not-found') {
