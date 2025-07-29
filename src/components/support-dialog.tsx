@@ -17,7 +17,7 @@ import { Copy, Mail, LifeBuoy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
-const SUPPORT_EMAIL = 'support@nacrelune.com';
+const SUPPORT_EMAIL = 'support@atelierabijoux.com';
 
 export function SupportDialog() {
   const t = useTranslations('HomePage');

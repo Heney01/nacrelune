@@ -213,7 +213,7 @@ export async function getOrders(): Promise<Order[]> {
 
         // Get all unique charm IDs from all orders first
         const allCharmIds = querySnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => item.charmIds) || []);
-        const uniqueCharmIds = [...new Set(allCharmIds)].filter(id => id);
+        const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
         // Fetch all required charms in a single query
         let charmsMap = new Map<string, Charm>();

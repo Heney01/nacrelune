@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { NacreluneLogo } from "@/components/icons";
+import { BrandLogo } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { logout } from "@/app/actions";
 import { ModelsManager } from "@/components/models-manager";
@@ -215,7 +215,7 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
       <div className="flex-col md:flex">
         <div className="border-b">
           <div className="flex h-16 items-center px-4">
-            <NacreluneLogo className="h-8 w-auto" />
+            <BrandLogo className="h-8 w-auto" />
             <div className="ml-auto flex items-center space-x-4">
                <Button variant="ghost" asChild>
                 <Link href={`/${locale}`} className="flex items-center">

@@ -8,8 +8,8 @@ import { CartProvider } from '@/hooks/use-cart';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Nacrelune',
-  description: 'Concevez vos propres bijoux personnalisés avec Nacrelune.',
+  title: 'Atelier à bijoux',
+  description: 'Concevez vos propres bijoux personnalisés avec Atelier à bijoux.',
 };
 
 export default async function LocaleLayout({

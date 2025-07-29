@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { NacreluneLogo } from '@/components/icons';
+import { BrandLogo } from '@/components/icons';
 import { login } from '@/app/actions';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -51,7 +51,7 @@ export function LoginForm() {
     <Card>
       <CardHeader className="text-center">
         <div className="mx-auto mb-4">
-            <NacreluneLogo className="h-10 w-auto" />
+            <BrandLogo className="h-10 w-auto" />
         </div>
         <CardTitle className="text-2xl">Espace Administrateur</CardTitle>
         <CardDescription>
@@ -73,7 +73,7 @@ export function LoginForm() {
               id="email"
               name="email"
               type="email"
-              placeholder="admin@nacrelune.com"
+              placeholder="admin@atelierabijoux.com"
               required
             />
           </div>

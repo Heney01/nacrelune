@@ -4,7 +4,7 @@
 
 import React from 'react';
 import Editor from '@/components/editor';
-import { NacreluneLogo } from '@/components/icons';
+import { BrandLogo } from '@/components/icons';
 import { useTranslations } from '@/hooks/use-translations';
 import { Gem, HandMetal, Ear, Truck } from 'lucide-react';
 import { TypeSelection } from '@/components/type-selection';
@@ -47,7 +47,7 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
          <header className="p-4 border-b bg-white">
           <div className="container mx-auto flex justify-between items-center">
             <Link href={`/${locale}`} className="flex items-center gap-2">
-              <NacreluneLogo className="h-8 w-auto text-foreground" />
+              <BrandLogo className="h-8 w-auto text-foreground" />
             </Link>
             <div className="flex items-center gap-2">
                 <SupportDialog />

@@ -11,7 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { SuggestionSidebar } from './suggestion-sidebar';
 import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { NacreluneLogo } from './icons';
+import { BrandLogo } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getCharmSuggestions } from '@/app/actions';
@@ -508,7 +508,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       <header className="p-4 border-b">
           <div className="container mx-auto flex justify-between items-center">
             <Link href={`/${locale}`} className="flex items-center gap-2">
-              <NacreluneLogo className="h-8 w-auto text-foreground" />
+              <BrandLogo className="h-8 w-auto text-foreground" />
             </Link>
             <div className="flex items-center gap-2">
                <Button variant="ghost" asChild>

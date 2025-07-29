@@ -2,6 +2,7 @@
 
 
 
+
 'use server';
 
 import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
@@ -452,7 +453,7 @@ function generateOrderNumber(): string {
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const day = date.getDate().toString().padStart(2, '0');
   const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
-  return `NAC-${year}${month}${day}-${randomPart}`;
+  return `ATB-${year}${month}${day}-${randomPart}`;
 }
 
 export type SerializableCartItem = {
