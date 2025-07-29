@@ -73,7 +73,7 @@ function SubmitButton({ isEditing }: { isEditing: boolean }) {
     )
 }
 
-const initialState = { success: false, message: '' };
+const initialState = { success: false, message: '', model: undefined };
 
 export function ModelForm({ isOpen, onOpenChange, jewelryType, model, onSave, locale }: ModelFormProps) {
     const [isMounted, setIsMounted] = useState(false);
@@ -84,7 +84,7 @@ export function ModelForm({ isOpen, onOpenChange, jewelryType, model, onSave, lo
     }, []);
     
     useEffect(() => {
-        if (state.success && state.model) {
+        if (state.success && 'model' in state && state.model) {
             onSave(state.model); // Trigger optimistic update
             onOpenChange(false);
         }

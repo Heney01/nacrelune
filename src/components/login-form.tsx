@@ -22,7 +22,7 @@ import { useParams } from 'next/navigation';
 
 
 const initialState = {
-  error: null,
+  error: '',
 };
 
 function LoginButton() {
@@ -42,7 +42,7 @@ export function LoginForm() {
   const locale = params.locale as string;
 
   useEffect(() => {
-    if (state?.error === null) {
+    if (state?.error === '') {
       // successful login is handled by redirect in the action
     }
   }, [state]);
@@ -60,7 +60,7 @@ export function LoginForm() {
       </CardHeader>
       <form action={formAction}>
         <CardContent className="space-y-4">
-          {state?.error && (
+          {state?.error && state.error !== '' && (
             <Alert variant="destructive">
               <AlertTitle>Erreur de connexion</AlertTitle>
               <AlertDescription>{state.error}</AlertDescription>

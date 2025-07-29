@@ -29,7 +29,7 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardHeader, CardTitle } from './ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { CharmCategoryForm } from './charm-category-form';
 import { CharmForm } from './charm-form';
 import { deleteCharmCategory, deleteCharm, markAsOrdered, markAsRestocked } from '@/app/actions';
@@ -77,9 +77,9 @@ const safeToLocaleDateString = (date: any) => {
     if (typeof date === 'object' && date.seconds) {
         return new Date(date.seconds * 1000).toLocaleDateString();
     }
-    // Handle JS Date
-    if (date instanceof Date) {
-        return date.toLocaleDateString();
+    // Handle JS Date or ISO string
+    if (date instanceof Date || typeof date === 'string') {
+        return new Date(date).toLocaleDateString();
     }
     return '';
 }
@@ -139,7 +139,7 @@ function ReorderDialog({ charm, locale, onOrder, onRestock, t }: {
     const [restockedQuantity, setRestockedQuantity] = useState(1);
     const [isOpen, setIsOpen] = useState(false);
 
-    const handleOrder = () => {
+    const handleOrderSubmit = () => {
         const formData = new FormData();
         formData.append('itemId', charm.id);
         formData.append('itemType', 'charms');
@@ -148,7 +148,7 @@ function ReorderDialog({ charm, locale, onOrder, onRestock, t }: {
         setIsOpen(false);
     }
     
-    const handleRestock = () => {
+    const handleRestockSubmit = () => {
         const formData = new FormData();
         formData.append('itemId', charm.id);
         formData.append('itemType', 'charms');
@@ -174,7 +174,7 @@ function ReorderDialog({ charm, locale, onOrder, onRestock, t }: {
                     <Button variant="outline" asChild disabled={!charm.reorderUrl}>
                         <a href={charm.reorderUrl || ''} target="_blank" rel="noopener noreferrer">{t('open_reorder_url')}</a>
                     </Button>
-                    <Button onClick={handleOrder} variant="secondary" className="w-full">{t('mark_as_ordered')}</Button>
+                    <Button onClick={handleOrderSubmit} variant="secondary" className="w-full">{t('mark_as_ordered')}</Button>
                     
                     <div className="flex items-center gap-2">
                         <hr className="flex-grow" />
@@ -192,7 +192,7 @@ function ReorderDialog({ charm, locale, onOrder, onRestock, t }: {
                             min="1"
                         />
                     </div>
-                     <Button onClick={handleRestock} className="w-full">{t('mark_as_restocked')}</Button>
+                     <Button onClick={handleRestockSubmit} className="w-full">{t('mark_as_restocked')}</Button>
                 </div>
                 <AlertDialogFooter>
                     <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
@@ -272,7 +272,6 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
 
     const handleRestockAction = (formData: FormData) => {
         const charmId = formData.get('itemId') as string;
-        const restockedQuantity = parseInt(formData.get('restockedQuantity') as string, 10);
         
         markAsRestocked(formData).then(result => {
             if(result.success && result.newQuantity !== undefined) {
@@ -299,13 +298,13 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
 
     const getCategoryAlertState = (categoryId: string): 'critical' | 'alert' | 'none' => {
         const categoryCharms = charmsByCategoryId[categoryId] || [];
-        if (categoryCharms.some(c => (c.quantity ?? Infinity) <= preferences.criticalThreshold && c.lastOrderedAt === null)) return 'critical';
-        if (categoryCharms.some(c => (c.quantity ?? Infinity) <= preferences.alertThreshold && c.lastOrderedAt === null)) return 'alert';
+        if (categoryCharms.some(c => (c.quantity ?? Infinity) <= preferences.criticalThreshold && !c.lastOrderedAt)) return 'critical';
+        if (categoryCharms.some(c => (c.quantity ?? Infinity) <= preferences.alertThreshold && !c.lastOrderedAt)) return 'alert';
         return 'none';
     };
 
     const getItemAlertState = (charm: Charm): 'reordered' | 'critical' | 'alert' | 'none' => {
-        if(charm.restockedAt === null && charm.lastOrderedAt !== null) return 'reordered';
+        if(charm.lastOrderedAt && !charm.restockedAt) return 'reordered';
         const q = charm.quantity ?? Infinity;
         if (q <= preferences.criticalThreshold) return 'critical';
         if (q <= preferences.alertThreshold) return 'alert';
@@ -324,119 +323,177 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
 
     return (
         <>
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 <CardTitle className="text-xl font-headline flex items-center gap-2">
                     <Tag/> Gestion des Breloques & Catégories
                 </CardTitle>
-                <div className='flex gap-2'>
-                    <Button size="sm" onClick={handleAddCategoryClick}><PlusCircle className="mr-2 h-4 w-4" />Ajouter une catégorie</Button>
-                </div>
+                <Button size="sm" onClick={handleAddCategoryClick} className="w-full sm:w-auto"><PlusCircle className="mr-2 h-4 w-4" />Ajouter une catégorie</Button>
             </div>
 
             <div className="p-4 bg-card rounded-lg border">
                 <Accordion type="multiple" className="w-full" disabled={isPending}>
                     {categories.map((category) => {
                         const alertState = getCategoryAlertState(category.id);
+                        const categoryCharms = charmsByCategoryId[category.id] || [];
                         return (
                             <AccordionItem value={category.id} key={category.id}>
-                                <div className="flex justify-between items-center w-full py-4 group">
-                                    <AccordionTrigger className="text-xl font-headline flex-1 py-0 hover:no-underline">
+                                <AccordionTrigger className="text-xl font-headline flex-1 py-4 hover:no-underline [&>svg]:hidden">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full gap-4">
                                         <div className="flex items-center gap-4">
                                             {alertState !== 'none' && (
                                                 <AlertIcon state={alertState} message={alertState === 'critical' ? "Un ou plusieurs articles ont un stock critique." : "Un ou plusieurs articles ont un stock bas."} />
                                             )}
                                             <Image src={category.imageUrl || 'https://placehold.co/100x100.png'} alt={category.name} width={40} height={40} className="rounded-md"/>
-                                            {category.name}
+                                            <span className='mr-auto'>{category.name}</span>
                                         </div>
-                                    </AccordionTrigger>
-                                    <div className="flex items-center gap-2 mr-4">
-                                        <Button variant="outline" size="sm" onClick={(e) => {e.stopPropagation(); handleEditCategoryClick(category);}}><Edit className="mr-2 h-4 w-4" />Modifier</Button>
-                                        <AlertDialog><AlertDialogTrigger asChild>
-                                            <Button variant="outline" size="sm" className="text-destructive hover:text-destructive hover:border-destructive/50" onClick={(e) => e.stopPropagation()}><Trash2 className="mr-2 h-4 w-4" />Supprimer</Button>
-                                        </AlertDialogTrigger><AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                                            <form action={handleDeleteCategoryAction}>
-                                                <input type="hidden" name="categoryId" value={category.id} /><input type="hidden" name="imageUrl" value={category.imageUrl || ''} /><input type="hidden" name="locale" value={locale} />
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-                                                    <AlertDialogDescription>Cette action est irréversible. La catégorie "{category.name}" sera définitivement supprimée. Les breloques associées ne seront plus dans cette catégorie.</AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter><AlertDialogCancel type="button">Annuler</AlertDialogCancel><AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction></AlertDialogFooter>
-                                            </form>
-                                        </AlertDialogContent></AlertDialog>
+                                        <div className="flex items-center gap-2 self-end sm:self-center">
+                                            <Button variant="outline" size="sm" onClick={(e) => {e.stopPropagation(); handleEditCategoryClick(category);}}><Edit className="mr-2 h-4 w-4" />Modifier</Button>
+                                            <AlertDialog><AlertDialogTrigger asChild>
+                                                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive hover:border-destructive/50" onClick={(e) => e.stopPropagation()}><Trash2 className="mr-2 h-4 w-4" />Supprimer</Button>
+                                            </AlertDialogTrigger><AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                                                <form action={handleDeleteCategoryAction}>
+                                                    <input type="hidden" name="categoryId" value={category.id} /><input type="hidden" name="imageUrl" value={category.imageUrl || ''} /><input type="hidden" name="locale" value={locale} />
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                                                        <AlertDialogDescription>Cette action est irréversible. La catégorie "{category.name}" sera définitivement supprimée. Les breloques associées ne seront plus dans cette catégorie.</AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter><AlertDialogCancel type="button">Annuler</AlertDialogCancel><AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction></AlertDialogFooter>
+                                                </form>
+                                            </AlertDialogContent></AlertDialog>
+                                            <AccordionTrigger className="p-2" />
+                                        </div>
                                     </div>
-                                </div>
+                                </AccordionTrigger>
                                 <AccordionContent>
-                                    <div className="pl-8">
-                                        <div className="flex justify-between items-center mb-4">
+                                    <div className="pl-0 sm:pl-8">
+                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
                                             <h4 className="font-semibold text-lg flex items-center gap-2"><WandSparkles className="h-5 w-5 text-primary" /> Breloques dans cette catégorie</h4>
-                                             <Button size="sm" variant="outline" onClick={handleAddCharmClick}><PlusCircle className="mr-2 h-4 w-4" />Ajouter une breloque</Button>
+                                             <Button size="sm" variant="outline" onClick={handleAddCharmClick} className="w-full sm:w-auto"><PlusCircle className="mr-2 h-4 w-4" />Ajouter une breloque</Button>
                                         </div>
-                                        <Table>
-                                            <TableHeader><TableRow>
-                                                <TableHead className="w-24">Image</TableHead><TableHead>Nom</TableHead><TableHead>Prix</TableHead><TableHead>Stock</TableHead><TableHead className="text-right">Actions</TableHead>
-                                            </TableRow></TableHeader>
-                                            <TableBody>
-                                                {(charmsByCategoryId[category.id] || []).map((charm) => {
-                                                    const itemAlertState = getItemAlertState(charm);
-                                                    return (
-                                                        <TableRow key={charm.id}>
-                                                            <TableCell>
-                                                                <Dialog><DialogTrigger asChild>
-                                                                    <div className="relative w-16 h-16 cursor-pointer group">
-                                                                        <Image src={charm.imageUrl} alt={charm.name} width={64} height={64} className="w-16 h-16 object-cover rounded-md bg-white p-1 border group-hover:opacity-75" />
-                                                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100"><ZoomIn className="text-white h-6 w-6" /></div>
+                                        {/* Desktop View */}
+                                        <div className="hidden md:block">
+                                            <Table>
+                                                <TableHeader><TableRow>
+                                                    <TableHead className="w-24">Image</TableHead><TableHead>Nom</TableHead><TableHead>Prix</TableHead><TableHead>Stock</TableHead><TableHead className="text-right">Actions</TableHead>
+                                                </TableRow></TableHeader>
+                                                <TableBody>
+                                                    {categoryCharms.map((charm) => {
+                                                        const itemAlertState = getItemAlertState(charm);
+                                                        return (
+                                                            <TableRow key={charm.id}>
+                                                                <TableCell>
+                                                                    <Dialog><DialogTrigger asChild>
+                                                                        <div className="relative w-16 h-16 cursor-pointer group">
+                                                                            <Image src={charm.imageUrl} alt={charm.name} width={64} height={64} className="w-16 h-16 object-cover rounded-md bg-white p-1 border group-hover:opacity-75" />
+                                                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100"><ZoomIn className="text-white h-6 w-6" /></div>
+                                                                        </div>
+                                                                    </DialogTrigger><DialogContent>
+                                                                        <DialogHeader><DialogTitle>{charm.name}</DialogTitle></DialogHeader>
+                                                                        <Image src={charm.imageUrl} alt={charm.name} width={400} height={400} className="w-full h-auto object-contain rounded-lg" />
+                                                                    </DialogContent></Dialog>
+                                                                </TableCell>
+                                                                <TableCell className="font-medium">{charm.name}</TableCell>
+                                                                <TableCell>{charm.price}€</TableCell>
+                                                                <TableCell>
+                                                                    <div className="flex items-center gap-2">
+                                                                        {itemAlertState !== 'none' && (
+                                                                             <AlertIcon state={itemAlertState} message={
+                                                                                itemAlertState === 'critical' ? t('stock_critical', { threshold: preferences.criticalThreshold }) : 
+                                                                                itemAlertState === 'alert' ? t('stock_low', { threshold: preferences.alertThreshold }) :
+                                                                                t('stock_reordered', { date: safeToLocaleDateString(charm.lastOrderedAt) })
+                                                                            } />
+                                                                        )}
+                                                                        {charm.quantity}
                                                                     </div>
-                                                                </DialogTrigger><DialogContent>
-                                                                    <DialogHeader><DialogTitle>{charm.name}</DialogTitle></DialogHeader>
-                                                                    <Image src={charm.imageUrl} alt={charm.name} width={400} height={400} className="w-full h-auto object-contain rounded-lg" />
-                                                                </DialogContent></Dialog>
-                                                            </TableCell>
-                                                            <TableCell className="font-medium">{charm.name}</TableCell>
-                                                            <TableCell>{charm.price}€</TableCell>
-                                                            <TableCell>
+                                                                </TableCell>
+                                                                <TableCell className="text-right space-x-1">
+                                                                    <ReorderDialog
+                                                                        charm={charm}
+                                                                        locale={locale}
+                                                                        onOrder={handleOrderAction}
+                                                                        onRestock={handleRestockAction}
+                                                                        t={t}
+                                                                    />
+                                                                    <Button variant="ghost" size="icon" onClick={() => handleEditCharmClick(charm)}><Edit className="h-4 w-4" /></Button>
+                                                                    <AlertDialog>
+                                                                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                                                                        <AlertDialogContent>
+                                                                            <form action={handleDeleteCharmAction}>
+                                                                                <input type="hidden" name="charmId" value={charm.id} /><input type="hidden" name="imageUrl" value={charm.imageUrl} /><input type="hidden" name="locale" value={locale} />
+                                                                                <AlertDialogHeader>
+                                                                                    <AlertDialogTitle>Supprimer la breloque "{charm.name}" ?</AlertDialogTitle>
+                                                                                    <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
+                                                                                </AlertDialogHeader>
+                                                                                <AlertDialogFooter>
+                                                                                    <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
+                                                                                    <AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
+                                                                                </AlertDialogFooter>
+                                                                            </form>
+                                                                        </AlertDialogContent>
+                                                                    </AlertDialog>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        );
+                                                    })}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                         {/* Mobile View */}
+                                        <div className="md:hidden space-y-4">
+                                            {categoryCharms.map((charm) => {
+                                                const itemAlertState = getItemAlertState(charm);
+                                                return (
+                                                    <Card key={charm.id} className="p-4">
+                                                        <div className="flex gap-4">
+                                                            <Image src={charm.imageUrl} alt={charm.name} width={64} height={64} className="w-16 h-16 object-cover rounded-md" />
+                                                            <div className="flex-grow space-y-1">
+                                                                <h4 className="font-bold">{charm.name}</h4>
+                                                                <p>Prix: {charm.price}€</p>
                                                                 <div className="flex items-center gap-2">
+                                                                    <span>Stock:</span>
                                                                     {itemAlertState !== 'none' && (
-                                                                         <AlertIcon state={itemAlertState} message={
-                                                                            itemAlertState === 'critical' ? t('stock_critical', { threshold: preferences.criticalThreshold }) : 
+                                                                        <AlertIcon state={itemAlertState} message={
+                                                                            itemAlertState === 'critical' ? t('stock_critical', { threshold: preferences.criticalThreshold }) :
                                                                             itemAlertState === 'alert' ? t('stock_low', { threshold: preferences.alertThreshold }) :
                                                                             t('stock_reordered', { date: safeToLocaleDateString(charm.lastOrderedAt) })
                                                                         } />
                                                                     )}
-                                                                    {charm.quantity}
+                                                                    <span>{charm.quantity}</span>
                                                                 </div>
-                                                            </TableCell>
-                                                            <TableCell className="text-right space-x-1">
-                                                                <ReorderDialog
-                                                                    charm={charm}
-                                                                    locale={locale}
-                                                                    onOrder={handleOrderAction}
-                                                                    onRestock={handleRestockAction}
-                                                                    t={t}
-                                                                />
-                                                                <Button variant="ghost" size="icon" onClick={() => handleEditCharmClick(charm)}><Edit className="h-4 w-4" /></Button>
-                                                                <AlertDialog>
-                                                                    <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                                                                    <AlertDialogContent>
-                                                                        <form action={handleDeleteCharmAction}>
-                                                                            <input type="hidden" name="charmId" value={charm.id} /><input type="hidden" name="imageUrl" value={charm.imageUrl} /><input type="hidden" name="locale" value={locale} />
-                                                                            <AlertDialogHeader>
-                                                                                <AlertDialogTitle>Supprimer la breloque "{charm.name}" ?</AlertDialogTitle>
-                                                                                <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
-                                                                            </AlertDialogHeader>
-                                                                            <AlertDialogFooter>
-                                                                                <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
-                                                                                <AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
-                                                                            </AlertDialogFooter>
-                                                                        </form>
-                                                                    </AlertDialogContent>
-                                                                </AlertDialog>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    );
-                                                })}
-                                            </TableBody>
-                                        </Table>
-                                        {(!charmsByCategoryId[category.id] || charmsByCategoryId[category.id].length === 0) && (
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex justify-end items-center gap-1 mt-2">
+                                                            <ReorderDialog
+                                                                charm={charm}
+                                                                locale={locale}
+                                                                onOrder={handleOrderAction}
+                                                                onRestock={handleRestockAction}
+                                                                t={t}
+                                                            />
+                                                            <Button variant="ghost" size="icon" onClick={() => handleEditCharmClick(charm)}><Edit className="h-4 w-4" /></Button>
+                                                            <AlertDialog>
+                                                                <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                                                                <AlertDialogContent>
+                                                                    <form action={handleDeleteCharmAction}>
+                                                                        <input type="hidden" name="charmId" value={charm.id} /><input type="hidden" name="imageUrl" value={charm.imageUrl} /><input type="hidden" name="locale" value={locale} />
+                                                                        <AlertDialogHeader>
+                                                                            <AlertDialogTitle>Supprimer la breloque "{charm.name}" ?</AlertDialogTitle>
+                                                                            <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
+                                                                        </AlertDialogHeader>
+                                                                        <AlertDialogFooter>
+                                                                            <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
+                                                                            <AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
+                                                                        </AlertDialogFooter>
+                                                                    </form>
+                                                                </AlertDialogContent>
+                                                            </AlertDialog>
+                                                        </div>
+                                                    </Card>
+                                                )
+                                            })}
+                                        </div>
+
+                                        {categoryCharms.length === 0 && (
                                             <p className="text-center text-muted-foreground py-8">Aucune breloque dans cette catégorie.</p>
                                         )}
                                     </div>

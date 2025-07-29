@@ -56,13 +56,13 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
             onDragStart(e, placed.id);
         }
 
-        element.addEventListener('wheel', handleWheel as EventListener, { passive: false });
+        element.addEventListener('wheel', handleWheel as unknown as EventListener, { passive: false });
         element.addEventListener('touchstart', handleTouchStart, { passive: false });
 
 
         return () => {
             if(element) {
-                element.removeEventListener('wheel', handleWheel as EventListener);
+                element.removeEventListener('wheel', handleWheel as unknown as EventListener);
                 element.removeEventListener('touchstart', handleTouchStart);
             }
         };
@@ -343,7 +343,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       const handleWheel = (e: Event) => {
           if (!(e.target as HTMLElement).closest('.charm-on-canvas')) {
               e.preventDefault();
-              handleCanvasWheel(e as WheelEvent);
+              handleCanvasWheel(e as unknown as WheelEvent);
           }
       };
       
