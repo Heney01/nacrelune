@@ -52,7 +52,7 @@ const getCharmsAlertState = (
 const getOrdersAlertCounts = (orders: Order[]): { [key in OrderStatus]?: number } => {
     const counts: { [key in OrderStatus]?: number } = {};
     for (const order of orders) {
-        if (order.status === 'commandée' || order.status === 'en cours de préparation') {
+        if (order.status === 'commandée' || order.status === 'en cours de préparation' || order.status === 'expédiée') {
             counts[order.status] = (counts[order.status] || 0) + 1;
         }
     }
@@ -124,14 +124,14 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
     const ICONS: Record<OrderStatus, React.ElementType> = {
         'commandée': PackageCheck,
         'en cours de préparation': CookingPot,
-        'expédiée': Truck, // Fallback
+        'expédiée': Truck,
         'livrée': Gem, // Fallback
         'annulée': AlertTriangle // Fallback
     }
     const COLORS: Record<OrderStatus, string> = {
         'commandée': 'text-blue-600 bg-blue-100',
         'en cours de préparation': 'text-yellow-600 bg-yellow-100',
-        'expédiée': '',
+        'expédiée': 'text-purple-600 bg-purple-100',
         'livrée': '',
         'annulée': '',
     }
@@ -268,6 +268,9 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
                                             )}
                                              {section.value === 'orders' && ordersAlertCounts['en cours de préparation'] && (
                                                 <OrderStatusIndicator status="en cours de préparation" count={ordersAlertCounts['en cours de préparation']} />
+                                            )}
+                                            {section.value === 'orders' && ordersAlertCounts['expédiée'] && (
+                                                <OrderStatusIndicator status="expédiée" count={ordersAlertCounts['expédiée']} />
                                             )}
                                             <section.icon className="h-5 w-5 text-muted-foreground" />
                                         </div>
