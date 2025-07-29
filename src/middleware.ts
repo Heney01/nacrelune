@@ -34,13 +34,13 @@ export function middleware(request: NextRequest) {
   }
 
   // Gérer la redirection pour l'espace admin
-  if (pathname.startsWith('/admin')) {
-    const sessionCookie = request.cookies.get('session');
-    if (!sessionCookie) {
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
-    return NextResponse.next();
-  }
+  // if (pathname.startsWith('/admin')) {
+  //   const sessionCookie = request.cookies.get('session');
+  //   if (!sessionCookie) {
+  //     return NextResponse.redirect(new URL('/login', request.url));
+  //   }
+  //   return NextResponse.next();
+  // }
 
   const pathnameHasLocale = locales.some(
     (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
