@@ -51,7 +51,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
             <DialogTitle className="text-2xl font-headline">{t('title')}</DialogTitle>
             <DialogDescription>{t('description')}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="mt-6 flex flex-col flex-grow">
+          <form onSubmit={handleSubmit} className="mt-6 flex flex-col flex-grow overflow-hidden">
             <ScrollArea className="flex-grow pr-4 -mr-4">
                 <div className="space-y-6">
                 <div>
@@ -164,4 +164,3 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
     </Dialog>
   );
 }
-
