@@ -74,6 +74,8 @@ export interface OrderItem {
     charmIds: string[];
     price: number;
     previewImageUrl: string;
+    // Enriched data on the client:
+    charms?: Charm[];
 }
 
 export interface Order {

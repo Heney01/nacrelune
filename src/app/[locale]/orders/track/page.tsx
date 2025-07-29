@@ -8,21 +8,23 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getOrderDetailsByNumber } from '@/app/actions';
 import { useTranslations } from '@/hooks/use-translations';
-import { Loader2, PackageCheck, Truck, Home, Package, AlertCircle } from 'lucide-react';
+import { Loader2, PackageCheck, Truck, Home, Package, AlertCircle, WandSparkles } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import type { Order, OrderStatus } from '@/lib/types';
+import type { Order, OrderItem, OrderStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const initialState = { success: false, message: '', order: null };
 
 function SubmitButton() {
     const { pending } = useFormStatus();
+    const t = useTranslations('HomePage');
     return (
         <Button type="submit" className="w-full" disabled={pending}>
             {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Suivre ma commande
+            {t('track_order_link')}
         </Button>
     )
 }
@@ -76,6 +78,9 @@ function OrderStatusTracker({ status }: { status: OrderStatus }) {
 
 function OrderDetails({ order }: { order: Order }) {
     const tCheckout = useTranslations('Checkout');
+    const tCart = useTranslations('Cart');
+    const formatPrice = (price: number) => tCart('price', { price });
+
     return (
         <Card className="mt-8">
             <CardHeader>
@@ -88,15 +93,45 @@ function OrderDetails({ order }: { order: Order }) {
                 <OrderStatusTracker status={order.status} />
                 <Separator className="my-6" />
                 <div className="space-y-4">
-                    {order.items.map((item, index) => (
-                        <div key={index} className="flex gap-4 items-center">
-                            <Image src={item.previewImageUrl} alt={item.modelName} width={80} height={80} className="rounded-md border aspect-square object-cover" data-ai-hint="jewelry" />
-                            <div>
-                                <p className="font-semibold">{item.modelName}</p>
-                                <p className="text-sm text-muted-foreground">{item.jewelryTypeName}</p>
-                            </div>
-                        </div>
-                    ))}
+                    <h3 className="font-semibold text-lg">Détails de votre commande</h3>
+                    <Accordion type="multiple" className="w-full space-y-4">
+                        {order.items.map((item, index) => (
+                            <AccordionItem value={`item-${index}`} key={index} className="border rounded-lg">
+                                <AccordionTrigger className="p-4 hover:no-underline">
+                                    <div className="flex justify-between w-full items-center">
+                                        <div className="text-left">
+                                            <p className="font-semibold">{item.modelName}</p>
+                                            <p className="text-sm text-muted-foreground">{item.jewelryTypeName}</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="font-semibold">{formatPrice(item.price)}</p>
+                                             <p className="text-sm text-muted-foreground">{tCart('item_count', {count: item.charms?.length || 0})}</p>
+                                        </div>
+                                    </div>
+                                </AccordionTrigger>
+                                <AccordionContent className="p-4 pt-0">
+                                    {item.charms && item.charms.length > 0 ? (
+                                        <ul className="space-y-3 mt-4">
+                                            {item.charms.map(charm => (
+                                                <li key={charm.id} className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <Image src={charm.imageUrl} alt={charm.name} width={40} height={40} className="rounded-md border bg-white p-1" data-ai-hint="jewelry charm" />
+                                                        <div>
+                                                            <p className="font-medium">{charm.name}</p>
+                                                            <p className="text-xs text-muted-foreground">{charm.description}</p>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-sm text-muted-foreground">{formatPrice(charm.price || 0)}</p>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="text-center text-sm text-muted-foreground mt-4">Aucune breloque pour cet article.</p>
+                                    )}
+                                </AccordionContent>
+                            </AccordionItem>
+                        ))}
+                    </Accordion>
                 </div>
             </CardContent>
         </Card>
@@ -105,12 +140,13 @@ function OrderDetails({ order }: { order: Order }) {
 
 export default function TrackOrderPage() {
     const [state, formAction] = useFormState(getOrderDetailsByNumber, initialState);
+    const t = useTranslations('HomePage');
 
     return (
         <div className="container mx-auto py-12 px-4 max-w-2xl">
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-center text-2xl font-headline">Suivre votre commande</CardTitle>
+                    <CardTitle className="text-center text-2xl font-headline">{t('track_order_link')}</CardTitle>
                     <CardDescription className="text-center">
                         Entrez votre numéro de commande pour voir son statut.
                     </CardDescription>

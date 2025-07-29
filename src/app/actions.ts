@@ -5,13 +5,13 @@
 import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { revalidatePath } from 'next/cache';
 import { db, storage } from '@/lib/firebase';
-import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction, Timestamp } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction, Timestamp, collectionGroup, documentId } from 'firebase/firestore';
 import { ref, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
-import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order } from '@/lib/types';
+import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem } from '@/lib/types';
 
 
 export async function getCharmSuggestions(
@@ -600,6 +600,31 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
 
         const orderDoc = querySnapshot.docs[0];
         const orderData = orderDoc.data();
+
+        // Get all unique charm IDs from all items in the order
+        const allCharmIds = orderData.items.flatMap((item: OrderItem) => item.charmIds);
+        const uniqueCharmIds = [...new Set(allCharmIds)].filter(id => id);
+
+        // Fetch all required charms in a single query
+        let charmsMap = new Map<string, Charm>();
+        if (uniqueCharmIds.length > 0) {
+            const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', uniqueCharmIds));
+            const charmsSnapshot = await getDocs(charmsQuery);
+            for (const charmDoc of charmsSnapshot.docs) {
+                const charmData = charmDoc.data() as Charm;
+                charmsMap.set(charmDoc.id, {
+                    ...charmData,
+                    id: charmDoc.id,
+                    imageUrl: await getDownloadURL(ref(storage, charmData.imageUrl))
+                });
+            }
+        }
+        
+        // Enrich order items with full charm details
+        const enrichedItems: OrderItem[] = orderData.items.map((item: OrderItem) => ({
+            ...item,
+            charms: item.charmIds.map(id => charmsMap.get(id)).filter(Boolean) as Charm[],
+        }));
         
         const order: Order = {
             id: orderDoc.id,
@@ -607,7 +632,7 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
             createdAt: (orderData.createdAt as Timestamp).toDate(),
             customerEmail: orderData.customerEmail,
             totalPrice: orderData.totalPrice,
-            items: orderData.items,
+            items: enrichedItems,
             status: orderData.status,
         };
         
