@@ -116,7 +116,7 @@ const ShipOrderDialog = ({
     
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogTrigger asChild>
+             <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
                     <Edit className="mr-2 h-4 w-4" /> Modifier
                 </Button>
@@ -335,16 +335,16 @@ const OrderDetails = ({ order, onItemStatusChange, onStatusChange }: {
     )
 }
 
-const OrderRow = ({ order, locale, onStatusChange, onItemStatusChange, t, tStatus, isPending }: {
+const OrderRow = ({ order, isOpen, onToggle, onStatusChange, onItemStatusChange, t, tStatus, isPending }: {
     order: Order,
-    locale: string,
+    isOpen: boolean,
+    onToggle: () => void,
     onStatusChange: (orderId: string, status: OrderStatus, options?: { shippingInfo?: { carrier: string, trackingNumber: string }, cancellationReason?: string }) => void,
     onItemStatusChange: (orderId: string, itemIndex: number, isCompleted: boolean) => void,
     t: (key: string, values?: any) => string,
     tStatus: (key: string, values?: any) => string,
     isPending: boolean
 }) => {
-    const [isOpen, setIsOpen] = useState(false);
     const [isShipDialogOpen, setIsShipDialogOpen] = useState(false);
     const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
     
@@ -359,9 +359,8 @@ const OrderRow = ({ order, locale, onStatusChange, onItemStatusChange, t, tStatu
     return (
         <Fragment>
             <TableRow 
-                key={order.id} 
                 className={cn(isPending && 'opacity-50', "cursor-pointer")}
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={onToggle}
             >
                 <TableCell className="font-medium">{order.orderNumber}</TableCell>
                 <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
@@ -403,7 +402,7 @@ const OrderRow = ({ order, locale, onStatusChange, onItemStatusChange, t, tStatu
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
-                        <Button variant="ghost" size="icon" className="ml-2" onClick={() => setIsOpen(!isOpen)}>
+                        <Button variant="ghost" size="icon" className="ml-2" onClick={onToggle}>
                              {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </Button>
                     </div>
@@ -446,6 +445,19 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
     const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+    const [openOrders, setOpenOrders] = useState<Set<string>>(new Set());
+
+    const toggleOrder = (orderId: string) => {
+        setOpenOrders(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(orderId)) {
+                newSet.delete(orderId);
+            } else {
+                newSet.add(orderId);
+            }
+            return newSet;
+        });
+    };
 
     const handleStatusChange = (orderId: string, status: OrderStatus, options?: { shippingInfo?: { carrier: string; trackingNumber: string; }, cancellationReason?: string}) => {
         const formData = new FormData();
@@ -576,7 +588,8 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
                                     <OrderRow 
                                         key={order.id}
                                         order={order}
-                                        locale={locale}
+                                        isOpen={openOrders.has(order.id)}
+                                        onToggle={() => toggleOrder(order.id)}
                                         onStatusChange={handleStatusChange}
                                         onItemStatusChange={handleItemStatusChange}
                                         t={t}
@@ -599,16 +612,10 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
                 <div className="md:hidden space-y-4">
                      {processedOrders.length > 0 ? (
                         processedOrders.map(order => (
-                            <Card key={order.id} className={cn("overflow-hidden", isPending && 'opacity-50')}>
-                                <div className="p-4" onClick={() => {
-                                    const tr = document.getElementById(`order-row-${order.id}`);
-                                    tr?.click();
-                                }}>
+                            <Card key={order.id} className={cn("overflow-hidden", isPending && 'opacity-50')} onClick={() => toggleOrder(order.id)}>
+                                <div className="p-4">
                                     <div className="flex justify-between items-start">
-                                        <div onClick={() => {
-                                            const row = document.querySelector<HTMLButtonElement>(`#order-row-${order.id}`);
-                                            if (row) row.click();
-                                        }}>
+                                        <div>
                                             <p className="font-bold">{order.orderNumber}</p>
                                             <p className="text-sm text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</p>
                                         </div>
@@ -660,6 +667,9 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
                                         </Badge>
                                     </div>
                                 </div>
+                                {openOrders.has(order.id) && (
+                                    <OrderDetails order={order} onItemStatusChange={handleItemStatusChange} onStatusChange={handleStatusChange} />
+                                )}
                             </Card>
                         ))
                     ) : (
