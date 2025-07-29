@@ -632,10 +632,10 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
         // Enrich order items with full charm details
         const enrichedItems: OrderItem[] = await Promise.all(orderData.items.map(async (item: OrderItem) => {
             const model = modelsMap.get(item.modelId);
-            const modelImageUrl = model ? await getDownloadURL(ref(storage, model.displayImageUrl)).catch(() => 'https://placehold.co/400x400.png') : 'https://placehold.co/400x400.png';
+            const modelImageUrl = model ? model.displayImageUrl : 'https://placehold.co/400x400.png';
             
             const enrichedCharms = await Promise.all(
-                item.charmIds.map(async id => {
+                (item.charmIds || []).map(async id => {
                     const charm = charmsMap.get(id);
                     if (!charm) return null;
                     const imageUrl = await getDownloadURL(ref(storage, charm.imageUrl)).catch(() => 'https://placehold.co/100x100.png');
