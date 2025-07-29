@@ -94,7 +94,7 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
                                    {jewelryType.models.map((model) => (
                                        <TableRow key={model.id}>
                                            <TableCell>
-                                               <Image src={model.displayImageUrl} alt={model.name} width={64} height={64} className="rounded-md object-cover bg-muted" />
+                                               <Image src={model.displayImageUrl} alt={model.name} width={64} height={64} className="rounded-md object-cover bg-muted h-auto" />
                                            </TableCell>
                                            <TableCell className="font-medium">{model.name}</TableCell>
                                            <TableCell>{model.price}€</TableCell>
