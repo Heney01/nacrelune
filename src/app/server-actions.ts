@@ -1,6 +1,5 @@
 
-
-// @/app/actions.ts
+// @/app/server-actions.ts
 'use server';
 
 import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
