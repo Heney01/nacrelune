@@ -618,16 +618,27 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
         }
         
         // Fetch all required models
-        const modelPromises = orderData.items.map((item: OrderItem) => getDoc(doc(db, item.jewelryTypeId, item.modelId)));
-        const modelSnapshots = await Promise.all(modelPromises);
+        const modelIds = orderData.items.map((item: OrderItem) => item.modelId);
+        const uniqueModelIds = [...new Set(modelIds)];
         const modelsMap = new Map<string, JewelryModel>();
-        for (let i = 0; i < modelSnapshots.length; i++) {
-            const modelSnap = modelSnapshots[i];
-            const item = orderData.items[i];
-            if (modelSnap.exists()) {
-                modelsMap.set(item.modelId, { id: modelSnap.id, ...modelSnap.data() } as JewelryModel);
-            }
+        
+        if (uniqueModelIds.length > 0) {
+            // We need to query across multiple collections ('necklace', 'bracelet', etc.)
+            const jewelryTypeIds = [...new Set(orderData.items.map((item: any) => item.jewelryTypeId))];
+            
+            const modelPromises = jewelryTypeIds.map(typeId => getDocs(query(collection(db, typeId), where(documentId(), 'in', uniqueModelIds))));
+            
+            const modelSnapshots = await Promise.all(modelPromises);
+            
+            modelSnapshots.flat().forEach(snap => {
+                 snap.docs.forEach(modelDoc => {
+                    if (modelDoc.exists()) {
+                         modelsMap.set(modelDoc.id, { id: modelDoc.id, ...modelDoc.data() } as JewelryModel);
+                    }
+                 })
+            });
         }
+
 
         // Enrich order items with full charm details
         const enrichedItems: OrderItem[] = await Promise.all(orderData.items.map(async (item: OrderItem) => {
@@ -666,3 +677,5 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
         return { success: false, message: "Une erreur est survenue lors de la recherche de la commande." };
     }
 }
+
+    
