@@ -1,21 +1,29 @@
 
 import { db, storage } from '@/lib/firebase';
-import { collection, getDocs, DocumentReference } from 'firebase/firestore';
+import { collection, getDocs, DocumentReference, getDoc, doc, Timestamp } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
-import type { JewelryModel, JewelryType, Charm, CharmCategory } from '@/lib/types';
+import type { JewelryModel, JewelryType, Charm, CharmCategory, GeneralPreferences } from '@/lib/types';
 
 const getUrl = async (path: string, fallback: string) => {
+    if (path && (path.startsWith('http://') || path.startsWith('https://'))) {
+        return path; // It's already a full URL
+    }
     if (path && !path.startsWith('http')) {
         try {
             const storageRef = ref(storage, path);
             return await getDownloadURL(storageRef);
         } catch (error) {
-            console.error("Error getting download URL: ", error);
+            console.error(`Error getting download URL for path "${path}":`, error);
             return fallback;
         }
     }
-    return path || fallback;
+    return fallback;
 };
+
+const toDate = (timestamp: Timestamp | null | undefined): Date | null => {
+    return timestamp ? timestamp.toDate() : null;
+}
+
 
 export async function getJewelryTypesAndModels(
     baseTypes: Omit<JewelryType, 'models' | 'icon'>[]
@@ -49,6 +57,10 @@ export async function getJewelryTypesAndModels(
                     editorImageUrl: editorImageUrl,
                     snapPath: data.snapPath || '',
                     price: data.price || 0,
+                    quantity: data.quantity || 0,
+                    reorderUrl: data.reorderUrl || '',
+                    lastOrderedAt: toDate(data.lastOrderedAt),
+                    restockedAt: toDate(data.restockedAt),
                 } as JewelryModel;
             });
             
@@ -72,14 +84,18 @@ export async function getCharms(): Promise<Charm[]> {
 
         const fetchedCharms = docs.map((doc, index) => {
             const data = doc.data();
-            const categoryRef = data.category as DocumentReference;
+            const categoryRefs = data.categoryIds as string[] || [];
             return {
                 id: doc.id,
                 name: data.name,
                 imageUrl: imageUrls[index],
                 description: data.description,
-                categoryId: categoryRef.id,
+                categoryIds: categoryRefs,
                 price: data.price || 0,
+                quantity: data.quantity || 0,
+                reorderUrl: data.reorderUrl || '',
+                lastOrderedAt: toDate(data.lastOrderedAt),
+                restockedAt: toDate(data.restockedAt),
             } as Charm;
         });
 
@@ -96,26 +112,89 @@ export async function getCharmCategories(): Promise<CharmCategory[]> {
         const categoriesSnapshot = await getDocs(collection(db, "charmCategories"));
         const docs = categoriesSnapshot.docs;
 
-        // Get all image URLs in parallel
-        const imageUrlPromises = docs.map(doc => {
-            const imageUrl = doc.data().imageUrl;
-            return imageUrl ? getUrl(imageUrl, 'https://placehold.co/100x100.png') : Promise.resolve(undefined);
-        });
-        const imageUrls = await Promise.all(imageUrlPromises);
-
-        const fetchedCategories = docs.map((doc, index) => {
+        const fetchedCategories = await Promise.all(docs.map(async (doc) => {
             const data = doc.data();
+            const imageUrl = await getUrl(data.imageUrl, 'https://placehold.co/100x100.png');
             return {
                 id: doc.id,
                 name: data.name,
                 description: data.description,
-                imageUrl: imageUrls[index],
+                imageUrl: imageUrl,
             } as CharmCategory;
-        });
+        }));
 
         return fetchedCategories;
     } catch (error) {
         console.error("Error fetching charm categories: ", error);
         return [];
+    }
+}
+
+
+export async function getFullCharmData(): Promise<{ charms: (Charm & { categoryName?: string })[], charmCategories: CharmCategory[] }> {
+    try {
+        const [charmsDocs, categoriesDocs] = await Promise.all([
+            getDocs(collection(db, "charms")),
+            getDocs(collection(db, "charmCategories"))
+        ]);
+
+        const charmCategories: CharmCategory[] = await Promise.all(categoriesDocs.docs.map(async (doc) => {
+             const data = doc.data();
+             const imageUrl = await getUrl(data.imageUrl, 'https://placehold.co/100x100.png');
+             return {
+                id: doc.id,
+                name: data.name,
+                description: data.description,
+                imageUrl: imageUrl,
+            };
+        }));
+        
+        const categoriesMap = new Map(charmCategories.map(cat => [cat.id, cat.name]));
+
+        const charms: (Charm & { categoryName?: string })[] = await Promise.all(charmsDocs.docs.map(async (doc) => {
+            const data = doc.data();
+            const categoryIds = (data.categoryIds || []) as string[];
+            const imageUrl = await getUrl(data.imageUrl, 'https://placehold.co/100x100.png');
+            
+            return {
+                id: doc.id,
+                name: data.name,
+                imageUrl: imageUrl,
+                description: data.description,
+                categoryIds: categoryIds,
+                price: data.price || 0,
+                quantity: data.quantity || 0,
+                reorderUrl: data.reorderUrl || '',
+                lastOrderedAt: toDate(data.lastOrderedAt),
+                restockedAt: toDate(data.restockedAt),
+                // The concept of a single categoryName is no longer accurate.
+                // We'll keep the property for compatibility but it may need to be handled differently in the UI.
+                categoryName: categoryIds.length > 0 ? categoriesMap.get(categoryIds[0]) || 'Uncategorized' : 'Uncategorized',
+            };
+        }));
+        
+        return { charms, charmCategories };
+
+    } catch (error) {
+        console.error("Error fetching full charm data: ", error);
+        return { charms: [], charmCategories: [] };
+    }
+}
+
+
+export async function getPreferences(): Promise<GeneralPreferences> {
+    try {
+        const docRef = doc(db, 'preferences', 'general');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            return docSnap.data() as GeneralPreferences;
+        } else {
+            // Return default values if not set
+            return { alertThreshold: 10, criticalThreshold: 5 };
+        }
+    } catch (error) {
+        console.error("Error fetching preferences:", error);
+        // In case of error, return default values to avoid breaking the app
+        return { alertThreshold: 10, criticalThreshold: 5 };
     }
 }

@@ -1,5 +1,7 @@
 
 
+import { DocumentReference } from 'firebase/firestore';
+
 export interface CharmCategory {
   id: string;
   name: string;
@@ -12,8 +14,13 @@ export interface Charm {
   name: string;
   imageUrl: string;
   description: string;
-  categoryId: string;
+  categoryIds: string[];
+  categories?: DocumentReference[]; // Raw from firestore
   price?: number;
+  quantity?: number;
+  reorderUrl?: string;
+  lastOrderedAt?: Date | null;
+  restockedAt?: Date | null;
 }
 
 export interface JewelryModel {
@@ -23,6 +30,10 @@ export interface JewelryModel {
   editorImageUrl: string;
   snapPath?: string;
   price?: number;
+  quantity?: number;
+  reorderUrl?: string;
+  lastOrderedAt?: Date | null;
+  restockedAt?: Date | null;
 }
 
 export interface JewelryType {
@@ -47,4 +58,9 @@ export interface CartItem {
     jewelryType: Omit<JewelryType, 'models' | 'icon'>;
     placedCharms: PlacedCharm[];
     previewImage: string; // URL to a generated preview of the final design
+}
+
+export interface GeneralPreferences {
+  alertThreshold: number;
+  criticalThreshold: number;
 }

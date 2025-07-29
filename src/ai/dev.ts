@@ -1,4 +1,11 @@
-import { config } from 'dotenv';
+import {genkit} from 'genkit';
+import {config} from 'dotenv';
 config();
 
-import '@/ai/flows/charm-placement-suggestions.ts';
+import {googleAI} from '@genkit-ai/googleai';
+
+genkit({
+  plugins: [googleAI()],
+});
+
+import './flows/charm-placement-suggestions.ts';

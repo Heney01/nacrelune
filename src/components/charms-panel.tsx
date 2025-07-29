@@ -7,14 +7,14 @@ import { Charm, CharmCategory } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, Search, ZoomIn } from 'lucide-react';
+import { Loader2, Search, ZoomIn, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useTranslations } from '@/hooks/use-translations';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Input } from './ui/input';
 import { getCharmCategories } from '@/lib/data';
+import { useTranslations } from '@/hooks/use-translations';
 
 interface CharmsPanelProps {
     allCharms: Charm[];
@@ -25,10 +25,10 @@ interface CharmsPanelProps {
 }
 
 export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermChange, isMobileSheet = false }: CharmsPanelProps) {
-    const t = useTranslations('Editor');
     const isMobile = useIsMobile();
     const [charmCategories, setCharmCategories] = useState<CharmCategory[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const t = useTranslations('CharmsPanel');
     
     useEffect(() => {
         const fetchCategories = async () => {
@@ -37,7 +37,7 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                 const categories = await getCharmCategories();
                 setCharmCategories(categories);
             } catch (error) {
-                console.error("Error fetching charm categories", error);
+                console.error('Error loading charm categories', error);
             } finally {
                 setIsLoading(false);
             }
@@ -55,64 +55,67 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
     }, [searchTerm, allCharms]);
 
     const charmsByCategory = useMemo(() => {
-        return filteredCharms.reduce((acc, charm) => {
-            const categoryId = charm.categoryId;
-            if (!acc[categoryId]) {
-                acc[categoryId] = [];
-            }
-            acc[categoryId].push(charm);
-            return acc;
-        }, {} as Record<string, Charm[]>);
-    }, [filteredCharms]);
+        const result: Record<string, Charm[]> = {};
+        charmCategories.forEach(category => {
+            result[category.id] = [];
+        });
+
+        filteredCharms.forEach(charm => {
+            charm.categoryIds.forEach(categoryId => {
+                if (result[categoryId]) {
+                    result[categoryId].push(charm);
+                }
+            });
+        });
+        return result;
+    }, [filteredCharms, charmCategories]);
     
     const renderCharmItem = (charm: Charm) => {
         const charmContent = (
-            <div
-                className="relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer"
-                title={charm.name}
-            >
-                <Image
-                    src={charm.imageUrl}
-                    alt={charm.name}
-                    width={48}
-                    height={48}
-                    className="pointer-events-none p-1"
-                    data-ai-hint="jewelry charm"
-                />
-                <p className="text-xs text-center mt-1 truncate">{charm.name}</p>
-                 {!isMobile && (
-                    <Dialog>
-                        <DialogTrigger asChild>
-                             <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); e.preventDefault() }}>
-                                <Button variant="ghost" size="icon" className="h-6 w-6">
-                                    <ZoomIn className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-md">
-                            <DialogHeader>
-                                <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
-                                <DialogDescription>{charm.description}</DialogDescription>
-                            </DialogHeader>
-                            <div className="mt-4 flex justify-center">
-                                <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
-                            </div>
-                            <div className="mt-6 flex justify-end">
-                                <DialogClose asChild>
-                                    <Button onClick={() => onAddCharm(charm)}>{t('add_to_design_button')}</Button>
-                                </DialogClose>
-                            </div>
-                        </DialogContent>
-                    </Dialog>
-                )}
-            </div>
+             <Dialog>
+                <div
+                    className="relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer"
+                    title={charm.name}
+                    onClick={() => onAddCharm(charm)}
+                >
+                    <Image
+                        src={charm.imageUrl}
+                        alt={charm.name}
+                        width={48}
+                        height={48}
+                        className="pointer-events-none p-1"
+                        data-ai-hint="jewelry charm"
+                    />
+                    <p className="text-xs text-center mt-1 truncate">{charm.name}</p>
+                    <DialogTrigger asChild>
+                         <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); }}>
+                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                                <ZoomIn className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </DialogTrigger>
+                </div>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
+                        <DialogDescription>{charm.description}</DialogDescription>
+                    </DialogHeader>
+                    <div className="mt-4 flex justify-center">
+                        <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                             <Button variant="outline">{t('close_button')}</Button>
+                        </DialogClose>
+                        <DialogClose asChild>
+                            <Button onClick={() => onAddCharm(charm)}><PlusCircle className="mr-2 h-4 w-4" />{t('add_to_design_button')}</Button>
+                        </DialogClose>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         );
 
-        if (isMobile) {
-            return <div key={charm.id} onClick={() => onAddCharm(charm)}>{charmContent}</div>
-        }
-        
-        return <div key={charm.id} onClick={() => onAddCharm(charm)}>{charmContent}</div>
+        return <div key={charm.id}>{charmContent}</div>
     };
     
     const renderCharmGrid = () => (
@@ -120,6 +123,7 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
              {isLoading ? (
                 <div className="flex justify-center items-center h-full p-8">
                     <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                    <span className="sr-only">{t('loading')}</span>
                 </div>
             ) : (
                 <Accordion type="multiple" defaultValue={charmCategories.map(c => c.id)} className="w-full">
@@ -147,7 +151,7 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
     return (
         <Card className={cn("flex flex-col h-full")}>
             <CardHeader>
-                <CardTitle className="font-headline text-xl">{t('charms_title')}</CardTitle>
+                <CardTitle className="font-headline text-xl">{t('title')}</CardTitle>
             </CardHeader>
             <div className="px-4 pb-4">
                 <div className="relative">
@@ -167,4 +171,3 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
         </Card>
     );
 }
-

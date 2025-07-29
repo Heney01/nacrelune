@@ -12,8 +12,7 @@ import { SuggestionSidebar } from './suggestion-sidebar';
 import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NacreluneLogo } from './icons';
-import { useTranslations } from '@/hooks/use-translations';
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getCharmSuggestions } from '@/app/actions';
 import type { Suggestion, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
@@ -21,10 +20,11 @@ import { CharmsPanel } from './charms-panel';
 import { Input } from './ui/input';
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams, useParams } from 'next/navigation';
 import { CartSheet } from './cart-sheet';
 import html2canvas from 'html2canvas';
 import { CartWidget } from './cart-widget';
+import { useTranslations } from '@/hooks/use-translations';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -47,22 +47,22 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
         const element = charmRef.current;
         if (!element) return;
 
-        const handleWheel = (e: Event) => {
+        const handleWheel = (e: WheelEvent) => {
             e.preventDefault();
-            onRotate(e as WheelEvent, placed.id);
+            onRotate(e, placed.id);
         }
         
         const handleTouchStart = (e: TouchEvent) => {
             onDragStart(e, placed.id);
         }
 
-        element.addEventListener('wheel', handleWheel, { passive: false });
+        element.addEventListener('wheel', handleWheel as unknown as EventListener, { passive: false });
         element.addEventListener('touchstart', handleTouchStart, { passive: false });
 
 
         return () => {
             if(element) {
-                element.removeEventListener('wheel', handleWheel);
+                element.removeEventListener('wheel', handleWheel as unknown as EventListener);
                 element.removeEventListener('touchstart', handleTouchStart);
             }
         };
@@ -115,17 +115,19 @@ interface EditorProps {
   model: JewelryModel;
   jewelryType: Omit<JewelryType, 'models' | 'icon'>;
   allCharms: Charm[];
-  locale: string;
 }
 
-export default function Editor({ model, jewelryType, allCharms, locale }: EditorProps) {
-  const t = useTranslations('Editor');
-  const tHomepage = useTranslations('HomePage');
+export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   const isMobile = useIsMobile();
   const { cart, addToCart, updateCartItem } = useCart();
   const { toast } = useToast();
-  const router = useRouter();
+  const t = useTranslations('Editor');
+  const tHome = useTranslations('HomePage');
+  const tCharm = useTranslations('CharmsPanel');
+  
   const searchParams = useSearchParams();
+  const params = useParams();
+  const locale = params.locale as string;
 
   const cartItemId = searchParams.get('cartItemId');
   
@@ -135,24 +137,19 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   
-  // State for mobile sheets
   const [isCharmsSheetOpen, setIsCharmsSheetOpen] = useState(false);
   const [isSuggestionsSheetOpen, setIsSuggestionsSheetOpen] = useState(false);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
 
-  // State for pan and zoom
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
 
-  // State for AI suggestions
   const [suggestions, setSuggestions] = useState<SuggestCharmPlacementOutput | null>(null);
   const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
   const [suggestionError, setSuggestionError] = useState<string | null>(null);
 
-  // State for charms panel search
   const [charmsSearchTerm, setCharmsSearchTerm] = useState('');
 
-  // State for screenshot capture
   const [isCapturing, setIsCapturing] = useState(false);
   
   const isEditing = cartItemId !== null;
@@ -175,7 +172,6 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
     panStart: { x: 0, y: 0 },
   }).current;
 
-  // Use refs to store latest state values to avoid stale closures in event listeners
   const panRef = useRef(pan);
   panRef.current = pan;
   const scaleRef = useRef(scale);
@@ -262,7 +258,6 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
           modelDescription: model.name,
           charmOptions: allCharms.map(c => c.name),
           userPreferences: preferences,
-          locale: locale,
         });
         setSuggestions(result);
       } catch (err) {
@@ -348,7 +343,7 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
       const handleWheel = (e: Event) => {
           if (!(e.target as HTMLElement).closest('.charm-on-canvas')) {
               e.preventDefault();
-              handleCanvasWheel(e as WheelEvent);
+              handleCanvasWheel(e as unknown as WheelEvent);
           }
       };
       
@@ -356,12 +351,10 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
         handlePanStart(e);
       };
 
-      // Mouse events
       canvas.addEventListener('mousedown', handlePanStart);
       window.addEventListener('mousemove', handleMove);
       window.addEventListener('mouseup', handleInteractionEnd);
 
-      // Touch events
       canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
       window.addEventListener('touchmove', handleMove, { passive: false });
       window.addEventListener('touchend', handleInteractionEnd);
@@ -443,15 +436,14 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
           return;
         }
 
-        // Wait a moment for the DOM to update before capturing
         await new Promise(resolve => setTimeout(resolve, 100));
 
         try {
           const canvas = await html2canvas(canvasRef.current, {
-            backgroundColor: null, // for transparent background
+            backgroundColor: null,
             logging: false,
             useCORS: true,
-            scale: 2 // for better quality
+            scale: 2
           });
           const previewImage = canvas.toDataURL('image/png');
 
@@ -465,8 +457,8 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
               };
               updateCartItem(cartItemId, updatedItem);
               toast({
-                  title: t('item_updated_title'),
-                  description: t('item_updated_description', { modelName: model.name }),
+                  title: t('toast_item_updated_title'),
+                  description: t('toast_item_updated_description', {modelName: model.name}),
               });
           } else {
               const newItem: Omit<CartItem, 'id'> = {
@@ -477,18 +469,18 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
               }
               addToCart(newItem);
               toast({
-                  title: t('item_added_to_cart_title'),
-                  description: t('item_added_to_cart_description', { modelName: model.name }),
+                  title: t('toast_item_added_title'),
+                  description: t('toast_item_added_description', {modelName: model.name}),
               });
           }
 
           setIsCartSheetOpen(true);
         } catch (error) {
-          console.error("Error capturing canvas:", error);
+          console.error("Erreur lors de la capture du canvas:", error);
           toast({
               variant: 'destructive',
-              title: t('error_title'),
-              description: "Could not capture design image."
+              title: t('toast_error_title'),
+              description: "Impossible de capturer l'image de la création."
           });
         } finally {
           setIsCapturing(false);
@@ -497,7 +489,7 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
 
       capture();
     }
-  }, [isCapturing, addToCart, updateCartItem, cartItemId, isEditing, jewelryType, model, placedCharms, t, toast]);
+  }, [isCapturing, addToCart, updateCartItem, cartItemId, isEditing, jewelryType, model, placedCharms, toast, t]);
 
 
   const charmsPanelDesktop = useMemo(() => (
@@ -519,9 +511,9 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
             </Link>
             <div className="flex items-center gap-2">
                <Button variant="ghost" asChild>
-                    <Link href={`/${locale}?type=${jewelryType.id}`}>
+                    <Link href={`/${locale}/?type=${jewelryType.id}`}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        {tHomepage('back_button')}
+                        {tHome('back_button')}
                     </Link>
                 </Button>
                 <CartWidget />
@@ -529,117 +521,114 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
           </div>
         </header>
       <main className={cn("flex-grow p-4 md:p-8", isMobile && "p-0")}>
-      <div className={cn("container mx-auto", isMobile && "px-0")}>
-        <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 h-full", isMobile && "grid-cols-1 gap-0")}>
-          {/* Charms Panel */}
-          {!isMobile && (
-             <div className="lg:col-span-3">
-                {charmsPanelDesktop}
-            </div>
-          )}
+        <div className={cn("container mx-auto", isMobile && "px-0")}>
+            <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 h-full", isMobile && "grid-cols-1 gap-0")}>
+            {!isMobile && (
+                <div className="lg:col-span-3">
+                    {charmsPanelDesktop}
+                </div>
+            )}
 
-          {/* Editor Canvas */}
-          <div className={cn("lg:col-span-6 flex flex-col gap-4", isMobile && "order-first")}>
-             <div className={cn("flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2", isMobile && "px-4 pt-4")}>
-              <h2 className="text-2xl font-headline tracking-tight">{t('customize_title', {modelName: model.name})}</h2>
-                <div className="flex gap-2">
-                  {isEditing ? (
-                     <Button onClick={handleUpdateCart} disabled={isCapturing}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        {t('update_item_button')}
-                    </Button>
-                  ) : (
-                    <Button onClick={handleAddToCart} disabled={isCapturing}>
-                        <ShoppingCart className="mr-2 h-4 w-4" />
-                        {t('add_to_cart_button')}
-                    </Button>
-                  )}
-                </div>
-            </div>
-            <div
-                ref={canvasWrapperRef}
-                className={cn("relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none grid place-items-center", isMobile && "rounded-none border-x-0")}
-            >
-                <div
-                    ref={canvasRef}
-                    className="relative w-full h-full grid place-items-center"
-                    style={{
-                        transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
-                        transformOrigin: '0 0',
-                    }}
-                >
-                    <Image
-                        src={model.editorImageUrl}
-                        alt={model.name}
-                        width={1000}
-                        height={1000}
-                        className="pointer-events-none max-w-full max-h-full object-contain"
-                        data-ai-hint="jewelry model"
-                        priority
-                    />
-                    
-                    {placedCharms.map((placed) => (
-                        <PlacedCharmComponent
-                            key={placed.id}
-                            placed={placed}
-                            isSelected={selectedPlacedCharmId === placed.id}
-                            onDragStart={handleDragStart}
-                            onDelete={removeCharm}
-                            onRotate={handlePlacedCharmRotation}
-                        />
-                    ))}
-                </div>
-                 <div className="absolute bottom-2 right-2 flex gap-2">
-                    <Button variant="secondary" size="icon" onClick={() => handleZoom('in')}><ZoomIn /></Button>
-                    <Button variant="secondary" size="icon" onClick={() => handleZoom('out')}><ZoomOut /></Button>
-                    <Button variant="secondary" size="icon" onClick={resetZoomAndPan}><Maximize /></Button>
-                </div>
-            </div>
-            <Card className={cn(isMobile && "rounded-none border-x-0")}>
-                <CardHeader>
-                    <CardTitle className="font-headline text-lg">{t('added_charms_title', {count: placedCharms.length})}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {placedCharms.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">{t('added_charms_placeholder')}</p>
+            <div className={cn("lg:col-span-6 flex flex-col gap-4", isMobile && "order-first")}>
+                <div className={cn("flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2", isMobile && "px-4 pt-4")}>
+                <h2 className="text-2xl font-headline tracking-tight">{t('customize_title', { modelName: model.name })}</h2>
+                    <div className="flex gap-2">
+                    {isEditing ? (
+                        <Button onClick={handleUpdateCart} disabled={isCapturing}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            {t('update_item_button')}
+                        </Button>
                     ) : (
-                        <ScrollArea className="h-24">
-                            <ul className="space-y-2">
-                                {placedCharms.map(pc => (
-                                    <li key={pc.id} 
-                                        className={cn("flex items-center justify-between text-sm p-1 rounded-md cursor-pointer",
-                                          selectedPlacedCharmId === pc.id ? 'bg-muted' : 'hover:bg-muted/50'
-                                        )}
-                                        onClick={() => handleCharmListClick(pc.id)}
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={24} height={24} className="rounded-sm" data-ai-hint="jewelry charm" />
-                                            <span>{pc.charm.name}</span>
-                                        </div>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); removeCharm(pc.id); }}>
-                                            <X className="h-4 w-4" />
-                                        </Button>
-                                    </li>
-                                ))}
-                            </ul>
-                        </ScrollArea>
+                        <Button onClick={handleAddToCart} disabled={isCapturing}>
+                            <ShoppingCart className="mr-2 h-4 w-4" />
+                            {t('add_to_cart_button')}
+                        </Button>
                     )}
-                </CardContent>
-            </Card>
-          </div>
+                    </div>
+                </div>
+                <div
+                    ref={canvasWrapperRef}
+                    className={cn("relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none grid place-items-center", isMobile && "rounded-none border-x-0")}
+                >
+                    <div
+                        ref={canvasRef}
+                        className="relative w-full h-full grid place-items-center"
+                        style={{
+                            transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
+                            transformOrigin: '0 0',
+                        }}
+                    >
+                        <Image
+                            src={model.editorImageUrl}
+                            alt={model.name}
+                            width={1000}
+                            height={1000}
+                            className="pointer-events-none max-w-full max-h-full object-contain"
+                            data-ai-hint="jewelry model"
+                            priority
+                        />
+                        
+                        {placedCharms.map((placed) => (
+                            <PlacedCharmComponent
+                                key={placed.id}
+                                placed={placed}
+                                isSelected={selectedPlacedCharmId === placed.id}
+                                onDragStart={handleDragStart}
+                                onDelete={removeCharm}
+                                onRotate={handlePlacedCharmRotation}
+                            />
+                        ))}
+                    </div>
+                    <div className="absolute bottom-2 right-2 flex gap-2">
+                        <Button variant="secondary" size="icon" onClick={() => handleZoom('in')}><ZoomIn /></Button>
+                        <Button variant="secondary" size="icon" onClick={() => handleZoom('out')}><ZoomOut /></Button>
+                        <Button variant="secondary" size="icon" onClick={resetZoomAndPan}><Maximize /></Button>
+                    </div>
+                </div>
+                <Card className={cn(isMobile && "rounded-none border-x-0")}>
+                    <CardHeader>
+                        <CardTitle className="font-headline text-lg">{t('added_charms_title', {count: placedCharms.length})}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {placedCharms.length === 0 ? (
+                            <p className="text-muted-foreground text-sm">{t('added_charms_placeholder')}</p>
+                        ) : (
+                            <ScrollArea className="h-24">
+                                <ul className="space-y-2">
+                                    {placedCharms.map(pc => (
+                                        <li key={pc.id} 
+                                            className={cn("flex items-center justify-between text-sm p-1 rounded-md cursor-pointer",
+                                            selectedPlacedCharmId === pc.id ? 'bg-muted' : 'hover:bg-muted/50'
+                                            )}
+                                            onClick={() => handleCharmListClick(pc.id)}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={24} height={24} className="rounded-sm" data-ai-hint="jewelry charm" />
+                                                <span>{pc.charm.name}</span>
+                                            </div>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); removeCharm(pc.id); }}>
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </ScrollArea>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
 
-          {/* AI Suggestions Panel */}
-          {!isMobile && <div className="lg:col-span-3">
-            <SuggestionSidebar
-                onApplySuggestion={addCharmFromSuggestions}
-                charms={allCharms}
-                suggestions={suggestions}
-                isLoading={isGeneratingSuggestions}
-                error={suggestionError}
-                onGenerate={handleGenerateSuggestions}
-            />
-          </div>}
-        </div>
+            {!isMobile && <div className="lg:col-span-3">
+                <SuggestionSidebar
+                    onApplySuggestion={addCharmFromSuggestions}
+                    charms={allCharms}
+                    suggestions={suggestions}
+                    isLoading={isGeneratingSuggestions}
+                    error={suggestionError}
+                    onGenerate={handleGenerateSuggestions}
+                />
+            </div>}
+            </div>
         </div>
       </main>
 
@@ -649,18 +638,18 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
                 <SheetTrigger asChild>
                     <Button variant="ghost" className="flex flex-col h-auto p-2">
                        <Gem className="h-6 w-6" />
-                       <span className="text-xs">{t('charms_title')}</span>
+                       <span className="text-xs">{tCharm('title')}</span>
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="bottom" className="h-[80%] p-0 flex flex-col" onOpenAutoFocus={(e) => e.preventDefault()}>
                     <SheetHeader className="p-4 border-b">
-                        <SheetTitle>{t('charms_title')}</SheetTitle>
+                        <SheetTitle>{tCharm('title')}</SheetTitle>
                     </SheetHeader>
                     <div className="p-4 border-b">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder={t('search_placeholder')}
+                                placeholder={tCharm('search_placeholder')}
                                 value={charmsSearchTerm}
                                 onChange={(e) => setCharmsSearchTerm(e.target.value)}
                                 className="pl-9"
@@ -705,3 +694,5 @@ export default function Editor({ model, jewelryType, allCharms, locale }: Editor
     </>
   );
 }
+
+    

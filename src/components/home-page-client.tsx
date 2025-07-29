@@ -4,27 +4,26 @@
 import React from 'react';
 import Editor from '@/components/editor';
 import { NacreluneLogo } from '@/components/icons';
-import { useTranslations, TranslationsProvider } from '@/hooks/use-translations';
+import { useTranslations } from '@/hooks/use-translations';
 import { Gem, HandMetal, Ear } from 'lucide-react';
 import { TypeSelection } from '@/components/type-selection';
 import { ModelSelection } from '@/components/model-selection';
-import type { JewelryType, JewelryModel, Charm } from '@/lib/types';
+import type { JewelryType, Charm } from '@/lib/types';
 import Link from 'next/link';
 import { CartWidget } from './cart-widget';
 
-// This is a client component that wraps the main page logic
-export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, locale, messages }: {
+export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, locale }: {
     searchParams: { [key: string]: string | string[] | undefined };
     jewelryTypes: Omit<JewelryType, 'icon'>[];
     allCharms: Charm[];
     locale: string;
-    messages: any;
 }) {
-    // Re-associate icons on the client side
+    const t = useTranslations('HomePage');
+    
     const jewelryTypes = initialJewelryTypes.map(jt => {
-        if (jt.id === 'necklace') return { ...jt, icon: Gem };
-        if (jt.id === 'bracelet') return { ...jt, icon: HandMetal };
-        if (jt.id === 'earring') return { ...jt, icon: Ear };
+        if (jt.id === 'necklace') return { ...jt, name: t('jewelry_types.necklace'), description: t('jewelry_types.necklace_description'), icon: Gem };
+        if (jt.id === 'bracelet') return { ...jt, name: t('jewelry_types.bracelet'), description: t('jewelry_types.bracelet_description'), icon: HandMetal };
+        if (jt.id === 'earring') return { ...jt, name: t('jewelry_types.earring'), description: t('jewelry_types.earring_description'), icon: Ear };
         return { ...jt, icon: Gem }; // fallback
     });
     
@@ -34,30 +33,8 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
     const selectedType = selectedTypeId ? jewelryTypes.find(t => t.id === selectedTypeId) : null;
     const selectedModel = selectedType && selectedModelId ? selectedType.models.find(m => m.id === selectedModelId) : null;
     
-    return (
-        <TranslationsProvider messages={messages}>
-            <PageContent 
-                selectedType={selectedType}
-                selectedModel={selectedModel}
-                jewelryTypes={jewelryTypes}
-                allCharms={allCharms}
-                locale={locale}
-            />
-        </TranslationsProvider>
-    )
-}
-
-function PageContent({ selectedType, selectedModel, jewelryTypes, allCharms, locale }: {
-    selectedType: JewelryType | null;
-    selectedModel: JewelryModel | null;
-    jewelryTypes: JewelryType[];
-    allCharms: Charm[];
-    locale: string;
-}) {
-    const t = useTranslations('HomePage');
-  
     if (selectedModel && selectedType) {
-      return <Editor model={selectedModel} jewelryType={selectedType} allCharms={allCharms} locale={locale} />;
+      return <Editor model={selectedModel} jewelryType={selectedType} allCharms={allCharms} />;
     }
   
     return (
@@ -67,7 +44,9 @@ function PageContent({ selectedType, selectedModel, jewelryTypes, allCharms, loc
             <Link href={`/${locale}`} className="flex items-center gap-2">
               <NacreluneLogo className="h-8 w-auto text-foreground" />
             </Link>
-            <CartWidget />
+            <div className="flex items-center gap-2">
+              <CartWidget />
+            </div>
           </div>
         </header>
 
@@ -79,14 +58,17 @@ function PageContent({ selectedType, selectedModel, jewelryTypes, allCharms, loc
                     locale={locale}
                 />
             ) : (
-                <TypeSelection jewelryTypes={jewelryTypes} />
+                <TypeSelection jewelryTypes={jewelryTypes} locale={locale} />
             )}
           </div>
         </main>
         
         <footer className="p-4 border-t mt-auto bg-white">
-          <div className="container mx-auto text-center text-muted-foreground text-sm">
-            {t('footer_text', { year: new Date().getFullYear() })}
+          <div className="container mx-auto text-center text-muted-foreground text-sm space-y-2">
+            <p>{t('footer_text', { year: new Date().getFullYear() })}</p>
+            <Link href={`/${locale}/login`} className="text-xs hover:underline text-muted-foreground/80">
+              {t('admin_area_link')}
+            </Link>
           </div>
         </footer>
       </div>

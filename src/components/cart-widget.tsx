@@ -4,13 +4,11 @@
 import { useCart } from "@/hooks/use-cart";
 import { ShoppingCart } from "lucide-react";
 import { Button } from "./ui/button";
-import { useTranslations } from "@/hooks/use-translations";
 import { useEffect, useState } from "react";
 import { CartSheet } from "./cart-sheet";
 
 export function CartWidget() {
   const { cart } = useCart();
-  const t = useTranslations('Editor');
   const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
@@ -23,7 +21,7 @@ export function CartWidget() {
     return (
         <Button variant="ghost" size="icon" className="relative">
             <ShoppingCart className="h-6 w-6" />
-            <span className="sr-only">{t('cart_title')}</span>
+            <span className="sr-only">Your Cart</span>
         </Button>
     );
   }
@@ -37,7 +35,7 @@ export function CartWidget() {
                     {itemCount}
                 </span>
             )}
-            <span className="sr-only">{t('cart_title')}</span>
+            <span className="sr-only">Votre panier</span>
         </Button>
     </CartSheet>
   );

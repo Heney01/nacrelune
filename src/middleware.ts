@@ -1,41 +1,33 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 
-const locales = ['en', 'fr'];
-const defaultLocale = 'en';
+export function middleware(request: NextRequest) {
+  const sessionCookie = request.cookies.get('session');
+  const locale = request.nextUrl.pathname.split('/')[1] || 'fr';
 
-function getLocale(request: NextRequest): string {
-  const acceptLanguage = request.headers.get('accept-language') || '';
-  const preferredLocales = acceptLanguage.split(',').map(l => l.split(';')[0]);
-
-  for (const locale of preferredLocales) {
-    if (locales.includes(locale)) {
-      return locale;
-    }
-    const lang = locale.split('-')[0];
-    if (locales.includes(lang)) {
-        return lang;
-    }
+  // We only want to protect routes under /admin
+  if (!request.nextUrl.pathname.includes('/admin')) {
+    return NextResponse.next();
   }
 
-  return defaultLocale;
-}
+  if (!sessionCookie) {
+    const loginUrl = new URL(`/${locale}/login`, request.url);
+    // Pass the original destination as a search parameter for redirection after login.
+    loginUrl.searchParams.set('redirect', request.nextUrl.pathname);
+    return NextResponse.redirect(loginUrl);
+  }
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  const pathnameHasLocale = locales.some(
-    (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
-  );
-
-  if (pathnameHasLocale) return;
-
-  const locale = getLocale(request);
-  request.nextUrl.pathname = `/${locale}${pathname}`;
-  return NextResponse.redirect(request.nextUrl);
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
-  ],
+  /*
+   * Match all request paths except for the ones starting with:
+   * - api (API routes)
+   * - _next/static (static files)
+   * - _next/image (image optimization files)
+   * - favicon.ico (favicon file)
+   * - login
+   */
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|login).*)'],
 };

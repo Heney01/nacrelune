@@ -4,13 +4,11 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '@/hooks/use-cart';
-import { useTranslations } from '@/hooks/use-translations';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Trash2, ShoppingCart, PlusCircle } from 'lucide-react';
 import React, { ReactNode } from 'react';
-import { usePathname } from 'next/navigation';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Card } from './ui/card';
 import {
@@ -21,16 +19,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { useTranslations } from '@/hooks/use-translations';
+import { useParams } from 'next/navigation';
 
 export function CartSheet({ children, open, onOpenChange }: {
   children?: ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
-  const t = useTranslations('Editor');
   const { cart, removeFromCart } = useCart();
-  const pathname = usePathname();
-  const locale = pathname.split('/')[1] || 'en';
+  const t = useTranslations('Cart');
+  const params = useParams();
+  const locale = params.locale as string;
 
   const totalItems = cart.length;
   
@@ -40,18 +40,22 @@ export function CartSheet({ children, open, onOpenChange }: {
     return sum + modelPrice + charmsPrice;
   }, 0);
 
+  const formatPrice = (price: number) => {
+    return t('price', { price });
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       {children && <SheetTrigger asChild>{children}</SheetTrigger>}
       <SheetContent className="flex flex-col">
         <SheetHeader>
-          <SheetTitle className="font-headline text-2xl">{t('cart_title')} ({totalItems})</SheetTitle>
+          <SheetTitle className="font-headline text-2xl">{t('title')} {t('item_count', { count: totalItems })}</SheetTitle>
         </SheetHeader>
         {cart.length === 0 ? (
           <div className="flex-grow flex flex-col items-center justify-center text-center text-muted-foreground">
             <ShoppingCart className="w-16 h-16 mb-4" />
-            <p className="font-bold text-lg">{t('cart_empty_title')}</p>
-            <p className="text-sm">{t('cart_empty_description')}</p>
+            <p className="font-bold text-lg">{t('empty_title')}</p>
+            <p className="text-sm">{t('empty_description')}</p>
             <SheetClose asChild>
               <Button variant="outline" asChild className="mt-6">
                 <Link href={`/${locale}`}>
@@ -94,15 +98,15 @@ export function CartSheet({ children, open, onOpenChange }: {
                           </DialogTrigger>
                           <DialogContent className="max-w-xl">
                             <DialogHeader>
-                              <DialogTitle>{t('cart_preview_title', { modelName: item.model.name })}</DialogTitle>
+                              <DialogTitle>{t('preview_title', { modelName: item.model.name })}</DialogTitle>
                               <DialogDescription>
-                                {t('cart_preview_description')}
+                                {t('preview_description')}
                               </DialogDescription>
                             </DialogHeader>
                             <div className="mt-4 grid place-items-center">
                               <Image
                                 src={item.previewImage || item.model.displayImageUrl}
-                                alt={`Preview of ${item.model.name}`}
+                                alt={t('preview_title', { modelName: item.model.name })}
                                 width={800}
                                 height={800}
                                 className="w-full h-auto object-contain rounded-lg max-w-full max-h-[70vh]"
@@ -116,7 +120,7 @@ export function CartSheet({ children, open, onOpenChange }: {
                             {item.jewelryType.name}
                           </p>
                           <p className="text-sm font-bold mt-1">
-                            {t('item_price', { price: itemPrice.toFixed(2) })}
+                            {formatPrice(itemPrice)}
                           </p>
                         </div>
                         <Button
@@ -126,14 +130,14 @@ export function CartSheet({ children, open, onOpenChange }: {
                           onClick={() => removeFromCart(item.id)}
                         >
                           <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">{t('cart_remove_item')}</span>
+                          <span className="sr-only">{t('remove_item')}</span>
                         </Button>
                       </div>
                       {item.placedCharms.length > 0 && (
                         <AccordionItem value={item.id} className="border-t">
                           <AccordionTrigger className="text-sm px-4 py-2 hover:no-underline hover:bg-muted/50">
                             <div className="flex justify-between w-full items-center">
-                              <span>{t('view_charms_action')} ({item.placedCharms.length})</span>
+                              <span>{t('view_charms_action', { count: item.placedCharms.length })}</span>
                             </div>
                           </AccordionTrigger>
                           <AccordionContent className="p-4 pt-0">
@@ -144,7 +148,7 @@ export function CartSheet({ children, open, onOpenChange }: {
                                     <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={24} height={24} className="rounded-sm border" data-ai-hint="jewelry charm" />
                                     <span>{pc.charm.name}</span>
                                   </div>
-                                  <span className="text-muted-foreground">{t('item_price', { price: (pc.charm.price || 0).toFixed(2) })}</span>
+                                  <span className="text-muted-foreground">{formatPrice(pc.charm.price || 0)}</span>
                                 </li>
                               ))}
                             </ul>
@@ -159,12 +163,12 @@ export function CartSheet({ children, open, onOpenChange }: {
             <SheetFooter className="mt-auto border-t pt-4">
               <div className="w-full space-y-4">
                 <div className="flex justify-between font-bold text-lg">
-                  <span>{t('cart_total')}</span>
-                  <span>${totalPrice.toFixed(2)}</span>
+                  <span>{t('total')}</span>
+                  <span>{formatPrice(totalPrice)}</span>
                 </div>
                 <SheetClose asChild>
                   <Button className="w-full" disabled>
-                    {t('purchase_button')}
+                    {t('checkout_button')}
                   </Button>
                 </SheetClose>
               </div>

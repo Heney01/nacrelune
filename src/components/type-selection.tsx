@@ -3,18 +3,19 @@
 
 import Link from 'next/link';
 import type { JewelryType } from "@/lib/types";
-import { useTranslations } from "@/hooks/use-translations";
 import { Card, CardContent } from "@/components/ui/card";
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useTranslations } from '@/hooks/use-translations';
 
 interface TypeSelectionProps {
     jewelryTypes: JewelryType[];
+    locale: string;
 }
 
-export function TypeSelection({ jewelryTypes }: TypeSelectionProps) {
-    const t = useTranslations('HomePage');
+export function TypeSelection({ jewelryTypes, locale }: TypeSelectionProps) {
     const [loadingTypeId, setLoadingTypeId] = useState<string | null>(null);
+    const t = useTranslations('HomePage');
 
     return (
         <section className="text-center">
@@ -24,7 +25,7 @@ export function TypeSelection({ jewelryTypes }: TypeSelectionProps) {
                 {jewelryTypes.map((type) => (
                     <Link 
                         key={type.id} 
-                        href={`?type=${type.id}`} 
+                        href={`/${locale}/?type=${type.id}`} 
                         className="contents"
                         onClick={() => setLoadingTypeId(type.id)}
                     >
@@ -38,8 +39,8 @@ export function TypeSelection({ jewelryTypes }: TypeSelectionProps) {
                                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
                                     <type.icon className="w-8 h-8 text-primary" />
                                 </div>
-                                <h3 className="text-xl font-headline">{t(`jewelry_types.${type.id}`)}</h3>
-                                <p className="text-sm text-muted-foreground">{t(`jewelry_types.${type.id}_description`)}</p>
+                                <h3 className="text-xl font-headline">{type.name}</h3>
+                                <p className="text-sm text-muted-foreground">{type.description}</p>
                             </CardContent>
                         </Card>
                     </Link>

@@ -13,8 +13,8 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Badge } from './ui/badge';
 import Image from 'next/image';
 import { Charm } from '@/lib/types';
-import { useTranslations } from '@/hooks/use-translations';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/hooks/use-translations';
 
 interface SuggestionSidebarProps {
   onApplySuggestion: (suggestion: Suggestion) => void;
@@ -35,8 +35,8 @@ export function SuggestionSidebar({
   error,
   onGenerate
 }: SuggestionSidebarProps) {
-  const t = useTranslations('Editor');
   const [preferences, setPreferences] = useState('');
+  const t = useTranslations('Editor');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,7 +84,7 @@ export function SuggestionSidebar({
           )}
           {error && (
             <Alert variant="destructive">
-              <AlertTitle>{t('error_title')}</AlertTitle>
+              <AlertTitle>{t('toast_error_title')}</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
