@@ -1,6 +1,4 @@
 
-
-// @/app/actions.ts
 'use server';
 
 import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
@@ -22,21 +20,10 @@ export async function getCharmSuggestions(
   }
 }
 
-export async function deleteModel(
-    prevState: any,
-    formData: FormData
-): Promise<{ success: boolean; message: string }> {
+export async function deleteModel(): Promise<{ success: boolean; message: string }> {
     console.log("--- TEST: deleteModel action was called successfully ---");
     
-    const modelId = formData.get('modelId') as string;
-    
-    if (!modelId) {
-        // This case should ideally not be reached if the form is correctly populated
-        return { success: false, message: "ID de modèle manquant." };
-    }
-
     // Simulate successful deletion for now
     revalidatePath('/admin/dashboard'); 
     return { success: true, message: "Le modèle a été supprimé avec succès (simulation)." };
 }
-
