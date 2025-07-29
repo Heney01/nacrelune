@@ -77,7 +77,6 @@ export function ModelForm({ isOpen, onOpenChange, jewelryType, model }: ModelFor
     }, []);
 
     useEffect(() => {
-        // Check if state and state.message exist before accessing them
         if (state?.message?.includes('succès')) {
             onOpenChange(false);
         }
@@ -103,22 +102,22 @@ export function ModelForm({ isOpen, onOpenChange, jewelryType, model }: ModelFor
                     <div className="space-y-2">
                         <Label htmlFor="name">Nom du modèle</Label>
                         <Input id="name" name="name" defaultValue={model?.name || ''} />
-                        {state.errors?.name && <p className="text-sm text-destructive">{state.errors.name[0]}</p>}
+                        {state?.errors?.name && <p className="text-sm text-destructive">{state.errors.name[0]}</p>}
                     </div>
 
                     <div className="space-y-2">
                         <Label htmlFor="price">Prix</Label>
                         <Input id="price" name="price" type="number" step="0.01" defaultValue={model?.price || ''}/>
-                        {state.errors?.price && <p className="text-sm text-destructive">{state.errors.price[0]}</p>}
+                        {state?.errors?.price && <p className="text-sm text-destructive">{state.errors.price[0]}</p>}
                     </div>
 
                     <ImagePicker name="displayImage" label="Image de présentation" defaultUrl={model?.displayImageUrl} />
-                     {state.errors?.displayImage && <p className="text-sm text-destructive">{state.errors.displayImage[0]}</p>}
+                     {state?.errors?.displayImage && <p className="text-sm text-destructive">{state.errors.displayImage[0]}</p>}
 
                     <ImagePicker name="editorImage" label="Image pour l'éditeur" defaultUrl={model?.editorImageUrl} />
-                     {state.errors?.editorImage && <p className="text-sm text-destructive">{state.errors.editorImage[0]}</p>}
+                     {state?.errors?.editorImage && <p className="text-sm text-destructive">{state.errors.editorImage[0]}</p>}
                     
-                    {state.message && !state.message.includes('succès') && (
+                    {state?.message && !state.message.includes('succès') && (
                       <p className="text-sm text-destructive">{state.message}</p>
                     )}
 
