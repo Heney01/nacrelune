@@ -16,7 +16,8 @@
     "back_button": "Retour",
     "select_button": "Sélectionner",
     "footer_text": "© {year} Nacrelune. Tous droits réservés.",
-    "admin_area_link": "Espace Administrateur"
+    "admin_area_link": "Espace Administrateur",
+    "track_order_link": "Suivre ma commande"
   },
   "Editor": {
     "charms_title": "Breloques",
@@ -108,5 +109,11 @@
     "success_order_number": "Votre numéro de commande",
     "success_description": "Un résumé de votre commande a été envoyé à {email}. Vous serez notifié(e) lorsque votre création sera expédiée.",
     "success_close_button": "Fermer"
+  },
+   "OrderStatus": {
+    "commandée": "Commandée",
+    "en cours de préparation": "En préparation",
+    "expédiée": "Expédiée",
+    "livrée": "Livrée"
   }
 }

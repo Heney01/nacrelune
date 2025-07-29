@@ -582,3 +582,38 @@ export async function createOrder(cartItems: CartItem[], email: string): Promise
         return { success: false, message: "Une erreur est survenue lors du passage de la commande." };
     }
 }
+
+export async function getOrderDetailsByNumber(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; order?: Order | null }> {
+    const orderNumber = formData.get('orderNumber') as string;
+    
+    if (!orderNumber) {
+        return { success: false, message: "Veuillez fournir un numéro de commande." };
+    }
+
+    try {
+        const q = query(collection(db, 'orders'), where('orderNumber', '==', orderNumber.trim()));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            return { success: false, message: "Aucune commande trouvée avec ce numéro.", order: null };
+        }
+
+        const orderDoc = querySnapshot.docs[0];
+        const orderData = orderDoc.data();
+        
+        const order: Order = {
+            id: orderDoc.id,
+            orderNumber: orderData.orderNumber,
+            createdAt: (orderData.createdAt as Timestamp).toDate(),
+            customerEmail: orderData.customerEmail,
+            totalPrice: orderData.totalPrice,
+            items: orderData.items,
+            status: orderData.status,
+        };
+        
+        return { success: true, message: "Commande trouvée.", order: order };
+    } catch (error) {
+        console.error('Error fetching order:', error);
+        return { success: false, message: "Une erreur est survenue lors de la recherche de la commande." };
+    }
+}

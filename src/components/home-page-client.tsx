@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React from 'react';
@@ -13,7 +14,7 @@ import Link from 'next/link';
 import { CartWidget } from './cart-widget';
 
 export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, locale }: {
-    searchParams: { [key: string]: string | string[] | undefined };
+    searchParams: { [key:string]: string | string[] | undefined };
     jewelryTypes: Omit<JewelryType, 'icon'>[];
     allCharms: Charm[];
     locale: string;
@@ -66,9 +67,15 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
         <footer className="p-4 border-t mt-auto bg-white">
           <div className="container mx-auto text-center text-muted-foreground text-sm space-y-2">
             <p>{t('footer_text', { year: new Date().getFullYear() })}</p>
-            <Link href={`/${locale}/login`} className="text-xs hover:underline text-muted-foreground/80">
-              {t('admin_area_link')}
-            </Link>
+             <div className="flex justify-center items-center gap-4 text-xs text-muted-foreground/80">
+                 <Link href={`/${locale}/login`} className="hover:underline">
+                    {t('admin_area_link')}
+                </Link>
+                 <span>&bull;</span>
+                 <Link href={`/${locale}/orders/track`} className="hover:underline">
+                    {t('track_order_link')}
+                </Link>
+            </div>
           </div>
         </footer>
       </div>

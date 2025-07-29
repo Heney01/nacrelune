@@ -16,7 +16,8 @@
     "back_button": "Back",
     "select_button": "Select",
     "footer_text": "© {year} Nacrelune. All rights reserved.",
-    "admin_area_link": "Administrator Area"
+    "admin_area_link": "Administrator Area",
+    "track_order_link": "Track My Order"
   },
   "Editor": {
     "charms_title": "Charms",
@@ -108,5 +109,11 @@
     "success_order_number": "Your order number",
     "success_description": "A summary of your order has been sent to {email}. You will be notified when your creation is shipped.",
     "success_close_button": "Close"
+  },
+  "OrderStatus": {
+    "commandée": "Ordered",
+    "en cours de préparation": "Preparing",
+    "expédiée": "Shipped",
+    "livrée": "Delivered"
   }
 }
