@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useReducer, useTransition, Fragment } from 'react';
@@ -25,7 +24,7 @@ import { Separator } from './ui/separator';
 import Image from 'next/image';
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface OrdersManagerProps {
@@ -207,7 +206,7 @@ const OrderRow = ({ order, locale, onStatusChange, onItemStatusChange, t, tStatu
                                 ))}
                             </DropdownMenuContent>
                         </DropdownMenu>
-                        <Button variant="ghost" size="icon" className="ml-2" onClick={() => setIsOpen(!isOpen)}>
+                        <Button variant="ghost" size="icon" className="ml-2">
                              {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </Button>
                     </div>
@@ -255,15 +254,31 @@ const OrderRow = ({ order, locale, onStatusChange, onItemStatusChange, t, tStatu
                                             </div>
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="bg-white p-2 rounded-md border mb-4">
-                                                <Image 
-                                                    src={item.previewImageUrl} 
-                                                    alt={`Aperçu de ${item.modelName}`}
-                                                    width={400} 
-                                                    height={400} 
-                                                    className="w-full h-auto object-contain rounded" 
-                                                />
-                                            </div>
+                                            <Dialog>
+                                                <DialogTrigger asChild>
+                                                    <div className="bg-white p-2 rounded-md border mb-4 cursor-pointer">
+                                                        <Image 
+                                                            src={item.previewImageUrl} 
+                                                            alt={`Aperçu de ${item.modelName}`}
+                                                            width={400} 
+                                                            height={400} 
+                                                            className="w-full h-auto object-contain rounded" 
+                                                        />
+                                                    </div>
+                                                </DialogTrigger>
+                                                <DialogContent className="max-w-2xl">
+                                                    <DialogHeader>
+                                                        <DialogTitle>Aperçu de {item.modelName}</DialogTitle>
+                                                    </DialogHeader>
+                                                     <Image 
+                                                        src={item.previewImageUrl} 
+                                                        alt={`Aperçu de ${item.modelName}`}
+                                                        width={800} 
+                                                        height={800} 
+                                                        className="w-full h-auto object-contain rounded-lg" 
+                                                    />
+                                                </DialogContent>
+                                            </Dialog>
                                             
                                             <Separator className="my-3" />
                                             
