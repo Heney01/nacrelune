@@ -201,6 +201,22 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
         });
     }
 
+    const createOrderAction = (charm: Charm) => {
+        const formData = new FormData();
+        formData.append('itemId', charm.id);
+        formData.append('itemType', 'charms');
+        formData.append('locale', locale);
+        handleOrderAction(formData);
+    }
+    
+    const createRestockAction = (charm: Charm) => {
+        const formData = new FormData();
+        formData.append('itemId', charm.id);
+        formData.append('itemType', 'charms');
+        formData.append('locale', locale);
+        handleRestockAction(formData);
+    }
+
     const charmsByCategoryId = useMemo(() => {
         const acc: Record<string, (Charm & { categoryName?: string; })[]> = {};
         charms.forEach(charm => {
@@ -222,7 +238,7 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
     };
 
     const getItemAlertState = (charm: Charm): 'reordered' | 'critical' | 'alert' | 'none' => {
-        if(charm.lastOrderedAt) return 'reordered';
+        if(charm.restockedAt === null && charm.lastOrderedAt !== null) return 'reordered';
         const q = charm.quantity ?? Infinity;
         if (q <= preferences.criticalThreshold) return 'critical';
         if (q <= preferences.alertThreshold) return 'alert';
@@ -338,10 +354,10 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                                                             <Button variant="outline" asChild disabled={!charm.reorderUrl}>
                                                                                 <a href={charm.reorderUrl || ''} target="_blank" rel="noopener noreferrer">{t('open_reorder_url')}</a>
                                                                             </Button>
-                                                                            <form action={() => handleOrderAction(new FormData(document.createElement('form')).append('itemId', charm.id).append('itemType', 'charms').append('locale', locale) as any)}>
+                                                                            <form action={() => createOrderAction(charm)}>
                                                                                 <AlertDialogAction type="submit" className="w-full">{t('mark_as_ordered')}</AlertDialogAction>
                                                                             </form>
-                                                                            <form action={() => handleRestockAction(new FormData(document.createElement('form')).append('itemId', charm.id).append('itemType', 'charms').append('locale', locale) as any)}>
+                                                                            <form action={() => createRestockAction(charm)}>
                                                                                  <Button type="submit" variant="secondary" className="w-full" onClick={(e) => (e.target as HTMLButtonElement).closest('[role="dialog"]')?.remove()}>{t('mark_as_restocked')}</Button>
                                                                             </form>
                                                                         </div>

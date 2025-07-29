@@ -164,6 +164,22 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
         });
     }
 
+    const createOrderAction = (model: JewelryModel, jewelryTypeId: string) => {
+        const formData = new FormData();
+        formData.append('itemId', model.id);
+        formData.append('itemType', jewelryTypeId);
+        formData.append('locale', locale);
+        handleOrderAction(formData);
+    }
+    
+    const createRestockAction = (model: JewelryModel, jewelryTypeId: string) => {
+        const formData = new FormData();
+        formData.append('itemId', model.id);
+        formData.append('itemType', jewelryTypeId);
+        formData.append('locale', locale);
+        handleRestockAction(formData);
+    }
+
     const getCategoryAlertState = (models: JewelryModel[]): 'critical' | 'alert' | 'none' => {
         if (models.some(m => (m.quantity ?? Infinity) <= preferences.criticalThreshold)) return 'critical';
         if (models.some(m => (m.quantity ?? Infinity) <= preferences.alertThreshold)) return 'alert';
@@ -171,7 +187,7 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
     };
     
     const getItemAlertState = (model: JewelryModel): 'reordered' | 'critical' | 'alert' | 'none' => {
-        if (model.lastOrderedAt) return 'reordered';
+        if (model.restockedAt === null && model.lastOrderedAt !== null) return 'reordered';
         const q = model.quantity ?? Infinity;
         if (q <= preferences.criticalThreshold) return 'critical';
         if (q <= preferences.alertThreshold) return 'alert';
@@ -278,18 +294,10 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                                                 <Button variant="outline" asChild disabled={!model.reorderUrl}>
                                                                     <a href={model.reorderUrl || ''} target="_blank" rel="noopener noreferrer">{t('open_reorder_url')}</a>
                                                                 </Button>
-                                                                <form action={() => handleOrderAction(new FormData(document.createElement('form'))
-                                                                    .append('itemId', model.id)
-                                                                    .append('itemType', jewelryType.id)
-                                                                    .append('locale', locale) as any
-                                                                )}>
+                                                                <form action={() => createOrderAction(model, jewelryType.id)}>
                                                                     <AlertDialogAction type="submit" className="w-full">{t('mark_as_ordered')}</AlertDialogAction>
                                                                 </form>
-                                                                <form action={() => handleRestockAction(new FormData(document.createElement('form'))
-                                                                    .append('itemId', model.id)
-                                                                    .append('itemType', jewelryType.id)
-                                                                    .append('locale', locale) as any
-                                                                )}>
+                                                                <form action={() => createRestockAction(model, jewelryType.id)}>
                                                                     <Button type="submit" variant="secondary" className="w-full" onClick={(e) => (e.target as HTMLButtonElement).closest('[role="dialog"]')?.remove()}>{t('mark_as_restocked')}</Button>
                                                                 </form>
                                                             </div>
