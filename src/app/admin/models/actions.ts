@@ -16,10 +16,9 @@ const ModelSchema = z.object({
     z.number().positive("Le prix doit être un nombre positif.")
   ),
   jewelryType: z.enum(['necklace', 'bracelet', 'earring']),
-  displayImage: z.any().transform((val) => (typeof val === 'string' ? JSON.parse(val) : val)),
-  editorImage: z.any().transform((val) => (typeof val === 'string' ? JSON.parse(val) : val)),
+  displayImage: z.any().optional(),
+  editorImage: z.any().optional(),
 });
-
 
 function getFileNameFromUrl(url: string): string | null {
     if (!url) return null;
@@ -40,7 +39,6 @@ function getFileNameFromUrl(url: string): string | null {
     }
     return null;
 }
-
 
 async function deleteImage(imageUrl: string) {
     if (!imageUrl) {
@@ -70,21 +68,29 @@ async function deleteImage(imageUrl: string) {
 }
 
 
-async function uploadImage(file: { dataUrl: string, name: string } | string | null, folder: string, oldImageUrl?: string): Promise<string | null> {
-    // If file is a string, it's the existing URL. No change.
-    if (typeof file === 'string') {
-        console.log(`uploadImage: Existing URL provided, keeping: ${file}`);
-        return file;
+async function uploadImage(fileData: any, folder: string, oldImageUrl?: string): Promise<string | null> {
+    let file: { dataUrl: string, name: string } | null = null;
+    if (typeof fileData === 'string') {
+        try {
+            file = JSON.parse(fileData);
+        } catch (e) {
+            // It might be just the URL string
+            if (fileData.startsWith('http')) return fileData;
+            return oldImageUrl || null;
+        }
     }
-    
-    // If file is null or has no dataUrl, it means no new image was uploaded.
+
     if (!file || !file.dataUrl) {
          console.log(`uploadImage: No new file uploaded. Keeping old image URL: ${oldImageUrl}`);
         return oldImageUrl || null;
     }
 
+    if (file.dataUrl === oldImageUrl) {
+      console.log(`uploadImage: dataUrl is the same as oldImageUrl. No change.`);
+      return oldImageUrl;
+    }
+
     console.log(`uploadImage: New image uploaded. Old image URL was: ${oldImageUrl}`);
-    // A new image was uploaded, so delete the old one if it exists.
     if (oldImageUrl) {
         await deleteImage(oldImageUrl);
     }
@@ -143,14 +149,9 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{me
 
     const dataToSave: any = {
       ...modelData,
+      displayImageUrl: newDisplayImageUrl,
+      editorImageUrl: newEditorImageUrl,
     };
-    
-    if (newDisplayImageUrl) {
-        dataToSave.displayImageUrl = newDisplayImageUrl;
-    }
-    if (newEditorImageUrl) {
-        dataToSave.editorImageUrl = newEditorImageUrl;
-    }
 
     console.log("Data to be saved in Firestore:", dataToSave);
 
@@ -201,3 +202,5 @@ export async function deleteModel(jewelryTypeId: string, modelId: string, displa
         return { success: false, message: `Erreur lors de la suppression: ${e.message}` };
     }
 }
+
+    
