@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useReducer } from 'react';
+import React, { useState, useReducer } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
