@@ -38,11 +38,6 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
     return tCart('price', { price });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onConfirm();
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl grid-cols-1 md:grid-cols-2 grid p-0">
@@ -51,7 +46,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
             <DialogTitle className="text-2xl font-headline">{t('title')}</DialogTitle>
             <DialogDescription>{t('description')}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="mt-6 flex flex-col flex-grow overflow-hidden">
+          <div className="mt-6 flex flex-col flex-grow overflow-hidden">
             <ScrollArea className="flex-grow -mx-6">
                 <div className="space-y-6 px-6">
                 <div>
@@ -105,7 +100,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
                 </div>
             </ScrollArea>
             <DialogFooter className="mt-6 pt-6 border-t">
-              <Button type="submit" className="w-full" disabled={isProcessing}>
+              <Button type="button" className="w-full" disabled={isProcessing} onClick={onConfirm}>
                 {isProcessing ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -116,11 +111,11 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
                 )}
               </Button>
             </DialogFooter>
-          </form>
+          </div>
         </div>
         <aside className="hidden md:flex flex-col bg-muted/50 p-6">
             <h3 className="text-lg font-medium">{t('order_summary')}</h3>
-            <ScrollArea className="mt-6 flex-grow">
+            <ScrollArea className="mt-6 flex-grow -mx-6 px-6">
                 <div className="space-y-4">
                     {cart.map(item => {
                          const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
