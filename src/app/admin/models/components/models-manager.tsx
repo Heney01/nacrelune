@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useActionState, useEffect, useOptimistic } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
@@ -15,6 +15,59 @@ import { useToast } from '@/hooks/use-toast';
 
 interface ModelsManagerProps {
     initialJewelryTypes: Omit<JewelryType, 'icon'>[];
+}
+
+type OptimisticUpdate = {
+    type: 'DELETE';
+    payload: {
+        jewelryTypeId: string;
+        modelId: string;
+    }
+} | {
+    type: 'ADD' | 'UPDATE';
+    payload: {
+        jewelryTypeId: string;
+        model: JewelryModel;
+    }
+}
+
+
+const DeleteForm = ({ jewelryTypeId, model }: { jewelryTypeId: string, model: JewelryModel}) => {
+    const { toast } = useToast();
+    
+    const [state, formAction] = useActionState(deleteModel, { success: false, message: '' });
+
+    useEffect(() => {
+        if(state.message) {
+            if (state.success) {
+                toast({
+                    title: 'Succès',
+                    description: state.message,
+                });
+            } else {
+                toast({
+                    variant: 'destructive',
+                    title: 'Erreur',
+                    description: state.message,
+                });
+            }
+        }
+    }, [state, toast]);
+
+    return (
+        <form action={formAction}>
+            <input type="hidden" name="jewelryTypeId" value={jewelryTypeId} />
+            <input type="hidden" name="modelId" value={model.id} />
+            <input type="hidden" name="displayImageUrl" value={model.displayImageUrl} />
+            <input type="hidden" name="editorImageUrl" value={model.editorImageUrl} />
+            <AlertDialogAction
+                type="submit"
+                className="bg-destructive hover:bg-destructive/90"
+            >
+                Supprimer
+            </AlertDialogAction>
+        </form>
+    )
 }
 
 export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
@@ -36,41 +89,6 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
         setSelectedJewelryType(jewelryType);
         setSelectedModel(model);
         setIsFormOpen(true);
-    };
-
-    const handleDeleteModel = async (jewelryTypeId: string, model: JewelryModel) => {
-        console.log(`--- TEST: Bouton 'Supprimer' cliqué pour le modèle ${model.name}`);
-        try {
-            const result = await deleteModel(jewelryTypeId, model.id);
-            if (result.success) {
-                toast({
-                    title: 'Succès',
-                    description: `Test de suppression réussi pour "${model.name}". Vérifiez la console serveur.`,
-                });
-                // Here we would refresh the data from the server.
-                // For now, we manually remove it from the state for UI feedback.
-                setJewelryTypes(prevTypes => 
-                    prevTypes.map(type => 
-                        type.id === jewelryTypeId
-                            ? { ...type, models: type.models.filter(m => m.id !== model.id) }
-                            : type
-                    )
-                );
-            } else {
-                 toast({
-                    variant: 'destructive',
-                    title: 'Erreur de test',
-                    description: result.message,
-                });
-            }
-        } catch (error) {
-            console.error('Erreur lors de l’appel de deleteModel', error);
-            toast({
-                variant: 'destructive',
-                title: 'Erreur de communication',
-                description: 'Impossible d’appeler l’action serveur.',
-            });
-        }
     };
 
     return (
@@ -140,12 +158,7 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter>
                                                             <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                                            <AlertDialogAction
-                                                                className="bg-destructive hover:bg-destructive/90"
-                                                                onClick={() => handleDeleteModel(jewelryType.id, model)}
-                                                            >
-                                                                Supprimer
-                                                            </AlertDialogAction>
+                                                            <DeleteForm jewelryTypeId={jewelryType.id} model={model} />
                                                         </AlertDialogFooter>
                                                     </AlertDialogContent>
                                                 </AlertDialog>
