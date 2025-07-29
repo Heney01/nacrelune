@@ -10,12 +10,16 @@ import { ModelForm } from './model-form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { deleteModel } from '../actions';
+import { useToast } from '@/hooks/use-toast';
 
 interface ModelsManagerProps {
     initialJewelryTypes: Omit<JewelryType, 'icon'>[];
 }
 
 export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
+    const { toast } = useToast();
+    const [jewelryTypes, setJewelryTypes] = useState(initialJewelryTypes);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [selectedJewelryType, setSelectedJewelryType] = useState<Omit<JewelryType, 'models'|'icon'>>(initialJewelryTypes[0]);
     const [selectedModel, setSelectedModel] = useState<JewelryModel | null>(null);
@@ -34,14 +38,45 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
         setIsFormOpen(true);
     };
 
-    const handleDeleteModel = (model: JewelryModel) => {
+    const handleDeleteModel = async (jewelryTypeId: string, model: JewelryModel) => {
         console.log(`--- TEST: Bouton 'Supprimer' cliqué pour le modèle ${model.name}`);
+        try {
+            const result = await deleteModel(jewelryTypeId, model.id);
+            if (result.success) {
+                toast({
+                    title: 'Succès',
+                    description: `Test de suppression réussi pour "${model.name}". Vérifiez la console serveur.`,
+                });
+                // Here we would refresh the data from the server.
+                // For now, we manually remove it from the state for UI feedback.
+                setJewelryTypes(prevTypes => 
+                    prevTypes.map(type => 
+                        type.id === jewelryTypeId
+                            ? { ...type, models: type.models.filter(m => m.id !== model.id) }
+                            : type
+                    )
+                );
+            } else {
+                 toast({
+                    variant: 'destructive',
+                    title: 'Erreur de test',
+                    description: result.message,
+                });
+            }
+        } catch (error) {
+            console.error('Erreur lors de l’appel de deleteModel', error);
+            toast({
+                variant: 'destructive',
+                title: 'Erreur de communication',
+                description: 'Impossible d’appeler l’action serveur.',
+            });
+        }
     };
 
     return (
         <div className="p-4 bg-card rounded-lg border">
             <Accordion type="multiple" defaultValue={initialJewelryTypes.map(jt => jt.id)} className="w-full">
-                {initialJewelryTypes.map((jewelryType) => (
+                {jewelryTypes.map((jewelryType) => (
                     <AccordionItem value={jewelryType.id} key={jewelryType.id}>
                         <div className="flex justify-between items-center w-full py-4">
                             <AccordionTrigger className="text-xl font-headline flex-1 py-0">
@@ -107,7 +142,7 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
                                                             <AlertDialogCancel>Annuler</AlertDialogCancel>
                                                             <AlertDialogAction
                                                                 className="bg-destructive hover:bg-destructive/90"
-                                                                onClick={() => handleDeleteModel(model)}
+                                                                onClick={() => handleDeleteModel(jewelryType.id, model)}
                                                             >
                                                                 Supprimer
                                                             </AlertDialogAction>
