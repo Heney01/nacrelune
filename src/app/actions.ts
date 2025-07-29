@@ -139,7 +139,7 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
         const displayImageUrl = await uploadImage(displayImageData, originalDisplayImageUrl, jewelryTypeId);
         const editorImageUrl = await uploadImage(editorImageData, originalEditorImageUrl, jewelryTypeId);
 
-        const modelData: Omit<JewelryModel, 'id' | 'lastOrderedAt'> = {
+        const modelData: Omit<JewelryModel, 'id' | 'lastOrderedAt' | 'restockedAt'> = {
             name,
             price,
             quantity,
@@ -159,7 +159,7 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
         } else {
             // Create
             const docRef = await addDoc(collection(db, jewelryTypeId), modelData);
-            savedModel = { id: docRef.id, ...modelData, lastOrderedAt: null };
+            savedModel = { id: docRef.id, ...modelData, lastOrderedAt: null, restockedAt: null };
         }
 
         revalidatePath(`/${locale}/admin/dashboard`);
@@ -327,7 +327,7 @@ export async function saveCharm(prevState: any, formData: FormData): Promise<{ s
         const categoryRefs = categoryIds.map(id => doc(db, 'charmCategories', id));
         const imageUrl = await uploadImage(imageData, originalImageUrl, `charms/${name.replace(/\s+/g, '_')}`);
         
-        const charmData: Omit<Charm, 'id' | 'lastOrderedAt'> = {
+        const charmData: Omit<Charm, 'id' | 'lastOrderedAt' | 'restockedAt'> = {
             name,
             description,
             price,
@@ -346,7 +346,7 @@ export async function saveCharm(prevState: any, formData: FormData): Promise<{ s
             savedCharmData = { id: charmId, ...docSnap.data() };
         } else {
             const docRef = await addDoc(collection(db, 'charms'), charmData);
-            savedCharmData = { id: docRef.id, ...charmData, lastOrderedAt: null };
+            savedCharmData = { id: docRef.id, ...charmData, lastOrderedAt: null, restockedAt: null };
         }
         
         const firstCategoryDoc = await getDoc(categoryRefs[0]);
@@ -456,7 +456,8 @@ export async function markAsOrdered(formData: FormData): Promise<{ success: bool
     try {
         const itemRef = doc(db, itemType, itemId);
         await updateDoc(itemRef, {
-            lastOrderedAt: serverTimestamp()
+            lastOrderedAt: serverTimestamp(),
+            restockedAt: null,
         });
 
         revalidatePath(`/${locale}/admin/dashboard`);
@@ -464,6 +465,30 @@ export async function markAsOrdered(formData: FormData): Promise<{ success: bool
 
     } catch (error) {
         console.error("Error marking item as ordered:", error);
+        return { success: false, message: "Une erreur est survenue." };
+    }
+}
+
+export async function markAsRestocked(formData: FormData): Promise<{ success: boolean; message: string }> {
+    const itemId = formData.get('itemId') as string;
+    const itemType = formData.get('itemType') as string;
+    const locale = formData.get('locale') as string || 'fr';
+
+    if (!itemId || !itemType) {
+        return { success: false, message: "Informations manquantes." };
+    }
+
+    try {
+        const itemRef = doc(db, itemType, itemId);
+        await updateDoc(itemRef, {
+            lastOrderedAt: null,
+            restockedAt: serverTimestamp(),
+        });
+        
+        revalidatePath(`/${locale}/admin/dashboard`);
+        return { success: true, message: "L'article a été marqué comme réapprovisionné." };
+    } catch (error) {
+        console.error("Error marking item as restocked:", error);
         return { success: false, message: "Une erreur est survenue." };
     }
 }

@@ -20,6 +20,7 @@ export interface Charm {
   quantity?: number;
   reorderUrl?: string;
   lastOrderedAt?: Date | null;
+  restockedAt?: Date | null;
 }
 
 export interface JewelryModel {
@@ -32,6 +33,7 @@ export interface JewelryModel {
   quantity?: number;
   reorderUrl?: string;
   lastOrderedAt?: Date | null;
+  restockedAt?: Date | null;
 }
 
 export interface JewelryType {

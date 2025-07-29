@@ -60,6 +60,7 @@ export async function getJewelryTypesAndModels(
                     quantity: data.quantity || 0,
                     reorderUrl: data.reorderUrl || '',
                     lastOrderedAt: toDate(data.lastOrderedAt),
+                    restockedAt: toDate(data.restockedAt),
                 } as JewelryModel;
             });
             
@@ -94,6 +95,7 @@ export async function getCharms(): Promise<Charm[]> {
                 quantity: data.quantity || 0,
                 reorderUrl: data.reorderUrl || '',
                 lastOrderedAt: toDate(data.lastOrderedAt),
+                restockedAt: toDate(data.restockedAt),
             } as Charm;
         });
 
@@ -164,6 +166,7 @@ export async function getFullCharmData(): Promise<{ charms: (Charm & { categoryN
                 quantity: data.quantity || 0,
                 reorderUrl: data.reorderUrl || '',
                 lastOrderedAt: toDate(data.lastOrderedAt),
+                restockedAt: toDate(data.restockedAt),
                 // The concept of a single categoryName is no longer accurate.
                 // We'll keep the property for compatibility but it may need to be handled differently in the UI.
                 categoryName: categoryIds.length > 0 ? categoriesMap.get(categoryIds[0]) || 'Uncategorized' : 'Uncategorized',

@@ -62,5 +62,18 @@
     "add_to_design_button": "Add to Design",
     "loading_error": "Error loading charm categories",
     "loading": "Loading..."
+  },
+  "Admin": {
+    "reorder_dialog_title": "Manage Order for {itemName}",
+    "reorder_dialog_description": "You can open the provider's URL to place an order, or manage the stock status here.",
+    "open_reorder_url": "Open Reorder URL",
+    "mark_as_ordered": "Mark as Ordered",
+    "mark_as_restocked": "Mark as Restocked",
+    "cancel": "Cancel",
+    "stock_critical": "Critical stock! (<= {threshold})",
+    "stock_low": "Low stock (<= {threshold})",
+    "stock_reordered": "Reordered on {date}",
+    "stock_ok": "Stock OK",
+    "order_management": "Order Management"
   }
 }

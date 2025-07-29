@@ -62,5 +62,18 @@
     "add_to_design_button": "Ajouter à la création",
     "loading_error": "Erreur lors de la récupération des catégories de breloques",
     "loading": "Chargement..."
+  },
+  "Admin": {
+    "reorder_dialog_title": "Gérer la commande pour {itemName}",
+    "reorder_dialog_description": "Vous pouvez ouvrir l'URL du fournisseur pour commander, ou gérer le statut du stock ici.",
+    "open_reorder_url": "Ouvrir l'URL de commande",
+    "mark_as_ordered": "Marquer comme commandé",
+    "mark_as_restocked": "Marquer comme réapprovisionné",
+    "cancel": "Annuler",
+    "stock_critical": "Stock critique ! (<= {threshold})",
+    "stock_low": "Stock bas (<= {threshold})",
+    "stock_reordered": "Commandé le {date}",
+    "stock_ok": "Stock OK",
+    "order_management": "Gestion de commande"
   }
 }
