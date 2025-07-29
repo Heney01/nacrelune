@@ -19,7 +19,12 @@
     "footer_text": "© {year} Nacrelune. Tous droits réservés.",
     "admin_area_link": "Espace Administrateur",
     "track_order_link": "Suivre ma commande",
-    "contact_support_link": "Contacter le support"
+    "contact_support_link": "Contacter le support",
+    "support_dialog_title": "Contacter le Service Client",
+    "support_dialog_description": "Vous avez une question ou besoin d'aide avec votre commande ?",
+    "support_dialog_instructions": "Vous pouvez nous joindre par e-mail. Copiez l'adresse ci-dessous ou utilisez le bouton pour ouvrir directement votre client de messagerie.",
+    "support_email_copied": "Adresse e-mail du support copiée !",
+    "support_open_mail_button": "Ouvrir l'application de messagerie"
   },
   "Editor": {
     "charms_title": "Breloques",

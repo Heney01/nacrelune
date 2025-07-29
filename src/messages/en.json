@@ -19,7 +19,12 @@
     "footer_text": "© {year} Nacrelune. All rights reserved.",
     "admin_area_link": "Administrator Area",
     "track_order_link": "Track My Order",
-    "contact_support_link": "Contact Support"
+    "contact_support_link": "Contact Support",
+    "support_dialog_title": "Contact Customer Support",
+    "support_dialog_description": "Have a question or need help with your order?",
+    "support_dialog_instructions": "You can reach us by email. Copy the address below or use the button to open your mail client directly.",
+    "support_email_copied": "Support email address copied!",
+    "support_open_mail_button": "Open Mail App"
   },
   "Editor": {
     "charms_title": "Charms",

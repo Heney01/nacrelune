@@ -6,7 +6,7 @@ import React from 'react';
 import Editor from '@/components/editor';
 import { NacreluneLogo } from '@/components/icons';
 import { useTranslations } from '@/hooks/use-translations';
-import { Gem, HandMetal, Ear, Truck, LifeBuoy } from 'lucide-react';
+import { Gem, HandMetal, Ear, Truck } from 'lucide-react';
 import { TypeSelection } from '@/components/type-selection';
 import { ModelSelection } from '@/components/model-selection';
 import type { JewelryType, Charm } from '@/lib/types';
@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { CartWidget } from './cart-widget';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { SupportDialog } from './support-dialog';
 
 
 export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, locale }: {
@@ -49,20 +50,8 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
               <NacreluneLogo className="h-8 w-auto text-foreground" />
             </Link>
             <div className="flex items-center gap-2">
+                <SupportDialog />
                 <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                             <Button asChild variant="ghost" size="icon">
-                                <a href="mailto:support@nacrelune.com">
-                                    <LifeBuoy className="h-6 w-6" />
-                                    <span className="sr-only">{t('contact_support_link')}</span>
-                                </a>
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>{t('contact_support_link')}</p>
-                        </TooltipContent>
-                    </Tooltip>
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button asChild variant="ghost" size="icon">
