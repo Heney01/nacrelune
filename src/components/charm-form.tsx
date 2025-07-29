@@ -13,13 +13,13 @@ import type { Charm, CharmCategory } from '@/lib/types';
 import { saveCharm } from '@/app/actions';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Textarea } from './ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Checkbox } from './ui/checkbox';
+import { ScrollArea } from './ui/scroll-area';
 
 interface CharmFormProps {
     isOpen: boolean;
     onOpenChange: (isOpen: boolean) => void;
     charm?: Charm | null;
-    category: CharmCategory;
     allCategories: CharmCategory[];
     onSave: (charm: Charm & { categoryName?: string }) => void;
     locale: string;
@@ -72,7 +72,7 @@ function SubmitButton({ isEditing }: { isEditing: boolean }) {
 
 const initialState = { success: false, message: '' };
 
-export function CharmForm({ isOpen, onOpenChange, charm, category, allCategories, onSave, locale }: CharmFormProps) {
+export function CharmForm({ isOpen, onOpenChange, charm, allCategories, onSave, locale }: CharmFormProps) {
     const [isMounted, setIsMounted] = useState(false);
     const [state, formAction] = useFormState(saveCharm, initialState);
     
@@ -89,6 +89,7 @@ export function CharmForm({ isOpen, onOpenChange, charm, category, allCategories
     
     const key = charm ? charm.id : 'new-charm';
     const isEditing = !!charm;
+    const currentCategoryIds = new Set(charm?.categoryIds || []);
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -97,7 +98,7 @@ export function CharmForm({ isOpen, onOpenChange, charm, category, allCategories
                     <DialogHeader>
                         <DialogTitle>{charm ? "Modifier la breloque" : "Ajouter une breloque"}</DialogTitle>
                         <DialogDescription>
-                            Remplissez les détails de la breloque pour la catégorie "{category.name}".
+                            Remplissez les détails de la breloque et assignez la à une ou plusieurs catégories.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -114,29 +115,34 @@ export function CharmForm({ isOpen, onOpenChange, charm, category, allCategories
                         <input type="hidden" name="locale" value={locale} />
                         <input type="hidden" name="originalImageUrl" value={charm?.imageUrl || ''} />
 
-                        <div className="space-y-2">
-                            <Label htmlFor="name">Nom de la breloque</Label>
-                            <Input id="name" name="name" defaultValue={charm?.name || ''} required />
-                        </div>
-                        
-                         <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="categoryId">Catégorie</Label>
-                                <Select name="categoryId" defaultValue={charm?.categoryId || category.id} required>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Sélectionner une catégorie" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {allCategories.map(cat => (
-                                            <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <Label htmlFor="name">Nom de la breloque</Label>
+                                <Input id="name" name="name" defaultValue={charm?.name || ''} required />
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="price">Prix (€)</Label>
                                 <Input id="price" name="price" type="number" step="0.01" defaultValue={charm?.price || ''} required />
                             </div>
+                        </div>
+
+                         <div className="space-y-2">
+                            <Label>Catégories</Label>
+                             <ScrollArea className="h-32 w-full rounded-md border p-4">
+                                <div className="space-y-2">
+                                 {allCategories.map(cat => (
+                                     <div key={cat.id} className="flex items-center space-x-2">
+                                         <Checkbox 
+                                             id={`category-${cat.id}`} 
+                                             name="categoryIds" 
+                                             value={cat.id}
+                                             defaultChecked={currentCategoryIds.has(cat.id)}
+                                         />
+                                         <Label htmlFor={`category-${cat.id}`} className="font-normal">{cat.name}</Label>
+                                     </div>
+                                 ))}
+                                </div>
+                             </ScrollArea>
                         </div>
 
                         <div className="space-y-2">

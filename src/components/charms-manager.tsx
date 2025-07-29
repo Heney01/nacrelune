@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useReducer, useTransition } from 'react';
+import React, { useState, useReducer, useTransition, useMemo } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Edit, Trash2, Tag, WandSparkles, GripVertical } from "lucide-react";
@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import Image from 'next/image';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Card, CardHeader, CardTitle } from './ui/card';
 import { CharmCategoryForm } from './charm-category-form';
 import { CharmForm } from './charm-form';
 import { deleteCharmCategory, deleteCharm } from '@/app/actions';
@@ -44,17 +44,29 @@ function charmsReducer(state: State, action: Action): State {
     switch (action.type) {
         case 'ADD_CATEGORY':
             return { ...state, categories: [...state.categories, action.payload] };
-        case 'UPDATE_CATEGORY':
+        case 'UPDATE_CATEGORY': {
+            const updatedCategories = state.categories.map(c => c.id === action.payload.id ? action.payload : c);
+            const updatedCharms = state.charms.map(charm => {
+                if (charm.categoryIds.includes(action.payload.id)) {
+                    // This part is complex to update optimistically as we don't have the full category mapping here easily
+                    return charm; // simplified: re-fetch would handle the name change
+                }
+                return charm;
+            });
             return {
                 ...state,
-                categories: state.categories.map(c => c.id === action.payload.id ? action.payload : c),
-                charms: state.charms.map(ch => ch.categoryId === action.payload.id ? {...ch, categoryName: action.payload.name } : ch)
+                categories: updatedCategories,
+                charms: updatedCharms
             };
+        }
         case 'DELETE_CATEGORY':
             return {
                 ...state,
                 categories: state.categories.filter(c => c.id !== action.payload.categoryId),
-                charms: state.charms.filter(ch => ch.categoryId !== action.payload.categoryId)
+                charms: state.charms.map(ch => ({
+                    ...ch,
+                    categoryIds: ch.categoryIds.filter(id => id !== action.payload.categoryId)
+                }))
             };
         case 'ADD_CHARM':
             return { ...state, charms: [...state.charms, action.payload] };
@@ -96,16 +108,13 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale }:
         setIsCategoryFormOpen(true);
     };
 
-    const handleAddCharmClick = (category: CharmCategory) => {
+    const handleAddCharmClick = () => {
         setSelectedCharm(null);
-        setSelectedCategory(category);
         setIsCharmFormOpen(true);
     };
 
     const handleEditCharmClick = (charm: Charm) => {
         setSelectedCharm(charm);
-        const category = categories.find(c => c.id === charm.categoryId);
-        setSelectedCategory(category || null);
         setIsCharmFormOpen(true);
     };
     
@@ -143,24 +152,38 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale }:
         toast({ title: result.success ? 'Succès' : 'Erreur', description: result.message, variant: result.success ? 'default' : 'destructive' });
     }
     
-    const charmsByCategoryId = charms.reduce((acc, charm) => {
-        (acc[charm.categoryId] = acc[charm.categoryId] || []).push(charm);
+    const charmsByCategoryId = useMemo(() => {
+        const acc: Record<string, (Charm & { categoryName?: string; })[]> = {};
+        charms.forEach(charm => {
+            charm.categoryIds.forEach(catId => {
+                if (!acc[catId]) {
+                    acc[catId] = [];
+                }
+                acc[catId].push(charm);
+            });
+        });
         return acc;
-    }, {} as Record<string, (Charm & { categoryName?: string; })[]>);
+    }, [charms]);
 
     return (
         <>
-            <div className="p-4 bg-card rounded-lg border">
-                <CardHeader className="p-0 mb-4">
-                    <div className="flex justify-between items-center">
-                        <CardTitle className="text-xl font-headline flex items-center gap-2"><Tag/> Catégories de Breloques</CardTitle>
-                        <Button size="sm" onClick={handleAddCategoryClick}>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Ajouter une catégorie
-                        </Button>
-                    </div>
-                </CardHeader>
+            <div className="flex justify-between items-center mb-6">
+                <CardTitle className="text-xl font-headline flex items-center gap-2">
+                    <Tag/> Gestion des Breloques & Catégories
+                </CardTitle>
+                <div className='flex gap-2'>
+                    <Button size="sm" variant="outline" onClick={handleAddCategoryClick}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Ajouter une catégorie
+                    </Button>
+                    <Button size="sm" onClick={handleAddCharmClick}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Ajouter une breloque
+                    </Button>
+                </div>
+            </div>
 
+            <div className="p-4 bg-card rounded-lg border">
                 <Accordion type="multiple" className="w-full" disabled={isPending}>
                     {categories.map((category) => (
                         <AccordionItem value={category.id} key={category.id}>
@@ -192,7 +215,7 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale }:
                                                 <AlertDialogHeader>
                                                     <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
                                                     <AlertDialogDescription>
-                                                        Cette action est irréversible. La catégorie "{category.name}" et <strong>toutes les breloques</strong> qu'elle contient seront définitivement supprimées.
+                                                        Cette action est irréversible. La catégorie "{category.name}" sera définitivement supprimée. Les breloques associées ne seront plus dans cette catégorie.
                                                     </AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
@@ -208,17 +231,12 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale }:
                                 <div className="pl-8">
                                     <div className="flex justify-between items-center mb-4">
                                         <h4 className="font-semibold text-lg flex items-center gap-2"><WandSparkles className="h-5 w-5 text-primary" /> Breloques dans cette catégorie</h4>
-                                         <Button size="sm" variant="secondary" onClick={() => handleAddCharmClick(category)}>
-                                            <PlusCircle className="mr-2 h-4 w-4" />
-                                            Ajouter une breloque
-                                        </Button>
                                     </div>
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead className="w-24">Image</TableHead>
                                                 <TableHead>Nom</TableHead>
-                                                <TableHead>Description</TableHead>
                                                 <TableHead>Prix</TableHead>
                                                 <TableHead className="text-right">Actions</TableHead>
                                             </TableRow>
@@ -228,7 +246,6 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale }:
                                                 <TableRow key={charm.id}>
                                                     <TableCell><Image src={charm.imageUrl} alt={charm.name} width={64} height={64} className="w-12 h-12 object-cover rounded-md bg-white p-1 border" /></TableCell>
                                                     <TableCell className="font-medium">{charm.name}</TableCell>
-                                                    <TableCell className="text-muted-foreground text-xs max-w-xs truncate">{charm.description}</TableCell>
                                                     <TableCell>{charm.price}€</TableCell>
                                                     <TableCell className="text-right">
                                                         <Button variant="ghost" size="icon" onClick={() => handleEditCharmClick(charm)}><Edit className="h-4 w-4" /></Button>
@@ -275,12 +292,11 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale }:
                     locale={locale}
                 />
             )}
-            {isCharmFormOpen && selectedCategory && (
+            {isCharmFormOpen && (
                 <CharmForm
                     isOpen={isCharmFormOpen}
                     onOpenChange={setIsCharmFormOpen}
                     charm={selectedCharm}
-                    category={selectedCategory}
                     allCategories={categories}
                     onSave={handleSaveCharm}
                     locale={locale}

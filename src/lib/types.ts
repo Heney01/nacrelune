@@ -14,8 +14,8 @@ export interface Charm {
   name: string;
   imageUrl: string;
   description: string;
-  categoryId: string;
-  category?: DocumentReference; // Raw from firestore
+  categoryIds: string[];
+  categories?: DocumentReference[]; // Raw from firestore
   price?: number;
 }
 

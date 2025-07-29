@@ -55,15 +55,20 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
     }, [searchTerm, allCharms]);
 
     const charmsByCategory = useMemo(() => {
-        return filteredCharms.reduce((acc, charm) => {
-            const categoryId = charm.categoryId;
-            if (!acc[categoryId]) {
-                acc[categoryId] = [];
-            }
-            acc[categoryId].push(charm);
-            return acc;
-        }, {} as Record<string, Charm[]>);
-    }, [filteredCharms]);
+        const result: Record<string, Charm[]> = {};
+        charmCategories.forEach(category => {
+            result[category.id] = [];
+        });
+
+        filteredCharms.forEach(charm => {
+            charm.categoryIds.forEach(categoryId => {
+                if (result[categoryId]) {
+                    result[categoryId].push(charm);
+                }
+            });
+        });
+        return result;
+    }, [filteredCharms, charmCategories]);
     
     const renderCharmItem = (charm: Charm) => {
         const charmContent = (

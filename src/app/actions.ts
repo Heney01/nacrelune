@@ -4,7 +4,7 @@
 import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { revalidatePath } from 'next/cache';
 import { db, storage } from '@/lib/firebase';
-import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, DocumentReference } from 'firebase/firestore';
 import { ref, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
@@ -266,40 +266,35 @@ export async function deleteCharmCategory(formData: FormData): Promise<{ success
         return { success: false, message: "ID de catégorie manquant." };
     }
 
-    try {
-        const batch = writeBatch(db);
+    const batch = writeBatch(db);
+    const categoryRef = doc(db, 'charmCategories', categoryId);
 
-        // Delete the category document
-        const categoryRef = doc(db, 'charmCategories', categoryId);
+    try {
+        // Delete the category document itself
         batch.delete(categoryRef);
 
-        // Find and delete all charms in this category
-        const charmsQuery = query(collection(db, 'charms'), where('category', '==', categoryRef));
+        // Query for charms that contain this categoryId in their categoryIds array
+        const charmsQuery = query(collection(db, 'charms'), where('categoryIds', 'array-contains', categoryId));
         const charmsSnapshot = await getDocs(charmsQuery);
-        
-        const charmImageDeletions: Promise<any>[] = [];
-        charmsSnapshot.forEach(charmDoc => {
-            batch.delete(charmDoc.ref);
-            const charmData = charmDoc.data();
-            if(charmData.imageUrl) {
-                charmImageDeletions.push(deleteFileFromStorage(charmData.imageUrl));
-            }
-        });
 
-        // Commit all Firestore writes
+        // For each charm found, remove the categoryId from its array
+        charmsSnapshot.forEach(charmDoc => {
+            const charmData = charmDoc.data();
+            const updatedCategoryIds = charmData.categoryIds.filter((id: string) => id !== categoryId);
+            batch.update(charmDoc.ref, { categoryIds: updatedCategoryIds });
+        });
+        
+        // Delete the category image from storage
+        await deleteFileFromStorage(imageUrl);
+
+        // Commit all batched writes to Firestore
         await batch.commit();
 
-        // Delete all images from storage
-        await Promise.allSettled([
-            ...charmImageDeletions,
-            deleteFileFromStorage(imageUrl)
-        ]);
-
         revalidatePath(`/${locale}/admin/dashboard`);
-        return { success: true, message: "La catégorie et toutes ses breloques ont été supprimées." };
+        return { success: true, message: "La catégorie a été supprimée." };
     } catch (error) {
         console.error("Error deleting charm category:", error);
-        return { success: false, message: "Une erreur est survenue lors de la suppression." };
+        return { success: false, message: "Une erreur est survenue lors de la suppression de la catégorie." };
     }
 }
 
@@ -311,46 +306,51 @@ export async function saveCharm(prevState: any, formData: FormData): Promise<{ s
     const name = formData.get('name') as string;
     const description = formData.get('description') as string;
     const price = parseFloat(formData.get('price') as string);
-    const categoryId = formData.get('categoryId') as string;
+    const categoryIds = formData.getAll('categoryIds') as string[];
     const locale = formData.get('locale') as string || 'fr';
     const imageData = formData.get('image') as string;
     const originalImageUrl = formData.get('originalImageUrl') as string || '';
 
-    if (!name || isNaN(price) || !categoryId) {
-        return { success: false, message: "Les champs obligatoires sont manquants ou invalides." };
+    if (!name || isNaN(price) || !categoryIds || categoryIds.length === 0) {
+        return { success: false, message: "Les champs obligatoires (nom, prix, au moins une catégorie) sont manquants ou invalides." };
     }
 
     try {
-        const categoryRef = doc(db, 'charmCategories', categoryId);
-        const imageUrl = await uploadImage(imageData, originalImageUrl, `charms/${categoryId}`);
+        const categoryRefs = categoryIds.map(id => doc(db, 'charmCategories', id));
+        const imageUrl = await uploadImage(imageData, originalImageUrl, `charms/${name.replace(/\s+/g, '_')}`);
         
         const charmData = {
             name,
             description,
             price,
-            category: categoryRef,
+            categoryIds: categoryIds, // Store array of string IDs
             imageUrl
         };
-
-        let savedCharm: Charm;
+        
+        let savedCharmData: any;
 
         if (charmId) {
             const charmRef = doc(db, 'charms', charmId);
             await updateDoc(charmRef, charmData);
-            savedCharm = { id: charmId, categoryId, ...charmData, category: categoryRef };
+            savedCharmData = { id: charmId, ...charmData };
         } else {
             const docRef = await addDoc(collection(db, 'charms'), charmData);
-            savedCharm = { id: docRef.id, categoryId, ...charmData, category: categoryRef };
+            savedCharmData = { id: docRef.id, ...charmData };
         }
+        
+        const firstCategoryDoc = await getDoc(categoryRefs[0]);
+        const firstCategoryName = firstCategoryDoc.exists() ? firstCategoryDoc.data().name : 'Inconnue';
 
-        const categoryDoc = await getDoc(categoryRef);
-        const categoryName = categoryDoc.exists() ? categoryDoc.data().name : 'Inconnue';
+        const finalCharmObject = {
+            ...savedCharmData,
+            categoryName: firstCategoryName // For optimistic update, just use the first one
+        };
 
         revalidatePath(`/${locale}/admin/dashboard`);
         return { 
             success: true, 
             message: `La breloque a été ${charmId ? 'mise à jour' : 'créée'} avec succès.`,
-            charm: { ...savedCharm, categoryName }
+            charm: finalCharmObject
         };
 
     } catch (error) {

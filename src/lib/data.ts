@@ -76,13 +76,13 @@ export async function getCharms(): Promise<Charm[]> {
 
         const fetchedCharms = docs.map((doc, index) => {
             const data = doc.data();
-            const categoryRef = data.category as DocumentReference;
+            const categoryRefs = data.categoryIds as string[] || [];
             return {
                 id: doc.id,
                 name: data.name,
                 imageUrl: imageUrls[index],
                 description: data.description,
-                categoryId: categoryRef.id,
+                categoryIds: categoryRefs,
                 price: data.price || 0,
             } as Charm;
         });
@@ -141,7 +141,7 @@ export async function getFullCharmData(): Promise<{ charms: (Charm & { categoryN
 
         const charms: (Charm & { categoryName?: string })[] = await Promise.all(charmsDocs.docs.map(async (doc) => {
             const data = doc.data();
-            const categoryRef = data.category as DocumentReference;
+            const categoryIds = (data.categoryIds || []) as string[];
             const imageUrl = await getUrl(data.imageUrl, 'https://placehold.co/100x100.png');
             
             return {
@@ -149,9 +149,11 @@ export async function getFullCharmData(): Promise<{ charms: (Charm & { categoryN
                 name: data.name,
                 imageUrl: imageUrl,
                 description: data.description,
-                categoryId: categoryRef.id,
+                categoryIds: categoryIds,
                 price: data.price || 0,
-                categoryName: categoriesMap.get(categoryRef.id) || 'Uncategorized',
+                // The concept of a single categoryName is no longer accurate.
+                // We'll keep the property for compatibility but it may need to be handled differently in the UI.
+                categoryName: categoryIds.length > 0 ? categoriesMap.get(categoryIds[0]) || 'Uncategorized' : 'Uncategorized',
             };
         }));
         
