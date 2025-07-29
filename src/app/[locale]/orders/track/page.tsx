@@ -4,12 +4,12 @@
 
 import React from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { getOrderDetailsByNumber } from '@/app/actions';
+import { getOrderDetailsByNumber, getOrdersByEmail } from '@/app/actions';
 import { useTranslations } from '@/hooks/use-translations';
-import { Loader2, PackageCheck, Truck, Home, Package, AlertCircle, WandSparkles, ArrowLeft } from 'lucide-react';
+import { Loader2, PackageCheck, Truck, Home, Package, AlertCircle, WandSparkles, ArrowLeft, Mail, Info } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { Order, OrderItem, OrderStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -19,15 +19,28 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
-const initialState = { success: false, message: '', order: null };
+const initialOrderState = { success: false, message: '', order: null };
+const initialEmailState = { success: false, message: '', orders: null };
 
-function SubmitButton() {
+
+function TrackSubmitButton() {
     const { pending } = useFormStatus();
-    const t = useTranslations('HomePage');
+    const t = useTranslations('OrderStatus');
     return (
         <Button type="submit" className="w-full" disabled={pending}>
             {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {t('track_order_link')}
+            {t('track_button')}
+        </Button>
+    )
+}
+
+function EmailSubmitButton() {
+    const { pending } = useFormStatus();
+    const t = useTranslations('OrderStatus');
+    return (
+        <Button type="submit" className="w-full" disabled={pending}>
+            {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {t('find_orders_button')}
         </Button>
     )
 }
@@ -145,8 +158,10 @@ function OrderDetails({ order }: { order: Order }) {
 }
 
 export default function TrackOrderPage() {
-    const [state, formAction] = useFormState(getOrderDetailsByNumber, initialState);
+    const [orderState, orderAction] = useFormState(getOrderDetailsByNumber, initialOrderState);
+    const [emailState, emailAction] = useFormState(getOrdersByEmail, initialEmailState);
     const t = useTranslations('HomePage');
+    const tStatus = useTranslations('OrderStatus');
     const params = useParams();
     const locale = params.locale as string;
 
@@ -164,31 +179,81 @@ export default function TrackOrderPage() {
                 <CardHeader>
                     <CardTitle className="text-center text-2xl font-headline">{t('track_order_link')}</CardTitle>
                     <CardDescription className="text-center">
-                        Entrez votre numéro de commande pour voir son statut.
+                        {tStatus('track_description')}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form action={formAction} className="space-y-4">
+                    <form action={orderAction} className="space-y-4">
                         <Input
                             name="orderNumber"
-                            placeholder="ex: NAC-240726-AB12CD"
+                            placeholder={tStatus('order_number_placeholder')}
                             required
                         />
-                        <SubmitButton />
+                        <TrackSubmitButton />
                     </form>
-                    {state && !state.success && state.message && (
+                    {orderState && !orderState.success && orderState.message && (
                         <Alert variant="destructive" className="mt-4">
                             <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>Erreur</AlertTitle>
-                            <AlertDescription>{state.message}</AlertDescription>
+                            <AlertTitle>{tStatus('error_title')}</AlertTitle>
+                            <AlertDescription>{orderState.message}</AlertDescription>
                         </Alert>
                     )}
                 </CardContent>
             </Card>
 
-            {state.success && state.order && (
-                <OrderDetails order={state.order} />
+            {orderState.success && orderState.order && (
+                <OrderDetails order={orderState.order} />
             )}
+
+            <Separator className="my-12" />
+
+             <Card>
+                <CardHeader>
+                    <CardTitle className="text-center text-2xl font-headline">{tStatus('find_orders_title')}</CardTitle>
+                    <CardDescription className="text-center">
+                        {tStatus('find_orders_description')}
+                    </CardDescription>
+                </CardHeader>
+                 <form action={emailAction}>
+                    <CardContent className="space-y-4">
+                        <Input
+                            name="email"
+                            type="email"
+                            placeholder={tStatus('email_placeholder')}
+                            required
+                        />
+                         <EmailSubmitButton />
+                         {emailState && !emailState.success && emailState.message && (
+                            <Alert variant="destructive" className="mt-4">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertTitle>{tStatus('error_title')}</AlertTitle>
+                                <AlertDescription>{emailState.message}</AlertDescription>
+                            </Alert>
+                        )}
+                    </CardContent>
+                </form>
+                {emailState.success && emailState.orders && (
+                    <CardFooter className="flex-col items-start gap-4">
+                         <Alert>
+                            <Info className="h-4 w-4" />
+                            <AlertTitle>{tStatus('orders_found_title')}</AlertTitle>
+                            <AlertDescription>
+                                <ul className="mt-2 space-y-2">
+                                    {emailState.orders.map(order => (
+                                        <li key={order.id} className="flex justify-between items-center text-sm">
+                                           <div>
+                                                <span className="font-mono bg-muted p-1 rounded-md">{order.orderNumber}</span>
+                                                <span className="ml-4 text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</span>
+                                           </div>
+                                            <span className="font-medium">{tStatus(order.status)}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </AlertDescription>
+                        </Alert>
+                    </CardFooter>
+                )}
+            </Card>
         </div>
     );
 }

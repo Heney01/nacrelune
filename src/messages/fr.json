@@ -114,6 +114,15 @@
     "commandée": "Commandée",
     "en cours de préparation": "En préparation",
     "expédiée": "Expédiée",
-    "livrée": "Livrée"
+    "livrée": "Livrée",
+    "track_description": "Entrez votre numéro de commande pour voir son statut.",
+    "order_number_placeholder": "ex: NAC-240726-AB12CD",
+    "track_button": "Suivre la commande",
+    "error_title": "Erreur",
+    "find_orders_title": "Vous avez perdu votre numéro de commande ?",
+    "find_orders_description": "Entrez votre adresse e-mail pour retrouver vos numéros de commande.",
+    "email_placeholder": "votre.email@example.com",
+    "find_orders_button": "Retrouver mes commandes",
+    "orders_found_title": "Commandes trouvées"
   }
 }

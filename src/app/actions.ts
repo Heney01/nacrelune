@@ -5,7 +5,7 @@
 import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { revalidatePath } from 'next/cache';
 import { db, storage } from '@/lib/firebase';
-import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction, Timestamp, collectionGroup, documentId } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction, Timestamp, collectionGroup, documentId, orderBy } from 'firebase/firestore';
 import { ref, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
@@ -648,7 +648,6 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
             
             const enrichedCharms = (item.charmIds || []).map(id => {
                 const charm = charmsMap.get(id);
-                // The full charm object with its imageUrl is already fetched, no need for another getDownloadURL call here.
                 return charm;
             }).filter((c): c is Charm => !!c);
 
@@ -673,5 +672,42 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
     } catch (error) {
         console.error('Error fetching order:', error);
         return { success: false, message: "Une erreur est survenue lors de la recherche de la commande." };
+    }
+}
+
+export async function getOrdersByEmail(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; orders?: Omit<Order, 'items' | 'totalPrice'>[] | null }> {
+    const email = formData.get('email') as string;
+    
+    if (!email) {
+        return { success: false, message: "Veuillez fournir une adresse e-mail." };
+    }
+
+    try {
+        const q = query(
+            collection(db, 'orders'), 
+            where('customerEmail', '==', email.trim()),
+            orderBy('createdAt', 'desc')
+        );
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            return { success: false, message: "Aucune commande trouvée pour cet e-mail.", orders: null };
+        }
+
+        const orders: Omit<Order, 'items' | 'totalPrice'>[] = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                orderNumber: data.orderNumber,
+                createdAt: (data.createdAt as Timestamp).toDate(),
+                customerEmail: data.customerEmail,
+                status: data.status,
+            };
+        });
+        
+        return { success: true, message: `${orders.length} commande(s) trouvée(s).`, orders: orders };
+    } catch (error) {
+        console.error('Error fetching orders by email:', error);
+        return { success: false, message: "Une erreur est survenue lors de la recherche des commandes." };
     }
 }
