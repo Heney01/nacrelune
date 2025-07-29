@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, Search, ZoomIn } from 'lucide-react';
+import { Loader2, Search, ZoomIn, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Input } from './ui/input';
@@ -72,52 +72,50 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
     
     const renderCharmItem = (charm: Charm) => {
         const charmContent = (
-            <div
-                className="relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer"
-                title={charm.name}
-            >
-                <Image
-                    src={charm.imageUrl}
-                    alt={charm.name}
-                    width={48}
-                    height={48}
-                    className="pointer-events-none p-1"
-                    data-ai-hint="jewelry charm"
-                />
-                <p className="text-xs text-center mt-1 truncate">{charm.name}</p>
-                 {!isMobile && (
-                    <Dialog>
-                        <DialogTrigger asChild>
-                             <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); e.preventDefault() }}>
-                                <Button variant="ghost" size="icon" className="h-6 w-6">
-                                    <ZoomIn className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-md">
-                            <DialogHeader>
-                                <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
-                                <DialogDescription>{charm.description}</DialogDescription>
-                            </DialogHeader>
-                            <div className="mt-4 flex justify-center">
-                                <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
-                            </div>
-                            <div className="mt-6 flex justify-end">
-                                <DialogClose asChild>
-                                    <Button onClick={() => onAddCharm(charm)}>{t('add_to_design_button')}</Button>
-                                </DialogClose>
-                            </div>
-                        </DialogContent>
-                    </Dialog>
-                )}
-            </div>
+             <Dialog>
+                <div
+                    className="relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer"
+                    title={charm.name}
+                    onClick={() => onAddCharm(charm)}
+                >
+                    <Image
+                        src={charm.imageUrl}
+                        alt={charm.name}
+                        width={48}
+                        height={48}
+                        className="pointer-events-none p-1"
+                        data-ai-hint="jewelry charm"
+                    />
+                    <p className="text-xs text-center mt-1 truncate">{charm.name}</p>
+                    <DialogTrigger asChild>
+                         <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); e.preventDefault() }}>
+                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                                <ZoomIn className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </DialogTrigger>
+                </div>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
+                        <DialogDescription>{charm.description}</DialogDescription>
+                    </DialogHeader>
+                    <div className="mt-4 flex justify-center">
+                        <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                             <Button variant="outline">{t('close_button')}</Button>
+                        </DialogClose>
+                        <DialogClose asChild>
+                            <Button onClick={() => onAddCharm(charm)}><PlusCircle className="mr-2 h-4 w-4" />{t('add_to_design_button')}</Button>
+                        </DialogClose>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         );
 
-        if (isMobile) {
-            return <div key={charm.id} onClick={() => onAddCharm(charm)}>{charmContent}</div>
-        }
-        
-        return <div key={charm.id} onClick={() => onAddCharm(charm)}>{charmContent}</div>
+        return <div key={charm.id}>{charmContent}</div>
     };
     
     const renderCharmGrid = () => (

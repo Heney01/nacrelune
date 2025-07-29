@@ -14,7 +14,7 @@
     "model_selection_title": "Sélectionnez un Modèle",
     "model_selection_subtitle": "Sélectionnez un magnifique modèle de {jewelryTypeName} comme base pour votre création personnalisée.",
     "back_button": "Retour",
-    "select_button": "Sélectionctionner",
+    "select_button": "Sélectionner",
     "footer_text": "© {year} Nacrelune. Tous droits réservés.",
     "admin_area_link": "Espace Administrateur"
   },
@@ -61,7 +61,8 @@
     "search_placeholder": "Rechercher des breloques...",
     "add_to_design_button": "Ajouter à la création",
     "loading_error": "Erreur lors de la récupération des catégories de breloques",
-    "loading": "Chargement..."
+    "loading": "Chargement...",
+    "close_button": "Fermer"
   },
   "Admin": {
     "reorder_dialog_title": "Gérer la commande pour {itemName}",

@@ -61,7 +61,8 @@
     "search_placeholder": "Search charms...",
     "add_to_design_button": "Add to Design",
     "loading_error": "Error loading charm categories",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "close_button": "Close"
   },
   "Admin": {
     "reorder_dialog_title": "Manage Order for {itemName}",
