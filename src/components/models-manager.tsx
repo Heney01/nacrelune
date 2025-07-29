@@ -182,7 +182,7 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                 <TooltipTrigger>
                     <AlertTriangle className={cn(
                         'h-5 w-5',
-                        state === 'critical' ? 'text-red-500' : 'text-orange-500'
+                        state === 'critical' ? 'text-red-500' : 'text-yellow-500'
                     )} />
                 </TooltipTrigger>
                 <TooltipContent>

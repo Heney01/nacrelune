@@ -212,7 +212,7 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                 <TooltipTrigger>
                     <AlertTriangle className={cn(
                         'h-5 w-5',
-                        state === 'critical' ? 'text-red-500' : 'text-orange-500'
+                        state === 'critical' ? 'text-red-500' : 'text-yellow-500'
                     )} />
                 </TooltipTrigger>
                 <TooltipContent>
@@ -229,13 +229,9 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                     <Tag/> Gestion des Breloques & Catégories
                 </CardTitle>
                 <div className='flex gap-2'>
-                    <Button size="sm" variant="outline" onClick={handleAddCategoryClick}>
+                    <Button size="sm" onClick={handleAddCategoryClick}>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Ajouter une catégorie
-                    </Button>
-                    <Button size="sm" onClick={handleAddCharmClick}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Ajouter une breloque
                     </Button>
                 </div>
             </div>
@@ -247,7 +243,6 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                         return (
                             <AccordionItem value={category.id} key={category.id}>
                                 <div className="flex justify-between items-center w-full py-4 group">
-                                    <GripVertical className="h-5 w-5 text-muted-foreground mr-2" />
                                     <AccordionTrigger className="text-xl font-headline flex-1 py-0 hover:no-underline">
                                         <div className="flex items-center gap-4">
                                             {alertState !== 'none' && (
@@ -293,6 +288,10 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                     <div className="pl-8">
                                         <div className="flex justify-between items-center mb-4">
                                             <h4 className="font-semibold text-lg flex items-center gap-2"><WandSparkles className="h-5 w-5 text-primary" /> Breloques dans cette catégorie</h4>
+                                             <Button size="sm" variant="outline" onClick={handleAddCharmClick}>
+                                                <PlusCircle className="mr-2 h-4 w-4" />
+                                                Ajouter une breloque
+                                            </Button>
                                         </div>
                                         <Table>
                                             <TableHeader>
@@ -374,6 +373,9 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                         );
                     })}
                 </Accordion>
+                 {categories.length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">Commencez par ajouter une catégorie.</p>
+                )}
             </div>
             {isCategoryFormOpen && (
                 <CharmCategoryForm
