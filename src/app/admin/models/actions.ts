@@ -64,7 +64,7 @@ async function deleteImage(imageUrl: string) {
 }
 
 
-async function uploadImage(file: { dataUrl: string, name: string } | string | null, folder: string, oldImageUrl?: string) {
+async function uploadImage(file: { dataUrl: string, name: string } | string | null, folder: string, oldImageUrl?: string): Promise<string | null> {
     // If file is a string, it's the existing URL. No change.
     if (typeof file === 'string') return file;
     
@@ -81,7 +81,6 @@ async function uploadImage(file: { dataUrl: string, name: string } | string | nu
 
     const storageRef = ref(storage, `${folder}/${Date.now()}_${file.name}`);
     await uploadString(storageRef, file.dataUrl, 'data_url');
-    // Return the full path for future reference (deletion)
     const url = await getDownloadURL(storageRef);
     return url;
 }
@@ -152,8 +151,8 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{me
 export async function deleteModel(jewelryTypeId: string, modelId: string, displayImageUrl: string, editorImageUrl: string) {
     try {
         // First, delete the images from storage.
-        await deleteImage(displayImageUrl);
-        await deleteImage(editorImageUrl);
+        if (displayImageUrl) await deleteImage(displayImageUrl);
+        if (editorImageUrl) await deleteImage(editorImageUrl);
 
         // Then, delete the document from Firestore.
         await deleteDoc(doc(db, jewelryTypeId, modelId));
