@@ -64,3 +64,22 @@ export interface GeneralPreferences {
   alertThreshold: number;
   criticalThreshold: number;
 }
+
+export type OrderStatus = 'commandée' | 'en cours de préparation' | 'expédiée' | 'livrée';
+
+export interface OrderItem {
+    modelId: string;
+    modelName: string;
+    jewelryTypeName: string;
+    charmIds: string[];
+    price: number;
+    previewImageUrl: string;
+}
+
+export interface Order {
+    id: string;
+    createdAt: Date;
+    totalPrice: number;
+    items: OrderItem[];
+    status: OrderStatus;
+}

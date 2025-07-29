@@ -11,7 +11,7 @@ import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
-import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem } from '@/lib/types';
+import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus } from '@/lib/types';
 
 
 export async function getCharmSuggestions(
@@ -548,10 +548,13 @@ export async function createOrder(cartItems: CartItem[]): Promise<{ success: boo
             };
         });
         
+        const initialStatus: OrderStatus = 'commandée';
+        
         const orderData = {
             createdAt: serverTimestamp(),
             totalPrice: totalOrderPrice,
             items: orderItems,
+            status: initialStatus,
         };
 
         // Step 3: Create the order document in Firestore
