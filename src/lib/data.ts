@@ -248,6 +248,8 @@ export async function getOrders(): Promise<Order[]> {
                 totalPrice: data.totalPrice,
                 status: data.status,
                 items: enrichedItems,
+                shippingCarrier: data.shippingCarrier,
+                trackingNumber: data.trackingNumber,
             };
         });
 

@@ -667,6 +667,8 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
             totalPrice: orderData.totalPrice,
             items: enrichedItems,
             status: orderData.status,
+            shippingCarrier: orderData.shippingCarrier,
+            trackingNumber: orderData.trackingNumber,
         };
         
         return { success: true, message: "Commande trouvée.", order: order };
@@ -719,6 +721,8 @@ export async function getOrders(): Promise<Order[]> {
                 totalPrice: data.totalPrice,
                 status: data.status,
                 items: data.items, // Items are not fully enriched here
+                shippingCarrier: data.shippingCarrier,
+                trackingNumber: data.trackingNumber,
             };
         });
         return orders;
@@ -739,11 +743,24 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
 
     try {
         const orderRef = doc(db, 'orders', orderId);
-        await updateDoc(orderRef, { status: newStatus });
+        
+        const dataToUpdate: { status: OrderStatus; shippingCarrier?: string; trackingNumber?: string } = {
+            status: newStatus
+        };
+
+        if (newStatus === 'expédiée') {
+            const shippingCarrier = formData.get('shippingCarrier') as string;
+            const trackingNumber = formData.get('trackingNumber') as string;
+            if (!shippingCarrier || !trackingNumber) {
+                return { success: false, message: "Le transporteur et le numéro de suivi sont obligatoires pour une expédition." };
+            }
+            dataToUpdate.shippingCarrier = shippingCarrier;
+            dataToUpdate.trackingNumber = trackingNumber;
+        }
+
+        await updateDoc(orderRef, dataToUpdate);
 
         revalidatePath(`/${locale}/admin/dashboard`);
-        // Potentially revalidate the specific order page if it exists
-        // revalidatePath(`/${locale}/admin/orders/${orderId}`);
         return { success: true, message: "Le statut de la commande a été mis à jour." };
     } catch (error) {
         console.error("Error updating order status:", error);

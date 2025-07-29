@@ -6,7 +6,7 @@ import React, { useState, useReducer, useTransition, Fragment } from 'react';
 import type { Order, OrderStatus, OrderItem, Charm } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from './ui/card';
-import { Package, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { Package, Search, ChevronDown, ChevronUp, Truck } from 'lucide-react';
 import { useTranslations } from '@/hooks/use-translations';
 import { Badge } from './ui/badge';
 import { updateOrderStatus, updateOrderItemStatus } from '@/app/actions';
@@ -25,17 +25,21 @@ import { Separator } from './ui/separator';
 import Image from 'next/image';
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface OrdersManagerProps {
     initialOrders: Order[];
     locale: string;
 }
 
+const SHIPPING_CARRIERS = ["Colissimo", "Chronopost", "DPD", "Mondial Relay", "GLS", "Colis Privé", "DHL", "UPS", "FedEx"];
+
 type State = Order[];
 
 type Action = {
     type: 'UPDATE_STATUS';
-    payload: { orderId: string; newStatus: OrderStatus };
+    payload: { orderId: string; newStatus: OrderStatus, shippingInfo?: { carrier: string, trackingNumber: string} };
 } | {
     type: 'UPDATE_ITEM_STATUS';
     payload: { orderId: string; itemIndex: number; isCompleted: boolean };
@@ -46,7 +50,12 @@ const ordersReducer = (state: State, action: Action): State => {
         case 'UPDATE_STATUS':
             return state.map(order => 
                 order.id === action.payload.orderId 
-                    ? { ...order, status: action.payload.newStatus }
+                    ? { 
+                        ...order, 
+                        status: action.payload.newStatus,
+                        shippingCarrier: action.payload.shippingInfo?.carrier ?? order.shippingCarrier,
+                        trackingNumber: action.payload.shippingInfo?.trackingNumber ?? order.trackingNumber,
+                      }
                     : order
             );
         case 'UPDATE_ITEM_STATUS':
@@ -74,16 +83,87 @@ const statusVariants: { [key in OrderStatus]: string } = {
     'livrée': 'bg-green-100 text-green-800 border-green-200',
 }
 
+const ShipOrderDialog = ({
+    order,
+    isOpen,
+    onOpenChange,
+    onConfirm,
+    t
+}: {
+    order: Order,
+    isOpen: boolean,
+    onOpenChange: (isOpen: boolean) => void,
+    onConfirm: (trackingNumber: string, shippingCarrier: string) => void,
+    t: (key: string, values?: any) => string
+}) => {
+    const [trackingNumber, setTrackingNumber] = useState('');
+    const [shippingCarrier, setShippingCarrier] = useState('');
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onConfirm(trackingNumber, shippingCarrier);
+        onOpenChange(false);
+    }
+    
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <form onSubmit={handleSubmit}>
+                    <DialogHeader>
+                        <DialogTitle>{t('ship_order_dialog_title')} {order.orderNumber}</DialogTitle>
+                        <DialogDescription>
+                            {t('ship_order_dialog_description')}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="shippingCarrier">{t('shipping_carrier')}</Label>
+                            <Select onValueChange={setShippingCarrier} required>
+                                <SelectTrigger id="shippingCarrier">
+                                    <SelectValue placeholder={t('select_carrier_placeholder')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {SHIPPING_CARRIERS.map(carrier => (
+                                        <SelectItem key={carrier} value={carrier}>{carrier}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="trackingNumber">{t('tracking_number')}</Label>
+                            <Input 
+                                id="trackingNumber" 
+                                value={trackingNumber}
+                                onChange={(e) => setTrackingNumber(e.target.value)}
+                                required 
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{t('cancel')}</Button>
+                        <Button type="submit">{t('confirm_shipping_button')}</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 const OrderRow = ({ order, locale, onStatusChange, onItemStatusChange, t, tStatus, isPending }: {
     order: Order,
     locale: string,
-    onStatusChange: (orderId: string, status: OrderStatus) => void,
+    onStatusChange: (orderId: string, status: OrderStatus, shippingInfo?: { carrier: string, trackingNumber: string}) => void,
     onItemStatusChange: (orderId: string, itemIndex: number, isCompleted: boolean) => void,
     t: (key: string, values?: any) => string,
     tStatus: (key: string, values?: any) => string,
     isPending: boolean
 }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [isShipDialogOpen, setIsShipDialogOpen] = useState(false);
+    
+    const handleShipConfirm = (trackingNumber: string, shippingCarrier: string) => {
+        onStatusChange(order.id, 'expédiée', { carrier: shippingCarrier, trackingNumber });
+    }
 
     return (
         <Fragment>
@@ -113,7 +193,13 @@ const OrderRow = ({ order, locale, onStatusChange, onItemStatusChange, t, tStatu
                                 {(['commandée', 'en cours de préparation', 'expédiée', 'livrée'] as OrderStatus[]).map(status => (
                                      <DropdownMenuItem 
                                         key={status} 
-                                        onClick={() => onStatusChange(order.id, status)}
+                                        onClick={() => {
+                                            if (status === 'expédiée') {
+                                                setIsShipDialogOpen(true);
+                                            } else {
+                                                onStatusChange(order.id, status)
+                                            }
+                                        }}
                                         disabled={order.status === status}
                                     >
                                         {t('update_status_to', { status: tStatus(status) })}
@@ -121,7 +207,7 @@ const OrderRow = ({ order, locale, onStatusChange, onItemStatusChange, t, tStatu
                                 ))}
                             </DropdownMenuContent>
                         </DropdownMenu>
-                        <Button variant="ghost" size="icon" className="ml-2">
+                        <Button variant="ghost" size="icon" className="ml-2" onClick={() => setIsOpen(!isOpen)}>
                              {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </Button>
                     </div>
@@ -132,6 +218,21 @@ const OrderRow = ({ order, locale, onStatusChange, onItemStatusChange, t, tStatu
                     <TableCell colSpan={6} className="p-0">
                        <div className="bg-muted/50 p-6">
                             <h4 className="text-lg font-semibold mb-4">Atelier de confection - Commande {order.orderNumber}</h4>
+                             {order.shippingCarrier && order.trackingNumber && (
+                                <div className="mb-6">
+                                    <h5 className="font-semibold mb-2 text-md flex items-center gap-2"><Truck className="h-5 w-5 text-primary" /> Informations d'expédition</h5>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-background p-4 rounded-lg border">
+                                        <div>
+                                            <p className="text-sm font-medium text-muted-foreground">Transporteur</p>
+                                            <p>{order.shippingCarrier}</p>
+                                        </div>
+                                         <div>
+                                            <p className="text-sm font-medium text-muted-foreground">Numéro de suivi</p>
+                                            <p className="font-mono">{order.trackingNumber}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                                 {order.items.map((item, index) => (
                                     <Card key={index} className={cn("overflow-hidden", item.isCompleted && "bg-green-50 border-green-200")}>
@@ -196,6 +297,13 @@ const OrderRow = ({ order, locale, onStatusChange, onItemStatusChange, t, tStatu
                     </TableCell>
                 </TableRow>
             )}
+            <ShipOrderDialog
+                order={order}
+                isOpen={isShipDialogOpen}
+                onOpenChange={setIsShipDialogOpen}
+                onConfirm={handleShipConfirm}
+                t={t}
+            />
         </Fragment>
     );
 };
@@ -212,16 +320,20 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
 
     const [searchTerm, setSearchTerm] = useState('');
 
-    const handleStatusChange = (orderId: string, status: OrderStatus) => {
+    const handleStatusChange = (orderId: string, status: OrderStatus, shippingInfo?: { carrier: string; trackingNumber: string; }) => {
         const formData = new FormData();
         formData.append('orderId', orderId);
         formData.append('status', status);
         formData.append('locale', locale);
+        if (shippingInfo) {
+            formData.append('shippingCarrier', shippingInfo.carrier);
+            formData.append('trackingNumber', shippingInfo.trackingNumber);
+        }
 
         startTransition(async () => {
             const result = await updateOrderStatus(formData);
             if (result.success) {
-                dispatch({ type: 'UPDATE_STATUS', payload: { orderId, newStatus: status }});
+                dispatch({ type: 'UPDATE_STATUS', payload: { orderId, newStatus: status, shippingInfo }});
                 toast({ title: 'Succès', description: result.message });
             } else {
                 toast({ title: 'Erreur', description: result.message, variant: 'destructive' });

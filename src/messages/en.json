@@ -81,7 +81,24 @@
     "stock_ok": "Stock OK",
     "order_management": "Order Management",
     "restock": "Restock",
-    "restocked_quantity": "Quantity Received"
+    "restocked_quantity": "Quantity Received",
+    "orders_title": "Order Management",
+    "orders_description": "View and manage all customer orders.",
+    "order_number": "Order #",
+    "date": "Date",
+    "customer": "Customer",
+    "total": "Total",
+    "status": "Status",
+    "actions": "Actions",
+    "view_order": "View order",
+    "update_status_to": "Update status to: {status}",
+    "no_orders": "No orders found.",
+    "ship_order_dialog_title": "Ship Order",
+    "ship_order_dialog_description": "Please enter the shipping details for this order.",
+    "shipping_carrier": "Shipping Carrier",
+    "select_carrier_placeholder": "Select a carrier...",
+    "tracking_number": "Tracking Number",
+    "confirm_shipping_button": "Confirm Shipping"
   },
   "Checkout": {
     "title": "Checkout",
@@ -125,6 +142,10 @@
     "find_orders_button": "Find My Orders",
     "orders_found_title": "Orders Found",
     "email_sent_title": "Request Processed",
-    "email_sent_description": "If any orders are associated with this email address, an email with your order numbers has been sent."
+    "email_sent_description": "If any orders are associated with this email address, an email with your order numbers has been sent.",
+    "shipping_details_title": "Shipping Details",
+    "shipping_carrier": "Carrier",
+    "tracking_number": "Tracking Number",
+    "tracking_number_copied": "Tracking number copied!"
   }
 }

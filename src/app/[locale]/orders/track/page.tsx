@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React from 'react';
@@ -9,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getOrderDetailsByNumber, getOrdersByEmail } from '@/app/actions';
 import { useTranslations } from '@/hooks/use-translations';
-import { Loader2, PackageCheck, Truck, Home, Package, AlertCircle, WandSparkles, ArrowLeft, Mail, Info } from 'lucide-react';
+import { Loader2, PackageCheck, Truck, Home, Package, AlertCircle, WandSparkles, ArrowLeft, Mail, Info, Copy } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { Order, OrderItem, OrderStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -18,6 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
 
 const initialOrderState = { success: false, message: '', order: null };
 const initialEmailState = { success: false, message: '', orders: null };
@@ -92,9 +92,50 @@ function OrderStatusTracker({ status }: { status: OrderStatus }) {
     );
 }
 
+function ShippingInfo({ order, t }: { order: Order, t: (key: string, values?: any) => string}) {
+    const { toast } = useToast();
+    
+    if (order.status !== 'expédiée' && order.status !== 'livrée') {
+        return null;
+    }
+
+    if (!order.shippingCarrier || !order.trackingNumber) {
+        return null;
+    }
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(order.trackingNumber!);
+        toast({
+            description: t('tracking_number_copied'),
+        });
+    };
+
+    return (
+        <div className="mt-6 border-t pt-6">
+            <h3 className="font-semibold text-lg mb-4">{t('shipping_details_title')}</h3>
+            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start bg-muted/50 p-4 rounded-lg">
+                <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">{t('shipping_carrier')}</p>
+                    <p className="font-medium">{order.shippingCarrier}</p>
+                </div>
+                <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">{t('tracking_number')}</p>
+                    <div className="flex items-center gap-2">
+                        <p className="font-medium font-mono">{order.trackingNumber}</p>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCopy}>
+                            <Copy className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function OrderDetails({ order }: { order: Order }) {
     const tCheckout = useTranslations('Checkout');
     const tCart = useTranslations('Cart');
+    const tStatus = useTranslations('OrderStatus');
     const formatPrice = (price: number) => tCart('price', { price });
 
     return (
@@ -107,6 +148,7 @@ function OrderDetails({ order }: { order: Order }) {
             </CardHeader>
             <CardContent>
                 <OrderStatusTracker status={order.status} />
+                <ShippingInfo order={order} t={tStatus} />
                 <Separator className="my-6" />
                 <div className="space-y-4">
                     <h3 className="font-semibold text-lg">Détails de votre commande</h3>

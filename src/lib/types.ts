@@ -89,4 +89,6 @@ export interface Order {
     totalPrice: number;
     items: OrderItem[];
     status: OrderStatus;
+    shippingCarrier?: string;
+    trackingNumber?: string;
 }

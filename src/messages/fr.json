@@ -92,7 +92,13 @@
     "actions": "Actions",
     "view_order": "Voir la commande",
     "update_status_to": "Mettre à jour le statut vers : {status}",
-    "no_orders": "Aucune commande trouvée."
+    "no_orders": "Aucune commande trouvée.",
+    "ship_order_dialog_title": "Expédier la Commande",
+    "ship_order_dialog_description": "Veuillez entrer les détails d'expédition pour cette commande.",
+    "shipping_carrier": "Transporteur",
+    "select_carrier_placeholder": "Sélectionnez un transporteur...",
+    "tracking_number": "Numéro de suivi",
+    "confirm_shipping_button": "Confirmer l'expédition"
   },
   "Checkout": {
     "title": "Paiement",
@@ -136,6 +142,10 @@
     "find_orders_button": "Retrouver mes commandes",
     "orders_found_title": "Commandes trouvées",
     "email_sent_title": "Demande traitée",
-    "email_sent_description": "Si des commandes sont associées à cette adresse e-mail, un e-mail contenant vos numéros de commande vous a été envoyé."
+    "email_sent_description": "Si des commandes sont associées à cette adresse e-mail, un e-mail contenant vos numéros de commande vous a été envoyé.",
+    "shipping_details_title": "Détails de l'expédition",
+    "shipping_carrier": "Transporteur",
+    "tracking_number": "Numéro de suivi",
+    "tracking_number_copied": "Numéro de suivi copié !"
   }
 }
