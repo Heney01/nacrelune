@@ -23,6 +23,7 @@ import { useTranslations } from '@/hooks/use-translations';
 import { useParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { createOrder } from '@/app/actions';
+import { CheckoutDialog } from './checkout-dialog';
 
 export function CartSheet({ children, open, onOpenChange }: {
   children?: ReactNode;
@@ -35,6 +36,7 @@ export function CartSheet({ children, open, onOpenChange }: {
   const locale = params.locale as string;
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   const totalItems = cart.length;
   
@@ -58,6 +60,7 @@ export function CartSheet({ children, open, onOpenChange }: {
           description: result.message,
         });
         clearCart();
+        setIsCheckoutOpen(false); // Close checkout dialog on success
       } else {
         throw new Error(result.message);
       }
@@ -73,6 +76,7 @@ export function CartSheet({ children, open, onOpenChange }: {
   };
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       {children && <SheetTrigger asChild>{children}</SheetTrigger>}
       <SheetContent className="flex flex-col">
@@ -195,7 +199,7 @@ export function CartSheet({ children, open, onOpenChange }: {
                   <span>{t('total')}</span>
                   <span>{formatPrice(totalPrice)}</span>
                 </div>
-                  <Button className="w-full" disabled={totalItems === 0 || isProcessing} onClick={handleCheckout}>
+                  <Button className="w-full" disabled={totalItems === 0 || isProcessing} onClick={() => setIsCheckoutOpen(true)}>
                      {isProcessing ? <Loader2 className="animate-spin" /> : t('checkout_button')}
                   </Button>
               </div>
@@ -204,5 +208,12 @@ export function CartSheet({ children, open, onOpenChange }: {
         )}
       </SheetContent>
     </Sheet>
+    <CheckoutDialog 
+        isOpen={isCheckoutOpen} 
+        onOpenChange={setIsCheckoutOpen}
+        onConfirm={handleCheckout}
+        isProcessing={isProcessing}
+    />
+    </>
   );
 }

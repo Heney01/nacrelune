@@ -81,5 +81,27 @@
     "order_management": "Gestion de commande",
     "restock": "Réapprovisionner",
     "restocked_quantity": "Quantité reçue"
+  },
+  "Checkout": {
+    "title": "Paiement",
+    "description": "Veuillez remplir vos informations pour finaliser la commande.",
+    "order_summary": "Résumé de la commande",
+    "shipping_info": "Informations de livraison",
+    "payment_info": "Informations de paiement",
+    "full_name": "Nom complet",
+    "address": "Adresse",
+    "city": "Ville",
+    "postal_code": "Code postal",
+    "country": "Pays",
+    "card_number": "Numéro de carte",
+    "expiry_date": "Date d'expiration (MM/AA)",
+    "cvc": "CVC",
+    "payment_simulation_notice": "Ceci est une simulation. N'entrez pas de vraies informations de carte.",
+    "subtotal": "Sous-total",
+    "shipping": "Livraison",
+    "total": "Total",
+    "shipping_cost_free": "Gratuite",
+    "confirm_order_button": "Confirmer la commande",
+    "processing_button": "Traitement en cours..."
   }
 }
