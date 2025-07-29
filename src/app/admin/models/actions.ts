@@ -67,7 +67,6 @@ async function deleteImage(imageUrl: string) {
     }
 }
 
-
 async function uploadImage(fileData: any, folder: string, oldImageUrl?: string): Promise<string | null> {
     let file: { dataUrl: string, name: string } | null = null;
     if (typeof fileData === 'string') {
@@ -180,25 +179,45 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{me
   }
 }
 
-export async function deleteModel(jewelryTypeId: string, modelId: string, displayImageUrl: string, editorImageUrl: string): Promise<{ success: boolean; message: string; }> {
-    try {
-        console.log(`--- deleteModel action started for modelId: ${modelId} ---`);
-        // First, delete the images from storage.
-        if (displayImageUrl) await deleteImage(displayImageUrl);
-        if (editorImageUrl) await deleteImage(editorImageUrl);
+export async function deleteModel(
+  jewelryTypeId: string, 
+  modelId: string, 
+  displayImageUrl: string, 
+  editorImageUrl: string
+): Promise<string> {
+  console.log('=== deleteModel SERVER ACTION START ===');
+  console.log('deleteModel called with parameters:', { jewelryTypeId, modelId });
 
-        // Then, delete the document from Firestore.
-        console.log(`Deleting document from Firestore: ${jewelryTypeId}/${modelId}`);
-        await deleteDoc(doc(db, jewelryTypeId, modelId));
-        console.log("Document deleted from Firestore.");
+  if (!jewelryTypeId || !modelId) {
+    const errorMsg = 'jewelryTypeId et modelId sont requis';
+    console.error('Validation error:', errorMsg);
+    return JSON.stringify({ success: false, message: errorMsg });
+  }
 
-        console.log("Revalidating paths...");
-        revalidatePath('/', 'layout');
-        revalidatePath('/admin/dashboard');
-        console.log("--- deleteModel action finished successfully ---");
-        return { success: true, message: 'Modèle supprimé avec succès.' };
-    } catch (e: any) {
-        console.error("--- Error in deleteModel action ---", e);
-        return { success: false, message: `Erreur lors de la suppression: ${e.message}` };
+  try {
+    console.log('Step 1: Deleting images from storage...');
+    if (displayImageUrl) {
+      await deleteImage(displayImageUrl);
     }
+    if (editorImageUrl) {
+      await deleteImage(editorImageUrl);
+    }
+
+    console.log('Step 2: Deleting document from Firestore...');
+    const docRef = doc(db, jewelryTypeId, modelId);
+    await deleteDoc(docRef);
+    console.log("Document successfully deleted from Firestore.");
+
+    console.log("Step 3: Revalidating paths...");
+    revalidatePath('/', 'layout');
+    revalidatePath('/admin/dashboard');
+    
+    console.log("=== deleteModel SERVER ACTION SUCCESS ===");
+    return JSON.stringify({ success: true, message: 'Modèle supprimé avec succès.' });
+      
+  } catch (error: any) {
+    console.error("=== ERROR in deleteModel SERVER ACTION ===", error);
+    const errorMessage = error.message || 'Erreur inconnue lors de la suppression';
+    return JSON.stringify({ success: false, message: `Erreur lors de la suppression: ${errorMessage}` });
+  }
 }

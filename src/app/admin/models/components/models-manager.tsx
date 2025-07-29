@@ -12,6 +12,7 @@ import Image from 'next/image';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { deleteModel } from '../actions';
 import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 interface ModelsManagerProps {
     initialJewelryTypes: Omit<JewelryType, 'icon'>[];
@@ -21,7 +22,9 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [selectedJewelryType, setSelectedJewelryType] = useState<Omit<JewelryType, 'models'|'icon'>>(initialJewelryTypes[0]);
     const [selectedModel, setSelectedModel] = useState<JewelryModel | null>(null);
+    const [isDeleting, setIsDeleting] = useState<string | null>(null);
     const { toast } = useToast();
+    const router = useRouter();
 
     const handleAddModelClick = (jewelryType: Omit<JewelryType, 'models'|'icon'>) => {
         setSelectedJewelryType(jewelryType);
@@ -36,26 +39,58 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
     };
 
     const handleDeleteModel = async (jewelryType: Omit<JewelryType, 'models'|'icon'>, model: JewelryModel) => {
+        console.log('=== handleDeleteModel START ===');
+        console.log('handleDeleteModel called with:', { 
+            jewelryTypeId: jewelryType.id, 
+            modelId: model.id,
+            modelName: model.name,
+            displayImageUrl: model.displayImageUrl,
+            editorImageUrl: model.editorImageUrl
+        });
+        
+        if (isDeleting === model.id) return;
+        setIsDeleting(model.id);
+        
         try {
-            const result = await deleteModel(jewelryType.id, model.id, model.displayImageUrl, model.editorImageUrl);
-             if (result?.success) {
-                toast({
-                    title: 'Succès',
-                    description: result.message,
-                });
+            console.log('Calling deleteModel action...');
+            const resultString = await deleteModel(
+                jewelryType.id, 
+                model.id, 
+                model.displayImageUrl || '', 
+                model.editorImageUrl || ''
+            );
+            console.log('deleteModel result string:', resultString);
+
+            if (typeof resultString === 'string') {
+                 const result = JSON.parse(resultString);
+                if (result.success) {
+                    console.log('Delete successful, showing success toast');
+                    toast({
+                        title: 'Succès',
+                        description: result.message,
+                    });
+                    router.refresh();
+                } else {
+                    console.error('Delete failed:', result);
+                    toast({
+                        variant: 'destructive',
+                        title: 'Erreur',
+                        description: result?.message || 'Une erreur inconnue est survenue.',
+                    });
+                }
             } else {
-                toast({
-                    variant: 'destructive',
-                    title: 'Erreur',
-                    description: result?.message || 'Une erreur inconnue est survenue.',
-                });
+                 throw new Error("La réponse du serveur n'est pas valide.");
             }
         } catch (error) {
-             toast({
+            console.error('Exception in handleDeleteModel:', error);
+            toast({
                 variant: 'destructive',
                 title: 'Erreur',
-                description: 'Une erreur inattendue est survenue lors de la suppression.',
+                description: `Une erreur inattendue est survenue: ${error instanceof Error ? error.message : 'Erreur inconnue'}`,
             });
+        } finally {
+            setIsDeleting(null);
+            console.log('=== handleDeleteModel END ===');
         }
     };
 
@@ -99,13 +134,23 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
                                            <TableCell className="font-medium">{model.name}</TableCell>
                                            <TableCell>{model.price}€</TableCell>
                                            <TableCell className="text-right">
-                                               <Button variant="ghost" size="icon" onClick={() => handleEditModelClick(jewelryType, model)}>
+                                               <Button 
+                                                   variant="ghost" 
+                                                   size="icon" 
+                                                   onClick={() => handleEditModelClick(jewelryType, model)}
+                                                   disabled={isDeleting === model.id}
+                                               >
                                                    <Edit className="h-4 w-4" />
                                                </Button>
                                                
                                                 <AlertDialog>
                                                     <AlertDialogTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="icon" 
+                                                            className="text-destructive hover:text-destructive"
+                                                            disabled={isDeleting === model.id}
+                                                        >
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>
                                                     </AlertDialogTrigger>
@@ -120,13 +165,14 @@ export function ModelsManager({ initialJewelryTypes }: ModelsManagerProps) {
                                                             <AlertDialogCancel>Annuler</AlertDialogCancel>
                                                             <AlertDialogAction
                                                                 className="bg-destructive hover:bg-destructive/90"
-                                                                onClick={() => handleDeleteModel(jewelryType, model)}>
-                                                                Supprimer
+                                                                disabled={isDeleting === model.id}
+                                                                onClick={() => handleDeleteModel(jewelryType, model)}
+                                                            >
+                                                                {isDeleting === model.id ? 'Suppression...' : 'Supprimer'}
                                                             </AlertDialogAction>
                                                         </AlertDialogFooter>
                                                     </AlertDialogContent>
                                                 </AlertDialog>
-
                                            </TableCell>
                                        </TableRow>
                                    ))}
