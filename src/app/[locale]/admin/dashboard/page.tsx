@@ -10,12 +10,13 @@ import { ModelsManager } from "@/components/models-manager";
 import { CharmsManager } from "@/components/charms-manager";
 import { PreferencesManager } from "@/components/preferences-manager";
 import { OrdersManager } from "@/components/orders-manager";
-import { Gem, User, Wrench, ChevronRight, ArrowLeft, Settings, AlertTriangle, Package } from "lucide-react";
-import type { JewelryType, Charm, CharmCategory, GeneralPreferences, Order } from "@/lib/types";
+import { Gem, User, Wrench, ChevronRight, ArrowLeft, Settings, AlertTriangle, Package, PackageCheck, CookingPot } from "lucide-react";
+import type { JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderStatus } from "@/lib/types";
 import Link from "next/link";
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useTranslations } from '@/hooks/use-translations';
 
 interface AdminDashboardProps {
     locale: string;
@@ -48,12 +49,16 @@ const getCharmsAlertState = (
     return 'none';
 };
 
-const getOrdersAlertState = (orders: Order[]): 'alert' | 'none' => {
-    if (orders.some(o => o.status === 'commandée' || o.status === 'en cours de préparation')) {
-        return 'alert';
+const getOrdersAlertCounts = (orders: Order[]): { [key in OrderStatus]?: number } => {
+    const counts: { [key in OrderStatus]?: number } = {};
+    for (const order of orders) {
+        if (order.status === 'commandée' || order.status === 'en cours de préparation') {
+            counts[order.status] = (counts[order.status] || 0) + 1;
+        }
     }
-    return 'none';
+    return counts;
 };
+
 
 const AlertIcon = ({ state, message }: { state: 'critical' | 'alert', message: string }) => (
     <TooltipProvider>
@@ -75,6 +80,7 @@ const AlertIcon = ({ state, message }: { state: 'critical' | 'alert', message: s
 function AdminDashboardClient({ locale }: AdminDashboardProps) {
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const tStatus = useTranslations('OrderStatus');
   const [initialData, setInitialData] = useState<{
     jewelryTypes: Omit<JewelryType, 'icon'>[],
     charms: (Charm & { categoryName?: string; })[],
@@ -112,7 +118,41 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
   
   const modelsAlertState = getModelsAlertState(jewelryTypes, preferences);
   const charmsAlertState = getCharmsAlertState(charms, preferences);
-  const ordersAlertState = getOrdersAlertState(orders);
+  const ordersAlertCounts = getOrdersAlertCounts(orders);
+
+  const OrderStatusIndicator = ({status, count}: {status: OrderStatus, count: number}) => {
+    const ICONS: Record<OrderStatus, React.ElementType> = {
+        'commandée': PackageCheck,
+        'en cours de préparation': CookingPot,
+        'expédiée': Truck, // Fallback
+        'livrée': Gem, // Fallback
+        'annulée': AlertTriangle // Fallback
+    }
+    const COLORS: Record<OrderStatus, string> = {
+        'commandée': 'text-blue-600 bg-blue-100',
+        'en cours de préparation': 'text-yellow-600 bg-yellow-100',
+        'expédiée': '',
+        'livrée': '',
+        'annulée': '',
+    }
+    const Icon = ICONS[status];
+    
+    return (
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger>
+                     <div className={cn("flex items-center gap-2 text-sm font-medium p-1 pr-2 rounded-full", COLORS[status])}>
+                        <Icon className="h-4 w-4" />
+                        <span>{count}</span>
+                    </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>{count} {count > 1 ? 'commandes' : 'commande'} {tStatus(status).toLowerCase()}</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+    )
+  }
 
 
   const adminSections = [
@@ -143,7 +183,7 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
       icon: Package,
       component: <OrdersManager initialOrders={orders} locale={locale} />,
       disabled: false,
-      alertState: ordersAlertState,
+      alertState: (ordersAlertCounts['commandée'] || ordersAlertCounts['en cours de préparation']) ? 'alert' : 'none',
       alertMessage: "Des commandes sont en attente de préparation.",
     },
     {
@@ -211,12 +251,20 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
                                 <div>
                                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                                         <CardTitle className="text-lg font-medium flex items-center gap-2">
-                                            {section.alertState !== 'none' && (
+                                            {section.alertState !== 'none' && section.value !== 'orders' && (
                                                 <AlertIcon state={section.alertState as 'alert' | 'critical'} message={section.alertMessage} />
                                             )}
                                             {section.title}
                                         </CardTitle>
-                                        <section.icon className="h-5 w-5 text-muted-foreground" />
+                                        <div className="flex items-center gap-2">
+                                            {section.value === 'orders' && ordersAlertCounts['commandée'] && (
+                                                <OrderStatusIndicator status="commandée" count={ordersAlertCounts['commandée']} />
+                                            )}
+                                             {section.value === 'orders' && ordersAlertCounts['en cours de préparation'] && (
+                                                <OrderStatusIndicator status="en cours de préparation" count={ordersAlertCounts['en cours de préparation']} />
+                                            )}
+                                            <section.icon className="h-5 w-5 text-muted-foreground" />
+                                        </div>
                                     </CardHeader>
                                     <CardContent>
                                         <p className="text-sm text-muted-foreground">
@@ -250,3 +298,5 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
 export default function AdminDashboard({ params }: { params: { locale: string }}) {
   return <AdminDashboardClient locale={params.locale} />;
 }
+
+    
