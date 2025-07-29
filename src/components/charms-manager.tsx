@@ -4,8 +4,8 @@
 import React, { useState, useReducer, useTransition, useMemo } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Tag, WandSparkles, GripVertical, ZoomIn } from "lucide-react";
-import type { Charm, CharmCategory } from "@/lib/types";
+import { PlusCircle, Edit, Trash2, Tag, WandSparkles, GripVertical, ZoomIn, AlertTriangle } from "lucide-react";
+import type { Charm, CharmCategory, GeneralPreferences } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
 import { 
@@ -32,11 +32,14 @@ import { Card, CardHeader, CardTitle } from './ui/card';
 import { CharmCategoryForm } from './charm-category-form';
 import { CharmForm } from './charm-form';
 import { deleteCharmCategory, deleteCharm } from '@/app/actions';
+import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 interface CharmsManagerProps {
     initialCharms: (Charm & { categoryName?: string })[];
     initialCharmCategories: CharmCategory[];
     locale: string;
+    preferences: GeneralPreferences;
 }
 
 type State = {
@@ -103,7 +106,7 @@ function charmsReducer(state: State, action: Action): State {
     }
 }
 
-export function CharmsManager({ initialCharms, initialCharmCategories, locale }: CharmsManagerProps) {
+export function CharmsManager({ initialCharms, initialCharmCategories, locale, preferences }: CharmsManagerProps) {
     const { toast } = useToast();
     const [isPending, startTransition] = useTransition();
     
@@ -173,15 +176,51 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale }:
     const charmsByCategoryId = useMemo(() => {
         const acc: Record<string, (Charm & { categoryName?: string; })[]> = {};
         charms.forEach(charm => {
-            charm.categoryIds.forEach(catId => {
-                if (!acc[catId]) {
-                    acc[catId] = [];
-                }
-                acc[catId].push(charm);
-            });
+            if (charm.categoryIds) {
+                charm.categoryIds.forEach(catId => {
+                    if (!acc[catId]) {
+                        acc[catId] = [];
+                    }
+                    acc[catId].push(charm);
+                });
+            }
         });
         return acc;
     }, [charms]);
+
+    const getCategoryAlertState = (categoryId: string): 'critical' | 'alert' | 'none' => {
+        const categoryCharms = charmsByCategoryId[categoryId] || [];
+        if (categoryCharms.some(c => (c.quantity ?? Infinity) <= preferences.criticalThreshold)) {
+            return 'critical';
+        }
+        if (categoryCharms.some(c => (c.quantity ?? Infinity) <= preferences.alertThreshold)) {
+            return 'alert';
+        }
+        return 'none';
+    };
+
+    const getItemAlertState = (quantity: number | undefined): 'critical' | 'alert' | 'none' => {
+        const q = quantity ?? Infinity;
+        if (q <= preferences.criticalThreshold) return 'critical';
+        if (q <= preferences.alertThreshold) return 'alert';
+        return 'none';
+    }
+
+    const AlertIcon = ({ state, message }: { state: 'critical' | 'alert', message: string }) => (
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger>
+                    <AlertTriangle className={cn(
+                        'h-5 w-5',
+                        state === 'critical' ? 'text-red-500' : 'text-orange-500'
+                    )} />
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>{message}</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+    );
 
     return (
         <>
@@ -203,121 +242,137 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale }:
 
             <div className="p-4 bg-card rounded-lg border">
                 <Accordion type="multiple" className="w-full" disabled={isPending}>
-                    {categories.map((category) => (
-                        <AccordionItem value={category.id} key={category.id}>
-                            <div className="flex justify-between items-center w-full py-4 group">
-                                <GripVertical className="h-5 w-5 text-muted-foreground mr-2" />
-                                <AccordionTrigger className="text-xl font-headline flex-1 py-0 hover:no-underline">
-                                    <div className="flex items-center gap-4">
-                                        <Image src={category.imageUrl || 'https://placehold.co/100x100.png'} alt={category.name} width={40} height={40} className="rounded-md"/>
-                                        {category.name}
+                    {categories.map((category) => {
+                        const alertState = getCategoryAlertState(category.id);
+                        return (
+                            <AccordionItem value={category.id} key={category.id}>
+                                <div className="flex justify-between items-center w-full py-4 group">
+                                    <GripVertical className="h-5 w-5 text-muted-foreground mr-2" />
+                                    <AccordionTrigger className="text-xl font-headline flex-1 py-0 hover:no-underline">
+                                        <div className="flex items-center gap-4">
+                                            {alertState !== 'none' && (
+                                                <AlertIcon state={alertState} message={alertState === 'critical' ? "Un ou plusieurs articles ont un stock critique." : "Un ou plusieurs articles ont un stock bas."} />
+                                            )}
+                                            <Image src={category.imageUrl || 'https://placehold.co/100x100.png'} alt={category.name} width={40} height={40} className="rounded-md"/>
+                                            {category.name}
+                                        </div>
+                                    </AccordionTrigger>
+                                    <div className="flex items-center gap-2 mr-4">
+                                        <Button variant="outline" size="sm" onClick={(e) => {e.stopPropagation(); handleEditCategoryClick(category);}}>
+                                            <Edit className="mr-2 h-4 w-4" />
+                                            Modifier
+                                        </Button>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive hover:border-destructive/50" onClick={(e) => e.stopPropagation()}>
+                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                    Supprimer
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                                                <form action={handleDeleteCategoryAction}>
+                                                    <input type="hidden" name="categoryId" value={category.id} />
+                                                    <input type="hidden" name="imageUrl" value={category.imageUrl || ''} />
+                                                    <input type="hidden" name="locale" value={locale} />
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            Cette action est irréversible. La catégorie "{category.name}" sera définitivement supprimée. Les breloques associées ne seront plus dans cette catégorie.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
+                                                        <AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </form>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     </div>
-                                </AccordionTrigger>
-                                <div className="flex items-center gap-2 mr-4">
-                                     <Button variant="outline" size="sm" onClick={(e) => {e.stopPropagation(); handleEditCategoryClick(category);}}>
-                                        <Edit className="mr-2 h-4 w-4" />
-                                        Modifier
-                                    </Button>
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="outline" size="sm" className="text-destructive hover:text-destructive hover:border-destructive/50" onClick={(e) => e.stopPropagation()}>
-                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                Supprimer
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                                             <form action={handleDeleteCategoryAction}>
-                                                <input type="hidden" name="categoryId" value={category.id} />
-                                                <input type="hidden" name="imageUrl" value={category.imageUrl || ''} />
-                                                <input type="hidden" name="locale" value={locale} />
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        Cette action est irréversible. La catégorie "{category.name}" sera définitivement supprimée. Les breloques associées ne seront plus dans cette catégorie.
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
-                                                    <AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                             </form>
-                                         </AlertDialogContent>
-                                    </AlertDialog>
                                 </div>
-                            </div>
-                            <AccordionContent>
-                                <div className="pl-8">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h4 className="font-semibold text-lg flex items-center gap-2"><WandSparkles className="h-5 w-5 text-primary" /> Breloques dans cette catégorie</h4>
-                                    </div>
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead className="w-24">Image</TableHead>
-                                                <TableHead>Nom</TableHead>
-                                                <TableHead>Prix</TableHead>
-                                                <TableHead>Stock</TableHead>
-                                                <TableHead className="text-right">Actions</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {(charmsByCategoryId[category.id] || []).map((charm) => (
-                                                <TableRow key={charm.id}>
-                                                    <TableCell>
-                                                        <Dialog>
-                                                            <DialogTrigger asChild>
-                                                                <div className="relative w-16 h-16 cursor-pointer group">
-                                                                    <Image src={charm.imageUrl} alt={charm.name} width={64} height={64} className="w-16 h-16 object-cover rounded-md bg-white p-1 border group-hover:opacity-75" />
-                                                                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                                                        <ZoomIn className="text-white h-6 w-6" />
-                                                                    </div>
-                                                                </div>
-                                                            </DialogTrigger>
-                                                            <DialogContent>
-                                                                <DialogHeader>
-                                                                    <DialogTitle>{charm.name}</DialogTitle>
-                                                                </DialogHeader>
-                                                                <Image src={charm.imageUrl} alt={charm.name} width={400} height={400} className="w-full h-auto object-contain rounded-lg" />
-                                                            </DialogContent>
-                                                        </Dialog>
-                                                    </TableCell>
-                                                    <TableCell className="font-medium">{charm.name}</TableCell>
-                                                    <TableCell>{charm.price}€</TableCell>
-                                                    <TableCell>{charm.quantity}</TableCell>
-                                                    <TableCell className="text-right">
-                                                        <Button variant="ghost" size="icon" onClick={() => handleEditCharmClick(charm)}><Edit className="h-4 w-4" /></Button>
-                                                        <AlertDialog>
-                                                            <AlertDialogTrigger asChild>
-                                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                                                            </AlertDialogTrigger>
-                                                            <AlertDialogContent>
-                                                                <form action={handleDeleteCharmAction}>
-                                                                    <input type="hidden" name="charmId" value={charm.id} />
-                                                                    <input type="hidden" name="imageUrl" value={charm.imageUrl} />
-                                                                    <input type="hidden" name="locale" value={locale} />
-                                                                    <AlertDialogHeader>
-                                                                        <AlertDialogTitle>Supprimer la breloque "{charm.name}" ?</AlertDialogTitle>
-                                                                        <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
-                                                                    </AlertDialogHeader>
-                                                                    <AlertDialogFooter>
-                                                                        <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
-                                                                        <AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
-                                                                    </AlertDialogFooter>
-                                                                </form>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
-                                                    </TableCell>
+                                <AccordionContent>
+                                    <div className="pl-8">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h4 className="font-semibold text-lg flex items-center gap-2"><WandSparkles className="h-5 w-5 text-primary" /> Breloques dans cette catégorie</h4>
+                                        </div>
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead className="w-24">Image</TableHead>
+                                                    <TableHead>Nom</TableHead>
+                                                    <TableHead>Prix</TableHead>
+                                                    <TableHead>Stock</TableHead>
+                                                    <TableHead className="text-right">Actions</TableHead>
                                                 </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                    {(!charmsByCategoryId[category.id] || charmsByCategoryId[category.id].length === 0) && (
-                                        <p className="text-center text-muted-foreground py-8">Aucune breloque dans cette catégorie.</p>
-                                    )}
-                                </div>
-                            </AccordionContent>
-                        </AccordionItem>
-                    ))}
+                                            </TableHeader>
+                                            <TableBody>
+                                                {(charmsByCategoryId[category.id] || []).map((charm) => {
+                                                    const itemAlertState = getItemAlertState(charm.quantity);
+                                                    return (
+                                                        <TableRow key={charm.id}>
+                                                            <TableCell>
+                                                                <Dialog>
+                                                                    <DialogTrigger asChild>
+                                                                        <div className="relative w-16 h-16 cursor-pointer group">
+                                                                            <Image src={charm.imageUrl} alt={charm.name} width={64} height={64} className="w-16 h-16 object-cover rounded-md bg-white p-1 border group-hover:opacity-75" />
+                                                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                                                <ZoomIn className="text-white h-6 w-6" />
+                                                                            </div>
+                                                                        </div>
+                                                                    </DialogTrigger>
+                                                                    <DialogContent>
+                                                                        <DialogHeader>
+                                                                            <DialogTitle>{charm.name}</DialogTitle>
+                                                                        </DialogHeader>
+                                                                        <Image src={charm.imageUrl} alt={charm.name} width={400} height={400} className="w-full h-auto object-contain rounded-lg" />
+                                                                    </DialogContent>
+                                                                </Dialog>
+                                                            </TableCell>
+                                                            <TableCell className="font-medium">{charm.name}</TableCell>
+                                                            <TableCell>{charm.price}€</TableCell>
+                                                            <TableCell>
+                                                                <div className="flex items-center gap-2">
+                                                                    {itemAlertState !== 'none' && (
+                                                                        <AlertIcon state={itemAlertState} message={itemAlertState === 'critical' ? 'Stock critique !' : 'Stock bas'} />
+                                                                    )}
+                                                                    {charm.quantity}
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                                <Button variant="ghost" size="icon" onClick={() => handleEditCharmClick(charm)}><Edit className="h-4 w-4" /></Button>
+                                                                <AlertDialog>
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                                                                    </AlertDialogTrigger>
+                                                                    <AlertDialogContent>
+                                                                        <form action={handleDeleteCharmAction}>
+                                                                            <input type="hidden" name="charmId" value={charm.id} />
+                                                                            <input type="hidden" name="imageUrl" value={charm.imageUrl} />
+                                                                            <input type="hidden" name="locale" value={locale} />
+                                                                            <AlertDialogHeader>
+                                                                                <AlertDialogTitle>Supprimer la breloque "{charm.name}" ?</AlertDialogTitle>
+                                                                                <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
+                                                                            </AlertDialogHeader>
+                                                                            <AlertDialogFooter>
+                                                                                <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
+                                                                                <AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
+                                                                            </AlertDialogFooter>
+                                                                        </form>
+                                                                    </AlertDialogContent>
+                                                                </AlertDialog>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    );
+                                                })}
+                                            </TableBody>
+                                        </Table>
+                                        {(!charmsByCategoryId[category.id] || charmsByCategoryId[category.id].length === 0) && (
+                                            <p className="text-center text-muted-foreground py-8">Aucune breloque dans cette catégorie.</p>
+                                        )}
+                                    </div>
+                                </AccordionContent>
+                            </AccordionItem>
+                        );
+                    })}
                 </Accordion>
             </div>
             {isCategoryFormOpen && (

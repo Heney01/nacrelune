@@ -9,7 +9,7 @@ import { logout } from "@/app/actions";
 import { ModelsManager } from "@/components/models-manager";
 import { CharmsManager } from "@/components/charms-manager";
 import { PreferencesManager } from "@/components/preferences-manager";
-import { Gem, User, Wrench, ChevronRight, ArrowLeft, Settings } from "lucide-react";
+import { Gem, User, Wrench, ChevronRight, ArrowLeft, Settings, AlertTriangle } from "lucide-react";
 import type { JewelryType, Charm, CharmCategory, GeneralPreferences } from "@/lib/types";
 import Link from "next/link";
 import { Loader2 } from 'lucide-react';
@@ -62,7 +62,7 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
       title: 'Gérer les modèles',
       description: 'Ajouter, modifier ou supprimer les types de bijoux.',
       icon: Gem,
-      component: <ModelsManager initialJewelryTypes={jewelryTypes} locale={locale} />,
+      component: <ModelsManager initialJewelryTypes={jewelryTypes} locale={locale} preferences={preferences} />,
       disabled: false,
     },
     {
@@ -70,7 +70,7 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
       title: 'Gérer les breloques',
       description: 'Gérer la collection de breloques et leurs catégories.',
       icon: Wrench,
-      component: <CharmsManager initialCharms={charms} initialCharmCategories={charmCategories} locale={locale} />,
+      component: <CharmsManager initialCharms={charms} initialCharmCategories={charmCategories} locale={locale} preferences={preferences} />,
       disabled: false,
     },
     {
