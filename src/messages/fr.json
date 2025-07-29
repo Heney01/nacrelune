@@ -111,7 +111,8 @@
     "sort_by_date": "Trier par date",
     "all_statuses": "Tous les statuts",
     "sort_newest": "Plus récentes d'abord",
-    "sort_oldest": "Plus anciennes d'abord"
+    "sort_oldest": "Plus anciennes d'abord",
+    "email_copied": "E-mail du client copié !"
   },
   "Checkout": {
     "title": "Paiement",

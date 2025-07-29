@@ -111,7 +111,8 @@
     "sort_by_date": "Sort by date",
     "all_statuses": "All Statuses",
     "sort_newest": "Newest First",
-    "sort_oldest": "Oldest First"
+    "sort_oldest": "Oldest First",
+    "email_copied": "Customer email copied!"
   },
   "Checkout": {
     "title": "Checkout",

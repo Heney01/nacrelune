@@ -26,10 +26,10 @@ const getModelsAlertState = (
     preferences: GeneralPreferences
 ): 'critical' | 'alert' | 'none' => {
     const allModels = jewelryTypes.flatMap(jt => jt.models);
-    if (allModels.some(m => (m.quantity ?? Infinity) <= preferences.criticalThreshold)) {
+    if (allModels.some(m => (m.quantity ?? Infinity) <= preferences.criticalThreshold && !m.lastOrderedAt)) {
         return 'critical';
     }
-    if (allModels.some(m => (m.quantity ?? Infinity) <= preferences.alertThreshold)) {
+    if (allModels.some(m => (m.quantity ?? Infinity) <= preferences.alertThreshold && !m.lastOrderedAt)) {
         return 'alert';
     }
     return 'none';
@@ -39,10 +39,17 @@ const getCharmsAlertState = (
     charms: Charm[], 
     preferences: GeneralPreferences
 ): 'critical' | 'alert' | 'none' => {
-    if (charms.some(c => (c.quantity ?? Infinity) <= preferences.criticalThreshold)) {
+    if (charms.some(c => (c.quantity ?? Infinity) <= preferences.criticalThreshold && !c.lastOrderedAt)) {
         return 'critical';
     }
-    if (charms.some(c => (c.quantity ?? Infinity) <= preferences.alertThreshold)) {
+    if (charms.some(c => (c.quantity ?? Infinity) <= preferences.alertThreshold && !c.lastOrderedAt)) {
+        return 'alert';
+    }
+    return 'none';
+};
+
+const getOrdersAlertState = (orders: Order[]): 'alert' | 'none' => {
+    if (orders.some(o => o.status === 'commandée' || o.status === 'en cours de préparation')) {
         return 'alert';
     }
     return 'none';
@@ -105,6 +112,8 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
   
   const modelsAlertState = getModelsAlertState(jewelryTypes, preferences);
   const charmsAlertState = getCharmsAlertState(charms, preferences);
+  const ordersAlertState = getOrdersAlertState(orders);
+
 
   const adminSections = [
     {
@@ -115,6 +124,7 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
       component: <ModelsManager initialJewelryTypes={jewelryTypes} locale={locale} preferences={preferences} />,
       disabled: false,
       alertState: modelsAlertState,
+      alertMessage: "Un ou plusieurs articles ont un stock bas ou critique.",
     },
     {
       value: 'charms',
@@ -124,6 +134,7 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
       component: <CharmsManager initialCharms={charms} initialCharmCategories={charmCategories} locale={locale} preferences={preferences} />,
       disabled: false,
       alertState: charmsAlertState,
+      alertMessage: "Un ou plusieurs articles ont un stock bas ou critique.",
     },
     {
       value: 'orders',
@@ -132,7 +143,8 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
       icon: Package,
       component: <OrdersManager initialOrders={orders} locale={locale} />,
       disabled: false,
-      alertState: 'none',
+      alertState: ordersAlertState,
+      alertMessage: "Des commandes sont en attente de préparation.",
     },
     {
       value: 'preferences',
@@ -142,6 +154,7 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
       component: <PreferencesManager initialPreferences={preferences} locale={locale} />,
       disabled: false,
       alertState: 'none',
+      alertMessage: "",
     },
     {
       value: 'users',
@@ -151,6 +164,7 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
       component: null,
       disabled: true,
       alertState: 'none',
+      alertMessage: "",
     },
   ];
 
@@ -198,7 +212,7 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
                                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                                         <CardTitle className="text-lg font-medium flex items-center gap-2">
                                             {section.alertState !== 'none' && (
-                                                <AlertIcon state={section.alertState as 'alert' | 'critical'} message="Un ou plusieurs articles ont un stock bas ou critique." />
+                                                <AlertIcon state={section.alertState as 'alert' | 'critical'} message={section.alertMessage} />
                                             )}
                                             {section.title}
                                         </CardTitle>
