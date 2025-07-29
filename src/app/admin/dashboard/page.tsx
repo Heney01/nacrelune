@@ -7,7 +7,6 @@ import { ModelsManager } from "../models/components/models-manager";
 import { getJewelryTypesAndModels } from "@/lib/data";
 import { Gem, HandMetal, Ear, User, Wrench } from "lucide-react";
 import type { JewelryType } from "@/lib/types";
-import { TestDeleteButton } from "@/components/test-delete-button";
 
 export default async function AdminDashboard() {
   const JEWELRY_TYPES_INFO: Omit<JewelryType, 'models' | 'icon'>[] = [
@@ -35,7 +34,6 @@ export default async function AdminDashboard() {
         <div className="flex items-center justify-between space-y-2">
           <h2 className="text-3xl font-bold tracking-tight">Tableau de bord</h2>
         </div>
-        <TestDeleteButton />
         <Tabs defaultValue="models" className="space-y-4">
           <TabsList>
             <TabsTrigger value="models">

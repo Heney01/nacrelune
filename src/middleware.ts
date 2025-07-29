@@ -5,7 +5,6 @@ import Negotiator from 'negotiator';
 
 const locales = ['en', 'fr'];
 const defaultLocale = 'fr';
-const publicPages = ['/login'];
 
 function getLocale(request: NextRequest): string {
   const negotiatorHeaders: Record<string, string> = {};
@@ -28,12 +27,17 @@ function getLocale(request: NextRequest): string {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Gérer la redirection pour la page de connexion
-  if (pathname.startsWith('/login')) {
-    return;
+  // If it's a server action, let it pass.
+   if (request.headers.get('x-next-action')) {
+    return NextResponse.next();
   }
 
-  // Gérer la redirection pour l'espace admin
+  // Handle /login page, no redirection needed.
+  if (pathname.startsWith('/login')) {
+    return NextResponse.next();
+  }
+
+  // Handle admin area protection.
   if (pathname.startsWith('/admin')) {
     const sessionCookie = request.cookies.get('session');
     if (!sessionCookie) {
@@ -47,14 +51,15 @@ export function middleware(request: NextRequest) {
   );
 
   if (pathnameHasLocale) {
-    return;
+    return NextResponse.next();
   }
   
-  // Ignorer les chemins spécifiques à Next.js et les fichiers statiques
+  // Ignore Next.js-specific paths and static files.
   if (pathname.startsWith('/_next') || pathname.includes('.') || pathname.startsWith('/api')) {
-    return;
+    return NextResponse.next();
   }
 
+  // Redirect to the default locale.
   const locale = getLocale(request);
   request.nextUrl.pathname = `/${locale}${pathname}`;
   
@@ -63,7 +68,7 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Exclure les fichiers statiques et les chemins API
+    // Exclude static files and API paths.
     '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 };
