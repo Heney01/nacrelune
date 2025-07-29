@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { CheckCircle, Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useParams, useRouter } from 'next/navigation';
 
 interface SuccessDialogProps {
   isOpen: boolean;
@@ -18,6 +19,9 @@ interface SuccessDialogProps {
 export function SuccessDialog({ isOpen, onOpenChange, orderNumber, email }: SuccessDialogProps) {
   const t = useTranslations('Checkout');
   const { toast } = useToast();
+  const router = useRouter();
+  const params = useParams();
+  const locale = params.locale as string;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(orderNumber);
@@ -26,8 +30,15 @@ export function SuccessDialog({ isOpen, onOpenChange, orderNumber, email }: Succ
     });
   };
 
+  const handleOpenChange = (open: boolean) => {
+    onOpenChange(open);
+    if (!open) {
+        router.push(`/${locale}`);
+    }
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
@@ -48,7 +59,7 @@ export function SuccessDialog({ isOpen, onOpenChange, orderNumber, email }: Succ
           </div>
         </div>
         <DialogFooter className="sm:justify-center">
-          <Button type="button" onClick={() => onOpenChange(false)}>
+          <Button type="button" onClick={() => handleOpenChange(false)}>
             {t('success_close_button')}
           </Button>
         </DialogFooter>
@@ -56,3 +67,4 @@ export function SuccessDialog({ isOpen, onOpenChange, orderNumber, email }: Succ
     </Dialog>
   );
 }
+
