@@ -67,7 +67,7 @@ function SubmitButton({ isEditing }: { isEditing: boolean }) {
     )
 }
 
-const initialState = { success: false, message: '' };
+const initialState = { success: false, message: '', category: undefined };
 
 export function CharmCategoryForm({ isOpen, onOpenChange, category, onSave, locale }: CharmCategoryFormProps) {
     const [isMounted, setIsMounted] = useState(false);
@@ -76,7 +76,7 @@ export function CharmCategoryForm({ isOpen, onOpenChange, category, onSave, loca
     useEffect(() => { setIsMounted(true); }, []);
     
     useEffect(() => {
-        if (state.success && state.category) {
+        if (state.success && 'category' in state && state.category) {
             onSave(state.category);
             onOpenChange(false);
         }

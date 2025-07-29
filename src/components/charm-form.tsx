@@ -70,16 +70,16 @@ function SubmitButton({ isEditing }: { isEditing: boolean }) {
     )
 }
 
-const initialState = { success: false, message: '' };
+const initialState = { success: false, message: '', charm: undefined };
 
 export function CharmForm({ isOpen, onOpenChange, charm, allCategories, onSave, locale }: CharmFormProps) {
     const [isMounted, setIsMounted] = useState(false);
     const [state, formAction] = useFormState(saveCharm, initialState);
     
     useEffect(() => { setIsMounted(true) }, []);
-
+        
     useEffect(() => {
-        if (state.success && state.charm) {
+        if (state.success && 'charm' in state && state.charm) {
             onSave(state.charm);
             onOpenChange(false);
         }

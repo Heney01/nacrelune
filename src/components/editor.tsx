@@ -47,22 +47,22 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
         const element = charmRef.current;
         if (!element) return;
 
-        const handleWheel = (e: Event) => {
+        const handleWheel = (e: WheelEvent) => {
             e.preventDefault();
-            onRotate(e as WheelEvent, placed.id);
+            onRotate(e, placed.id);
         }
         
         const handleTouchStart = (e: TouchEvent) => {
             onDragStart(e, placed.id);
         }
 
-        element.addEventListener('wheel', handleWheel, { passive: false });
+        element.addEventListener('wheel', handleWheel as EventListener, { passive: false });
         element.addEventListener('touchstart', handleTouchStart, { passive: false });
 
 
         return () => {
             if(element) {
-                element.removeEventListener('wheel', handleWheel);
+                element.removeEventListener('wheel', handleWheel as EventListener);
                 element.removeEventListener('touchstart', handleTouchStart);
             }
         };
@@ -694,3 +694,5 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     </>
   );
 }
+
+    

@@ -187,7 +187,7 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
                                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                                         <CardTitle className="text-lg font-medium flex items-center gap-2">
                                             {section.alertState !== 'none' && (
-                                                <AlertIcon state={section.alertState} message="Un ou plusieurs articles ont un stock bas ou critique." />
+                                                <AlertIcon state={section.alertState as 'alert' | 'critical'} message="Un ou plusieurs articles ont un stock bas ou critique." />
                                             )}
                                             {section.title}
                                         </CardTitle>
