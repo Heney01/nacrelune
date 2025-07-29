@@ -4,7 +4,7 @@
 import React, { useState, useReducer, useTransition, useMemo, FormEvent } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, ZoomIn, AlertTriangle, ShoppingCart, Info, Search } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ZoomIn, AlertTriangle, ShoppingCart, Info, Search, Gem } from "lucide-react";
 import type { JewelryType, JewelryModel, GeneralPreferences } from "@/lib/types";
 import { ModelForm } from './model-form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -130,7 +130,7 @@ function ReorderDialog({ model, jewelryTypeId, locale, onOrder, onRestock, t }: 
     
     const handleRestockSubmit = (e: FormEvent) => {
         e.preventDefault();
-        const formData = new FormData(e.currentTarget);
+        const formData = new FormData(e.target as HTMLFormElement);
         formData.append('itemId', model.id);
         formData.append('itemType', jewelryTypeId);
         formData.append('locale', locale);
@@ -154,7 +154,10 @@ function ReorderDialog({ model, jewelryTypeId, locale, onOrder, onRestock, t }: 
                     <Button variant="outline" asChild disabled={!model.reorderUrl}>
                         <a href={model.reorderUrl || ''} target="_blank" rel="noopener noreferrer">{t('open_reorder_url')}</a>
                     </Button>
-                    <AlertDialogAction onClick={handleOrderSubmit} className="w-full">{t('mark_as_ordered')}</AlertDialogAction>
+                    
+                    <form onSubmit={(e) => { e.preventDefault(); handleOrderSubmit(); }}>
+                        <AlertDialogAction type="submit" className="w-full">{t('mark_as_ordered')}</AlertDialogAction>
+                    </form>
                     
                     <div className="flex items-center gap-2">
                         <hr className="flex-grow" />
@@ -194,11 +197,7 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [selectedJewelryType, setSelectedJewelryType] = useState<Omit<JewelryType, 'models'|'icon'>>(initialJewelryTypes[0]);
     const [selectedModel, setSelectedModel] = useState<JewelryModel | null>(null);
-    const [searchTerms, setSearchTerms] = useState<Record<string, string>>({});
-
-    const handleSearchChange = (jewelryTypeId: string, term: string) => {
-        setSearchTerms(prev => ({ ...prev, [jewelryTypeId]: term }));
-    };
+    const [searchTerm, setSearchTerm] = useState('');
 
     const handleAddModelClick = (jewelryType: Omit<JewelryType, 'models'|'icon'>) => {
         setSelectedJewelryType(jewelryType);
@@ -259,15 +258,14 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
     }
 
     const filteredJewelryTypes = useMemo(() => {
-        return jewelryTypes.map(jt => {
-            const searchTerm = searchTerms[jt.id] || '';
-            if (!searchTerm) return jt;
-            return {
+        if (!searchTerm) return jewelryTypes;
+        return jewelryTypes
+            .map(jt => ({
                 ...jt,
                 models: jt.models.filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase()))
-            };
-        });
-    }, [jewelryTypes, searchTerms]);
+            }))
+            .filter(jt => jt.models.length > 0);
+    }, [jewelryTypes, searchTerm]);
 
     const getCategoryAlertState = (models: JewelryModel[]): 'critical' | 'alert' | 'none' => {
         if (models.some(m => (m.quantity ?? Infinity) <= preferences.criticalThreshold && !m.lastOrderedAt)) return 'critical';
@@ -304,206 +302,222 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
     };
     
     return (
-        <div className="p-4 bg-card rounded-lg border">
-            <Accordion type="multiple" className="w-full" defaultValue={jewelryTypes.map(jt => jt.id)}>
-                {filteredJewelryTypes.map((jewelryType) => {
-                    const alertState = getCategoryAlertState(jewelryType.models);
-                    return (
-                        <AccordionItem value={jewelryType.id} key={jewelryType.id}>
-                            <AccordionTrigger className="text-xl font-headline flex-1 py-4 hover:no-underline [&>svg]:hidden">
-                                <div className="flex items-center gap-2 w-full pr-6">
-                                    {alertState !== 'none' && (
-                                        <AlertIcon state={alertState} message={alertState === 'critical' ? "Un ou plusieurs modèles ont un stock critique." : "Un ou plusieurs modèles ont un stock bas."} />
-                                    )}
-                                    {jewelryType.name}
-                                </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
-                                     <div className="relative w-full sm:w-auto sm:flex-grow max-w-xs">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            placeholder="Rechercher un modèle..."
-                                            value={searchTerms[jewelryType.id] || ''}
-                                            onChange={(e) => handleSearchChange(jewelryType.id, e.target.value)}
-                                            className="pl-9"
-                                        />
-                                    </div>
-                                    <Button size="sm" className="w-full sm:w-auto" onClick={(e) => { e.stopPropagation(); handleAddModelClick(jewelryType); }}>
-                                        <PlusCircle className="mr-2 h-4 w-4" />
-                                        Ajouter un modèle
-                                    </Button>
-                                </div>
+        <>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                <CardTitle className="text-xl font-headline flex items-center gap-2">
+                    <Gem /> Gestion des Modèles
+                </CardTitle>
+                 <div className="relative w-full sm:w-auto sm:max-w-xs">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Rechercher un modèle..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-9"
+                    />
+                </div>
+            </div>
 
-                                {/* Desktop View */}
-                                <div className="hidden md:block">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead className="w-24">Image</TableHead>
-                                                <TableHead>Nom</TableHead>
-                                                <TableHead>Prix</TableHead>
-                                                <TableHead>Stock</TableHead>
-                                                <TableHead className="text-right">Actions</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {jewelryType.models.map((model) => {
-                                                const itemAlertState = getItemAlertState(model);
-                                                return (
-                                                    <TableRow key={model.id} className={isPending ? 'opacity-50' : ''}>
-                                                        <TableCell>
-                                                            <Dialog><DialogTrigger asChild>
-                                                                <div className="relative w-16 h-16 cursor-pointer group">
-                                                                    <Image src={model.displayImageUrl} alt={model.name} fill className="w-16 h-16 object-cover rounded-md group-hover:opacity-75" />
+            <div className="p-4 bg-card rounded-lg border">
+                <Accordion type="multiple" className="w-full" defaultValue={jewelryTypes.map(jt => jt.id)}>
+                    {filteredJewelryTypes.map((jewelryType) => {
+                        const alertState = getCategoryAlertState(jewelryType.models);
+                        return (
+                            <AccordionItem value={jewelryType.id} key={jewelryType.id}>
+                                <AccordionTrigger className="text-xl font-headline flex-1 py-4 hover:no-underline [&>svg]:hidden">
+                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full gap-4">
+                                        <div className="flex items-center gap-2">
+                                            {alertState !== 'none' && (
+                                                <AlertIcon state={alertState} message={alertState === 'critical' ? "Un ou plusieurs modèles ont un stock critique." : "Un ou plusieurs modèles ont un stock bas."} />
+                                            )}
+                                            {jewelryType.name}
+                                        </div>
+                                        <div className="flex items-center gap-2 self-end sm:self-center">
+                                            <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleAddModelClick(jewelryType); }}>
+                                                <PlusCircle className="mr-2 h-4 w-4" />
+                                                Ajouter un modèle
+                                            </Button>
+                                            <AccordionTrigger className="p-2" />
+                                        </div>
+                                    </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                    {/* Desktop View */}
+                                    <div className="hidden md:block">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead className="w-24">Image</TableHead>
+                                                    <TableHead>Nom</TableHead>
+                                                    <TableHead>Prix</TableHead>
+                                                    <TableHead>Stock</TableHead>
+                                                    <TableHead className="text-right">Actions</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {jewelryType.models.map((model) => {
+                                                    const itemAlertState = getItemAlertState(model);
+                                                    return (
+                                                        <TableRow key={model.id} className={isPending ? 'opacity-50' : ''}>
+                                                            <TableCell>
+                                                                <Dialog>
+                                                                    <DialogTrigger asChild>
+                                                                        <div className="relative w-16 h-16 cursor-pointer group">
+                                                                            <Image src={model.displayImageUrl} alt={model.name} fill className="w-16 h-16 object-cover rounded-md group-hover:opacity-75" sizes="64px" />
+                                                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
+                                                                                <ZoomIn className="text-white h-6 w-6" />
+                                                                            </div>
+                                                                        </div>
+                                                                    </DialogTrigger>
+                                                                    <DialogContent>
+                                                                        <DialogHeader><DialogTitle>{model.name}</DialogTitle></DialogHeader>
+                                                                        <Image src={model.displayImageUrl} alt={model.name} width={400} height={400} className="w-full h-auto object-contain rounded-lg" sizes="400px"/>
+                                                                    </DialogContent>
+                                                                </Dialog>
+                                                            </TableCell>
+                                                            <TableCell className="font-medium">{model.name}</TableCell>
+                                                            <TableCell>{model.price}€</TableCell>
+                                                            <TableCell>
+                                                                <div className="flex items-center gap-2">
+                                                                    {itemAlertState !== 'none' && (
+                                                                        <AlertIcon state={itemAlertState} message={
+                                                                            itemAlertState === 'critical' ? t('stock_critical', { threshold: preferences.criticalThreshold }) : 
+                                                                            itemAlertState === 'alert' ? t('stock_low', { threshold: preferences.alertThreshold }) :
+                                                                            t('stock_reordered', { date: safeToLocaleDateString(model.lastOrderedAt) })
+                                                                        } />
+                                                                    )}
+                                                                    {model.quantity}
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell className="text-right space-x-1">
+                                                                <ReorderDialog 
+                                                                    model={model}
+                                                                    jewelryTypeId={jewelryType.id}
+                                                                    locale={locale}
+                                                                    onOrder={handleOrderAction}
+                                                                    onRestock={handleRestockAction}
+                                                                    t={t}
+                                                                />
+                                                                <Button variant="ghost" size="icon" onClick={() => handleEditModelClick(jewelryType, model)}>
+                                                                    <Edit className="h-4 w-4" />
+                                                                </Button>
+                                                                <AlertDialog>
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                                            <Trash2 className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </AlertDialogTrigger>
+                                                                    <AlertDialogContent>
+                                                                        <form action={handleDeleteAction}>
+                                                                            <input type="hidden" name="modelId" value={model.id} />
+                                                                            <input type="hidden" name="jewelryTypeId" value={jewelryType.id} />
+                                                                            <input type="hidden" name="displayImageUrl" value={model.displayImageUrl} />
+                                                                            <input type="hidden" name="editorImageUrl" value={model.editorImageUrl} />
+                                                                            <input type="hidden" name="locale" value={locale} />
+                                                                            <AlertDialogHeader>
+                                                                                <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                                                                                <AlertDialogDescription>Cette action est irréversible. Le modèle "{model.name}" sera définitivement supprimé.</AlertDialogDescription>
+                                                                            </AlertDialogHeader>
+                                                                            <AlertDialogFooter>
+                                                                                <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
+                                                                                <AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
+                                                                            </AlertDialogFooter>
+                                                                        </form>
+                                                                    </AlertDialogContent>
+                                                                </AlertDialog>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    )
+                                                })}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                    {/* Mobile View */}
+                                    <div className="md:hidden space-y-4">
+                                         {jewelryType.models.map((model) => {
+                                            const itemAlertState = getItemAlertState(model);
+                                            return (
+                                                <Card key={model.id} className="p-4">
+                                                    <div className="flex gap-4">
+                                                        <Dialog>
+                                                            <DialogTrigger asChild>
+                                                                <div className="relative w-16 h-16 cursor-pointer group flex-shrink-0">
+                                                                    <Image src={model.displayImageUrl} alt={model.name} fill className="object-cover rounded-md group-hover:opacity-75" sizes="64px"/>
                                                                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
                                                                         <ZoomIn className="text-white h-6 w-6" />
                                                                     </div>
                                                                 </div>
-                                                            </DialogTrigger><DialogContent>
+                                                            </DialogTrigger>
+                                                            <DialogContent>
                                                                 <DialogHeader><DialogTitle>{model.name}</DialogTitle></DialogHeader>
-                                                                <Image src={model.displayImageUrl} alt={model.name} width={400} height={400} className="w-full h-auto object-contain rounded-lg" />
-                                                            </DialogContent></Dialog>
-                                                        </TableCell>
-                                                        <TableCell className="font-medium">{model.name}</TableCell>
-                                                        <TableCell>{model.price}€</TableCell>
-                                                        <TableCell>
+                                                                <Image src={model.displayImageUrl} alt={model.name} width={400} height={400} className="w-full h-auto object-contain rounded-lg" sizes="400px"/>
+                                                            </DialogContent>
+                                                        </Dialog>
+                                                        <div className="flex-grow space-y-1">
+                                                            <h4 className="font-bold">{model.name}</h4>
+                                                            <p>Prix: {model.price}€</p>
                                                             <div className="flex items-center gap-2">
+                                                                <span>Stock:</span>
                                                                 {itemAlertState !== 'none' && (
                                                                     <AlertIcon state={itemAlertState} message={
-                                                                        itemAlertState === 'critical' ? t('stock_critical', { threshold: preferences.criticalThreshold }) : 
+                                                                        itemAlertState === 'critical' ? t('stock_critical', { threshold: preferences.criticalThreshold }) :
                                                                         itemAlertState === 'alert' ? t('stock_low', { threshold: preferences.alertThreshold }) :
                                                                         t('stock_reordered', { date: safeToLocaleDateString(model.lastOrderedAt) })
                                                                     } />
                                                                 )}
-                                                                {model.quantity}
+                                                                <span>{model.quantity}</span>
                                                             </div>
-                                                        </TableCell>
-                                                        <TableCell className="text-right space-x-1">
-                                                            <ReorderDialog 
-                                                                model={model}
-                                                                jewelryTypeId={jewelryType.id}
-                                                                locale={locale}
-                                                                onOrder={handleOrderAction}
-                                                                onRestock={handleRestockAction}
-                                                                t={t}
-                                                            />
-                                                            <Button variant="ghost" size="icon" onClick={() => handleEditModelClick(jewelryType, model)}>
-                                                                <Edit className="h-4 w-4" />
-                                                            </Button>
-                                                            <AlertDialog>
-                                                                <AlertDialogTrigger asChild>
-                                                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                    </Button>
-                                                                </AlertDialogTrigger>
-                                                                <AlertDialogContent>
-                                                                    <form action={handleDeleteAction}>
-                                                                        <input type="hidden" name="modelId" value={model.id} />
-                                                                        <input type="hidden" name="jewelryTypeId" value={jewelryType.id} />
-                                                                        <input type="hidden" name="displayImageUrl" value={model.displayImageUrl} />
-                                                                        <input type="hidden" name="editorImageUrl" value={model.editorImageUrl} />
-                                                                        <input type="hidden" name="locale" value={locale} />
-                                                                        <AlertDialogHeader>
-                                                                            <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-                                                                            <AlertDialogDescription>Cette action est irréversible. Le modèle "{model.name}" sera définitivement supprimé.</AlertDialogDescription>
-                                                                        </AlertDialogHeader>
-                                                                        <AlertDialogFooter>
-                                                                            <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
-                                                                            <AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
-                                                                        </AlertDialogFooter>
-                                                                    </form>
-                                                                </AlertDialogContent>
-                                                            </AlertDialog>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )
-                                            })}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                                {/* Mobile View */}
-                                <div className="md:hidden space-y-4">
-                                     {jewelryType.models.map((model) => {
-                                        const itemAlertState = getItemAlertState(model);
-                                        return (
-                                            <Card key={model.id} className="p-4">
-                                                <div className="flex gap-4">
-                                                    <Dialog><DialogTrigger asChild>
-                                                        <div className="relative w-16 h-16 cursor-pointer group flex-shrink-0">
-                                                            <Image src={model.displayImageUrl} alt={model.name} fill className="object-cover rounded-md group-hover:opacity-75" />
-                                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
-                                                                <ZoomIn className="text-white h-6 w-6" />
-                                                            </div>
-                                                        </div>
-                                                    </DialogTrigger><DialogContent>
-                                                        <DialogHeader><DialogTitle>{model.name}</DialogTitle></DialogHeader>
-                                                        <Image src={model.displayImageUrl} alt={model.name} width={400} height={400} className="w-full h-auto object-contain rounded-lg" />
-                                                    </DialogContent></Dialog>
-                                                    <div className="flex-grow space-y-1">
-                                                        <h4 className="font-bold">{model.name}</h4>
-                                                        <p>Prix: {model.price}€</p>
-                                                        <div className="flex items-center gap-2">
-                                                            <span>Stock:</span>
-                                                            {itemAlertState !== 'none' && (
-                                                                <AlertIcon state={itemAlertState} message={
-                                                                    itemAlertState === 'critical' ? t('stock_critical', { threshold: preferences.criticalThreshold }) :
-                                                                    itemAlertState === 'alert' ? t('stock_low', { threshold: preferences.alertThreshold }) :
-                                                                    t('stock_reordered', { date: safeToLocaleDateString(model.lastOrderedAt) })
-                                                                } />
-                                                            )}
-                                                            <span>{model.quantity}</span>
                                                         </div>
                                                     </div>
-                                                </div>
-                                                <div className="flex justify-end items-center gap-1 mt-2">
-                                                    <ReorderDialog 
-                                                        model={model}
-                                                        jewelryTypeId={jewelryType.id}
-                                                        locale={locale}
-                                                        onOrder={handleOrderAction}
-                                                        onRestock={handleRestockAction}
-                                                        t={t}
-                                                    />
-                                                    <Button variant="ghost" size="icon" onClick={() => handleEditModelClick(jewelryType, model)}>
-                                                        <Edit className="h-4 w-4" />
-                                                    </Button>
-                                                    <AlertDialog>
-                                                        <AlertDialogTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </AlertDialogTrigger>
-                                                        <AlertDialogContent>
-                                                            <form action={handleDeleteAction}>
-                                                                <input type="hidden" name="modelId" value={model.id} />
-                                                                <input type="hidden" name="jewelryTypeId" value={jewelryType.id} />
-                                                                <input type="hidden" name="displayImageUrl" value={model.displayImageUrl} />
-                                                                <input type="hidden" name="editorImageUrl" value={model.editorImageUrl} />
-                                                                <input type="hidden" name="locale" value={locale} />
-                                                                <AlertDialogHeader>
-                                                                    <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-                                                                    <AlertDialogDescription>Cette action est irréversible. Le modèle "{model.name}" sera définitivement supprimé.</AlertDialogDescription>
-                                                                </AlertDialogHeader>
-                                                                <AlertDialogFooter>
-                                                                    <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
-                                                                    <AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </form>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
-                                                </div>
-                                            </Card>
-                                        );
-                                     })}
-                                </div>
+                                                    <div className="flex justify-end items-center gap-1 mt-2">
+                                                        <ReorderDialog 
+                                                            model={model}
+                                                            jewelryTypeId={jewelryType.id}
+                                                            locale={locale}
+                                                            onOrder={handleOrderAction}
+                                                            onRestock={handleRestockAction}
+                                                            t={t}
+                                                        />
+                                                        <Button variant="ghost" size="icon" onClick={() => handleEditModelClick(jewelryType, model)}>
+                                                            <Edit className="h-4 w-4" />
+                                                        </Button>
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <form action={handleDeleteAction}>
+                                                                    <input type="hidden" name="modelId" value={model.id} />
+                                                                    <input type="hidden" name="jewelryTypeId" value={jewelryType.id} />
+                                                                    <input type="hidden" name="displayImageUrl" value={model.displayImageUrl} />
+                                                                    <input type="hidden" name="editorImageUrl" value={model.editorImageUrl} />
+                                                                    <input type="hidden" name="locale" value={locale} />
+                                                                    <AlertDialogHeader>
+                                                                        <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                                                                        <AlertDialogDescription>Cette action est irréversible. Le modèle "{model.name}" sera définitivement supprimé.</AlertDialogDescription>
+                                                                    </AlertDialogHeader>
+                                                                    <AlertDialogFooter>
+                                                                        <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
+                                                                        <AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
+                                                                    </AlertDialogFooter>
+                                                                </form>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                    </div>
+                                                </Card>
+                                            );
+                                         })}
+                                    </div>
 
-                                {jewelryType.models.length === 0 && (<p className="text-center text-muted-foreground py-8">Aucun modèle pour cette catégorie.</p>)}
-                            </AccordionContent>
-                        </AccordionItem>
-                    )
-                })}
-            </Accordion>
+                                    {jewelryType.models.length === 0 && (<p className="text-center text-muted-foreground py-8">Aucun modèle pour cette catégorie.</p>)}
+                                </AccordionContent>
+                            </AccordionItem>
+                        )
+                    })}
+                </Accordion>
+            </div>
              {isFormOpen && (
                 <ModelForm 
                     isOpen={isFormOpen} 
@@ -514,6 +528,8 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                     locale={locale}
                 />
             )}
-        </div>
+        </>
     );
 }
+
+    
