@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, UploadCloud } from 'lucide-react';
-import { saveModel } from '../actions';
+import { saveModel } from '@/app/actions';
 import type { JewelryModel, JewelryType } from '@/lib/types';
 
 interface ModelFormProps {
