@@ -11,8 +11,9 @@ import { ModelsManager } from "@/components/models-manager";
 import { CharmsManager } from "@/components/charms-manager";
 import { PreferencesManager } from "@/components/preferences-manager";
 import { OrdersManager } from "@/components/orders-manager";
-import { Gem, User, Wrench, ChevronRight, ArrowLeft, Settings, AlertTriangle, Package, PackageCheck, CookingPot, Truck, Home } from "lucide-react";
-import type { JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderStatus } from "@/lib/types";
+import { MailManager } from "@/components/mail-manager";
+import { Gem, User, Wrench, ChevronRight, ArrowLeft, Settings, AlertTriangle, Package, PackageCheck, CookingPot, Truck, Home, Mail } from "lucide-react";
+import type { JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderStatus, MailLog } from "@/lib/types";
 import Link from "next/link";
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -88,6 +89,7 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
     charmCategories: CharmCategory[],
     preferences: GeneralPreferences,
     orders: Order[],
+    mailLogs: MailLog[],
   } | null>(null);
 
   useEffect(() => {
@@ -115,11 +117,13 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
       );
   }
 
-  const { jewelryTypes, charms, charmCategories, preferences, orders } = initialData;
+  const { jewelryTypes, charms, charmCategories, preferences, orders, mailLogs } = initialData;
   
   const modelsAlertState = getModelsAlertState(jewelryTypes, preferences);
   const charmsAlertState = getCharmsAlertState(charms, preferences);
   const ordersAlertCounts = getOrdersAlertCounts(orders);
+  const mailErrorCount = mailLogs.filter(log => log.delivery?.state === 'ERROR').length;
+
 
   const OrderStatusIndicator = ({status, count}: {status: OrderStatus, count: number}) => {
     const ICONS: Record<OrderStatus, React.ElementType> = {
@@ -186,6 +190,16 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
       disabled: false,
       alertState: (ordersAlertCounts['commandée'] || ordersAlertCounts['en cours de préparation']) ? 'alert' : 'none',
       alertMessage: "Des commandes sont en attente de préparation.",
+    },
+     {
+      value: 'mails',
+      title: 'Gérer les e-mails',
+      description: 'Consulter l\'historique des e-mails transactionnels.',
+      icon: Mail,
+      component: <MailManager initialMailLogs={mailLogs} />,
+      disabled: false,
+      alertState: mailErrorCount > 0 ? 'critical' : 'none',
+      alertMessage: `Il y a ${mailErrorCount} e-mail(s) en échec de livraison.`,
     },
     {
       value: 'preferences',

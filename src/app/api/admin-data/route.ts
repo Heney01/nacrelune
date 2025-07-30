@@ -1,6 +1,6 @@
 
-import { getJewelryTypesAndModels, getFullCharmData, getPreferences, getOrders } from '@/lib/data';
-import type { JewelryType, Charm, CharmCategory, GeneralPreferences, Order } from '@/lib/types';
+import { getJewelryTypesAndModels, getFullCharmData, getPreferences, getOrders, getMailLogs } from '@/lib/data';
+import type { JewelryType, Charm, CharmCategory, GeneralPreferences, Order, MailLog } from '@/lib/types';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -13,11 +13,12 @@ export async function GET(request: Request) {
             { id: 'earring', name: "Boucles d'oreilles", description: "" },
         ];
 
-        const [jewelryTypes, { charms, charmCategories }, preferences, orders] = await Promise.all([
+        const [jewelryTypes, { charms, charmCategories }, preferences, orders, mailLogs] = await Promise.all([
             getJewelryTypesAndModels(JEWELRY_TYPES_INFO),
             getFullCharmData(),
             getPreferences(),
-            getOrders()
+            getOrders(),
+            getMailLogs()
         ]);
         
         return NextResponse.json({
@@ -25,7 +26,8 @@ export async function GET(request: Request) {
             charms,
             charmCategories,
             preferences,
-            orders
+            orders,
+            mailLogs
         });
 
     } catch (error) {
