@@ -217,6 +217,7 @@ function FindOrdersByEmailForm() {
     const locale = params.locale as string;
 
     useEffect(() => {
+        // This log will appear in the browser console when the server action completes.
         if (emailState && (emailState.success || emailState.message)) {
             console.log("[CLIENT DEBUG] Server action 'getOrdersByEmail' completed. State:", emailState);
         }
@@ -283,29 +284,31 @@ export default function TrackOrderPage() {
             </div>
             
             <Card>
-                <CardHeader>
-                    <CardTitle className="text-center text-2xl font-headline">{t('track_order_link')}</CardTitle>
-                    <CardDescription className="text-center">
-                        {tStatus('track_description')}
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <form action={orderAction} className="space-y-4">
+                <form action={orderAction}>
+                    <CardHeader>
+                        <CardTitle className="text-center text-2xl font-headline">{t('track_order_link')}</CardTitle>
+                        <CardDescription className="text-center">
+                            {tStatus('track_description')}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
                         <Input
                             name="orderNumber"
                             placeholder={tStatus('order_number_placeholder')}
                             required
                         />
                         <TrackSubmitButton />
-                    </form>
-                    {orderState && !orderState.success && orderState.message && (
-                        <Alert variant="destructive" className="mt-4">
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>{tStatus('error_title')}</AlertTitle>
-                            <AlertDescription>{orderState.message}</AlertDescription>
-                        </Alert>
-                    )}
-                </CardContent>
+                    </CardContent>
+                    <CardFooter>
+                        {orderState && !orderState.success && orderState.message && (
+                            <Alert variant="destructive" className="w-full">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertTitle>{tStatus('error_title')}</AlertTitle>
+                                <AlertDescription>{orderState.message}</AlertDescription>
+                            </Alert>
+                        )}
+                    </CardFooter>
+                </form>
             </Card>
 
             {orderState.success && orderState.order && (
