@@ -50,7 +50,6 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
               <BrandLogo className="h-8 w-auto text-foreground" />
             </Link>
             <div className="flex items-center gap-2 flex-wrap">
-                <SupportDialog />
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
@@ -88,6 +87,7 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
           <div className="container mx-auto text-center text-muted-foreground text-sm space-y-2">
             <p>{t('footer_text', { year: new Date().getFullYear() })}</p>
              <div className="flex justify-center items-center gap-4 text-xs text-muted-foreground/80">
+                <SupportDialog />
                  <Link href={`/${locale}/login`} className="hover:underline">
                     {t('admin_area_link')}
                 </Link>
