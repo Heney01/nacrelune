@@ -81,6 +81,21 @@ export interface OrderItem {
     charms?: Charm[];
 }
 
+export interface MailDelivery {
+    state: 'SUCCESS' | 'ERROR' | 'PROCESSING' | 'PENDING' | string;
+    startTime: Date | null;
+    endTime: Date | null;
+    error?: string | null;
+    attempts: number;
+}
+
+export interface MailLog {
+    id: string;
+    to: string[];
+    subject: string;
+    delivery: MailDelivery | null;
+}
+
 export interface Order {
     id: string;
     orderNumber: string;
@@ -92,4 +107,5 @@ export interface Order {
     shippingCarrier?: string;
     trackingNumber?: string;
     cancellationReason?: string;
+    mailHistory?: MailLog[];
 }

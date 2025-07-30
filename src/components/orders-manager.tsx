@@ -3,10 +3,10 @@
 'use client';
 
 import React, { useState, useReducer, useTransition, Fragment, useMemo } from 'react';
-import type { Order, OrderStatus, OrderItem, Charm } from '@/lib/types';
+import type { Order, OrderStatus, OrderItem, Charm, MailLog } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from './ui/card';
-import { Package, Search, ChevronDown, ChevronUp, Truck, FileX, Edit, Copy } from 'lucide-react';
+import { Package, Search, ChevronDown, ChevronUp, Truck, FileX, Edit, Copy, Mail, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { useTranslations } from '@/hooks/use-translations';
 import { Badge } from './ui/badge';
 import { updateOrderStatus, updateOrderItemStatus } from '@/app/actions';
@@ -29,6 +29,8 @@ import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Textarea } from './ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 interface OrdersManagerProps {
     initialOrders: Order[];
@@ -213,6 +215,58 @@ const CancelOrderDialog = ({
     )
 }
 
+const MailHistoryTab = ({ mailHistory }: { mailHistory: MailLog[] }) => {
+    const mailStatusIcons: { [key: string]: React.ReactElement } = {
+        'SUCCESS': <CheckCircle className="h-4 w-4 text-green-500" />,
+        'ERROR': <XCircle className="h-4 w-4 text-red-500" />,
+        'PENDING': <Clock className="h-4 w-4 text-yellow-500" />,
+        'PROCESSING': <Clock className="h-4 w-4 text-blue-500" />,
+    }
+
+    if (!mailHistory || mailHistory.length === 0) {
+        return <p className="text-sm text-muted-foreground text-center p-8">Aucun e-mail n'a été envoyé pour cette commande.</p>
+    }
+
+    return (
+        <div className="p-2 sm:p-4">
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Statut</TableHead>
+                        <TableHead>Date d'envoi</TableHead>
+                        <TableHead>Sujet</TableHead>
+                        <TableHead>Destinataire</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {mailHistory.map(mail => (
+                        <TableRow key={mail.id}>
+                            <TableCell>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger>
+                                            <div className="flex items-center gap-2">
+                                                {mailStatusIcons[mail.delivery?.state || 'PENDING'] || <Clock className="h-4 w-4" />}
+                                                <span className="hidden sm:inline">{mail.delivery?.state || 'PENDING'}</span>
+                                            </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            {mail.delivery?.error ? <p className="text-destructive-foreground bg-destructive p-2 rounded-md">{mail.delivery.error}</p> : <p>{mail.delivery?.state}</p>}
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            </TableCell>
+                            <TableCell>{mail.delivery?.startTime ? new Date(mail.delivery.startTime).toLocaleString() : 'En attente'}</TableCell>
+                            <TableCell className="max-w-xs truncate">{mail.subject}</TableCell>
+                            <TableCell>{mail.to.join(', ')}</TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
+    )
+}
+
 const OrderDetails = ({ order, onItemStatusChange, onStatusChange, t, onEditShipping }: { 
     order: Order, 
     onItemStatusChange: (orderId: string, itemIndex: number, isCompleted: boolean) => void,
@@ -220,119 +274,128 @@ const OrderDetails = ({ order, onItemStatusChange, onStatusChange, t, onEditShip
     t: (key: string, values?: any) => string,
     onEditShipping: () => void
 }) => {
-
     return (
-        <>
-            <div className="bg-muted/50 p-4 md:p-6">
-                <h4 className="text-lg font-semibold mb-4">Atelier de confection - Commande {order.orderNumber}</h4>
-                {order.shippingCarrier && order.trackingNumber && (
-                    <div className="mb-6">
-                        <h5 className="font-semibold mb-2 text-md flex items-center gap-2"><Truck className="h-5 w-5 text-primary" /> Informations d'expédition</h5>
-                        <div className="flex items-start justify-between bg-background p-4 rounded-lg border">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Transporteur</p>
-                                    <p>{order.shippingCarrier}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Numéro de suivi</p>
-                                    <p className="font-mono">{order.trackingNumber}</p>
+        <div className="bg-muted/50">
+            <Tabs defaultValue="workshop" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="workshop">Atelier de confection</TabsTrigger>
+                    <TabsTrigger value="mailHistory">Historique des e-mails</TabsTrigger>
+                </TabsList>
+                <TabsContent value="workshop">
+                     <div className="p-4 md:p-6">
+                        {order.shippingCarrier && order.trackingNumber && (
+                            <div className="mb-6">
+                                <h5 className="font-semibold mb-2 text-md flex items-center gap-2"><Truck className="h-5 w-5 text-primary" /> Informations d'expédition</h5>
+                                <div className="flex items-start justify-between bg-background p-4 rounded-lg border">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
+                                        <div>
+                                            <p className="text-sm font-medium text-muted-foreground">Transporteur</p>
+                                            <p>{order.shippingCarrier}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-muted-foreground">Numéro de suivi</p>
+                                            <p className="font-mono">{order.trackingNumber}</p>
+                                        </div>
+                                    </div>
+                                   <Button variant="outline" size="sm" onClick={onEditShipping}>
+                                        <Edit className="mr-2 h-4 w-4" /> Modifier
+                                    </Button>
                                 </div>
                             </div>
-                           <Button variant="outline" size="sm" onClick={onEditShipping}>
-                                <Edit className="mr-2 h-4 w-4" /> Modifier
-                            </Button>
-                        </div>
-                    </div>
-                )}
-                {order.status === 'annulée' && order.cancellationReason && (
-                    <div className="mb-6">
-                        <h5 className="font-semibold mb-2 text-md flex items-center gap-2"><FileX className="h-5 w-5 text-destructive" /> Commande Annulée</h5>
-                        <div className="bg-background p-4 rounded-lg border">
-                            <p className="text-sm font-medium text-muted-foreground">Motif de l'annulation</p>
-                            <p className="italic">"{order.cancellationReason}"</p>
-                        </div>
-                    </div>
-                )}
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {order.items.map((item, index) => (
-                        <Card key={index} className={cn("overflow-hidden", item.isCompleted && "bg-green-50 border-green-200")}>
-                            <CardHeader>
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <CardTitle className="text-base">{item.modelName}</CardTitle>
-                                        <CardDescription>Réf: {item.modelId}</CardDescription>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox
-                                            id={`completed-${order.id}-${index}`}
-                                            checked={item.isCompleted}
-                                            onCheckedChange={(checked) => {
-                                                onItemStatusChange(order.id, index, !!checked)
-                                            }}
-                                            disabled={order.status === 'annulée'}
-                                        />
-                                        <Label htmlFor={`completed-${order.id}-${index}`}>Terminé</Label>
-                                    </div>
+                        )}
+                        {order.status === 'annulée' && order.cancellationReason && (
+                            <div className="mb-6">
+                                <h5 className="font-semibold mb-2 text-md flex items-center gap-2"><FileX className="h-5 w-5 text-destructive" /> Commande Annulée</h5>
+                                <div className="bg-background p-4 rounded-lg border">
+                                    <p className="text-sm font-medium text-muted-foreground">Motif de l'annulation</p>
+                                    <p className="italic">"{order.cancellationReason}"</p>
                                 </div>
-                            </CardHeader>
-                            <CardContent>
-                                <Dialog>
-                                    <DialogTrigger asChild>
-                                        <div className="w-full max-w-48 mx-auto bg-white p-2 rounded-md border mb-4 cursor-pointer">
-                                            <Image 
-                                                src={item.previewImageUrl} 
-                                                alt={`Aperçu de ${item.modelName}`}
-                                                width={400} 
-                                                height={400} 
-                                                className="w-full h-auto object-contain rounded" 
-                                            />
-                                        </div>
-                                    </DialogTrigger>
-                                    <DialogContent className="max-w-2xl">
-                                        <DialogHeader>
-                                            <DialogTitle>Aperçu de {item.modelName}</DialogTitle>
-                                        </DialogHeader>
-                                        <Image 
-                                            src={item.previewImageUrl} 
-                                            alt={`Aperçu de ${item.modelName}`}
-                                            width={800} 
-                                            height={800} 
-                                            className="w-full h-auto object-contain rounded-lg" 
-                                        />
-                                    </DialogContent>
-                                </Dialog>
-                                
-                                <Separator className="my-3" />
-                                
-                                <h5 className="font-semibold mb-2 text-sm">Breloques à ajouter:</h5>
-                                {item.charms && item.charms.length > 0 ? (
-                                    <ul className="space-y-2">
-                                        {item.charms.map((charm, charmIndex) => (
-                                            <li key={`${charm.id}-${charmIndex}`} className="flex items-center gap-3 text-sm">
-                                                <Image 
-                                                    src={charm.imageUrl} 
-                                                    alt={charm.name}
-                                                    width={32} 
-                                                    height={32} 
-                                                    className="w-8 h-8 object-contain rounded border bg-white p-0.5" 
+                            </div>
+                        )}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                            {order.items.map((item, index) => (
+                                <Card key={index} className={cn("overflow-hidden", item.isCompleted && "bg-green-50 border-green-200")}>
+                                    <CardHeader>
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <CardTitle className="text-base">{item.modelName}</CardTitle>
+                                                <CardDescription>Réf: {item.modelId}</CardDescription>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <Checkbox
+                                                    id={`completed-${order.id}-${index}`}
+                                                    checked={item.isCompleted}
+                                                    onCheckedChange={(checked) => {
+                                                        onItemStatusChange(order.id, index, !!checked)
+                                                    }}
+                                                    disabled={order.status === 'annulée'}
                                                 />
-                                                <div className="flex-grow">
-                                                    <span>{charm.name}</span>
-                                                    <p className="text-xs text-muted-foreground">Réf: {charm.id}</p>
+                                                <Label htmlFor={`completed-${order.id}-${index}`}>Terminé</Label>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Dialog>
+                                            <DialogTrigger asChild>
+                                                <div className="w-full max-w-48 mx-auto bg-white p-2 rounded-md border mb-4 cursor-pointer">
+                                                    <Image 
+                                                        src={item.previewImageUrl} 
+                                                        alt={`Aperçu de ${item.modelName}`}
+                                                        width={400} 
+                                                        height={400} 
+                                                        className="w-full h-auto object-contain rounded" 
+                                                    />
                                                 </div>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                ): (
-                                    <p className="text-sm text-muted-foreground">Aucune breloque pour cet article.</p>
-                                )}
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-            </div>
-        </>
+                                            </DialogTrigger>
+                                            <DialogContent className="max-w-2xl">
+                                                <DialogHeader>
+                                                    <DialogTitle>Aperçu de {item.modelName}</DialogTitle>
+                                                </DialogHeader>
+                                                <Image 
+                                                    src={item.previewImageUrl} 
+                                                    alt={`Aperçu de ${item.modelName}`}
+                                                    width={800} 
+                                                    height={800} 
+                                                    className="w-full h-auto object-contain rounded-lg" 
+                                                />
+                                            </DialogContent>
+                                        </Dialog>
+                                        
+                                        <Separator className="my-3" />
+                                        
+                                        <h5 className="font-semibold mb-2 text-sm">Breloques à ajouter:</h5>
+                                        {item.charms && item.charms.length > 0 ? (
+                                            <ul className="space-y-2">
+                                                {item.charms.map((charm, charmIndex) => (
+                                                    <li key={`${charm.id}-${charmIndex}`} className="flex items-center gap-3 text-sm">
+                                                        <Image 
+                                                            src={charm.imageUrl} 
+                                                            alt={charm.name}
+                                                            width={32} 
+                                                            height={32} 
+                                                            className="w-8 h-8 object-contain rounded border bg-white p-0.5" 
+                                                        />
+                                                        <div className="flex-grow">
+                                                            <span>{charm.name}</span>
+                                                            <p className="text-xs text-muted-foreground">Réf: {charm.id}</p>
+                                                        </div>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ): (
+                                            <p className="text-sm text-muted-foreground">Aucune breloque pour cet article.</p>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    </div>
+                </TabsContent>
+                <TabsContent value="mailHistory">
+                    <MailHistoryTab mailHistory={order.mailHistory || []} />
+                </TabsContent>
+            </Tabs>
+        </div>
     )
 }
 
