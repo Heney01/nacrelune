@@ -41,7 +41,7 @@ const placementPrompt = ai.definePrompt({
   name: 'charmPlacementPrompt',
   input: { schema: CharmSuggestionInputSchema },
   output: { schema: CharmSuggestionOutputSchema },
-  model: googleAI.model('gemini-1.5-flash'),
+  model: googleAI.model('gemini-1.5-pro'),
   prompt: `Tu es un expert en design de bijoux pour un atelier de création personnalisée.
 Ton rôle est de suggérer des emplacements créatifs et esthétiques pour des breloques sur un bijou.
 
