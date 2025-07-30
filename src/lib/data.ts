@@ -1,6 +1,5 @@
 
 
-
 import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, DocumentReference, getDoc, doc, Timestamp, query, orderBy, where, documentId } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
@@ -37,20 +36,13 @@ export async function getJewelryTypesAndModels(
             const querySnapshot = await getDocs(collection(db, typeInfo.id));
             const docs = querySnapshot.docs;
 
-            // Get all image URLs in parallel
-            const imageUrlPromises = docs.map(doc => {
+            const models = await Promise.all(docs.map(async (doc) => {
                 const data = doc.data();
-                return Promise.all([
+                
+                const [displayImageUrl, editorImageUrl] = await Promise.all([
                     getUrl(data.displayImageUrl, 'https://placehold.co/800x800.png'),
                     getUrl(data.editorImageUrl, 'https://placehold.co/800x800.png')
                 ]);
-            });
-
-            const imageUrls = await Promise.all(imageUrlPromises);
-
-            const models = docs.map((doc, index) => {
-                const data = doc.data();
-                const [displayImageUrl, editorImageUrl] = imageUrls[index];
                 
                 return {
                     id: doc.id,
@@ -64,7 +56,7 @@ export async function getJewelryTypesAndModels(
                     lastOrderedAt: toDate(data.lastOrderedAt),
                     restockedAt: toDate(data.restockedAt),
                 } as JewelryModel;
-            });
+            }));
             
             typesWithModels.push({ ...typeInfo, models });
         } catch (error) {
