@@ -786,17 +786,13 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
 }
 
 export async function getOrdersByEmail(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; }> {
-    console.log("[SERVER] getOrdersByEmail action started.");
     const email = formData.get('email') as string;
     const locale = formData.get('locale') as string || 'fr';
     
     if (!email) {
-        console.log("[SERVER] No email provided.");
         return { success: false, message: "Veuillez fournir une adresse e-mail." };
     }
     
-    console.log(`[SERVER] Searching for orders with email: ${email}`);
-
     try {
         const q = query(
             collection(db, 'orders'), 
@@ -804,7 +800,6 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
             orderBy('createdAt', 'desc')
         );
         const querySnapshot = await getDocs(q);
-        console.log(`[SERVER] Firestore query returned ${querySnapshot.docs.length} documents.`);
 
         const orders = querySnapshot.docs.map(doc => {
             const data = doc.data();
@@ -826,7 +821,6 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
         let returnMessage: string;
         
         if (orders.length > 0) {
-            console.log(`[SERVER] Found ${orders.length} orders. Preparing email.`);
             returnMessage = `Email sent. ${orders.length} order(s) found.`;
             const ordersListText = orders.map(o => 
                 `- Commande ${o.orderNumber} (du ${o.createdAt}) - Statut : ${o.status}`
@@ -837,7 +831,6 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
             mailText = `Bonjour,\n\nVoici la liste de vos commandes récentes passées avec cette adresse e-mail :\n\n${ordersListText}\n\nVous pouvez suivre le statut de n'importe quelle commande sur notre page de suivi : ${baseUrl}/${locale}/orders/track${emailFooterText}`;
             mailHtml = `<h1>Vos commandes Atelier à bijoux</h1><p>Bonjour,</p><p>Voici la liste de vos commandes récentes passées avec cette adresse e-mail :</p><ul>${ordersListHtml}</ul><p>Vous pouvez suivre le statut de n'importe quelle commande sur notre <a href="${baseUrl}/${locale}/orders/track">page de suivi</a>.</p>${emailFooterHtml}`;
         } else {
-            console.log(`[SERVER] No orders found. Preparing email.`);
             returnMessage = "Email sent. No orders found.";
             mailText = `Bonjour,\n\nVous avez récemment demandé à retrouver vos commandes. Aucune commande n'est associée à cette adresse e-mail (${email}).\n\nSi vous pensez qu'il s'agit d'une erreur, veuillez vérifier l'adresse e-mail ou contacter notre support.${emailFooterText}`;
             mailHtml = `<h1>Vos commandes Atelier à bijoux</h1><p>Bonjour,</p><p>Vous avez récemment demandé à retrouver vos commandes. Aucune commande n'est associée à cette adresse e-mail (${email}).</p><p>Si vous pensez qu'il s'agit d'une erreur, veuillez vérifier l'adresse e-mail ou contacter notre support.</p>${emailFooterHtml}`;
@@ -852,20 +845,15 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
             },
         };
         
-        console.log("[SERVER] Creating mail document in Firestore...");
         const mailRef = doc(collection(db, 'mail'));
         await setDoc(mailRef, mailDocData);
-        console.log(`[SERVER] Mail document successfully created with ID: ${mailRef.id}.`);
         
         return { success: true, message: returnMessage };
 
     } catch (error: any) {
-        // Log the actual error on the server for debugging
         console.error(`[SERVER] Error in getOrdersByEmail for ${email}:`, error);
-        
-        // IMPORTANT: For security, we still tell the client that the process was successful.
-        // This prevents attackers from guessing which emails are registered in our system.
-        return { success: true, message: "An error occurred, but we are telling the user an email was sent for security." };
+        // Propagate the actual error message for clearer debugging on the client.
+        return { success: false, message: error.message || "Une erreur inconnue est survenue côté serveur." };
     }
 }
 
@@ -1087,3 +1075,5 @@ export async function updateOrderItemStatus(formData: FormData): Promise<{ succe
         return { success: false, message: error.message || "Une erreur est survenue." };
     }
 }
+
+    
