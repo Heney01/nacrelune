@@ -51,10 +51,14 @@ const suggestCharmPlacementFlow = ai.defineFlow(
     outputSchema: SuggestCharmPlacementOutputSchema,
   },
   async (input) => {
-     if (input.charmOptions.length === 0) {
+    console.log('[AI Flow] Starting suggestCharmPlacementFlow with input:', input);
+
+    if (input.charmOptions.length === 0) {
+      console.log('[AI Flow] No charm options provided, returning empty suggestions.');
       return { suggestions: [] };
     }
 
+    console.log('[AI Flow] Calling AI.generate...');
     const llmResponse = await ai.generate({
       prompt: `You are a jewelry design assistant. Your task is to suggest creative and aesthetically pleasing charm placements.
 
@@ -81,9 +85,11 @@ Please provide your suggestions in the required output format.`,
     
     const output = llmResponse.output;
     if (!output) {
+      console.error('[AI Flow] No output from prompt.');
       throw new Error('No output from prompt');
     }
     
+    console.log('[AI Flow] Successfully received output from AI:', output);
     return output;
   }
 );

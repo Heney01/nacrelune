@@ -19,10 +19,9 @@ export async function getCharmSuggestions(
   try {
     const suggestions = await suggestCharmPlacement(input);
     return suggestions;
-  } catch (error) {
-    console.error('Error getting charm suggestions:', error);
-    // In a real app, you might want to return a more user-friendly error
-    throw new Error('Failed to generate suggestions.');
+  } catch (error: any) {
+    console.error('Error in getCharmSuggestions action:', error);
+    throw new Error(error.message || 'Failed to generate suggestions.');
   }
 }
 
