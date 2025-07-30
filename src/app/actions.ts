@@ -5,6 +5,7 @@
 
 
 
+
 'use server';
 
 import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
@@ -599,6 +600,18 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
             to: [email],
             message: {
                 subject: `Confirmation de votre commande n°${orderNumber}`,
+                text: `
+                    Bonjour,
+
+                    Nous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalOrderPrice.toFixed(2)}€.
+                    
+                    Récapitulatif :
+                    ${cartItems.map(item => `- ${item.model.name} avec ${item.placedCharms.length} breloque(s)`).join('\n')}
+                    
+                    Vous recevrez un autre e-mail lorsque votre commande sera expédiée.
+                    
+                    L'équipe Atelier à bijoux
+                `.trim(),
                 html: `
                     <h1>Merci pour votre commande !</h1>
                     <p>Bonjour,</p>
