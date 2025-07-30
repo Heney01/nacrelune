@@ -70,7 +70,7 @@ const suggestCharmPlacementFlow = ai.defineFlow(
   },
   async (input) => {
     const llmResponse = await placementPrompt(input);
-    const output = llmResponse.output();
+    const output = llmResponse.output;
 
     if (!output) {
       console.error('[AI FLOW] LLM returned no output.');
