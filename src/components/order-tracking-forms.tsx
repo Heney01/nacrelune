@@ -49,32 +49,18 @@ export function TrackByNumberForm({ onOrderFound }: { onOrderFound: (order: Orde
     // Autofill and submit form if orderNumber is in URL
     useEffect(() => {
         if (orderNumberFromUrl) {
-            const form = document.getElementById('track-by-number-form') as HTMLFormElement;
-            if (form) {
-                const input = form.elements.namedItem('orderNumber') as HTMLInputElement;
-                if (input && input.value !== orderNumberFromUrl) {
-                    // This is a bit of a hack to trigger the form action with the URL param
-                    // A cleaner way might involve a dedicated server component for the initial load
-                    const formData = new FormData();
-                    formData.append('orderNumber', orderNumberFromUrl);
-                    // we call the action directly
-                    (getOrderDetailsByNumber as any)(null, formData).then((res: any) => {
-                         if (res.success && res.order) {
-                            onOrderFound(res.order);
-                        } else {
-                            onOrderFound(null);
-                        }
-                    })
-
-                }
-            }
+            const formData = new FormData();
+            formData.append('orderNumber', orderNumberFromUrl);
+            orderAction(formData);
+        } else {
+            onOrderFound(null);
         }
-    }, [orderNumberFromUrl, onOrderFound]);
+    }, [orderNumberFromUrl]);
     
     useEffect(() => {
         if (orderState.success && orderState.order) {
             onOrderFound(orderState.order);
-        } else {
+        } else if (!orderState.success) {
             onOrderFound(null);
         }
     }, [orderState, onOrderFound]);
@@ -93,6 +79,7 @@ export function TrackByNumberForm({ onOrderFound }: { onOrderFound: (order: Orde
                         name="orderNumber"
                         placeholder={tStatus('order_number_placeholder')}
                         defaultValue={orderNumberFromUrl || ''}
+                        key={orderNumberFromUrl} // Force re-render if URL changes
                         required
                     />
                     <TrackSubmitButton />
@@ -169,5 +156,3 @@ export function TrackByEmailForm() {
         </Card>
     );
 }
-
-    
