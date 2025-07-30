@@ -14,7 +14,7 @@
     "model_selection_title": "Sélectionnez un Modèle",
     "model_selection_subtitle": "Sélectionnez un magnifique modèle de {jewelryTypeName} comme base pour votre création personnalisée.",
     "back_button": "Retour",
-    "select_button": "Sélectionctionner",
+    "select_button": "Sélectionner",
     "footer_text": "© {year} Atelier à bijoux. Tous droits réservés.",
     "admin_area_link": "Espace Administrateur",
     "track_order_link": "Suivre ma commande",
@@ -23,7 +23,10 @@
     "support_dialog_description": "Vous avez une question ou besoin d'aide avec votre commande ?",
     "support_dialog_instructions": "Vous pouvez nous joindre par e-mail. Copiez l'adresse ci-dessous ou utilisez le bouton pour ouvrir directement votre client de messagerie.",
     "support_email_copied": "Adresse e-mail du support copiée !",
-    "support_open_mail_button": "Ouvrir l'application de messagerie"
+    "support_open_mail_button": "Ouvrir l'application de messagerie",
+    "coming_soon": "Bientôt disponible",
+    "wip_title": "Projet en Construction",
+    "wip_description": "Bienvenue ! Ce projet est actuellement en cours de développement. De nouvelles fonctionnalités et de nouveaux modèles de bijoux seront ajoutés prochainement."
   },
   "Editor": {
     "charms_title": "Breloques",
@@ -172,5 +175,3 @@
     "tracking_number_copied": "Numéro de suivi copié !"
   }
 }
-
-    

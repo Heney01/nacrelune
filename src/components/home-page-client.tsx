@@ -6,7 +6,7 @@ import React from 'react';
 import Editor from '@/components/editor';
 import { BrandLogo } from '@/components/icons';
 import { useTranslations } from '@/hooks/use-translations';
-import { Gem, HandMetal, Ear, Truck } from 'lucide-react';
+import { Gem, HandMetal, Ear, Truck, Construction } from 'lucide-react';
 import { TypeSelection } from '@/components/type-selection';
 import { ModelSelection } from '@/components/model-selection';
 import type { JewelryType, Charm } from '@/lib/types';
@@ -15,6 +15,7 @@ import { CartWidget } from './cart-widget';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { SupportDialog } from './support-dialog';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 
 export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, locale }: {
@@ -72,6 +73,13 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
 
         <main className="flex-grow p-4 md:p-8">
           <div className="container mx-auto">
+            <Alert className="mb-8 border-yellow-400 bg-yellow-50 text-yellow-800 [&>svg]:text-yellow-600">
+                <Construction />
+                <AlertTitle>{t('wip_title')}</AlertTitle>
+                <AlertDescription>
+                    {t('wip_description')}
+                </AlertDescription>
+            </Alert>
             {selectedType ? (
                 <ModelSelection 
                     selectedType={selectedType}

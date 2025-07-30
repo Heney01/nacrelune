@@ -23,7 +23,10 @@
     "support_dialog_description": "Have a question or need help with your order?",
     "support_dialog_instructions": "You can reach us by email. Copy the address below or use the button to open your mail client directly.",
     "support_email_copied": "Support email address copied!",
-    "support_open_mail_button": "Open Mail App"
+    "support_open_mail_button": "Open Mail App",
+    "coming_soon": "Coming Soon",
+    "wip_title": "Project Under Construction",
+    "wip_description": "Welcome! This project is currently under development. New features and jewelry models will be added soon."
   },
   "Editor": {
     "charms_title": "Charms",
@@ -172,5 +175,3 @@
     "tracking_number_copied": "Tracking number copied!"
   }
 }
-
-    
