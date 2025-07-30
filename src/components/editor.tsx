@@ -14,8 +14,6 @@ import { cn } from '@/lib/utils';
 import { BrandLogo } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { getCharmSuggestions } from '@/app/actions';
-import type { Suggestion, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { CharmsPanel } from './charms-panel';
 import { Input } from './ui/input';
 import { useCart } from '@/hooks/use-cart';
@@ -144,10 +142,6 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
 
-  const [suggestions, setSuggestions] = useState<SuggestCharmPlacementOutput | null>(null);
-  const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
-  const [suggestionError, setSuggestionError] = useState<string | null>(null);
-
   const [charmsSearchTerm, setCharmsSearchTerm] = useState('');
 
   const [captureRequest, setCaptureRequest] = useState(false);
@@ -227,12 +221,6 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     addCharmToCanvas(charm, { source: 'charmsPanel' });
   }, [addCharmToCanvas]);
 
-  const addCharmFromSuggestions = useCallback((suggestion: Suggestion) => {
-    const charm = allCharms.find(c => c.name === suggestion.charm);
-    if (charm && suggestion.position) {
-        addCharmToCanvas(charm, { source: 'suggestionsPanel', position: suggestion.position });
-    }
-  }, [addCharmToCanvas, allCharms]);
   
   const removeCharm = useCallback((id: string) => {
     setPlacedCharms(prev => prev.filter(c => c.id !== id));
@@ -248,25 +236,6 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       )
     );
   }, []);
-
-  const handleGenerateSuggestions = async (preferences: string) => {
-      setIsGeneratingSuggestions(true);
-      setSuggestionError(null);
-      try {
-        const result = await getCharmSuggestions({
-          jewelryType: jewelryType.id,
-          modelDescription: model.name,
-          charmOptions: allCharms.map(c => c.name),
-          userPreferences: preferences,
-        });
-        setSuggestions(result);
-      } catch (err) {
-        setSuggestionError(t('error_generating_suggestions'));
-      } finally {
-        setIsGeneratingSuggestions(false);
-      }
-  };
-
 
   const handleDragStart = useCallback((e: React.MouseEvent | TouchEvent, charmId: string) => {
     if ('preventDefault' in e && e.cancelable) e.preventDefault();
@@ -623,12 +592,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
 
               {!isMobile && <div className="lg:col-span-3">
                   <SuggestionSidebar
-                      onApplySuggestion={addCharmFromSuggestions}
                       charms={allCharms}
-                      suggestions={suggestions}
-                      isLoading={isGeneratingSuggestions}
-                      error={suggestionError}
-                      onGenerate={handleGenerateSuggestions}
                   />
               </div>}
               </div>
@@ -682,13 +646,8 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                           <SheetTitle>{t('ai_suggestions_title')}</SheetTitle>
                      </SheetHeader>
                       <SuggestionSidebar 
-                          onApplySuggestion={addCharmFromSuggestions}
                           charms={allCharms} 
                           isMobile={true}
-                          suggestions={suggestions}
-                          isLoading={isGeneratingSuggestions}
-                          error={suggestionError}
-                          onGenerate={handleGenerateSuggestions}
                       />
                   </SheetContent>
               </Sheet>

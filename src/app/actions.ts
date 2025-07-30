@@ -1,7 +1,6 @@
 
 'use server';
 
-import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { revalidatePath } from 'next/cache';
 import { db, storage } from '@/lib/firebase';
 import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction, Timestamp, collectionGroup, documentId, orderBy, DocumentReference, DocumentSnapshot } from 'firebase/firestore';
@@ -12,18 +11,6 @@ import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
 import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm } from '@/lib/types';
 
-
-export async function getCharmSuggestions(
-  input: SuggestCharmPlacementInput
-): Promise<SuggestCharmPlacementOutput> {
-  try {
-    const suggestions = await suggestCharmPlacement(input);
-    return suggestions;
-  } catch (error: any) {
-    console.error('Error in getCharmSuggestions action:', error);
-    throw new Error(error.message || 'Failed to generate suggestions.');
-  }
-}
 
 const getFileNameFromUrl = (url: string) => {
     if (!url) return null;
