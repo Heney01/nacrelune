@@ -46,14 +46,17 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-full grid p-0 max-h-[90vh] md:grid-cols-2">
-        <div className="flex flex-col p-6 overflow-hidden">
-            <DialogHeader>
+      <DialogContent 
+        className="max-w-4xl w-full grid p-0 max-h-[90vh] md:grid-cols-2"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <div className="flex flex-col overflow-hidden">
+            <DialogHeader className="p-6 pb-0">
                 <DialogTitle className="text-2xl font-headline">{t('title')}</DialogTitle>
                 <DialogDescription>{t('description')}</DialogDescription>
             </DialogHeader>
-            <ScrollArea className="flex-grow mt-6 -mx-6 pr-2">
-                <form id="checkout-form" onSubmit={handleConfirm} className="px-6 space-y-6">
+            <ScrollArea className="flex-grow">
+                <form id="checkout-form" onSubmit={handleConfirm} className="px-6 py-4 space-y-6">
                     <div>
                         <h3 className="text-lg font-medium">{t('shipping_info')}</h3>
                         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -108,7 +111,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
                     </div>
                 </form>
             </ScrollArea>
-             <DialogFooter className="mt-6 pt-6 border-t">
+             <DialogFooter className="p-6 pt-0 mt-auto border-t">
               <Button type="submit" form="checkout-form" className="w-full" disabled={isProcessing}>
                 {isProcessing ? (
                   <>
@@ -168,3 +171,4 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
     </Dialog>
   );
 }
+

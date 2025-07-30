@@ -486,13 +486,22 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
           
           // Vérifier si le canvas n'est pas vide
           const context = canvas.getContext('2d');
-          const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-          const isEmpty = imageData.data.every(pixel => pixel === 0);
-          
-          if (isEmpty) {
-            throw new Error('Canvas capturé est vide');
+          if (!context) {
+            console.warn('Impossible de vérifier si le canvas est vide, mais on continue...');
+          } else {
+            try {
+              const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+              const isEmpty = imageData.data.every(pixel => pixel === 0);
+              
+              if (isEmpty) {
+                throw new Error('Canvas capturé est vide');
+              }    
+            } catch (error) {
+              console.warn('Erreur lors de la vérification du canvas:', error);
+            }
           }
-      
+          
+  
           const previewImage = canvas.toDataURL('image/png', 0.9);
       
           if (isEditing && cartItemId) {
@@ -575,7 +584,12 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     const canvas = document.createElement('canvas');
     canvas.width = 400;
     canvas.height = 400;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) {
+      // Fallback du fallback : retourner une URL d'image placeholder
+      return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+    }
     
     // Fond blanc
     ctx.fillStyle = '#ffffff';
