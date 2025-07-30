@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useTranslations } from '@/hooks/use-translations';
-import { PackageCheck, Truck, Home, AlertCircle, ArrowLeft } from 'lucide-react';
+import { PackageCheck, Truck, Home, AlertCircle, ArrowLeft, Package } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { Order, OrderItem, OrderStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
