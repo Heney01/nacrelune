@@ -11,6 +11,8 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import {googleAI} from '@genkit-ai/googleai';
+
 
 const CharmSuggestionInputSchema = z.object({
   jewelryType: z.string().describe('Le type de bijou (ex: "collier", "bracelet").'),
@@ -39,6 +41,7 @@ const placementPrompt = ai.definePrompt({
   name: 'charmPlacementPrompt',
   input: { schema: CharmSuggestionInputSchema },
   output: { schema: CharmSuggestionOutputSchema },
+  model: googleAI.model('gemini-1.5-flash'),
   prompt: `Tu es un expert en design de bijoux pour un atelier de création personnalisée.
 Ton rôle est de suggérer des emplacements créatifs et esthétiques pour des breloques sur un bijou.
 
@@ -66,8 +69,6 @@ const suggestCharmPlacementFlow = ai.defineFlow(
     outputSchema: CharmSuggestionOutputSchema,
   },
   async (input) => {
-    console.log('[AI FLOW] Input received:', input);
-    
     const llmResponse = await placementPrompt(input);
     const output = llmResponse.output();
 
@@ -75,8 +76,7 @@ const suggestCharmPlacementFlow = ai.defineFlow(
       console.error('[AI FLOW] LLM returned no output.');
       throw new Error("L'IA n'a retourné aucune suggestion.");
     }
-
-    console.log('[AI FLOW] Output generated:', output);
+    
     return output;
   }
 );
