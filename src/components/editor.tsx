@@ -442,25 +442,14 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
         }
       
         try {
-          // Configuration spécifique pour mobile
-          const isMobileDevice = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-          
           const html2canvasOptions = {
             backgroundColor: null,
             logging: false,
             useCORS: true,
             allowTaint: true,
-            scale: isMobileDevice ? 1 : 2, // Réduire l'échelle sur mobile
+            scale: isMobile ? 1 : 2,
             width: canvasRef.current.offsetWidth,
             height: canvasRef.current.offsetHeight,
-            // Options spécifiques pour mobile
-            ...(isMobileDevice && {
-              foreignObjectRendering: false, // Désactiver le rendu foreign object sur mobile
-              imageTimeout: 15000, // Augmenter le timeout
-              removeContainer: true,
-              scrollX: 0,
-              scrollY: 0,
-            })
           };
       
           // Forcer le rendu des images avant la capture
@@ -472,36 +461,16 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
               } else {
                 img.onload = () => resolve(true);
                 img.onerror = () => resolve(true);
-                // Fallback si l'image ne charge pas
                 setTimeout(() => resolve(true), 3000);
               }
             });
           }));
       
-          // Attendre un peu plus sur mobile
-          if (isMobileDevice) {
+          if (isMobile) {
             await new Promise(resolve => setTimeout(resolve, 200));
           }
       
           const canvas = await html2canvas(canvasRef.current, html2canvasOptions);
-          
-          // Vérifier si le canvas n'est pas vide
-          const context = canvas.getContext('2d');
-          if (!context) {
-            console.warn('Impossible de vérifier si le canvas est vide, mais on continue...');
-          } else {
-            try {
-              const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-              const isEmpty = imageData.data.every(pixel => pixel === 0);
-              
-              if (isEmpty) {
-                throw new Error('Canvas capturé est vide');
-              }    
-            } catch (error) {
-              console.warn('Erreur lors de la vérification du canvas:', error);
-            }
-          }
-          
   
           const previewImage = canvas.toDataURL('image/png', 0.9);
       
@@ -541,7 +510,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   
       capture();
     }
-  }, [captureRequest, scale, pan, addToCart, cartItemId, isEditing, jewelryType, model, placedCharms, t, toast, updateCartItem]);
+  }, [captureRequest, scale, pan, addToCart, cartItemId, isEditing, jewelryType, model, placedCharms, t, toast, updateCartItem, isMobile]);
 
   const charmsPanelDesktop = useMemo(() => (
     <CharmsPanel 
@@ -745,3 +714,5 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     </>
   );
 }
+
+    

@@ -3,7 +3,7 @@
 import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, DocumentReference, getDoc, doc, Timestamp, query, orderBy, where, documentId } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
-import type { JewelryModel, JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderItem } from '@/lib/types';
+import type { JewelryModel, JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderItem, MailLog, MailDelivery } from '@/lib/types';
 
 const getUrl = async (path: string, fallback: string) => {
     if (path && (path.startsWith('http://') || path.startsWith('https://'))) {
@@ -196,15 +196,44 @@ export async function getPreferences(): Promise<GeneralPreferences> {
 
 export async function getOrders(): Promise<Order[]> {
     try {
-        const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
-        const querySnapshot = await getDocs(q);
+        const [ordersSnapshot, mailSnapshot] = await Promise.all([
+            getDocs(query(collection(db, 'orders'), orderBy('createdAt', 'desc'))),
+            getDocs(collection(db, 'mail'))
+        ]);
 
-        if (querySnapshot.empty) {
+        if (ordersSnapshot.empty) {
             return [];
         }
 
+        const mailLogsByOrderNumber = new Map<string, MailLog[]>();
+        mailSnapshot.docs.forEach(doc => {
+            const data = doc.data();
+            const subject = data.message?.subject || '';
+            const orderNumberMatch = subject.match(/n°\s*([A-Z0-9-]+)/);
+            if (orderNumberMatch && orderNumberMatch[1]) {
+                const orderNumber = orderNumberMatch[1];
+                const delivery = data.delivery;
+                const log: MailLog = {
+                    id: doc.id,
+                    to: data.to,
+                    subject: subject,
+                    delivery: delivery ? {
+                        state: delivery.state,
+                        startTime: toDate(delivery.startTime),
+                        endTime: toDate(delivery.endTime),
+                        error: delivery.error,
+                        attempts: delivery.attempts
+                    } : null
+                };
+                if (!mailLogsByOrderNumber.has(orderNumber)) {
+                    mailLogsByOrderNumber.set(orderNumber, []);
+                }
+                mailLogsByOrderNumber.get(orderNumber)!.push(log);
+            }
+        });
+
         // Get all unique charm IDs from all orders first
-        const allCharmIds = querySnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => item.charmIds) || []);
+        const allCharmIds = ordersSnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => item.charmIds) || []);
         const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
         // Fetch all required charms in a single query
@@ -219,7 +248,7 @@ export async function getOrders(): Promise<Order[]> {
             }
         }
         
-        const orders: Order[] = await Promise.all(querySnapshot.docs.map(async(orderDoc) => {
+        const orders: Order[] = await Promise.all(ordersSnapshot.docs.map(async(orderDoc) => {
             const data = orderDoc.data();
             
             const enrichedItems: OrderItem[] = (data.items || []).map((item: OrderItem) => {
@@ -240,10 +269,13 @@ export async function getOrders(): Promise<Order[]> {
             enrichedItems.forEach((item, index) => {
                 item.previewImageUrl = previewImageUrls[index];
             });
+            
+            const orderNumber = data.orderNumber;
+            const mailHistory = mailLogsByOrderNumber.get(orderNumber) || [];
 
             return {
                 id: orderDoc.id,
-                orderNumber: data.orderNumber,
+                orderNumber,
                 createdAt: (data.createdAt as Timestamp).toDate(),
                 customerEmail: data.customerEmail,
                 totalPrice: data.totalPrice,
@@ -252,6 +284,7 @@ export async function getOrders(): Promise<Order[]> {
                 shippingCarrier: data.shippingCarrier,
                 trackingNumber: data.trackingNumber,
                 cancellationReason: data.cancellationReason,
+                mailHistory: mailHistory,
             };
         }));
 

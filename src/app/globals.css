@@ -47,12 +47,12 @@
     --input: 240 3.7% 15.9%;
     --ring: 340 82% 52%;
   }
-}
 
-@layer base {
+  /* Styles de base */
   * {
     @apply border-border;
   }
+  
   body {
     @apply bg-background text-foreground;
   }
