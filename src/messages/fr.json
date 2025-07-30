@@ -165,9 +165,12 @@
     "orders_found_title": "Commandes trouvées",
     "email_sent_title": "Demande traitée",
     "email_sent_description": "Si des commandes sont associées à cette adresse e-mail, un e-mail contenant vos numéros de commande vous a été envoyé.",
+    "email_sent_description_no_orders": "Un e-mail vous a été envoyé pour confirmer qu'aucune commande n'a été trouvée.",
     "shipping_details_title": "Détails de l'expédition",
     "shipping_carrier": "Transporteur",
     "tracking_number": "Numéro de suivi",
     "tracking_number_copied": "Numéro de suivi copié !"
   }
 }
+
+    

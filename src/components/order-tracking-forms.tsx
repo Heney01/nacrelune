@@ -92,7 +92,8 @@ export function TrackByEmailForm() {
 
     useEffect(() => {
         if (emailState.message) {
-            console.log("[CLIENT DEBUG] Server action 'getOrdersByEmail' completed. State:", emailState);
+            // This will now log the detailed message from the server action
+            console.log("[CLIENT] Server action 'getOrdersByEmail' completed. State:", emailState);
         }
     }, [emailState]);
 
@@ -116,19 +117,22 @@ export function TrackByEmailForm() {
                     <EmailSubmitButton />
                 </CardContent>
                 <CardFooter className="flex-col items-start">
-                    {emailState && !emailState.success && emailState.message && emailState.message !== 'email_sent_notice' && (
+                    {emailState && !emailState.success && (
                         <Alert variant="destructive" className="w-full">
                             <AlertCircle className="h-4 w-4" />
                             <AlertTitle>{tStatus('error_title')}</AlertTitle>
                             <AlertDescription>{emailState.message}</AlertDescription>
                         </Alert>
                     )}
-                    {emailState.success && emailState.message === 'email_sent_notice' && (
+                    {emailState.success && emailState.message && (
                         <Alert variant="default" className="w-full">
                             <Mail className="h-4 w-4" />
                             <AlertTitle>{tStatus('email_sent_title')}</AlertTitle>
                             <AlertDescription>
-                                {tStatus('email_sent_description')}
+                                {emailState.message.includes("No orders found") 
+                                    ? tStatus('email_sent_description_no_orders')
+                                    : tStatus('email_sent_description')
+                                }
                             </AlertDescription>
                         </Alert>
                     )}
@@ -137,3 +141,5 @@ export function TrackByEmailForm() {
         </Card>
     );
 }
+
+    
