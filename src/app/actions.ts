@@ -803,12 +803,6 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
         );
         const querySnapshot = await getDocs(q);
         console.log(`[DEBUG] Firestore query returned ${querySnapshot.docs.length} documents.`);
-        
-        if (querySnapshot.empty) {
-            console.log("[DEBUG] No orders found for this email. Exiting silently.");
-            // Return success to not leak information about which emails exist in the database
-            return { success: true, message: "email_sent_notice" };
-        }
 
         const orders = querySnapshot.docs.map(doc => {
             const data = doc.data();
@@ -821,21 +815,26 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
         console.log("[DEBUG] Processed orders: ", orders);
 
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com';
-        
         const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}.`;
         const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}">${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}</a>.</p>`;
 
-        const ordersListText = orders.map(o => 
-            `- Commande ${o.orderNumber} (du ${o.createdAt}) - Statut : ${o.status}`
-        ).join('\n');
+        let mailText: string;
+        let mailHtml: string;
         
-        const ordersListHtml = orders.map(o => 
-            `<li>Commande <strong>${o.orderNumber}</strong> (du ${o.createdAt}) - Statut : ${o.status} - Suivre: <a href="${baseUrl}/${locale}/orders/track?orderNumber=${o.orderNumber}">Lien</a></li>`
-        ).join('');
+        if (orders.length > 0) {
+            const ordersListText = orders.map(o => 
+                `- Commande ${o.orderNumber} (du ${o.createdAt}) - Statut : ${o.status}`
+            ).join('\n');
+            const ordersListHtml = orders.map(o => 
+                `<li>Commande <strong>${o.orderNumber}</strong> (du ${o.createdAt}) - Statut : ${o.status} - Suivre: <a href="${baseUrl}/${locale}/orders/track?orderNumber=${o.orderNumber}">Lien</a></li>`
+            ).join('');
+            mailText = `Bonjour,\n\nVoici la liste de vos commandes récentes passées avec cette adresse e-mail :\n\n${ordersListText}\n\nVous pouvez suivre le statut de n'importe quelle commande sur notre page de suivi : ${baseUrl}/${locale}/orders/track${emailFooterText}`;
+            mailHtml = `<h1>Vos commandes Atelier à bijoux</h1><p>Bonjour,</p><p>Voici la liste de vos commandes récentes passées avec cette adresse e-mail :</p><ul>${ordersListHtml}</ul><p>Vous pouvez suivre le statut de n'importe quelle commande sur notre <a href="${baseUrl}/${locale}/orders/track">page de suivi</a>.</p>${emailFooterHtml}`;
+        } else {
+            mailText = `Bonjour,\n\nVous avez récemment demandé à retrouver vos commandes. Aucune commande n'est associée à cette adresse e-mail (${email}).\n\nSi vous pensez qu'il s'agit d'une erreur, veuillez vérifier l'adresse e-mail ou contacter notre support.${emailFooterText}`;
+            mailHtml = `<h1>Vos commandes Atelier à bijoux</h1><p>Bonjour,</p><p>Vous avez récemment demandé à retrouver vos commandes. Aucune commande n'est associée à cette adresse e-mail (${email}).</p><p>Si vous pensez qu'il s'agit d'une erreur, veuillez vérifier l'adresse e-mail ou contacter notre support.</p>${emailFooterHtml}`;
+        }
 
-        const mailText = `Bonjour,\n\nVoici la liste de vos commandes récentes passées avec cette adresse e-mail :\n\n${ordersListText}\n\nVous pouvez suivre le statut de n'importe quelle commande sur notre page de suivi : ${baseUrl}/${locale}/orders/track${emailFooterText}`;
-        const mailHtml = `<h1>Vos commandes Atelier à bijoux</h1><p>Bonjour,</p><p>Voici la liste de vos commandes récentes passées avec cette adresse e-mail :</p><ul>${ordersListHtml}</ul><p>Vous pouvez suivre le statut de n'importe quelle commande sur notre <a href="${baseUrl}/${locale}/orders/track">page de suivi</a>.</p>${emailFooterHtml}`;
-        
         const mailDocData = {
             to: [email],
             message: {
