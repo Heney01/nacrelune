@@ -431,6 +431,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   useEffect(() => {
     // This effect runs when a capture is requested and the canvas is reset.
     if (captureRequest && scale === 1 && pan.x === 0 && pan.y === 0) {
+      
       const capture = async () => {
         // Attendre que le DOM soit mis à jour
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -533,42 +534,6 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
           setIsCartSheetOpen(true);
         } catch (error) {
           console.error("Erreur lors de la capture du canvas:", error);
-          
-          // Fallback : créer une image de base si la capture échoue
-          try {
-            const fallbackImage = await createFallbackImage();
-            
-            if (isEditing && cartItemId) {
-              const updatedItem = {
-                id: cartItemId,
-                model,
-                jewelryType,
-                placedCharms,
-                previewImage: fallbackImage
-              };
-              updateCartItem(cartItemId, updatedItem);
-            } else {
-              const newItem: Omit<CartItem, 'id'> = {
-                model,
-                jewelryType,
-                placedCharms,
-                previewImage: fallbackImage
-              }
-              addToCart(newItem);
-            }
-            
-            toast({
-              title: t('toast_item_added_title'),
-              description: t('toast_item_added_description', { modelName: model.name }),
-            });
-            setIsCartSheetOpen(true);
-          } catch (fallbackError) {
-            toast({
-              variant: 'destructive',
-              title: t('toast_error_title'),
-              description: "Impossible de capturer l'image de la création."
-            });
-          }
         } finally {
           setCaptureRequest(false);
         }
@@ -577,33 +542,6 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       capture();
     }
   }, [captureRequest, scale, pan, addToCart, cartItemId, isEditing, jewelryType, model, placedCharms, t, toast, updateCartItem]);
-
-
-  // Fonction de fallback pour créer une image de base
-  const createFallbackImage = async (): Promise<string> => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 400;
-    canvas.height = 400;
-    const ctx = canvas.getContext('2d');
-    
-    if (!ctx) {
-      // Fallback du fallback : retourner une URL d'image placeholder
-      return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
-    }
-    
-    // Fond blanc
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, 400, 400);
-    
-    // Texte de fallback
-    ctx.fillStyle = '#666666';
-    ctx.font = '16px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('Aperçu non disponible', 200, 200);
-    ctx.fillText(model.name, 200, 220);
-    
-    return canvas.toDataURL('image/png');
-  };
 
   const charmsPanelDesktop = useMemo(() => (
     <CharmsPanel 
