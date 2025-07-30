@@ -270,6 +270,7 @@ export default function TrackOrderPage() {
                 </CardHeader>
                  <form action={emailAction}>
                     <CardContent className="space-y-4">
+                        <input type="hidden" name="locale" value={locale} />
                         <Input
                             name="email"
                             type="email"

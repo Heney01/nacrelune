@@ -786,28 +786,70 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
 
 export async function getOrdersByEmail(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; orders?: Omit<Order, 'items' | 'totalPrice'>[] | null }> {
     const email = formData.get('email') as string;
+    const locale = formData.get('locale') as string || 'fr';
     
     if (!email) {
         return { success: false, message: "Veuillez fournir une adresse e-mail." };
     }
     
-    // For security reasons, we don't query the database here.
-    // In a real application, you would trigger a secure, rate-limited email sending service.
-    // Here, we just return a success message to the user.
-    // This prevents malicious users from checking if an email has an account.
+    try {
+        const q = query(
+            collection(db, 'orders'), 
+            where('customerEmail', '==', email.trim()),
+            orderBy('createdAt', 'desc')
+        );
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+            // Don't reveal if an email has an account or not.
+            // Just return success and do nothing.
+            return { success: true, message: "email_sent_notice" };
+        }
 
-    // const q = query(
-    //     collection(db, 'orders'), 
-    //     where('customerEmail', '==', email.trim()),
-    //     orderBy('createdAt', 'desc')
-    // );
-    // const querySnapshot = await getDocs(q);
-    
-    // if (!querySnapshot.empty) {
-    //    // TODO: Send email with order numbers
-    // }
+        const orders = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                orderNumber: data.orderNumber,
+                status: data.status,
+                createdAt: (data.createdAt as Timestamp).toDate().toLocaleDateString(locale),
+            };
+        });
 
-    return { success: true, message: "email_sent_notice" };
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com';
+        
+        const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}.`;
+        const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}">${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}</a>.</p>`;
+
+        const ordersListText = orders.map(o => 
+            `- Commande ${o.orderNumber} (du ${o.createdAt}) - Statut : ${o.status}`
+        ).join('\n');
+        
+        const ordersListHtml = orders.map(o => 
+            `<li>Commande <strong>${o.orderNumber}</strong> (du ${o.createdAt}) - Statut : ${o.status}</li>`
+        ).join('');
+
+        const mailText = `Bonjour,\n\nVoici la liste de vos commandes récentes passées avec cette adresse e-mail :\n\n${ordersListText}\n\nVous pouvez suivre le statut de n'importe quelle commande sur notre page de suivi : ${baseUrl}/${locale}/orders/track${emailFooterText}`;
+        const mailHtml = `<h1>Vos commandes Atelier à bijoux</h1><p>Bonjour,</p><p>Voici la liste de vos commandes récentes passées avec cette adresse e-mail :</p><ul>${ordersListHtml}</ul><p>Vous pouvez suivre le statut de n'importe quelle commande sur notre <a href="${baseUrl}/${locale}/orders/track">page de suivi</a>.</p>${emailFooterHtml}`;
+        
+        const mailDocData = {
+            to: [email],
+            message: {
+                subject: "Vos commandes chez Atelier à bijoux",
+                text: mailText.trim(),
+                html: mailHtml.trim(),
+            },
+        };
+
+        const mailRef = doc(collection(db, 'mail'));
+        await setDoc(mailRef, mailDocData);
+        
+        return { success: true, message: "email_sent_notice" };
+
+    } catch (error) {
+        console.error("Error in getOrdersByEmail: ", error);
+        // Fail silently to the user to prevent errors from revealing information.
+        return { success: true, message: "email_sent_notice" };
+    }
 }
 
 
@@ -818,21 +860,62 @@ export async function getOrders(): Promise<Order[]> {
         const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
         const querySnapshot = await getDocs(q);
 
-        const orders: Order[] = querySnapshot.docs.map(doc => {
-            const data = doc.data();
+        if (querySnapshot.empty) {
+            return [];
+        }
+
+        // Get all unique charm IDs from all orders first
+        const allCharmIds = querySnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => item.charmIds) || []);
+        const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
+
+        // Fetch all required charms in a single query
+        let charmsMap = new Map<string, Charm>();
+        if (uniqueCharmIds.length > 0) {
+            const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', uniqueCharmIds));
+            const charmsSnapshot = await getDocs(charmsQuery);
+            for (const charmDoc of charmsSnapshot.docs) {
+                const charmData = charmDoc.data() as Omit<Charm, 'id'>;
+                const imageUrl = await getUrl(charmData.imageUrl, 'https://placehold.co/100x100.png');
+                charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id, imageUrl });
+            }
+        }
+        
+        const orders: Order[] = await Promise.all(querySnapshot.docs.map(async(orderDoc) => {
+            const data = orderDoc.data();
+            
+            const enrichedItems: OrderItem[] = (data.items || []).map((item: OrderItem) => {
+                const enrichedCharms = (item.charmIds || [])
+                    .map(id => charmsMap.get(id))
+                    .filter((c): c is Charm => !!c); // Filter out undefined charms
+
+                return {
+                    ...item,
+                    charms: enrichedCharms,
+                };
+            });
+            
+            const previewImageUrls = await Promise.all(
+                (data.items || []).map((item: OrderItem) => getUrl(item.previewImageUrl, 'https://placehold.co/400x400.png'))
+            );
+
+            enrichedItems.forEach((item, index) => {
+                item.previewImageUrl = previewImageUrls[index];
+            });
+
             return {
-                id: doc.id,
+                id: orderDoc.id,
                 orderNumber: data.orderNumber,
                 createdAt: (data.createdAt as Timestamp).toDate(),
                 customerEmail: data.customerEmail,
                 totalPrice: data.totalPrice,
                 status: data.status,
-                items: data.items, // Items are not fully enriched here
+                items: enrichedItems,
                 shippingCarrier: data.shippingCarrier,
                 trackingNumber: data.trackingNumber,
                 cancellationReason: data.cancellationReason,
             };
-        });
+        }));
+
         return orders;
     } catch (error) {
         console.error("Error fetching orders:", error);
