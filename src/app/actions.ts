@@ -567,8 +567,11 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
             }
 
             // Step 2: Fetch all item documents and check stock
-            const itemDocPromises = Array.from(itemDocsToFetch.values()).map(ref => transaction.get(ref));
-            const itemDocsSnapshots = await Promise.all(itemDocPromises);
+            const itemDocRefs = Array.from(itemDocsToFetch.values());
+            const itemDocsSnapshots: firebase.firestore.DocumentSnapshot[] = [];
+            for (const ref of itemDocRefs) {
+                itemDocsSnapshots.push(await transaction.get(ref));
+            }
             const itemDocsMap = new Map(itemDocsSnapshots.map(d => [d.ref.path, d]));
 
 
@@ -633,14 +636,18 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
             transaction.set(orderRef, { ...newOrderData, createdAt: serverTimestamp() });
             
             // Step 6: Prepare email data
-            const mailText = `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalOrderPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.model.name} avec ${item.placedCharms.length} breloque(s)`).join('\n')}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux`.trim();
-            
+            const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${process.env.NEXT_PUBLIC_SUPPORT_EMAIL} en précisant votre numéro de commande (${orderNumber}).`;
+            const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}">${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}</a> en précisant votre numéro de commande (${orderNumber}).</p>`;
+
+            const mailText = `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalOrderPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.model.name} avec ${item.placedCharms.length} breloque(s)`).join('\n')}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
+            const mailHtml = `<h1>Merci pour votre commande !</h1><p>Bonjour,</p><p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${totalOrderPrice.toFixed(2)}€.</p><h2>Récapitulatif :</h2><ul>${cartItems.map(item => `<li>${item.model.name} avec ${item.placedCharms.length} breloque(s)</li>`).join('')}</ul><p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
+
             const mailDocData = {
                 to: [email],
                 message: {
                     subject: `Confirmation de votre commande n°${orderNumber}`,
-                    text: mailText,
-                    html: `<h1>Merci pour votre commande !</h1><p>Bonjour,</p><p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${totalOrderPrice.toFixed(2)}€.</p><h2>Récapitulatif :</h2><ul>${cartItems.map(item => `<li>${item.model.name} avec ${item.placedCharms.length} breloque(s)</li>`).join('')}</ul><p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p><p>L'équipe Atelier à bijoux</p>`,
+                    text: mailText.trim(),
+                    html: mailHtml.trim(),
                 },
             };
 
@@ -832,7 +839,7 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
             }
             
             let itemRefsToUpdate: DocumentReference[] = [];
-            let stockToRestore = new Map<string, number>();
+            const stockToRestore = new Map<string, number>();
 
             if (newStatus === 'annulée' && currentStatus !== 'annulée') {
                 const itemRefsToFetch = new Map<string, DocumentReference>();
@@ -883,7 +890,25 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
                             transaction.update(itemDoc.ref, { quantity: newQuantity });
                         }
                     }
-                 }
+                }
+
+                // Send cancellation email
+                const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${process.env.NEXT_PUBLIC_SUPPORT_EMAIL} en précisant votre numéro de commande (${orderData.orderNumber}).`;
+                const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}">${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}</a> en précisant votre numéro de commande (${orderData.orderNumber}).</p>`;
+
+                const mailText = `Bonjour,\n\nVotre commande n°${orderData.orderNumber} a été annulée.\n\nMotif : ${cancellationReason}\n\nLe remboursement complet a été initié et devrait apparaître sur votre compte d'ici quelques jours.\n\nNous nous excusons pour ce désagrément.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
+                const mailHtml = `<h1>Votre commande n°${orderData.orderNumber} a été annulée</h1><p>Bonjour,</p><p>Votre commande n°<strong>${orderData.orderNumber}</strong> a été annulée.</p><p><strong>Motif de l'annulation :</strong> ${cancellationReason}</p><p>Le remboursement complet a été initié et devrait apparaître sur votre compte d'ici quelques jours.</p><p>Nous nous excusons pour ce désagrément.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
+                
+                const mailDocData = {
+                    to: [orderData.customerEmail],
+                    message: {
+                        subject: `Annulation de votre commande n°${orderData.orderNumber}`,
+                        text: mailText.trim(),
+                        html: mailHtml.trim(),
+                    },
+                };
+                const mailRef = doc(collection(db, 'mail'));
+                transaction.set(mailRef, mailDocData);
             }
             
             transaction.update(orderRef, dataToUpdate);
@@ -934,3 +959,4 @@ export async function updateOrderItemStatus(formData: FormData): Promise<{ succe
     }
 }
 
+    
