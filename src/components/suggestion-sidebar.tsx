@@ -20,7 +20,7 @@ import { ScrollArea } from './ui/scroll-area';
 interface SuggestionSidebarProps {
   charms: Charm[];
   isMobile?: boolean;
-  onGenerate: (preferences: string) => void;
+  onGenerate: (preferences: string) => Promise<string | null>;
   isLoading: boolean;
   suggestions: Suggestion[];
   onApplySuggestion: (suggestion: Suggestion) => void;
@@ -35,11 +35,20 @@ export function SuggestionSidebar({
   onApplySuggestion,
 }: SuggestionSidebarProps) {
   const [preferences, setPreferences] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const t = useTranslations('Editor');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onGenerate(preferences);
+    setError(null);
+    const errorMessage = await onGenerate(preferences);
+    if (errorMessage) {
+      if (errorMessage.includes("503") || errorMessage.includes("overloaded")) {
+        setError("Le service d'IA est actuellement très demandé. Veuillez réessayer dans quelques instants.");
+      } else {
+        setError(errorMessage);
+      }
+    }
   };
 
 
@@ -74,6 +83,14 @@ export function SuggestionSidebar({
             )}
           </Button>
         </form>
+
+        {error && (
+            <Alert variant="destructive">
+                <AlertTitle>{t('toast_error_title')}</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+            </Alert>
+        )}
+
         <div className="flex-grow mt-4">
             {isLoading && (
               <div className="space-y-4">
@@ -82,7 +99,7 @@ export function SuggestionSidebar({
                 <Skeleton className="h-24 w-full" />
               </div>
             )}
-            {!isLoading && suggestions.length === 0 && (
+            {!isLoading && suggestions.length === 0 && !error && (
                 <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-full p-4 border border-dashed rounded-lg">
                     <Lightbulb className="w-10 h-10 mb-4" />
                     <p>{t('suggestions_placeholder_title')}</p>

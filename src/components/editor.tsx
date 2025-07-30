@@ -479,7 +479,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     />
   ), [allCharms, addCharmFromCharmList, charmsSearchTerm]);
 
-  const handleGenerateSuggestions = async (userPreferences: string) => {
+  const handleGenerateSuggestions = async (userPreferences: string): Promise<string | null> => {
     setIsGenerating(true);
     setSuggestions([]);
     try {
@@ -492,15 +492,13 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
 
         if (result.success && result.suggestions) {
             setSuggestions(result.suggestions);
+            return null;
         } else {
             throw new Error(result.error || "Une erreur inconnue est survenue.");
         }
     } catch (error: any) {
-        toast({
-            variant: "destructive",
-            title: t('toast_error_title'),
-            description: t('error_generating_suggestions') + " " + error.message,
-        });
+        console.error("Error in handleGenerateSuggestions:", error.message);
+        return error.message;
     } finally {
         setIsGenerating(false);
     }
