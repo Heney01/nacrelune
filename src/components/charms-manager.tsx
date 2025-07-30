@@ -151,7 +151,7 @@ function ReorderDialog({ charm, locale, onOrder, onRestock, t }: {
         setIsOpen(false);
     }
     
-    const handleRestockSubmit = (e: FormEvent) => {
+    const handleRestockSubmit = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
         formData.append('itemId', charm.id);

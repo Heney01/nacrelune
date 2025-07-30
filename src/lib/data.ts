@@ -1,8 +1,10 @@
 
+
+
 import { db, storage } from '@/lib/firebase';
-import { collection, getDocs, DocumentReference, getDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, DocumentReference, getDoc, doc, Timestamp, query, orderBy, where, documentId } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
-import type { JewelryModel, JewelryType, Charm, CharmCategory, GeneralPreferences } from '@/lib/types';
+import type { JewelryModel, JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderItem } from '@/lib/types';
 
 const getUrl = async (path: string, fallback: string) => {
     if (path && (path.startsWith('http://') || path.startsWith('https://'))) {
@@ -196,5 +198,74 @@ export async function getPreferences(): Promise<GeneralPreferences> {
         console.error("Error fetching preferences:", error);
         // In case of error, return default values to avoid breaking the app
         return { alertThreshold: 10, criticalThreshold: 5 };
+    }
+}
+
+
+export async function getOrders(): Promise<Order[]> {
+    try {
+        const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            return [];
+        }
+
+        // Get all unique charm IDs from all orders first
+        const allCharmIds = querySnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => item.charmIds) || []);
+        const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
+
+        // Fetch all required charms in a single query
+        let charmsMap = new Map<string, Charm>();
+        if (uniqueCharmIds.length > 0) {
+            const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', uniqueCharmIds));
+            const charmsSnapshot = await getDocs(charmsQuery);
+            for (const charmDoc of charmsSnapshot.docs) {
+                const charmData = charmDoc.data() as Omit<Charm, 'id'>;
+                const imageUrl = await getUrl(charmData.imageUrl, 'https://placehold.co/100x100.png');
+                charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id, imageUrl });
+            }
+        }
+        
+        const orders: Order[] = await Promise.all(querySnapshot.docs.map(async(orderDoc) => {
+            const data = orderDoc.data();
+            
+            const enrichedItems: OrderItem[] = (data.items || []).map((item: OrderItem) => {
+                const enrichedCharms = (item.charmIds || [])
+                    .map(id => charmsMap.get(id))
+                    .filter((c): c is Charm => !!c); // Filter out undefined charms
+
+                return {
+                    ...item,
+                    charms: enrichedCharms,
+                };
+            });
+            
+            const previewImageUrls = await Promise.all(
+                (data.items || []).map((item: OrderItem) => getUrl(item.previewImageUrl, 'https://placehold.co/400x400.png'))
+            );
+
+            enrichedItems.forEach((item, index) => {
+                item.previewImageUrl = previewImageUrls[index];
+            });
+
+            return {
+                id: orderDoc.id,
+                orderNumber: data.orderNumber,
+                createdAt: (data.createdAt as Timestamp).toDate(),
+                customerEmail: data.customerEmail,
+                totalPrice: data.totalPrice,
+                status: data.status,
+                items: enrichedItems,
+                shippingCarrier: data.shippingCarrier,
+                trackingNumber: data.trackingNumber,
+                cancellationReason: data.cancellationReason,
+            };
+        }));
+
+        return orders;
+    } catch (error) {
+        console.error("Error fetching orders:", error);
+        return [];
     }
 }

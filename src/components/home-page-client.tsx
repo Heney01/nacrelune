@@ -1,19 +1,24 @@
 
-"use client";
+
+'use client';
 
 import React from 'react';
 import Editor from '@/components/editor';
-import { NacreluneLogo } from '@/components/icons';
+import { BrandLogo } from '@/components/icons';
 import { useTranslations } from '@/hooks/use-translations';
-import { Gem, HandMetal, Ear } from 'lucide-react';
+import { Gem, HandMetal, Ear, Truck } from 'lucide-react';
 import { TypeSelection } from '@/components/type-selection';
 import { ModelSelection } from '@/components/model-selection';
 import type { JewelryType, Charm } from '@/lib/types';
 import Link from 'next/link';
 import { CartWidget } from './cart-widget';
+import { Button } from './ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { SupportDialog } from './support-dialog';
+
 
 export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, locale }: {
-    searchParams: { [key: string]: string | string[] | undefined };
+    searchParams: { [key:string]: string | string[] | undefined };
     jewelryTypes: Omit<JewelryType, 'icon'>[];
     allCharms: Charm[];
     locale: string;
@@ -42,9 +47,25 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
          <header className="p-4 border-b bg-white">
           <div className="container mx-auto flex justify-between items-center">
             <Link href={`/${locale}`} className="flex items-center gap-2">
-              <NacreluneLogo className="h-8 w-auto text-foreground" />
+              <BrandLogo className="h-8 w-auto text-foreground" />
             </Link>
             <div className="flex items-center gap-2">
+                <SupportDialog />
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button asChild variant="ghost" size="icon">
+                                <Link href={`/${locale}/orders/track`}>
+                                    <Truck className="h-6 w-6" />
+                                    <span className="sr-only">{t('track_order_link')}</span>
+                                </Link>
+                            </Button>
+                        </TooltipTrigger>
+                         <TooltipContent>
+                            <p>{t('track_order_link')}</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
               <CartWidget />
             </div>
           </div>
@@ -66,9 +87,11 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
         <footer className="p-4 border-t mt-auto bg-white">
           <div className="container mx-auto text-center text-muted-foreground text-sm space-y-2">
             <p>{t('footer_text', { year: new Date().getFullYear() })}</p>
-            <Link href={`/${locale}/login`} className="text-xs hover:underline text-muted-foreground/80">
-              {t('admin_area_link')}
-            </Link>
+             <div className="flex justify-center items-center gap-4 text-xs text-muted-foreground/80">
+                 <Link href={`/${locale}/login`} className="hover:underline">
+                    {t('admin_area_link')}
+                </Link>
+            </div>
           </div>
         </footer>
       </div>

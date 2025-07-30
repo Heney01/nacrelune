@@ -1,8 +1,8 @@
 import type { SVGProps } from "react"
 
-export function NacreluneLogo(props: SVGProps<SVGSVGElement>) {
+export function BrandLogo(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 20" {...props}>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 20" {...props}>
       <defs>
         <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" style={{ stopColor: "hsl(var(--primary))", stopOpacity: 1 }} />
@@ -17,7 +17,7 @@ export function NacreluneLogo(props: SVGProps<SVGSVGElement>) {
         x="0"
         y="15"
       >
-        Nacrelune
+        Atelier à bijoux
       </text>
     </svg>
   )

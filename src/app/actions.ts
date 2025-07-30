@@ -1,17 +1,20 @@
 
 
+
+
+
 'use server';
 
 import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { revalidatePath } from 'next/cache';
 import { db, storage } from '@/lib/firebase';
-import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction, Timestamp, collectionGroup, documentId, orderBy } from 'firebase/firestore';
 import { ref, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
-import type { JewelryModel, CharmCategory, Charm, GeneralPreferences } from '@/lib/types';
+import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm } from '@/lib/types';
 
 
 export async function getCharmSuggestions(
@@ -444,6 +447,27 @@ export async function savePreferences(prevState: any, formData: FormData): Promi
 
 // --- Order Actions ---
 
+function generateOrderNumber(): string {
+  const date = new Date();
+  const year = date.getFullYear().toString().slice(-2);
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `ATB-${year}${month}${day}-${randomPart}`;
+}
+
+export type SerializableCartItem = {
+    id: string;
+    model: JewelryModel;
+    jewelryType: {
+        id: 'necklace' | 'bracelet' | 'earring';
+        name: string;
+        description: string;
+    };
+    placedCharms: PlacedCharm[];
+    previewImage: string;
+};
+
 export async function markAsOrdered(formData: FormData): Promise<{ success: boolean; message: string }> {
     const itemId = formData.get('itemId') as string;
     const itemType = formData.get('itemType') as string; // 'charms' or a jewelryTypeId like 'necklace'
@@ -509,5 +533,296 @@ export async function markAsRestocked(formData: FormData): Promise<{ success: bo
     } catch (error) {
         console.error("Error marking item as restocked:", error);
         return { success: false, message: "Une erreur est survenue." };
+    }
+}
+
+
+export async function createOrder(cartItems: SerializableCartItem[], email: string): Promise<{ success: boolean; message: string; orderNumber?: string, email?: string }> {
+    if (!cartItems || cartItems.length === 0) {
+        return { success: false, message: 'Le panier est vide.' };
+    }
+
+    try {
+        // Step 1: Upload all preview images to Firebase Storage
+        const uploadPromises = cartItems.map(async (item) => {
+            const storageRef = ref(storage, `order_previews/${item.id}-${Date.now()}.png`);
+            // The previewImage is a base64 data URL, so we use uploadString
+            const uploadResult = await uploadString(storageRef, item.previewImage, 'data_url');
+            return getDownloadURL(uploadResult.ref);
+        });
+
+        const previewImageUrls = await Promise.all(uploadPromises);
+
+        // Step 2: Prepare the order data for Firestore
+        const totalOrderPrice = cartItems.reduce((sum, item) => {
+            const modelPrice = item.model.price || 0;
+            const charmsPrice = item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+            return sum + modelPrice + charmsPrice;
+        }, 0);
+
+        const orderItems: Omit<OrderItem, 'modelImageUrl' | 'charms'>[] = cartItems.map((item, index) => {
+             const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+            return {
+                modelId: item.model.id,
+                modelName: item.model.name,
+                jewelryTypeId: item.jewelryType.id,
+                jewelryTypeName: item.jewelryType.name,
+                charmIds: item.placedCharms.map(pc => pc.charm.id),
+                price: itemPrice,
+                previewImageUrl: previewImageUrls[index], // Get the corresponding uploaded image URL
+                isCompleted: false, // Initialize as not completed
+            };
+        });
+        
+        const initialStatus: OrderStatus = 'commandée';
+        const orderNumber = generateOrderNumber();
+        
+        const orderData: Omit<Order, 'id' | 'createdAt'> = {
+            orderNumber,
+            customerEmail: email,
+            totalPrice: totalOrderPrice,
+            items: orderItems,
+            status: initialStatus,
+        };
+
+        // Step 3: Create the order document in Firestore
+        const finalOrderData = {
+            ...orderData,
+            createdAt: serverTimestamp(),
+        }
+        await addDoc(collection(db, 'orders'), finalOrderData);
+        
+        return { success: true, message: 'Votre commande a été passée avec succès !', orderNumber, email };
+    } catch (error) {
+        console.error("Error creating order:", error);
+        return { success: false, message: "Une erreur est survenue lors du passage de la commande." };
+    }
+}
+
+export async function getOrderDetailsByNumber(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; order?: Order | null }> {
+    const orderNumber = formData.get('orderNumber') as string;
+    
+    if (!orderNumber) {
+        return { success: false, message: "Veuillez fournir un numéro de commande." };
+    }
+
+    try {
+        const q = query(collection(db, 'orders'), where('orderNumber', '==', orderNumber.trim()));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            return { success: false, message: "Aucune commande trouvée avec ce numéro.", order: null };
+        }
+
+        const orderDoc = querySnapshot.docs[0];
+        const orderData = orderDoc.data();
+
+        // Get all unique charm IDs from all items in the order
+        const allCharmIds = orderData.items.flatMap((item: OrderItem) => item.charmIds);
+        const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
+
+        // Fetch all required charms in a single query
+        let charmsMap = new Map<string, Charm>();
+        if (uniqueCharmIds.length > 0) {
+            const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', uniqueCharmIds));
+            const charmsSnapshot = await getDocs(charmsQuery);
+            for (const charmDoc of charmsSnapshot.docs) {
+                const charmData = charmDoc.data() as Omit<Charm, 'id'>;
+                charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id });
+            }
+        }
+        
+        // Fetch all required models
+        const modelIds = orderData.items.map((item: OrderItem) => item.modelId);
+        const uniqueModelIds = Array.from(new Set(modelIds));
+        const modelsMap = new Map<string, JewelryModel>();
+        
+        if (uniqueModelIds.length > 0) {
+            const jewelryTypeIds = Array.from(new Set(
+                orderData.items.map((item: any) => item.jewelryTypeId).filter(Boolean)
+            ));
+            
+            const modelPromises = jewelryTypeIds.map((typeId) => 
+                getDocs(query(collection(db, typeId as string), where(documentId(), 'in', uniqueModelIds)))
+            );
+            
+            const modelSnapshots = await Promise.all(modelPromises);
+            
+            for (const snap of modelSnapshots) {
+                 for (const modelDoc of snap.docs) {
+                    if (modelDoc.exists()) {
+                         modelsMap.set(modelDoc.id, { id: modelDoc.id, ...modelDoc.data() } as JewelryModel);
+                    }
+                 }
+            }
+        }
+
+        // Enrich order items with full charm and model details
+        const enrichedItems: OrderItem[] = await Promise.all(orderData.items.map(async (item: OrderItem) => {
+            const model = modelsMap.get(item.modelId);
+            
+            const enrichedCharms = (item.charmIds || []).map(id => {
+                const charm = charmsMap.get(id);
+                return charm;
+            }).filter((c): c is Charm => !!c);
+
+            return {
+                ...item,
+                modelImageUrl: model?.displayImageUrl,
+                charms: enrichedCharms,
+            };
+        }));
+        
+        const order: Order = {
+            id: orderDoc.id,
+            orderNumber: orderData.orderNumber,
+            createdAt: (orderData.createdAt as Timestamp).toDate(),
+            customerEmail: orderData.customerEmail,
+            totalPrice: orderData.totalPrice,
+            items: enrichedItems,
+            status: orderData.status,
+            shippingCarrier: orderData.shippingCarrier,
+            trackingNumber: orderData.trackingNumber,
+        };
+        
+        return { success: true, message: "Commande trouvée.", order: order };
+    } catch (error) {
+        return { success: false, message: "Une erreur est survenue lors de la recherche de la commande." };
+    }
+}
+
+export async function getOrdersByEmail(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; orders?: Omit<Order, 'items' | 'totalPrice'>[] | null }> {
+    const email = formData.get('email') as string;
+    
+    if (!email) {
+        return { success: false, message: "Veuillez fournir une adresse e-mail." };
+    }
+    
+    // For security reasons, we don't query the database here.
+    // In a real application, you would trigger a secure, rate-limited email sending service.
+    // Here, we just return a success message to the user.
+    // This prevents malicious users from checking if an email has an account.
+
+    // const q = query(
+    //     collection(db, 'orders'), 
+    //     where('customerEmail', '==', email.trim()),
+    //     orderBy('createdAt', 'desc')
+    // );
+    // const querySnapshot = await getDocs(q);
+    
+    // if (!querySnapshot.empty) {
+    //    // TODO: Send email with order numbers
+    // }
+
+    return { success: true, message: "email_sent_notice" };
+}
+
+
+// --- Admin Order Actions ---
+
+export async function getOrders(): Promise<Order[]> {
+    try {
+        const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
+        const querySnapshot = await getDocs(q);
+
+        const orders: Order[] = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                orderNumber: data.orderNumber,
+                createdAt: (data.createdAt as Timestamp).toDate(),
+                customerEmail: data.customerEmail,
+                totalPrice: data.totalPrice,
+                status: data.status,
+                items: data.items, // Items are not fully enriched here
+                shippingCarrier: data.shippingCarrier,
+                trackingNumber: data.trackingNumber,
+                cancellationReason: data.cancellationReason,
+            };
+        });
+        return orders;
+    } catch (error) {
+        console.error("Error fetching orders:", error);
+        return [];
+    }
+}
+
+export async function updateOrderStatus(formData: FormData): Promise<{ success: boolean; message: string }> {
+    const orderId = formData.get('orderId') as string;
+    const newStatus = formData.get('status') as OrderStatus;
+    const locale = formData.get('locale') as string || 'fr';
+
+    if (!orderId || !newStatus) {
+        return { success: false, message: "Informations manquantes." };
+    }
+
+    try {
+        const orderRef = doc(db, 'orders', orderId);
+        
+        let dataToUpdate: Partial<Order> = { status: newStatus };
+
+        if (newStatus === 'expédiée') {
+            const shippingCarrier = formData.get('shippingCarrier') as string;
+            const trackingNumber = formData.get('trackingNumber') as string;
+            if (!shippingCarrier || !trackingNumber) {
+                return { success: false, message: "Le transporteur et le numéro de suivi sont obligatoires pour une expédition." };
+            }
+            dataToUpdate.shippingCarrier = shippingCarrier;
+            dataToUpdate.trackingNumber = trackingNumber;
+        }
+
+        if (newStatus === 'annulée') {
+            const cancellationReason = formData.get('cancellationReason') as string;
+            if (!cancellationReason) {
+                return { success: false, message: "Le motif de l'annulation est obligatoire." };
+            }
+            dataToUpdate.cancellationReason = cancellationReason;
+            // Here you would also trigger an email to the customer with the cancellationReason.
+        }
+
+        await updateDoc(orderRef, dataToUpdate);
+
+        revalidatePath(`/${locale}/admin/dashboard`);
+        return { success: true, message: "Le statut de la commande a été mis à jour." };
+    } catch (error) {
+        console.error("Error updating order status:", error);
+        return { success: false, message: "Une erreur est survenue." };
+    }
+}
+
+export async function updateOrderItemStatus(formData: FormData): Promise<{ success: boolean; message: string }> {
+    const orderId = formData.get('orderId') as string;
+    const itemIndex = parseInt(formData.get('itemIndex') as string, 10);
+    const isCompleted = formData.get('isCompleted') === 'true';
+
+    if (!orderId || isNaN(itemIndex)) {
+        return { success: false, message: "Informations manquantes." };
+    }
+
+    try {
+        const orderRef = doc(db, 'orders', orderId);
+        
+        await runTransaction(db, async (transaction) => {
+            const orderDoc = await transaction.get(orderRef);
+            if (!orderDoc.exists()) {
+                throw new Error("La commande n'existe pas.");
+            }
+            
+            const orderData = orderDoc.data();
+            const items = orderData.items as OrderItem[];
+
+            if (itemIndex < 0 || itemIndex >= items.length) {
+                 throw new Error("Index de l'article invalide.");
+            }
+
+            items[itemIndex].isCompleted = isCompleted;
+            
+            transaction.update(orderRef, { items: items });
+        });
+
+        revalidatePath(`/fr/admin/dashboard`);
+        return { success: true, message: "Statut de l'article mis à jour." };
+    } catch (error: any) {
+        return { success: false, message: error.message || "Une erreur est survenue." };
     }
 }

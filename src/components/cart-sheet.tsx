@@ -7,8 +7,8 @@ import { useCart } from '@/hooks/use-cart';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, ShoppingCart, PlusCircle } from 'lucide-react';
-import React, { ReactNode } from 'react';
+import { Trash2, ShoppingCart, PlusCircle, Loader2 } from 'lucide-react';
+import React, { ReactNode, useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Card } from './ui/card';
 import {
@@ -21,16 +21,49 @@ import {
 } from '@/components/ui/dialog';
 import { useTranslations } from '@/hooks/use-translations';
 import { useParams } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import { createOrder, SerializableCartItem } from '@/app/actions';
+import { CheckoutDialog } from './checkout-dialog';
+import { SuccessDialog } from './success-dialog';
+import type { CartItem } from '@/lib/types';
+
+
+// Helper to compress a base64 PNG to a base64 JPEG
+const compressImage = (base64Png: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    img.src = base64Png;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        return reject(new Error('Could not get canvas context'));
+      }
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL('image/jpeg', 0.7)); // 70% quality
+    };
+    img.onerror = (error) => {
+      reject(error);
+    };
+  });
+};
+
 
 export function CartSheet({ children, open, onOpenChange }: {
   children?: ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
-  const { cart, removeFromCart } = useCart();
+  const { cart, removeFromCart, clearCart } = useCart();
   const t = useTranslations('Cart');
   const params = useParams();
   const locale = params.locale as string;
+  const { toast } = useToast();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [successData, setSuccessData] = useState<{orderNumber: string, email: string} | null>(null);
 
   const totalItems = cart.length;
   
@@ -43,8 +76,47 @@ export function CartSheet({ children, open, onOpenChange }: {
   const formatPrice = (price: number) => {
     return t('price', { price });
   };
+  
+  const handleCheckout = async (email: string) => {
+    setIsProcessing(true);
+    try {
+      // Compress images before sending to the server action
+      const compressedCartPromises = cart.map(async (item): Promise<SerializableCartItem> => ({
+        id: item.id,
+        model: item.model,
+        jewelryType: {
+          id: item.jewelryType.id,
+          name: item.jewelryType.name,
+          description: item.jewelryType.description
+        },
+        placedCharms: item.placedCharms,
+        previewImage: await compressImage(item.previewImage),
+      }));
+
+      const compressedCart = await Promise.all(compressedCartPromises);
+
+      const result = await createOrder(compressedCart, email);
+      
+      if (result.success && result.orderNumber && result.email) {
+        clearCart();
+        setIsCheckoutOpen(false); // Close checkout dialog on success
+        setSuccessData({orderNumber: result.orderNumber, email: result.email});
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: t('checkout_error_title'),
+        description: error.message || "Une erreur inattendue est survenue.",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       {children && <SheetTrigger asChild>{children}</SheetTrigger>}
       <SheetContent className="flex flex-col">
@@ -128,6 +200,7 @@ export function CartSheet({ children, open, onOpenChange }: {
                           size="icon"
                           className="h-8 w-8 flex-shrink-0"
                           onClick={() => removeFromCart(item.id)}
+                          disabled={isProcessing}
                         >
                           <Trash2 className="h-4 w-4" />
                           <span className="sr-only">{t('remove_item')}</span>
@@ -166,16 +239,29 @@ export function CartSheet({ children, open, onOpenChange }: {
                   <span>{t('total')}</span>
                   <span>{formatPrice(totalPrice)}</span>
                 </div>
-                <SheetClose asChild>
-                  <Button className="w-full" disabled>
-                    {t('checkout_button')}
+                  <Button className="w-full" disabled={totalItems === 0 || isProcessing} onClick={() => setIsCheckoutOpen(true)}>
+                     {isProcessing ? <Loader2 className="animate-spin" /> : t('checkout_button')}
                   </Button>
-                </SheetClose>
               </div>
             </SheetFooter>
           </>
         )}
       </SheetContent>
     </Sheet>
+    <CheckoutDialog 
+        isOpen={isCheckoutOpen} 
+        onOpenChange={setIsCheckoutOpen}
+        onConfirm={handleCheckout}
+        isProcessing={isProcessing}
+    />
+    {successData && (
+        <SuccessDialog
+            isOpen={!!successData}
+            onOpenChange={() => setSuccessData(null)}
+            orderNumber={successData.orderNumber}
+            email={successData.email}
+        />
+    )}
+    </>
   );
 }

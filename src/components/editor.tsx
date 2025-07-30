@@ -11,7 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { SuggestionSidebar } from './suggestion-sidebar';
 import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { NacreluneLogo } from './icons';
+import { BrandLogo } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getCharmSuggestions } from '@/app/actions';
@@ -150,7 +150,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
 
   const [charmsSearchTerm, setCharmsSearchTerm] = useState('');
 
-  const [isCapturing, setIsCapturing] = useState(false);
+  const [captureRequest, setCaptureRequest] = useState(false);
   
   const isEditing = cartItemId !== null;
 
@@ -416,8 +416,8 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   const triggerCapture = () => {
     resetZoomAndPan();
     setSelectedPlacedCharmId(null);
-    setIsCapturing(true);
-  }
+    setCaptureRequest(true); // Request a capture after state updates
+  };
 
   const handleAddToCart = () => {
     triggerCapture();
@@ -429,14 +429,16 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   }
 
   useEffect(() => {
-    if (isCapturing) {
+    // This effect runs when a capture is requested and the canvas is reset.
+    if (captureRequest && scale === 1 && pan.x === 0 && pan.y === 0) {
       const capture = async () => {
+        // Ensure the DOM has updated
+        await new Promise(resolve => setTimeout(resolve, 50));
+
         if (!canvasRef.current) {
-          setIsCapturing(false);
+          setCaptureRequest(false);
           return;
         }
-
-        await new Promise(resolve => setTimeout(resolve, 100));
 
         try {
           const canvas = await html2canvas(canvasRef.current, {
@@ -473,7 +475,6 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                   description: t('toast_item_added_description', {modelName: model.name}),
               });
           }
-
           setIsCartSheetOpen(true);
         } catch (error) {
           console.error("Erreur lors de la capture du canvas:", error);
@@ -483,13 +484,13 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
               description: "Impossible de capturer l'image de la création."
           });
         } finally {
-          setIsCapturing(false);
+          setCaptureRequest(false); // Reset the request
         }
       };
 
       capture();
     }
-  }, [isCapturing, addToCart, updateCartItem, cartItemId, isEditing, jewelryType, model, placedCharms, toast, t]);
+  }, [captureRequest, scale, pan, addToCart, cartItemId, isEditing, jewelryType, model, placedCharms, t, toast, updateCartItem]);
 
 
   const charmsPanelDesktop = useMemo(() => (
@@ -507,7 +508,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       <header className="p-4 border-b">
           <div className="container mx-auto flex justify-between items-center">
             <Link href={`/${locale}`} className="flex items-center gap-2">
-              <NacreluneLogo className="h-8 w-auto text-foreground" />
+              <BrandLogo className="h-8 w-auto text-foreground" />
             </Link>
             <div className="flex items-center gap-2">
                <Button variant="ghost" asChild>
@@ -534,12 +535,12 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                 <h2 className="text-2xl font-headline tracking-tight">{t('customize_title', { modelName: model.name })}</h2>
                     <div className="flex gap-2">
                     {isEditing ? (
-                        <Button onClick={handleUpdateCart} disabled={isCapturing}>
+                        <Button onClick={handleUpdateCart} disabled={captureRequest}>
                             <PlusCircle className="mr-2 h-4 w-4" />
                             {t('update_item_button')}
                         </Button>
                     ) : (
-                        <Button onClick={handleAddToCart} disabled={isCapturing}>
+                        <Button onClick={handleAddToCart} disabled={captureRequest}>
                             <ShoppingCart className="mr-2 h-4 w-4" />
                             {t('add_to_cart_button')}
                         </Button>
@@ -694,5 +695,3 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     </>
   );
 }
-
-    
