@@ -1,14 +1,4 @@
 
-
-
-
-
-
-
-
-
-
-
 'use server';
 
 import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
@@ -550,29 +540,49 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
 
     try {
          const orderData = await runTransaction(db, async (transaction) => {
-            // Step 1: Check stock and prepare updates
-            const stockUpdates: { ref: any, newQuantity: number }[] = [];
-            for (const item of cartItems) {
-                // Check model stock
-                const modelRef = doc(db, item.jewelryType.id, item.model.id);
-                const modelDoc = await transaction.get(modelRef);
-                if (!modelDoc.exists()) throw new Error(`Le modèle ${item.model.name} n'existe plus.`);
-                const modelStock = modelDoc.data().quantity || 0;
-                if (modelStock < 1) throw new Error(`Le modèle ${item.model.name} est en rupture de stock.`);
-                stockUpdates.push({ ref: modelRef, newQuantity: modelStock - 1 });
+            const stockUpdates: Map<DocumentReference, { newQuantity: number; name: string }> = new Map();
+            const itemDocsToFetch: Map<string, DocumentReference> = new Map();
+            
+            // Step 1: Consolidate stock deduction requests
+            const stockDeductions = new Map<string, { count: number, name: string, type: string }>();
 
-                // Check charms stock
+            for (const item of cartItems) {
+                // Models
+                const modelKey = `${item.jewelryType.id}/${item.model.id}`;
+                const currentModel = stockDeductions.get(modelKey) || { count: 0, name: item.model.name, type: item.jewelryType.id };
+                stockDeductions.set(modelKey, { ...currentModel, count: currentModel.count + 1 });
+                if (!itemDocsToFetch.has(modelKey)) {
+                    itemDocsToFetch.set(modelKey, doc(db, item.jewelryType.id, item.model.id));
+                }
+
+                // Charms
                 for (const pc of item.placedCharms) {
-                    const charmRef = doc(db, 'charms', pc.charm.id);
-                    const charmDoc = await transaction.get(charmRef);
-                    if (!charmDoc.exists()) throw new Error(`La breloque ${pc.charm.name} n'existe plus.`);
-                    const charmStock = charmDoc.data().quantity || 0;
-                    if (charmStock < 1) throw new Error(`La breloque ${pc.charm.name} est en rupture de stock.`);
-                    stockUpdates.push({ ref: charmRef, newQuantity: charmStock - 1 });
+                    const charmKey = `charms/${pc.charm.id}`;
+                    const currentCharm = stockDeductions.get(charmKey) || { count: 0, name: pc.charm.name, type: 'charms' };
+                    stockDeductions.set(charmKey, { ...currentCharm, count: currentCharm.count + 1 });
+                    if (!itemDocsToFetch.has(charmKey)) {
+                        itemDocsToFetch.set(charmKey, doc(db, 'charms', pc.charm.id));
+                    }
                 }
             }
 
-            // Step 2: Upload all preview images to Firebase Storage
+            // Step 2: Fetch all item documents and check stock
+            const itemDocs = await transaction.getAll(...Array.from(itemDocsToFetch.values()));
+            const itemDocsMap = new Map(itemDocs.map(d => [d.ref.path, d]));
+
+            for (const [key, deduction] of stockDeductions.entries()) {
+                const itemDoc = itemDocsMap.get(itemDocsToFetch.get(key)!.path);
+                if (!itemDoc || !itemDoc.exists()) {
+                    throw new Error(`L'article ${deduction.name} n'existe plus.`);
+                }
+                const currentStock = itemDoc.data().quantity || 0;
+                if (currentStock < deduction.count) {
+                    throw new Error(`Le stock pour ${deduction.name} est insuffisant (${currentStock} disponibles, ${deduction.count} demandés).`);
+                }
+                stockUpdates.set(itemDoc.ref, { newQuantity: currentStock - deduction.count, name: deduction.name });
+            }
+
+            // Step 3: Upload all preview images to Firebase Storage
             const uploadPromises = cartItems.map(async (item) => {
                 const storageRef = ref(storage, `order_previews/${item.id}-${Date.now()}.png`);
                 const uploadResult = await uploadString(storageRef, item.previewImage, 'data_url');
@@ -580,12 +590,12 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
             });
             const previewImageUrls = await Promise.all(uploadPromises);
 
-            // Step 3: Apply stock updates
-            stockUpdates.forEach(update => {
-                transaction.update(update.ref, { quantity: update.newQuantity });
-            });
+            // Step 4: Apply stock updates
+            for (const [ref, update] of stockUpdates.entries()) {
+                transaction.update(ref, { quantity: update.newQuantity });
+            }
 
-            // Step 4: Prepare the order data
+            // Step 5: Prepare the order data
             const totalOrderPrice = cartItems.reduce((sum, item) => {
                 const modelPrice = item.model.price || 0;
                 const charmsPrice = item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
@@ -620,12 +630,12 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
             const orderRef = doc(collection(db, 'orders'));
             transaction.set(orderRef, { ...newOrderData, createdAt: serverTimestamp() });
             
-            // Step 5: Prepare email data
-            const mailDocData = {
+            // Step 6: Prepare email data
+             const mailDocData = {
                 to: [email],
                 message: {
                     subject: `Confirmation de votre commande n°${orderNumber}`,
-                    text: `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalOrderPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.model.name} avec ${item.placedCharms.length} breloque(s)`).join('\n')}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux`.trim(),
+                    text: `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalOrderPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.model.name} avec ${item.placedCharms.length} breloque(s)`).join('\n')}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux`.trim().replace(/\n\n/g, '\n'),
                     html: `<h1>Merci pour votre commande !</h1><p>Bonjour,</p><p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${totalOrderPrice.toFixed(2)}€.</p><h2>Récapitulatif :</h2><ul>${cartItems.map(item => `<li>${item.model.name} avec ${item.placedCharms.length} breloque(s)</li>`).join('')}</ul><p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p><p>L'équipe Atelier à bijoux</p>`,
                 },
             };
@@ -813,26 +823,32 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
             const orderData = orderDoc.data();
             const currentStatus = orderData.status;
 
-            // Prevent re-cancelling or re-stocking
             if (currentStatus === 'annulée' && newStatus === 'annulée') {
                 throw new Error("La commande est déjà annulée.");
             }
             
-            let itemRefsAndDocs: { ref: DocumentReference, doc: any }[] = [];
+            let itemRefsToUpdate: DocumentReference[] = [];
+            let stockToRestore = new Map<string, number>();
+
             if (newStatus === 'annulée' && currentStatus !== 'annulée') {
-                 // Fetch all item documents that need to be restocked
+                const itemRefsToFetch: Set<DocumentReference> = new Set();
+                
+                // Consolidate stock restoration requests
                 for (const item of orderData.items as OrderItem[]) {
                     const modelRef = doc(db, item.jewelryTypeId, item.modelId);
-                    const modelDoc = await transaction.get(modelRef);
-                    itemRefsAndDocs.push({ ref: modelRef, doc: modelDoc });
+                    itemRefsToFetch.add(modelRef);
+                    stockToRestore.set(modelRef.path, (stockToRestore.get(modelRef.path) || 0) + 1);
 
                     for (const charmId of item.charmIds) {
                         const charmRef = doc(db, 'charms', charmId);
-                        const charmDoc = await transaction.get(charmRef);
-                        itemRefsAndDocs.push({ ref: charmRef, doc: charmDoc });
+                        itemRefsToFetch.add(charmRef);
+                        stockToRestore.set(charmRef.path, (stockToRestore.get(charmRef.path) || 0) + 1);
                     }
                 }
+                itemRefsToUpdate = Array.from(itemRefsToFetch);
             }
+            
+            const itemDocs = itemRefsToUpdate.length > 0 ? await transaction.getAll(...itemRefsToUpdate) : [];
             
             // --- WRITE PHASE ---
             let dataToUpdate: Partial<Order> = { status: newStatus };
@@ -854,24 +870,12 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
                 }
                 dataToUpdate.cancellationReason = cancellationReason;
 
-                // Perform the stock updates now that all reads are done
-                 if (currentStatus !== 'annulée') {
-                    let itemIndex = 0; // To keep track of which item we are processing
-                    for (const item of orderData.items as OrderItem[]) {
-                        // Restock model
-                        const modelItem = itemRefsAndDocs[itemIndex++];
-                        if (modelItem.doc.exists()) {
-                            const newQuantity = (modelItem.doc.data().quantity || 0) + 1;
-                            transaction.update(modelItem.ref, { quantity: newQuantity });
-                        }
-
-                        // Restock charms
-                        for (let i = 0; i < item.charmIds.length; i++) {
-                            const charmItem = itemRefsAndDocs[itemIndex++];
-                            if (charmItem.doc.exists()) {
-                                const newQuantity = (charmItem.doc.data().quantity || 0) + 1;
-                                transaction.update(charmItem.ref, { quantity: newQuantity });
-                            }
+                if (currentStatus !== 'annulée') {
+                    for (const itemDoc of itemDocs) {
+                         if (itemDoc.exists()) {
+                            const quantityToRestore = stockToRestore.get(itemDoc.ref.path) || 0;
+                            const newQuantity = (itemDoc.data().quantity || 0) + quantityToRestore;
+                            transaction.update(itemDoc.ref, { quantity: newQuantity });
                         }
                     }
                  }
