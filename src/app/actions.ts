@@ -4,7 +4,7 @@
 import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { revalidatePath } from 'next/cache';
 import { db, storage } from '@/lib/firebase';
-import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction, Timestamp, collectionGroup, documentId, orderBy, DocumentReference } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction, Timestamp, collectionGroup, documentId, orderBy, DocumentReference, DocumentSnapshot } from 'firebase/firestore';
 import { ref, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
@@ -582,7 +582,7 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
 
             // Step 2: Fetch all item documents and check stock
             const itemDocRefs = Array.from(itemDocsToFetch.values());
-            const itemDocsSnapshots: firebase.firestore.DocumentSnapshot[] = [];
+            const itemDocsSnapshots: DocumentSnapshot[] = [];
             for (const ref of itemDocRefs) {
                 const docSnap = await transaction.get(ref);
                 itemDocsSnapshots.push(docSnap);
@@ -590,7 +590,7 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
             const itemDocsMap = new Map(itemDocsSnapshots.map(d => [d.ref.path, d]));
 
 
-            for (const [key, deduction] of stockDeductions.entries()) {
+            for (const [key, deduction] of Array.from(stockDeductions.entries())) {
                 const itemDoc = itemDocsMap.get(itemDocsToFetch.get(key)!.path);
                 if (!itemDoc || !itemDoc.exists()) {
                     throw new Error(`L'article ${deduction.name} n'existe plus.`);
@@ -611,7 +611,7 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
             const previewImageUrls = await Promise.all(uploadPromises);
 
             // Step 4: Apply stock updates
-            for (const [ref, update] of stockUpdates.entries()) {
+            for (const [ref, update] of Array.from(stockUpdates.entries())) {
                 transaction.update(ref, { quantity: update.newQuantity });
             }
 

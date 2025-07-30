@@ -46,71 +46,70 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl grid-cols-1 md:grid-cols-2 grid p-0">
-        <form onSubmit={handleConfirm} className="p-6 flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-headline">{t('title')}</DialogTitle>
-            <DialogDescription>{t('description')}</DialogDescription>
-          </DialogHeader>
-          <div className="mt-6 flex flex-col flex-grow overflow-hidden">
-            <ScrollArea className="flex-grow -mx-6">
-                <div className="space-y-6 px-6">
-                <div>
-                    <h3 className="text-lg font-medium">{t('shipping_info')}</h3>
-                    <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                        <Label htmlFor="name">{t('full_name')}</Label>
-                        <Input id="name" defaultValue="Marie Dubois" required />
-                    </div>
-                     <div className="space-y-2 sm:col-span-2">
-                        <Label htmlFor="email-address">{t('email_address')}</Label>
-                        <Input id="email-address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                    </div>
-                    <div className="space-y-2 sm:col-span-2">
-                        <Label htmlFor="address">{t('address')}</Label>
-                        <Input id="address" defaultValue="123 Rue de la Joie" required />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="city">{t('city')}</Label>
-                        <Input id="city" defaultValue="Paris" required />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="postal-code">{t('postal_code')}</Label>
-                        <Input id="postal-code" defaultValue="75001" required />
-                    </div>
-                     <div className="space-y-2 sm:col-span-2">
-                        <Label htmlFor="country">{t('country')}</Label>
-                        <Input id="country" defaultValue="France" required />
-                    </div>
-                    </div>
-                </div>
-                <div>
-                    <h3 className="text-lg font-medium">{t('payment_info')}</h3>
-                    <div className="mt-2 text-sm text-muted-foreground">{t('payment_simulation_notice')}</div>
-                    <div className="mt-4 grid grid-cols-1 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="card-number">{t('card_number')}</Label>
-                        <div className="relative">
-                        <Input id="card-number" defaultValue="**** **** **** 4242" required />
-                        <CreditCard className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+      <DialogContent className="max-w-4xl w-full grid p-0 max-h-[90vh] md:grid-cols-2">
+        <div className="flex flex-col p-6 overflow-hidden">
+            <DialogHeader>
+                <DialogTitle className="text-2xl font-headline">{t('title')}</DialogTitle>
+                <DialogDescription>{t('description')}</DialogDescription>
+            </DialogHeader>
+            <ScrollArea className="flex-grow mt-6 -mx-6 pr-2">
+                <form id="checkout-form" onSubmit={handleConfirm} className="px-6 space-y-6">
+                    <div>
+                        <h3 className="text-lg font-medium">{t('shipping_info')}</h3>
+                        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="name">{t('full_name')}</Label>
+                                <Input id="name" defaultValue="Marie Dubois" required />
+                            </div>
+                            <div className="space-y-2 sm:col-span-2">
+                                <Label htmlFor="email-address">{t('email_address')}</Label>
+                                <Input id="email-address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                            </div>
+                            <div className="space-y-2 sm:col-span-2">
+                                <Label htmlFor="address">{t('address')}</Label>
+                                <Input id="address" defaultValue="123 Rue de la Joie" required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="city">{t('city')}</Label>
+                                <Input id="city" defaultValue="Paris" required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="postal-code">{t('postal_code')}</Label>
+                                <Input id="postal-code" defaultValue="75001" required />
+                            </div>
+                            <div className="space-y-2 sm:col-span-2">
+                                <Label htmlFor="country">{t('country')}</Label>
+                                <Input id="country" defaultValue="France" required />
+                            </div>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                        <Label htmlFor="expiry-date">{t('expiry_date')}</Label>
-                        <Input id="expiry-date" defaultValue="12/28" required />
-                        </div>
-                        <div className="space-y-2">
-                        <Label htmlFor="cvc">{t('cvc')}</Label>
-                        <Input id="cvc" defaultValue="123" required />
+                    <div>
+                        <h3 className="text-lg font-medium">{t('payment_info')}</h3>
+                        <div className="mt-2 text-sm text-muted-foreground">{t('payment_simulation_notice')}</div>
+                        <div className="mt-4 grid grid-cols-1 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="card-number">{t('card_number')}</Label>
+                                <div className="relative">
+                                    <Input id="card-number" defaultValue="**** **** **** 4242" required />
+                                    <CreditCard className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="expiry-date">{t('expiry_date')}</Label>
+                                    <Input id="expiry-date" defaultValue="12/28" required />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="cvc">{t('cvc')}</Label>
+                                    <Input id="cvc" defaultValue="123" required />
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    </div>
-                </div>
-                </div>
+                </form>
             </ScrollArea>
-            <DialogFooter className="mt-6 pt-6 border-t">
-              <Button type="submit" className="w-full" disabled={isProcessing}>
+             <DialogFooter className="mt-6 pt-6 border-t">
+              <Button type="submit" form="checkout-form" className="w-full" disabled={isProcessing}>
                 {isProcessing ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -121,12 +120,12 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
                 )}
               </Button>
             </DialogFooter>
-          </div>
-        </form>
-        <aside className="hidden md:flex flex-col bg-muted/50 p-6">
+        </div>
+        
+        <aside className="hidden md:flex flex-col bg-muted/50 p-6 overflow-hidden">
             <h3 className="text-lg font-medium">{t('order_summary')}</h3>
-            <ScrollArea className="mt-6 flex-grow -mx-6 px-6">
-                <div className="space-y-4">
+            <ScrollArea className="mt-6 flex-grow -mx-6">
+                <div className="space-y-4 px-6">
                     {cart.map(item => {
                          const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
                         return (

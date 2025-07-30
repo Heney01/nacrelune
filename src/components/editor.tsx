@@ -432,66 +432,164 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     // This effect runs when a capture is requested and the canvas is reset.
     if (captureRequest && scale === 1 && pan.x === 0 && pan.y === 0) {
       const capture = async () => {
-        // Ensure the DOM has updated
-        await new Promise(resolve => setTimeout(resolve, 50));
-
+        // Attendre que le DOM soit mis à jour
+        await new Promise(resolve => setTimeout(resolve, 100));
+      
         if (!canvasRef.current) {
           setCaptureRequest(false);
           return;
         }
-
+      
         try {
-          const canvas = await html2canvas(canvasRef.current, {
+          // Configuration spécifique pour mobile
+          const isMobileDevice = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+          
+          const html2canvasOptions = {
             backgroundColor: null,
             logging: false,
             useCORS: true,
-            scale: 2
-          });
-          const previewImage = canvas.toDataURL('image/png');
-
-          if (isEditing && cartItemId) {
-              const updatedItem = {
-                  id: cartItemId,
-                  model,
-                  jewelryType,
-                  placedCharms,
-                  previewImage
-              };
-              updateCartItem(cartItemId, updatedItem);
-              toast({
-                  title: t('toast_item_updated_title'),
-                  description: t('toast_item_updated_description', {modelName: model.name}),
-              });
-          } else {
-              const newItem: Omit<CartItem, 'id'> = {
-                  model,
-                  jewelryType,
-                  placedCharms,
-                  previewImage: previewImage
+            allowTaint: true,
+            scale: isMobileDevice ? 1 : 2, // Réduire l'échelle sur mobile
+            width: canvasRef.current.offsetWidth,
+            height: canvasRef.current.offsetHeight,
+            // Options spécifiques pour mobile
+            ...(isMobileDevice && {
+              foreignObjectRendering: false, // Désactiver le rendu foreign object sur mobile
+              imageTimeout: 15000, // Augmenter le timeout
+              removeContainer: true,
+              scrollX: 0,
+              scrollY: 0,
+            })
+          };
+      
+          // Forcer le rendu des images avant la capture
+          const images = canvasRef.current.querySelectorAll('img');
+          await Promise.all(Array.from(images).map(img => {
+            return new Promise((resolve) => {
+              if (img.complete) {
+                resolve(true);
+              } else {
+                img.onload = () => resolve(true);
+                img.onerror = () => resolve(true);
+                // Fallback si l'image ne charge pas
+                setTimeout(() => resolve(true), 3000);
               }
-              addToCart(newItem);
-              toast({
-                  title: t('toast_item_added_title'),
-                  description: t('toast_item_added_description', {modelName: model.name}),
-              });
+            });
+          }));
+      
+          // Attendre un peu plus sur mobile
+          if (isMobileDevice) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+      
+          const canvas = await html2canvas(canvasRef.current, html2canvasOptions);
+          
+          // Vérifier si le canvas n'est pas vide
+          const context = canvas.getContext('2d');
+          const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+          const isEmpty = imageData.data.every(pixel => pixel === 0);
+          
+          if (isEmpty) {
+            throw new Error('Canvas capturé est vide');
+          }
+      
+          const previewImage = canvas.toDataURL('image/png', 0.9);
+      
+          if (isEditing && cartItemId) {
+            const updatedItem = {
+              id: cartItemId,
+              model,
+              jewelryType,
+              placedCharms,
+              previewImage
+            };
+            updateCartItem(cartItemId, updatedItem);
+            toast({
+              title: t('toast_item_updated_title'),
+              description: t('toast_item_updated_description', { modelName: model.name }),
+            });
+          } else {
+            const newItem: Omit<CartItem, 'id'> = {
+              model,
+              jewelryType,
+              placedCharms,
+              previewImage: previewImage
+            }
+            addToCart(newItem);
+            toast({
+              title: t('toast_item_added_title'),
+              description: t('toast_item_added_description', { modelName: model.name }),
+            });
           }
           setIsCartSheetOpen(true);
         } catch (error) {
           console.error("Erreur lors de la capture du canvas:", error);
-          toast({
+          
+          // Fallback : créer une image de base si la capture échoue
+          try {
+            const fallbackImage = await createFallbackImage();
+            
+            if (isEditing && cartItemId) {
+              const updatedItem = {
+                id: cartItemId,
+                model,
+                jewelryType,
+                placedCharms,
+                previewImage: fallbackImage
+              };
+              updateCartItem(cartItemId, updatedItem);
+            } else {
+              const newItem: Omit<CartItem, 'id'> = {
+                model,
+                jewelryType,
+                placedCharms,
+                previewImage: fallbackImage
+              }
+              addToCart(newItem);
+            }
+            
+            toast({
+              title: t('toast_item_added_title'),
+              description: t('toast_item_added_description', { modelName: model.name }),
+            });
+            setIsCartSheetOpen(true);
+          } catch (fallbackError) {
+            toast({
               variant: 'destructive',
               title: t('toast_error_title'),
               description: "Impossible de capturer l'image de la création."
-          });
+            });
+          }
         } finally {
-          setCaptureRequest(false); // Reset the request
+          setCaptureRequest(false);
         }
       };
-
+  
       capture();
     }
   }, [captureRequest, scale, pan, addToCart, cartItemId, isEditing, jewelryType, model, placedCharms, t, toast, updateCartItem]);
 
+
+  // Fonction de fallback pour créer une image de base
+  const createFallbackImage = async (): Promise<string> => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 400;
+    const ctx = canvas.getContext('2d')!;
+    
+    // Fond blanc
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 400, 400);
+    
+    // Texte de fallback
+    ctx.fillStyle = '#666666';
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Aperçu non disponible', 200, 200);
+    ctx.fillText(model.name, 200, 220);
+    
+    return canvas.toDataURL('image/png');
+  };
 
   const charmsPanelDesktop = useMemo(() => (
     <CharmsPanel 
