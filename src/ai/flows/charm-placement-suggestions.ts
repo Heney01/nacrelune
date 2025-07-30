@@ -40,31 +40,37 @@ const SuggestCharmPlacementOutputSchema = z.object({
 });
 export type SuggestCharmPlacementOutput = z.infer<typeof SuggestCharmPlacementOutputSchema>;
 
+// This is the main function exported to the client.
+// It wraps the Genkit flow and handles errors.
 export async function suggestCharmPlacement(input: SuggestCharmPlacementInput): Promise<SuggestCharmPlacementOutput> {
-  try {
-    const suggestions = await suggestCharmPlacementFlow(input);
-    return suggestions;
+   console.log('[Action] suggestCharmPlacement called with:', input);
+   try {
+    const result = await suggestCharmPlacementFlow(input);
+    console.log('[Action] suggestCharmPlacement received result:', result);
+    return result;
   } catch (error: any) {
-    console.error('Error in suggestCharmPlacement action:', error);
-    // Return the actual error message to the client for better debugging
-    throw new Error(error.message || 'Failed to generate suggestions.');
+    console.error('[Action] Error in suggestCharmPlacement:', error);
+    // Re-throw the actual error to be caught by the client-side caller.
+    // This ensures the real error message is visible in the browser console.
+    throw new Error(error.message || 'An unknown error occurred in the AI flow.');
   }
 }
 
-const prompt = ai.definePrompt(
-    {
-        name: 'suggestCharmPlacementPrompt',
-        input: { schema: SuggestCharmPlacementInputSchema },
-        output: { schema: SuggestCharmPlacementOutputSchema },
-        config: {
-            safetySettings: [
-                { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-                { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-                { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-                { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-            ],
-        },
-        prompt: `You are a jewelry design assistant. Your task is to suggest creative and aesthetically pleasing charm placements.
+const suggestCharmPlacementFlow = ai.defineFlow(
+  {
+    name: 'suggestCharmPlacementFlow',
+    inputSchema: SuggestCharmPlacementInputSchema,
+    outputSchema: SuggestCharmPlacementOutputSchema,
+  },
+  async (input) => {
+    console.log('[AI Flow] Starting with input:', JSON.stringify(input, null, 2));
+
+    if (!input.charmOptions || input.charmOptions.length === 0) {
+      console.log('[AI Flow] No charm options provided, returning empty suggestions.');
+      return { suggestions: [] };
+    }
+    
+    const prompt = `You are a jewelry design assistant. Your task is to suggest creative and aesthetically pleasing charm placements.
 
 You will be given the type of jewelry, a description of the model, a list of available charms, and optional user preferences.
 
@@ -76,36 +82,33 @@ Your goal is to provide a few (2-4) placement suggestions for the available char
 **IMPORTANT:** You MUST strictly adhere to any negative constraints in the user's preferences (e.g., "I hate...", "no red," "I don't like..."). Do not suggest anything that violates these constraints.
 
 Here is the information for your task:
-- Jewelry Type: {{{jewelryType}}}
-- Model Description: {{{modelDescription}}}
-- Available Charms: {{{charmOptions}}}
-- User Preferences: {{{userPreferences}}}
+- Jewelry Type: ${input.jewelryType}
+- Model Description: ${input.modelDescription}
+- Available Charms: ${input.charmOptions.join(', ')}
+- User Preferences: ${input.userPreferences || 'None'}
 
-Please provide your suggestions in the required output format.`,
-    }
-);
+Please provide your suggestions in the required output format.`;
 
+    console.log('[AI Flow] Generating with prompt.');
 
-const suggestCharmPlacementFlow = ai.defineFlow(
-  {
-    name: 'suggestCharmPlacementFlow',
-    inputSchema: SuggestCharmPlacementInputSchema,
-    outputSchema: SuggestCharmPlacementOutputSchema,
-  },
-  async (input) => {
-    console.log('[AI Flow] Starting suggestCharmPlacementFlow with input:', JSON.stringify(input, null, 2));
-
-    if (!input.charmOptions || input.charmOptions.length === 0) {
-      console.log('[AI Flow] No charm options provided, returning empty suggestions.');
-      return { suggestions: [] };
-    }
-
-    console.log('[AI Flow] Calling prompt...');
-    const {output} = await prompt(input);
+    const { output } = await ai.generate({
+      prompt: prompt,
+      output: {
+        schema: SuggestCharmPlacementOutputSchema,
+      },
+       config: {
+            safetySettings: [
+                { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+                { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+                { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+                { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+            ],
+        },
+    });
 
     if (!output) {
-      console.error('[AI Flow] No output from prompt.');
-      throw new Error('No output from prompt. This could be due to API limits or safety settings.');
+       console.error('[AI Flow] No output from AI. This could be due to API limits or safety settings.');
+       throw new Error('No output from AI. This could be due to API limits or safety settings.');
     }
     
     console.log('[AI Flow] Successfully received output from AI:', JSON.stringify(output, null, 2));
