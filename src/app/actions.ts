@@ -4,6 +4,7 @@
 
 
 
+
 'use server';
 
 import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
@@ -593,43 +594,26 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
         }
         await addDoc(collection(db, 'orders'), finalOrderData);
 
-        // Step 4: Send a confirmation email (simulation)
-        // In a real application, you would use a transactional email service like Resend, SendGrid, or a Firebase Extension.
-        try {
-            const subject = `Confirmation de votre commande n°${orderNumber}`;
-            const itemsSummary = cartItems.map(item => `- ${item.model.name} (${item.placedCharms.length} breloque(s))`).join('\n');
-            const body = `
-                <h1>Merci pour votre commande !</h1>
-                <p>Bonjour,</p>
-                <p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${totalOrderPrice.toFixed(2)}€.</p>
-                <h2>Récapitulatif :</h2>
-                <ul>
-                    ${cartItems.map(item => `<li>${item.model.name} avec ${item.placedCharms.length} breloque(s)</li>`).join('')}
-                </ul>
-                <p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p>
-                <p>L'équipe Atelier à bijoux</p>
-            `;
+        // Step 4: Create a document in the 'mail' collection to trigger the 'Trigger Email' extension
+        const mailDoc = {
+            to: [email],
+            message: {
+                subject: `Confirmation de votre commande n°${orderNumber}`,
+                html: `
+                    <h1>Merci pour votre commande !</h1>
+                    <p>Bonjour,</p>
+                    <p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${totalOrderPrice.toFixed(2)}€.</p>
+                    <h2>Récapitulatif :</h2>
+                    <ul>
+                        ${cartItems.map(item => `<li>${item.model.name} avec ${item.placedCharms.length} breloque(s)</li>`).join('')}
+                    </ul>
+                    <p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p>
+                    <p>L'équipe Atelier à bijoux</p>
+                `,
+            },
+        };
 
-            // --- SIMULATION D'ENVOI D'EMAIL ---
-            // Remplacer ce bloc par votre service d'envoi d'e-mails.
-            console.log("--- Début de la simulation d'envoi d'e-mail ---");
-            console.log(`Destinataire: ${email}`);
-            console.log(`Sujet: ${subject}`);
-            console.log(`Contenu (HTML): \n${body}`);
-            console.log("--- Fin de la simulation d'envoi d'e-mail ---");
-            // Exemple avec un service comme 'Resend':
-            // await resend.emails.send({
-            //   from: 'contact@atelierabijoux.com',
-            //   to: email,
-            //   subject: subject,
-            //   html: body,
-            // });
-            // --- FIN DE LA SIMULATION ---
-            
-        } catch (emailError) {
-            console.error("Erreur lors de l'envoi de l'e-mail de confirmation (simulation) :", emailError);
-            // Ne pas bloquer la commande même si l'e-mail échoue.
-        }
+        await addDoc(collection(db, 'mail'), mailDoc);
         
         return { success: true, message: 'Votre commande a été passée avec succès !', orderNumber, email };
     } catch (error) {
