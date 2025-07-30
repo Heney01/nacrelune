@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -217,6 +217,12 @@ export default function TrackOrderPage() {
     const tStatus = useTranslations('OrderStatus');
     const params = useParams();
     const locale = params.locale as string;
+
+    useEffect(() => {
+        if (emailState && (emailState.success || emailState.message)) {
+            console.log("[CLIENT DEBUG] Server action 'getOrdersByEmail' completed. State:", emailState);
+        }
+    }, [emailState]);
 
     return (
         <div className="container mx-auto py-12 px-4 max-w-2xl">
