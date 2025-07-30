@@ -12,7 +12,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-export const CharmSuggestionInputSchema = z.object({
+const CharmSuggestionInputSchema = z.object({
   jewelryType: z.string().describe('Le type de bijou (ex: "collier", "bracelet").'),
   existingCharms: z.array(z.string()).describe('La liste des noms des breloques déjà placées sur le bijou.'),
   allCharms: z.array(z.string()).describe('La liste de toutes les breloques disponibles que l\'IA peut suggérer.'),
@@ -20,7 +20,7 @@ export const CharmSuggestionInputSchema = z.object({
 });
 export type CharmSuggestionInput = z.infer<typeof CharmSuggestionInputSchema>;
 
-export const CharmSuggestionOutputSchema = z.object({
+const CharmSuggestionOutputSchema = z.object({
   suggestions: z.array(
     z.object({
       charmName: z.string().describe('Le nom de la breloque à placer.'),
