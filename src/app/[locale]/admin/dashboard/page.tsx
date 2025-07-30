@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -214,9 +215,9 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
     <div className="bg-muted/40 min-h-screen">
       <div className="flex-col md:flex">
         <div className="border-b">
-          <div className="flex h-16 items-center px-4">
+          <div className="flex h-16 items-center px-4 flex-wrap">
             <BrandLogo className="h-8 w-auto" />
-            <div className="ml-auto flex items-center space-x-4">
+            <div className="ml-auto flex items-center space-x-4 flex-wrap">
                <Button variant="ghost" asChild>
                 <Link href={`/${locale}`} className="flex items-center">
                     <Home className="mr-2 h-4 w-4" />
