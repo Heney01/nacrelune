@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React from 'react';
@@ -261,8 +260,8 @@ export default function TrackOrderPage() {
 
             <Separator className="my-12" />
 
-             <Card>
-                <form action={emailAction}>
+             <form action={emailAction}>
+                <Card>
                     <CardHeader>
                         <CardTitle className="text-center text-2xl font-headline">{tStatus('find_orders_title')}</CardTitle>
                         <CardDescription className="text-center">
@@ -279,17 +278,15 @@ export default function TrackOrderPage() {
                         />
                         <EmailSubmitButton />
                     </CardContent>
-                    {emailState && !emailState.success && emailState.message && (
-                        <CardFooter>
-                            <Alert variant="destructive" className="mt-4 w-full">
+                    <CardFooter className="flex-col items-start">
+                        {emailState && !emailState.success && emailState.message && (
+                            <Alert variant="destructive" className="w-full">
                                 <AlertCircle className="h-4 w-4" />
                                 <AlertTitle>{tStatus('error_title')}</AlertTitle>
                                 <AlertDescription>{emailState.message}</AlertDescription>
                             </Alert>
-                        </CardFooter>
-                    )}
-                    {emailState.success && emailState.message === 'email_sent_notice' && (
-                        <CardFooter>
+                        )}
+                        {emailState.success && emailState.message === 'email_sent_notice' && (
                             <Alert variant="default" className="w-full">
                                 <Mail className="h-4 w-4" />
                                 <AlertTitle>{tStatus('email_sent_title')}</AlertTitle>
@@ -297,10 +294,10 @@ export default function TrackOrderPage() {
                                     {tStatus('email_sent_description')}
                                 </AlertDescription>
                             </Alert>
-                        </CardFooter>
-                    )}
-                </form>
-            </Card>
+                        )}
+                    </CardFooter>
+                </Card>
+            </form>
         </div>
     );
 }
