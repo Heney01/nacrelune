@@ -651,8 +651,9 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
             transaction.set(orderRef, { ...newOrderData, createdAt: serverTimestamp() });
             
             // Step 6: Prepare email data
-            const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${process.env.NEXT_PUBLIC_SUPPORT_EMAIL} en précisant votre numéro de commande (${orderNumber}).`;
-            const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}">${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}</a> en précisant votre numéro de commande (${orderNumber}).</p>`;
+            const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@atelierabijoux.com';
+            const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${supportEmail} en précisant votre numéro de commande (${orderNumber}).`;
+            const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${supportEmail}">${supportEmail}</a> en précisant votre numéro de commande (${orderNumber}).</p>`;
             const trackingUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com'}/${locale}/orders/track`;
 
             const mailText = `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalOrderPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.model.name} avec ${item.placedCharms.length} breloque(s)`).join('\n')}\n\nVous pouvez suivre votre commande ici : ${trackingUrl}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
@@ -784,7 +785,7 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
     }
 }
 
-export async function getOrdersByEmail(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; orders?: Omit<Order, 'items' | 'totalPrice'>[] | null }> {
+export async function getOrdersByEmail(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; }> {
     console.log("[SERVER] getOrdersByEmail action started.");
     const email = formData.get('email') as string;
     const locale = formData.get('locale') as string || 'fr';
@@ -815,8 +816,10 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
         });
 
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com';
-        const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}.`;
-        const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}">${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}</a>.</p>`;
+        const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@atelierabijoux.com';
+        
+        const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${supportEmail}.`;
+        const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${supportEmail}">${supportEmail}</a>.</p>`;
 
         let mailText: string;
         let mailHtml: string;
@@ -856,10 +859,12 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
         
         return { success: true, message: returnMessage };
 
-    } catch (error) {
-        console.error("[SERVER] Error in getOrdersByEmail: ", error);
-        // Fail silently to the user to prevent errors from revealing information about existing user emails.
-        // We still return a "success" state so the UI shows the "email sent" message.
+    } catch (error: any) {
+        // Log the actual error on the server for debugging
+        console.error(`[SERVER] Error in getOrdersByEmail for ${email}:`, error);
+        
+        // IMPORTANT: For security, we still tell the client that the process was successful.
+        // This prevents attackers from guessing which emails are registered in our system.
         return { success: true, message: "An error occurred, but we are telling the user an email was sent for security." };
     }
 }
@@ -1016,8 +1021,9 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
                 }
 
                 // Send cancellation email
-                const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${process.env.NEXT_PUBLIC_SUPPORT_EMAIL} en précisant votre numéro de commande (${orderData.orderNumber}).`;
-                const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}">${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}</a> en précisant votre numéro de commande (${orderData.orderNumber}).</p>`;
+                const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@atelierabijoux.com';
+                const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${supportEmail} en précisant votre numéro de commande (${orderData.orderNumber}).`;
+                const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${supportEmail}">${supportEmail}</a> en précisant votre numéro de commande (${orderData.orderNumber}).</p>`;
 
                 const mailText = `Bonjour,\n\nVotre commande n°${orderData.orderNumber} a été annulée.\n\nMotif : ${cancellationReason}\n\nLe remboursement complet a été initié et devrait apparaître sur votre compte d'ici quelques jours.\n\nNous nous excusons pour ce désagrément.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
                 const mailHtml = `<h1>Votre commande n°${orderData.orderNumber} a été annulée</h1><p>Bonjour,</p><p>Votre commande n°<strong>${orderData.orderNumber}</strong> a été annulée.</p><p><strong>Motif de l'annulation :</strong> ${cancellationReason}</p><p>Le remboursement complet a été initié et devrait apparaître sur votre compte d'ici quelques jours.</p><p>Nous nous excusons pour ce désagrément.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
@@ -1081,5 +1087,3 @@ export async function updateOrderItemStatus(formData: FormData): Promise<{ succe
         return { success: false, message: error.message || "Une erreur est survenue." };
     }
 }
-
-    

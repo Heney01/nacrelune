@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { useTranslations } from '@/hooks/use-translations';
 import { Loader2, Mail, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { Order } from '@/lib/types';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 
 const initialOrderState: { success: boolean; message: string; order?: Order | null } = { success: false, message: '', order: null };
 const initialEmailState: { success: boolean; message: string } = { success: false, message: '' };
@@ -43,6 +43,33 @@ export function TrackByNumberForm({ onOrderFound }: { onOrderFound: (order: Orde
     const [orderState, orderAction] = useFormState(getOrderDetailsByNumber, initialOrderState);
     const tHome = useTranslations('HomePage');
     const tStatus = useTranslations('OrderStatus');
+    const searchParams = useSearchParams();
+    const orderNumberFromUrl = searchParams.get('orderNumber');
+    
+    // Autofill and submit form if orderNumber is in URL
+    useEffect(() => {
+        if (orderNumberFromUrl) {
+            const form = document.getElementById('track-by-number-form') as HTMLFormElement;
+            if (form) {
+                const input = form.elements.namedItem('orderNumber') as HTMLInputElement;
+                if (input && input.value !== orderNumberFromUrl) {
+                    // This is a bit of a hack to trigger the form action with the URL param
+                    // A cleaner way might involve a dedicated server component for the initial load
+                    const formData = new FormData();
+                    formData.append('orderNumber', orderNumberFromUrl);
+                    // we call the action directly
+                    (getOrderDetailsByNumber as any)(null, formData).then((res: any) => {
+                         if (res.success && res.order) {
+                            onOrderFound(res.order);
+                        } else {
+                            onOrderFound(null);
+                        }
+                    })
+
+                }
+            }
+        }
+    }, [orderNumberFromUrl, onOrderFound]);
     
     useEffect(() => {
         if (orderState.success && orderState.order) {
@@ -54,7 +81,7 @@ export function TrackByNumberForm({ onOrderFound }: { onOrderFound: (order: Orde
 
     return (
         <Card>
-            <form action={orderAction}>
+            <form id="track-by-number-form" action={orderAction}>
                 <CardHeader>
                     <CardTitle className="text-center text-2xl font-headline">{tHome('track_order_link')}</CardTitle>
                     <CardDescription className="text-center">
@@ -65,6 +92,7 @@ export function TrackByNumberForm({ onOrderFound }: { onOrderFound: (order: Orde
                     <Input
                         name="orderNumber"
                         placeholder={tStatus('order_number_placeholder')}
+                        defaultValue={orderNumberFromUrl || ''}
                         required
                     />
                     <TrackSubmitButton />
@@ -91,9 +119,9 @@ export function TrackByEmailForm() {
     const locale = params.locale as string;
 
     useEffect(() => {
+        // This log helps debug by showing the result of the server action in the browser console.
         if (emailState.message) {
-            // This will now log the detailed message from the server action
-            console.log("[CLIENT] Server action 'getOrdersByEmail' completed. State:", emailState);
+             console.log("[CLIENT] Server action 'getOrdersByEmail' completed. State:", emailState);
         }
     }, [emailState]);
 
@@ -117,14 +145,14 @@ export function TrackByEmailForm() {
                     <EmailSubmitButton />
                 </CardContent>
                 <CardFooter className="flex-col items-start">
-                    {emailState && !emailState.success && (
+                    {emailState && !emailState.success && emailState.message && (
                         <Alert variant="destructive" className="w-full">
                             <AlertCircle className="h-4 w-4" />
                             <AlertTitle>{tStatus('error_title')}</AlertTitle>
                             <AlertDescription>{emailState.message}</AlertDescription>
                         </Alert>
                     )}
-                    {emailState.success && emailState.message && (
+                    {emailState.success && (
                         <Alert variant="default" className="w-full">
                             <Mail className="h-4 w-4" />
                             <AlertTitle>{tStatus('email_sent_title')}</AlertTitle>
@@ -141,5 +169,3 @@ export function TrackByEmailForm() {
         </Card>
     );
 }
-
-    
