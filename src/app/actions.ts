@@ -567,8 +567,10 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
             }
 
             // Step 2: Fetch all item documents and check stock
-            const itemDocs = await transaction.getAll(...Array.from(itemDocsToFetch.values()));
-            const itemDocsMap = new Map(itemDocs.map(d => [d.ref.path, d]));
+            const itemDocPromises = Array.from(itemDocsToFetch.values()).map(ref => transaction.get(ref));
+            const itemDocsSnapshots = await Promise.all(itemDocPromises);
+            const itemDocsMap = new Map(itemDocsSnapshots.map(d => [d.ref.path, d]));
+
 
             for (const [key, deduction] of stockDeductions.entries()) {
                 const itemDoc = itemDocsMap.get(itemDocsToFetch.get(key)!.path);
@@ -631,11 +633,13 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
             transaction.set(orderRef, { ...newOrderData, createdAt: serverTimestamp() });
             
             // Step 6: Prepare email data
-             const mailDocData = {
+            const mailText = `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalOrderPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.model.name} avec ${item.placedCharms.length} breloque(s)`).join('\n')}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux`.trim();
+            
+            const mailDocData = {
                 to: [email],
                 message: {
                     subject: `Confirmation de votre commande n°${orderNumber}`,
-                    text: `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalOrderPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.model.name} avec ${item.placedCharms.length} breloque(s)`).join('\n')}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux`.trim().replace(/\n\n/g, '\n'),
+                    text: mailText,
                     html: `<h1>Merci pour votre commande !</h1><p>Bonjour,</p><p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${totalOrderPrice.toFixed(2)}€.</p><h2>Récapitulatif :</h2><ul>${cartItems.map(item => `<li>${item.model.name} avec ${item.placedCharms.length} breloque(s)</li>`).join('')}</ul><p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p><p>L'équipe Atelier à bijoux</p>`,
                 },
             };
@@ -831,24 +835,25 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
             let stockToRestore = new Map<string, number>();
 
             if (newStatus === 'annulée' && currentStatus !== 'annulée') {
-                const itemRefsToFetch: Set<DocumentReference> = new Set();
+                const itemRefsToFetch = new Map<string, DocumentReference>();
                 
                 // Consolidate stock restoration requests
                 for (const item of orderData.items as OrderItem[]) {
                     const modelRef = doc(db, item.jewelryTypeId, item.modelId);
-                    itemRefsToFetch.add(modelRef);
+                    if (!itemRefsToFetch.has(modelRef.path)) itemRefsToFetch.set(modelRef.path, modelRef);
                     stockToRestore.set(modelRef.path, (stockToRestore.get(modelRef.path) || 0) + 1);
 
                     for (const charmId of item.charmIds) {
                         const charmRef = doc(db, 'charms', charmId);
-                        itemRefsToFetch.add(charmRef);
+                        if (!itemRefsToFetch.has(charmRef.path)) itemRefsToFetch.set(charmRef.path, charmRef);
                         stockToRestore.set(charmRef.path, (stockToRestore.get(charmRef.path) || 0) + 1);
                     }
                 }
-                itemRefsToUpdate = Array.from(itemRefsToFetch);
+                itemRefsToUpdate = Array.from(itemRefsToFetch.values());
             }
             
-            const itemDocs = itemRefsToUpdate.length > 0 ? await transaction.getAll(...itemRefsToUpdate) : [];
+            const itemDocsPromises = itemRefsToUpdate.map(ref => transaction.get(ref));
+            const itemDocs = await Promise.all(itemDocsPromises);
             
             // --- WRITE PHASE ---
             let dataToUpdate: Partial<Order> = { status: newStatus };
@@ -928,3 +933,4 @@ export async function updateOrderItemStatus(formData: FormData): Promise<{ succe
         return { success: false, message: error.message || "Une erreur est survenue." };
     }
 }
+
