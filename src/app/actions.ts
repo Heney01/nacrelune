@@ -48,6 +48,20 @@ const getFileNameFromUrl = (url: string) => {
     return lastPart.split('?')[0];
 };
 
+const getUrl = async (path: string | undefined | null, fallback: string): Promise<string> => {
+    if (!path) return fallback;
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+        return path;
+    }
+    try {
+        const storageRef = ref(storage, path);
+        return await getDownloadURL(storageRef);
+    } catch (error) {
+        console.error(`Error getting download URL for path "${path}":`, error);
+        return fallback;
+    }
+};
+
 const deleteFileFromStorage = async (fileUrl: string) => {
     const filePath = getFileNameFromUrl(fileUrl);
     if (filePath) {
@@ -388,7 +402,7 @@ export async function deleteCharm(formData: FormData): Promise<{ success: boolea
 
     } catch (error) {
         console.error("Error deleting charm:", error);
-        return { success: false, message: "Une erreur est survenue lors de la suppression." };
+        return { success: false, message: "Une erreur est survenue." };
     }
 }
 
@@ -695,7 +709,11 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
             const charmsSnapshot = await getDocs(charmsQuery);
             for (const charmDoc of charmsSnapshot.docs) {
                 const charmData = charmDoc.data() as Omit<Charm, 'id'>;
-                charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id });
+                charmsMap.set(charmDoc.id, {
+                    ...charmData,
+                    id: charmDoc.id,
+                    imageUrl: await getUrl(charmData.imageUrl, 'https://placehold.co/100x100.png')
+                });
             }
         }
         
@@ -718,7 +736,13 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
             for (const snap of modelSnapshots) {
                  for (const modelDoc of snap.docs) {
                     if (modelDoc.exists()) {
-                         modelsMap.set(modelDoc.id, { id: modelDoc.id, ...modelDoc.data() } as JewelryModel);
+                        const modelData = modelDoc.data();
+                        modelsMap.set(modelDoc.id, {
+                            id: modelDoc.id,
+                            ...modelData,
+                            displayImageUrl: await getUrl(modelData.displayImageUrl, 'https://placehold.co/400x400.png'),
+                            editorImageUrl: await getUrl(modelData.editorImageUrl, 'https://placehold.co/400x400.png'),
+                        } as JewelryModel);
                     }
                  }
             }
@@ -736,6 +760,7 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
             return {
                 ...item,
                 modelImageUrl: model?.displayImageUrl,
+                previewImageUrl: await getUrl(item.previewImageUrl, 'https://placehold.co/400x400.png'),
                 charms: enrichedCharms,
             };
         }));
@@ -754,6 +779,7 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
         
         return { success: true, message: "Commande trouvée.", order: order };
     } catch (error) {
+        console.error("Error finding order: ", error);
         return { success: false, message: "Une erreur est survenue lors de la recherche de la commande." };
     }
 }
@@ -960,5 +986,3 @@ export async function updateOrderItemStatus(formData: FormData): Promise<{ succe
         return { success: false, message: error.message || "Une erreur est survenue." };
     }
 }
-
-    
