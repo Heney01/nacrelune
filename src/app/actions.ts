@@ -785,10 +785,13 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
 }
 
 export async function getOrdersByEmail(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; orders?: Omit<Order, 'items' | 'totalPrice'>[] | null }> {
+    console.log("[DEBUG] getOrdersByEmail action started.");
     const email = formData.get('email') as string;
     const locale = formData.get('locale') as string || 'fr';
+    console.log(`[DEBUG] Searching for orders with email: ${email}, locale: ${locale}`);
     
     if (!email) {
+        console.log("[DEBUG] No email provided.");
         return { success: false, message: "Veuillez fournir une adresse e-mail." };
     }
     
@@ -799,10 +802,10 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
             orderBy('createdAt', 'desc')
         );
         const querySnapshot = await getDocs(q);
+        console.log(`[DEBUG] Firestore query returned ${querySnapshot.docs.length} documents.`);
         
         if (querySnapshot.empty) {
-            // Don't reveal if an email has an account or not.
-            // Just return success and do nothing.
+            console.log("[DEBUG] No orders found for this email. Exiting silently.");
             return { success: true, message: "email_sent_notice" };
         }
 
@@ -814,6 +817,7 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
                 createdAt: (data.createdAt as Timestamp).toDate().toLocaleDateString(locale),
             };
         });
+        console.log("[DEBUG] Processed orders: ", orders);
 
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com';
         
@@ -825,7 +829,7 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
         ).join('\n');
         
         const ordersListHtml = orders.map(o => 
-            `<li>Commande <strong>${o.orderNumber}</strong> (du ${o.createdAt}) - Statut : ${o.status}</li>`
+            `<li>Commande <strong>${o.orderNumber}</strong> (du ${o.createdAt}) - Statut : ${o.status} - Suivre: <a href="${baseUrl}/${locale}/orders/track?orderNumber=${o.orderNumber}">Lien</a></li>`
         ).join('');
 
         const mailText = `Bonjour,\n\nVoici la liste de vos commandes récentes passées avec cette adresse e-mail :\n\n${ordersListText}\n\nVous pouvez suivre le statut de n'importe quelle commande sur notre page de suivi : ${baseUrl}/${locale}/orders/track${emailFooterText}`;
@@ -839,14 +843,16 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
                 html: mailHtml.trim(),
             },
         };
+        console.log("[DEBUG] Mail document to be created: ", JSON.stringify(mailDocData, null, 2));
 
         const mailRef = doc(collection(db, 'mail'));
         await setDoc(mailRef, mailDocData);
+        console.log("[DEBUG] Mail document successfully created in 'mail' collection.");
         
         return { success: true, message: "email_sent_notice" };
 
     } catch (error) {
-        console.error("Error in getOrdersByEmail: ", error);
+        console.error("[DEBUG] Error in getOrdersByEmail: ", error);
         // Fail silently to the user to prevent errors from revealing information.
         return { success: true, message: "email_sent_notice" };
     }
@@ -1069,3 +1075,5 @@ export async function updateOrderItemStatus(formData: FormData): Promise<{ succe
         return { success: false, message: error.message || "Une erreur est survenue." };
     }
 }
+
+    
