@@ -806,6 +806,7 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
         
         if (querySnapshot.empty) {
             console.log("[DEBUG] No orders found for this email. Exiting silently.");
+            // Return success to not leak information about which emails exist in the database
             return { success: true, message: "email_sent_notice" };
         }
 
@@ -853,7 +854,8 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
 
     } catch (error) {
         console.error("[DEBUG] Error in getOrdersByEmail: ", error);
-        // Fail silently to the user to prevent errors from revealing information.
+        // Fail silently to the user to prevent errors from revealing information about existing user emails.
+        // We still return a "success" state so the UI shows the "email sent" message.
         return { success: true, message: "email_sent_notice" };
     }
 }
