@@ -794,12 +794,10 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
     }
     
     try {
-        const q = query(
-            collection(db, 'orders'), 
-            where('customerEmail', '==', email.trim()),
-            orderBy('createdAt', 'desc')
-        );
+        console.log(`[SERVER] Searching for orders with email: ${email}`);
+        const q = query(collection(db, 'orders'), where('customerEmail', '==', email.trim()));
         const querySnapshot = await getDocs(q);
+        console.log(`[SERVER] Found ${querySnapshot.docs.length} orders for ${email}`);
 
         const orders = querySnapshot.docs.map(doc => {
             const data = doc.data();
@@ -821,6 +819,7 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
         let returnMessage: string;
         
         if (orders.length > 0) {
+            console.log('[SERVER] Orders found, preparing email.');
             returnMessage = `Email sent. ${orders.length} order(s) found.`;
             const ordersListText = orders.map(o => 
                 `- Commande ${o.orderNumber} (du ${o.createdAt}) - Statut : ${o.status}`
@@ -831,6 +830,7 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
             mailText = `Bonjour,\n\nVoici la liste de vos commandes récentes passées avec cette adresse e-mail :\n\n${ordersListText}\n\nVous pouvez suivre le statut de n'importe quelle commande sur notre page de suivi : ${baseUrl}/${locale}/orders/track${emailFooterText}`;
             mailHtml = `<h1>Vos commandes Atelier à bijoux</h1><p>Bonjour,</p><p>Voici la liste de vos commandes récentes passées avec cette adresse e-mail :</p><ul>${ordersListHtml}</ul><p>Vous pouvez suivre le statut de n'importe quelle commande sur notre <a href="${baseUrl}/${locale}/orders/track">page de suivi</a>.</p>${emailFooterHtml}`;
         } else {
+            console.log('[SERVER] No orders found, preparing notification email.');
             returnMessage = "Email sent. No orders found.";
             mailText = `Bonjour,\n\nVous avez récemment demandé à retrouver vos commandes. Aucune commande n'est associée à cette adresse e-mail (${email}).\n\nSi vous pensez qu'il s'agit d'une erreur, veuillez vérifier l'adresse e-mail ou contacter notre support.${emailFooterText}`;
             mailHtml = `<h1>Vos commandes Atelier à bijoux</h1><p>Bonjour,</p><p>Vous avez récemment demandé à retrouver vos commandes. Aucune commande n'est associée à cette adresse e-mail (${email}).</p><p>Si vous pensez qu'il s'agit d'une erreur, veuillez vérifier l'adresse e-mail ou contacter notre support.</p>${emailFooterHtml}`;
@@ -845,15 +845,16 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
             },
         };
         
+        console.log('[SERVER] Creating mail document in Firestore.');
         const mailRef = doc(collection(db, 'mail'));
         await setDoc(mailRef, mailDocData);
+        console.log('[SERVER] Mail document created successfully.');
         
         return { success: true, message: returnMessage };
 
     } catch (error: any) {
         console.error(`[SERVER] Error in getOrdersByEmail for ${email}:`, error);
-        // Propagate the actual error message for clearer debugging on the client.
-        return { success: false, message: error.message || "Une erreur inconnue est survenue côté serveur." };
+        return { success: false, message: error.message };
     }
 }
 
