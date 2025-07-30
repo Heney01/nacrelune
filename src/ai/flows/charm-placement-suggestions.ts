@@ -51,9 +51,9 @@ const suggestCharmPlacementFlow = ai.defineFlow(
     outputSchema: SuggestCharmPlacementOutputSchema,
   },
   async (input) => {
-    console.log('[AI Flow] Starting suggestCharmPlacementFlow with input:', input);
+    console.log('[AI Flow] Starting suggestCharmPlacementFlow with input:', JSON.stringify(input, null, 2));
 
-    if (input.charmOptions.length === 0) {
+    if (!input.charmOptions || input.charmOptions.length === 0) {
       console.log('[AI Flow] No charm options provided, returning empty suggestions.');
       return { suggestions: [] };
     }
@@ -89,7 +89,7 @@ Please provide your suggestions in the required output format.`,
       throw new Error('No output from prompt');
     }
     
-    console.log('[AI Flow] Successfully received output from AI:', output);
+    console.log('[AI Flow] Successfully received output from AI:', JSON.stringify(output, null, 2));
     return output;
   }
 );
