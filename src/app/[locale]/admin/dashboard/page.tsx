@@ -12,7 +12,7 @@ import { CharmsManager } from "@/components/charms-manager";
 import { PreferencesManager } from "@/components/preferences-manager";
 import { OrdersManager } from "@/components/orders-manager";
 import { MailManager } from "@/components/mail-manager";
-import { Gem, User, Wrench, ChevronRight, ArrowLeft, Settings, AlertTriangle, Package, PackageCheck, CookingPot, Truck, Home, Mail } from "lucide-react";
+import { Gem, User, Wrench, ChevronRight, ArrowLeft, Settings, AlertTriangle, Package, PackageCheck, CookingPot, Truck, Mail } from "lucide-react";
 import type { JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderStatus, MailLog, JewelryModel } from "@/lib/types";
 import Link from "next/link";
 import { Loader2 } from 'lucide-react';
@@ -228,12 +228,6 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
           <div className="flex h-16 items-center px-4 flex-wrap">
             <BrandLogo className="h-8 w-auto" />
             <div className="ml-auto flex items-center space-x-4 flex-wrap">
-               <Button variant="ghost" asChild>
-                <Link href={`/${locale}`} className="flex items-center">
-                    <Home className="mr-2 h-4 w-4" />
-                    Boutique
-                </Link>
-              </Button>
               <form action={logout}>
                   <input type="hidden" name="locale" value={locale} />
                   <Button variant="ghost">
