@@ -20,7 +20,7 @@ import { useParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 
 const initialOrderState = { success: false, message: '', order: null };
-const initialEmailState = { success: false, message: '', orders: null };
+const initialEmailState = { success: false, message: '' };
 
 
 function TrackSubmitButton() {
@@ -210,10 +210,8 @@ function OrderDetails({ order }: { order: Order }) {
     )
 }
 
-export default function TrackOrderPage() {
-    const [orderState, orderAction] = useFormState(getOrderDetailsByNumber, initialOrderState);
+function FindOrdersByEmailForm() {
     const [emailState, emailAction] = useFormState(getOrdersByEmail, initialEmailState);
-    const t = useTranslations('HomePage');
     const tStatus = useTranslations('OrderStatus');
     const params = useParams();
     const locale = params.locale as string;
@@ -224,6 +222,55 @@ export default function TrackOrderPage() {
         }
     }, [emailState]);
 
+    return (
+        <Card>
+            <form action={emailAction}>
+                <CardHeader>
+                    <CardTitle className="text-center text-2xl font-headline">{tStatus('find_orders_title')}</CardTitle>
+                    <CardDescription className="text-center">
+                        {tStatus('find_orders_description')}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <input type="hidden" name="locale" value={locale} />
+                    <Input
+                        name="email"
+                        type="email"
+                        placeholder={tStatus('email_placeholder')}
+                        required
+                    />
+                    <EmailSubmitButton />
+                </CardContent>
+                <CardFooter className="flex-col items-start">
+                    {emailState && !emailState.success && emailState.message && (
+                        <Alert variant="destructive" className="w-full">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>{tStatus('error_title')}</AlertTitle>
+                            <AlertDescription>{emailState.message}</AlertDescription>
+                        </Alert>
+                    )}
+                    {emailState.success && emailState.message === 'email_sent_notice' && (
+                        <Alert variant="default" className="w-full">
+                            <Mail className="h-4 w-4" />
+                            <AlertTitle>{tStatus('email_sent_title')}</AlertTitle>
+                            <AlertDescription>
+                                {tStatus('email_sent_description')}
+                            </AlertDescription>
+                        </Alert>
+                    )}
+                </CardFooter>
+            </form>
+        </Card>
+    );
+}
+
+export default function TrackOrderPage() {
+    const [orderState, orderAction] = useFormState(getOrderDetailsByNumber, initialOrderState);
+    const t = useTranslations('HomePage');
+    const tStatus = useTranslations('OrderStatus');
+    const params = useParams();
+    const locale = params.locale as string;
+    
     return (
         <div className="container mx-auto py-12 px-4 max-w-2xl">
             <div className="flex justify-start mb-8">
@@ -267,45 +314,7 @@ export default function TrackOrderPage() {
 
             <Separator className="my-12" />
 
-            <Card>
-                 <form action={emailAction}>
-                    <CardHeader>
-                        <CardTitle className="text-center text-2xl font-headline">{tStatus('find_orders_title')}</CardTitle>
-                        <CardDescription className="text-center">
-                            {tStatus('find_orders_description')}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <input type="hidden" name="locale" value={locale} />
-                        <Input
-                            name="email"
-                            type="email"
-                            placeholder={tStatus('email_placeholder')}
-                            required
-                        />
-                        <EmailSubmitButton />
-                    </CardContent>
-                    <CardFooter className="flex-col items-start">
-                        {emailState && !emailState.success && emailState.message && (
-                            <Alert variant="destructive" className="w-full">
-                                <AlertCircle className="h-4 w-4" />
-                                <AlertTitle>{tStatus('error_title')}</AlertTitle>
-                                <AlertDescription>{emailState.message}</AlertDescription>
-                            </Alert>
-                        )}
-                        {emailState.success && emailState.message === 'email_sent_notice' && (
-                            <Alert variant="default" className="w-full">
-                                <Mail className="h-4 w-4" />
-                                <AlertTitle>{tStatus('email_sent_title')}</AlertTitle>
-                                <AlertDescription>
-                                    {tStatus('email_sent_description')}
-                                </AlertDescription>
-                            </Alert>
-                        )}
-                    </CardFooter>
-                </form>
-            </Card>
+            <FindOrdersByEmailForm />
         </div>
     );
 }
-
