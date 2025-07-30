@@ -193,6 +193,64 @@ export async function getPreferences(): Promise<GeneralPreferences> {
     }
 }
 
+export async function getMailLogs(): Promise<MailLog[]> {
+    try {
+        const mailSnapshot = await getDocs(query(collection(db, 'mail'), orderBy('delivery.startTime', 'desc')));
+        if (mailSnapshot.empty) {
+            return [];
+        }
+
+        const mailLogs: MailLog[] = mailSnapshot.docs.map(doc => {
+            const data = doc.data();
+            const delivery = data.delivery;
+            return {
+                id: doc.id,
+                to: data.to,
+                subject: data.message?.subject || 'Sans objet',
+                delivery: delivery ? {
+                    state: delivery.state || 'PENDING',
+                    startTime: toDate(delivery.startTime),
+                    endTime: toDate(delivery.endTime),
+                    error: delivery.error || null,
+                    attempts: delivery.attempts || 0,
+                } : null,
+            };
+        });
+        
+        return mailLogs;
+    } catch (e) {
+        console.error('Error fetching mail logs: ', e);
+        // This might fail if the index doesn't exist. Let's try fetching without ordering.
+        try {
+             const mailSnapshot = await getDocs(collection(db, 'mail'));
+             const mailLogs: MailLog[] = mailSnapshot.docs.map(doc => {
+                const data = doc.data();
+                const delivery = data.delivery;
+                return {
+                    id: doc.id,
+                    to: data.to,
+                    subject: data.message?.subject || 'Sans objet',
+                    delivery: delivery ? {
+                        state: delivery.state || 'PENDING',
+                        startTime: toDate(delivery.startTime),
+                        endTime: toDate(delivery.endTime),
+                        error: delivery.error || null,
+                        attempts: delivery.attempts || 0,
+                    } : null,
+                };
+            });
+            // Manual sort as a fallback
+            return mailLogs.sort((a, b) => {
+                const timeA = a.delivery?.startTime?.getTime() || 0;
+                const timeB = b.delivery?.startTime?.getTime() || 0;
+                return timeB - timeA;
+            });
+        } catch (finalError) {
+             console.error('Failed to fetch mail logs even without sorting: ', finalError);
+             return [];
+        }
+    }
+}
 
 export async function getOrders(): Promise<Order[]> {
     try {

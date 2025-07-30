@@ -1,5 +1,4 @@
 
-
 {
   "HomePage": {
     "title": "Begin Your Creation",
@@ -30,7 +29,7 @@
     "charms_title": "Charms",
     "search_placeholder": "Search charms...",
     "add_to_design_button": "Add to Design",
-    "customize_title": "Customize Your {modelName}",
+    "customize_title": "Customization",
     "add_to_cart_button": "Add to Cart",
     "update_item_button": "Update Item",
     "added_charms_title": "Added Charms ({count})",
@@ -166,9 +165,12 @@
     "orders_found_title": "Orders Found",
     "email_sent_title": "Request Processed",
     "email_sent_description": "If any orders are associated with this email address, an email with your order numbers has been sent.",
+    "email_sent_description_no_orders": "An email has been sent to your address to confirm that no orders were found.",
     "shipping_details_title": "Shipping Details",
     "shipping_carrier": "Carrier",
     "tracking_number": "Tracking Number",
     "tracking_number_copied": "Tracking number copied!"
   }
 }
+
+    

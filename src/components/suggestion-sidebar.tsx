@@ -6,8 +6,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-import type { Suggestion, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
-import { Lightbulb, Sparkles, WandSparkles, PlusCircle } from 'lucide-react';
+import { Lightbulb, Sparkles, WandSparkles, Loader2, PlusCircle } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Badge } from './ui/badge';
@@ -15,37 +14,43 @@ import Image from 'next/image';
 import { Charm } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useTranslations } from '@/hooks/use-translations';
+import { Suggestion } from './editor';
+import { ScrollArea } from './ui/scroll-area';
 
 interface SuggestionSidebarProps {
-  onApplySuggestion: (suggestion: Suggestion) => void;
   charms: Charm[];
   isMobile?: boolean;
-  suggestions: SuggestCharmPlacementOutput | null;
+  onGenerate: (preferences: string) => Promise<string | null>;
   isLoading: boolean;
-  error: string | null;
-  onGenerate: (preferences: string) => void;
+  suggestions: Suggestion[];
+  onApplySuggestion: (suggestion: Suggestion) => void;
 }
 
 export function SuggestionSidebar({
-  onApplySuggestion,
   charms,
   isMobile = false,
-  suggestions,
+  onGenerate,
   isLoading,
-  error,
-  onGenerate
+  suggestions,
+  onApplySuggestion,
 }: SuggestionSidebarProps) {
   const [preferences, setPreferences] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const t = useTranslations('Editor');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onGenerate(preferences);
+    setError(null);
+    const errorMessage = await onGenerate(preferences);
+    if (errorMessage) {
+      if (errorMessage.includes("503") || errorMessage.includes("overloaded")) {
+        setError("Le service d'IA est actuellement très demandé. Veuillez réessayer dans quelques instants.");
+      } else {
+        setError(errorMessage);
+      }
+    }
   };
 
-  const handleSuggestionClick = (suggestion: Suggestion) => {
-    onApplySuggestion(suggestion);
-  };
 
   return (
     <Card className={cn("h-full flex flex-col", isMobile && "border-0 shadow-none rounded-none")}>
@@ -71,55 +76,74 @@ export function SuggestionSidebar({
             />
           </div>
           <Button type="submit" className="w-full" disabled={isLoading || charms.length === 0}>
-            {isLoading ? t('generating_button') : <> <Sparkles className="mr-2 h-4 w-4" /> {t('generate_ideas_button')}</>}
+             {isLoading ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('generating_button')}</>
+            ) : (
+              <> <Sparkles className="mr-2 h-4 w-4" /> {t('generate_ideas_button')}</>
+            )}
           </Button>
         </form>
-        <div className="flex-grow mt-4">
-          {isLoading && (
-            <div className="space-y-4">
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-24 w-full" />
-            </div>
-          )}
-          {error && (
+
+        {error && (
             <Alert variant="destructive">
-              <AlertTitle>{t('toast_error_title')}</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
+                <AlertTitle>{t('toast_error_title')}</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
             </Alert>
-          )}
-          {suggestions && (
-             <div className="space-y-2">
-              {suggestions.suggestions.map((suggestion, index) => {
-                 const charm = charms.find(c => c.name === suggestion.charm);
-                 return(
-                  <Card 
-                    key={index} 
-                    className={`${suggestion.shouldIntegrate ? 'border-primary' : ''}`}
-                  >
-                    <div className="p-4 flex items-center gap-4">
-                        {charm && <Image src={charm.imageUrl} alt={charm.name} width={40} height={40} className="border rounded-md p-1 bg-white" data-ai-hint="jewelry charm" />}
-                        <div className="flex-1">
-                          <CardTitle className="text-base font-headline">{suggestion.charm}</CardTitle>
-                          <p className="text-sm text-muted-foreground">{suggestion.placementDescription}</p>
-                          {suggestion.shouldIntegrate && <Badge variant="secondary" className="mt-2">{t('recommended_badge')}</Badge>}
-                        </div>
-                        <Button size="sm" variant="outline" onClick={() => handleSuggestionClick(suggestion)}>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            {t('add_to_design_button')}
-                        </Button>
-                    </div>
-                  </Card>
-                 )
-              })}
-             </div>
-          )}
-           {!isLoading && !suggestions && !error && (
-            <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-full p-4 border border-dashed rounded-lg">
-                <Lightbulb className="w-10 h-10 mb-4" />
-                <p>{t('suggestions_placeholder_title')}</p>
-            </div>
-           )}
+        )}
+
+        <div className="flex-grow mt-4">
+            {isLoading && (
+              <div className="space-y-4">
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+            )}
+            {!isLoading && suggestions.length === 0 && !error && (
+                <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-full p-4 border border-dashed rounded-lg">
+                    <Lightbulb className="w-10 h-10 mb-4" />
+                    <p>{t('suggestions_placeholder_title')}</p>
+                </div>
+            )}
+             {!isLoading && suggestions.length > 0 && (
+              <ScrollArea className="h-full pr-4 -mr-4">
+                <div className="space-y-4">
+                  {suggestions.map((suggestion, index) => {
+                    const charm = charms.find(c => c.name === suggestion.charmName);
+                    return (
+                      <Card key={index} className="bg-muted/50">
+                        <CardHeader className="pb-4">
+                           <div className="flex items-start gap-4">
+                            {charm && (
+                                <Image 
+                                    src={charm.imageUrl} 
+                                    alt={charm.name}
+                                    width={40}
+                                    height={40}
+                                    className="rounded-md border bg-white p-1"
+                                />
+                            )}
+                            <div className="flex-grow">
+                                <CardTitle className="text-base">{suggestion.charmName}</CardTitle>
+                                <Badge variant="outline" className="mt-1 border-primary/50 text-primary bg-primary/10">{t('recommended_badge')}</Badge>
+                            </div>
+                           </div>
+                        </CardHeader>
+                        <CardContent className="pt-0 pb-4">
+                          <p className="text-sm text-muted-foreground italic">"{suggestion.justification}"</p>
+                        </CardContent>
+                        <CardFooter>
+                           <Button size="sm" className="w-full" onClick={() => onApplySuggestion(suggestion)}>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Appliquer la suggestion
+                           </Button>
+                        </CardFooter>
+                      </Card>
+                    )
+                  })}
+                </div>
+              </ScrollArea>
+             )}
         </div>
       </CardContent>
     </Card>

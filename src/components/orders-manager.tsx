@@ -507,7 +507,7 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
     const { orders } = { orders: state };
 
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
+    const [tab, setTab] = useState<'active' | 'archived'>('active');
     const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
     const [openOrders, setOpenOrders] = useState<Set<string>>(new Set());
 
@@ -578,9 +578,14 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
     }
     
     const processedOrders = useMemo(() => {
+        const activeStatuses: OrderStatus[] = ['commandée', 'en cours de préparation', 'expédiée'];
+        const archivedStatuses: OrderStatus[] = ['livrée', 'annulée'];
+        
+        const statusFilter = tab === 'active' ? activeStatuses : archivedStatuses;
+        
         return orders
             .filter(order => {
-                if (statusFilter !== 'all' && order.status !== statusFilter) {
+                if (!statusFilter.includes(order.status)) {
                     return false;
                 }
                 if (searchTerm && !order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) && !order.customerEmail.toLowerCase().includes(searchTerm.toLowerCase())) {
@@ -593,9 +598,7 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
                 const dateB = new Date(b.createdAt).getTime();
                 return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
             });
-    }, [orders, searchTerm, statusFilter, sortOrder]);
-    
-    const ALL_STATUSES: OrderStatus[] = ['commandée', 'en cours de préparation', 'expédiée', 'livrée', 'annulée'];
+    }, [orders, searchTerm, tab, sortOrder]);
     
     const handleCopyEmail = (email: string) => {
         navigator.clipboard.writeText(email);
@@ -636,151 +639,31 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
                                 className="pl-9"
                             />
                         </div>
-                        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as any)}>
-                                <SelectTrigger className="w-full sm:w-[180px]">
-                                    <SelectValue placeholder={t('filter_by_status')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">{t('all_statuses')}</SelectItem>
-                                    {ALL_STATUSES.map(status => (
-                                        <SelectItem key={status} value={status}>{tStatus(status)}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                             <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as any)}>
-                                <SelectTrigger className="w-full sm:w-[180px]">
-                                    <SelectValue placeholder={t('sort_by_date')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="desc">{t('sort_newest')}</SelectItem>
-                                    <SelectItem value="asc">{t('sort_oldest')}</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
+                        <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as any)}>
+                            <SelectTrigger className="w-full sm:w-[180px]">
+                                <SelectValue placeholder={t('sort_by_date')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="desc">{t('sort_newest')}</SelectItem>
+                                <SelectItem value="asc">{t('sort_oldest')}</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </CardHeader>
                 <CardContent>
-                    {/* Desktop Table View */}
-                    <div className="hidden md:block">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>{t('order_number')}</TableHead>
-                                    <TableHead>{t('date')}</TableHead>
-                                    <TableHead>{t('customer')}</TableHead>
-                                    <TableHead>{t('total')}</TableHead>
-                                    <TableHead>{t('status')}</TableHead>
-                                    <TableHead className="text-right">{t('actions')}</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {processedOrders.length > 0 ? (
-                                    processedOrders.map(order => (
-                                        <OrderRow 
-                                            key={order.id}
-                                            order={order}
-                                            isOpen={openOrders.has(order.id)}
-                                            onToggle={() => toggleOrder(order.id)}
-                                            onStatusChange={handleStatusChange}
-                                            onItemStatusChange={handleItemStatusChange}
-                                            t={t}
-                                            tStatus={tStatus}
-                                            isPending={isPending}
-                                            onEditShipping={() => handleOpenShipDialog(order)}
-                                        />
-                                ))
-                                ) : (
-                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center h-24">
-                                           {t('no_orders')}
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
+                    <Tabs value={tab} onValueChange={(value) => setTab(value as any)} className="w-full">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="active">Commandes Actives</TabsTrigger>
+                            <TabsTrigger value="archived">Commandes Terminées</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="active">
+                            <OrderTableContent orders={processedOrders} />
+                        </TabsContent>
+                         <TabsContent value="archived">
+                            <OrderTableContent orders={processedOrders} />
+                        </TabsContent>
+                    </Tabs>
 
-                    {/* Mobile Card View */}
-                    <div className="md:hidden space-y-4">
-                         {processedOrders.length > 0 ? (
-                            processedOrders.map(order => (
-                                <Card key={order.id} className={cn("overflow-hidden", isPending && 'opacity-50')}>
-                                    <div className="p-4 cursor-pointer" onClick={() => toggleOrder(order.id)}>
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <p className="font-bold">{order.orderNumber}</p>
-                                                <p className="text-sm text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</p>
-                                            </div>
-                                            <div onClick={e => e.stopPropagation()}>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                            <EllipsisVertical className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent>
-                                                        {(['commandée', 'en cours de préparation', 'expédiée', 'livrée'] as OrderStatus[]).map(status => (
-                                                            <DropdownMenuItem 
-                                                                key={status} 
-                                                                onSelect={(e) => {
-                                                                    e.preventDefault();
-                                                                    if (status === 'expédiée') {
-                                                                        handleMobileShipClick(order)
-                                                                    } else {
-                                                                        handleStatusChange(order.id, status)
-                                                                    }
-                                                                }}
-                                                                disabled={order.status === status || order.status === 'annulée'}
-                                                            >
-                                                              {t('update_status_to', { status: tStatus(status) })}
-                                                            </DropdownMenuItem>
-                                                        ))}
-                                                        <DropdownMenuSeparator />
-                                                        <CancelOrderDialog onConfirm={(reason) => handleStatusChange(order.id, 'annulée', {cancellationReason: reason})} t={t}>
-                                                            <DropdownMenuItem 
-                                                                onSelect={(e) => e.preventDefault()}
-                                                                disabled={order.status === 'annulée'} 
-                                                                className="text-destructive focus:text-destructive"
-                                                            >
-                                                                <FileX className="mr-2 h-4 w-4"/>
-                                                                {t('cancel_order')}
-                                                            </DropdownMenuItem>
-                                                        </CancelOrderDialog>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </div>
-                                        </div>
-                                        <div className="mt-4 flex flex-col items-start gap-2">
-                                            <div className="flex items-center gap-2">
-                                                <p className="text-sm">{order.customerEmail}</p>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleCopyEmail(order.customerEmail); }}>
-                                                    <Copy className="h-3 w-3" />
-                                                </Button>
-                                            </div>
-                                            <div className="w-full flex justify-between items-center">
-                                                <p className="font-bold text-lg">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(order.totalPrice)}</p>
-                                                <Badge variant="outline" className={cn(statusVariants[order.status])}>
-                                                    {tStatus(order.status)}
-                                                </Badge>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {openOrders.has(order.id) && (
-                                        <OrderDetails 
-                                            order={order} 
-                                            onItemStatusChange={handleItemStatusChange} 
-                                            onStatusChange={handleStatusChange} 
-                                            t={t} 
-                                            onEditShipping={() => handleOpenShipDialog(order)}
-                                        />
-                                    )}
-                                </Card>
-                            ))
-                        ) : (
-                            <p className="text-center text-muted-foreground py-10">{t('no_orders')}</p>
-                        )}
-                    </div>
                 </CardContent>
             </Card>
             {selectedOrderForShipping && (
@@ -796,4 +679,131 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
             )}
         </>
     );
+
+    function OrderTableContent({ orders }: { orders: Order[] }) {
+        return (
+            <>
+                {/* Desktop Table View */}
+                <div className="hidden md:block mt-4">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>{t('order_number')}</TableHead>
+                                <TableHead>{t('date')}</TableHead>
+                                <TableHead>{t('customer')}</TableHead>
+                                <TableHead>{t('total')}</TableHead>
+                                <TableHead>{t('status')}</TableHead>
+                                <TableHead className="text-right">{t('actions')}</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {orders.length > 0 ? (
+                                orders.map(order => (
+                                    <OrderRow 
+                                        key={order.id}
+                                        order={order}
+                                        isOpen={openOrders.has(order.id)}
+                                        onToggle={() => toggleOrder(order.id)}
+                                        onStatusChange={handleStatusChange}
+                                        onItemStatusChange={handleItemStatusChange}
+                                        t={t}
+                                        tStatus={tStatus}
+                                        isPending={isPending}
+                                        onEditShipping={() => handleOpenShipDialog(order)}
+                                    />
+                            ))
+                            ) : (
+                                 <TableRow>
+                                    <TableCell colSpan={6} className="text-center h-24">
+                                       {t('no_orders')}
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-4 mt-4">
+                     {orders.length > 0 ? (
+                        orders.map(order => (
+                            <Card key={order.id} className={cn("overflow-hidden", isPending && 'opacity-50')}>
+                                <div className="p-4 cursor-pointer" onClick={() => toggleOrder(order.id)}>
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="font-bold">{order.orderNumber}</p>
+                                            <p className="text-sm text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</p>
+                                        </div>
+                                        <div onClick={e => e.stopPropagation()}>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                        <EllipsisVertical className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent>
+                                                    {(['commandée', 'en cours de préparation', 'expédiée', 'livrée'] as OrderStatus[]).map(status => (
+                                                        <DropdownMenuItem 
+                                                            key={status} 
+                                                            onSelect={(e) => {
+                                                                e.preventDefault();
+                                                                if (status === 'expédiée') {
+                                                                    handleMobileShipClick(order)
+                                                                } else {
+                                                                    handleStatusChange(order.id, status)
+                                                                }
+                                                            }}
+                                                            disabled={order.status === status || order.status === 'annulée'}
+                                                        >
+                                                          {t('update_status_to', { status: tStatus(status) })}
+                                                        </DropdownMenuItem>
+                                                    ))}
+                                                    <DropdownMenuSeparator />
+                                                    <CancelOrderDialog onConfirm={(reason) => handleStatusChange(order.id, 'annulée', {cancellationReason: reason})} t={t}>
+                                                        <DropdownMenuItem 
+                                                            onSelect={(e) => e.preventDefault()}
+                                                            disabled={order.status === 'annulée'} 
+                                                            className="text-destructive focus:text-destructive"
+                                                        >
+                                                            <FileX className="mr-2 h-4 w-4"/>
+                                                            {t('cancel_order')}
+                                                        </DropdownMenuItem>
+                                                    </CancelOrderDialog>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 flex flex-col items-start gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-sm">{order.customerEmail}</p>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleCopyEmail(order.customerEmail); }}>
+                                                <Copy className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                        <div className="w-full flex justify-between items-center">
+                                            <p className="font-bold text-lg">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(order.totalPrice)}</p>
+                                            <Badge variant="outline" className={cn(statusVariants[order.status])}>
+                                                {tStatus(order.status)}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                </div>
+                                {openOrders.has(order.id) && (
+                                    <OrderDetails 
+                                        order={order} 
+                                        onItemStatusChange={handleItemStatusChange} 
+                                        onStatusChange={handleStatusChange} 
+                                        t={t} 
+                                        onEditShipping={() => handleOpenShipDialog(order)}
+                                    />
+                                )}
+                            </Card>
+                        ))
+                    ) : (
+                        <p className="text-center text-muted-foreground py-10">{t('no_orders')}</p>
+                    )}
+                </div>
+            </>
+        )
+    }
 }

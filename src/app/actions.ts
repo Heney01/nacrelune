@@ -1,7 +1,6 @@
 
 'use server';
 
-import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { revalidatePath } from 'next/cache';
 import { db, storage } from '@/lib/firebase';
 import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction, Timestamp, collectionGroup, documentId, orderBy, DocumentReference, DocumentSnapshot } from 'firebase/firestore';
@@ -11,20 +10,8 @@ import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
 import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm } from '@/lib/types';
+import { getCharmSuggestions as getCharmSuggestionsFlow, CharmSuggestionInput, CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 
-
-export async function getCharmSuggestions(
-  input: SuggestCharmPlacementInput
-): Promise<SuggestCharmPlacementOutput> {
-  try {
-    const suggestions = await suggestCharmPlacement(input);
-    return suggestions;
-  } catch (error) {
-    console.error('Error getting charm suggestions:', error);
-    // In a real app, you might want to return a more user-friendly error
-    throw new Error('Failed to generate suggestions.');
-  }
-}
 
 const getFileNameFromUrl = (url: string) => {
     if (!url) return null;
@@ -651,9 +638,10 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
             transaction.set(orderRef, { ...newOrderData, createdAt: serverTimestamp() });
             
             // Step 6: Prepare email data
-            const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${process.env.NEXT_PUBLIC_SUPPORT_EMAIL} en précisant votre numéro de commande (${orderNumber}).`;
-            const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}">${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}</a> en précisant votre numéro de commande (${orderNumber}).</p>`;
-            const trackingUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com'}/${locale}/orders/track`;
+            const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@atelierabijoux.com';
+            const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${supportEmail} en précisant votre numéro de commande (${orderNumber}).`;
+            const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${supportEmail}">${supportEmail}</a> en précisant votre numéro de commande (${orderNumber}).</p>`;
+            const trackingUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com'}/${locale}/orders/track?orderNumber=${orderNumber}`;
 
             const mailText = `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalOrderPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.model.name} avec ${item.placedCharms.length} breloque(s)`).join('\n')}\n\nVous pouvez suivre votre commande ici : ${trackingUrl}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
             const mailHtml = `<h1>Merci pour votre commande !</h1><p>Bonjour,</p><p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${totalOrderPrice.toFixed(2)}€.</p><h2>Récapitulatif :</h2><ul>${cartItems.map(item => `<li>${item.model.name} avec ${item.placedCharms.length} breloque(s)</li>`).join('')}</ul><p>Vous pouvez suivre l'avancement de votre commande en cliquant sur ce lien : <a href="${trackingUrl}">${trackingUrl}</a>.</p><p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
@@ -784,30 +772,19 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
     }
 }
 
-export async function getOrdersByEmail(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; orders?: Omit<Order, 'items' | 'totalPrice'>[] | null }> {
-    console.log("[DEBUG] getOrdersByEmail action started.");
+export async function getOrdersByEmail(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; }> {
     const email = formData.get('email') as string;
     const locale = formData.get('locale') as string || 'fr';
-    console.log(`[DEBUG] Searching for orders with email: ${email}, locale: ${locale}`);
     
     if (!email) {
-        console.log("[DEBUG] No email provided.");
         return { success: false, message: "Veuillez fournir une adresse e-mail." };
     }
     
     try {
-        const q = query(
-            collection(db, 'orders'), 
-            where('customerEmail', '==', email.trim()),
-            orderBy('createdAt', 'desc')
-        );
+        console.log(`[SERVER] Searching for orders with email: ${email}`);
+        const q = query(collection(db, 'orders'), where('customerEmail', '==', email.trim()));
         const querySnapshot = await getDocs(q);
-        console.log(`[DEBUG] Firestore query returned ${querySnapshot.docs.length} documents.`);
-        
-        if (querySnapshot.empty) {
-            console.log("[DEBUG] No orders found for this email. Exiting silently.");
-            return { success: true, message: "email_sent_notice" };
-        }
+        console.log(`[SERVER] Found ${querySnapshot.docs.length} orders for ${email}`);
 
         const orders = querySnapshot.docs.map(doc => {
             const data = doc.data();
@@ -817,24 +794,36 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
                 createdAt: (data.createdAt as Timestamp).toDate().toLocaleDateString(locale),
             };
         });
-        console.log("[DEBUG] Processed orders: ", orders);
 
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com';
+        const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@atelierabijoux.com';
         
-        const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}.`;
-        const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}">${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}</a>.</p>`;
+        const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${supportEmail}.`;
+        const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${supportEmail}">${supportEmail}</a>.</p>`;
 
-        const ordersListText = orders.map(o => 
-            `- Commande ${o.orderNumber} (du ${o.createdAt}) - Statut : ${o.status}`
-        ).join('\n');
+        let mailText: string;
+        let mailHtml: string;
+        let returnMessage: string;
         
-        const ordersListHtml = orders.map(o => 
-            `<li>Commande <strong>${o.orderNumber}</strong> (du ${o.createdAt}) - Statut : ${o.status} - Suivre: <a href="${baseUrl}/${locale}/orders/track?orderNumber=${o.orderNumber}">Lien</a></li>`
-        ).join('');
+        if (orders.length > 0) {
+            console.log('[SERVER] Orders found, preparing email.');
+            returnMessage = `Email sent. ${orders.length} order(s) found.`;
+            const ordersListText = orders.map(o => 
+                `- Commande ${o.orderNumber} (du ${o.createdAt}) - Statut : ${o.status}`
+            ).join('\n');
+            const ordersListHtml = orders.map(o => 
+                `<li>Commande <strong>${o.orderNumber}</strong> (du ${o.createdAt}) - Statut : ${o.status} - <a href="${baseUrl}/${locale}/orders/track?orderNumber=${o.orderNumber}">Suivre cette commande</a></li>`
+            ).join('');
 
-        const mailText = `Bonjour,\n\nVoici la liste de vos commandes récentes passées avec cette adresse e-mail :\n\n${ordersListText}\n\nVous pouvez suivre le statut de n'importe quelle commande sur notre page de suivi : ${baseUrl}/${locale}/orders/track${emailFooterText}`;
-        const mailHtml = `<h1>Vos commandes Atelier à bijoux</h1><p>Bonjour,</p><p>Voici la liste de vos commandes récentes passées avec cette adresse e-mail :</p><ul>${ordersListHtml}</ul><p>Vous pouvez suivre le statut de n'importe quelle commande sur notre <a href="${baseUrl}/${locale}/orders/track">page de suivi</a>.</p>${emailFooterHtml}`;
-        
+            mailText = `Bonjour,\n\nVoici la liste de vos commandes récentes passées avec cette adresse e-mail :\n\n${ordersListText}\n\nVous pouvez cliquer sur le lien de chaque commande pour voir son statut.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
+            mailHtml = `<h1>Vos commandes Atelier à bijoux</h1><p>Bonjour,</p><p>Voici la liste de vos commandes récentes passées avec cette adresse e-mail :</p><ul>${ordersListHtml}</ul><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
+        } else {
+            console.log('[SERVER] No orders found, preparing notification email.');
+            returnMessage = "Email sent. No orders found.";
+            mailText = `Bonjour,\n\nVous avez récemment demandé à retrouver vos commandes. Aucune commande n'est associée à cette adresse e-mail (${email}).\n\nSi vous pensez qu'il s'agit d'une erreur, veuillez vérifier l'adresse e-mail ou contacter notre support.${emailFooterText}`;
+            mailHtml = `<h1>Vos commandes Atelier à bijoux</h1><p>Bonjour,</p><p>Vous avez récemment demandé à retrouver vos commandes. Aucune commande n'est associée à cette adresse e-mail (${email}).</p><p>Si vous pensez qu'il s'agit d'une erreur, veuillez vérifier l'adresse e-mail ou contacter notre support.</p>${emailFooterHtml}`;
+        }
+
         const mailDocData = {
             to: [email],
             message: {
@@ -843,18 +832,17 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
                 html: mailHtml.trim(),
             },
         };
-        console.log("[DEBUG] Mail document to be created: ", JSON.stringify(mailDocData, null, 2));
-
+        
+        console.log('[SERVER] Creating mail document in Firestore.');
         const mailRef = doc(collection(db, 'mail'));
         await setDoc(mailRef, mailDocData);
-        console.log("[DEBUG] Mail document successfully created in 'mail' collection.");
+        console.log('[SERVER] Mail document created successfully.');
         
-        return { success: true, message: "email_sent_notice" };
+        return { success: true, message: returnMessage };
 
-    } catch (error) {
-        console.error("[DEBUG] Error in getOrdersByEmail: ", error);
-        // Fail silently to the user to prevent errors from revealing information.
-        return { success: true, message: "email_sent_notice" };
+    } catch (error: any) {
+        console.error(`[SERVER] Error in getOrdersByEmail for ${email}:`, error);
+        return { success: false, message: error.message };
     }
 }
 
@@ -1010,8 +998,9 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
                 }
 
                 // Send cancellation email
-                const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${process.env.NEXT_PUBLIC_SUPPORT_EMAIL} en précisant votre numéro de commande (${orderData.orderNumber}).`;
-                const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}">${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}</a> en précisant votre numéro de commande (${orderData.orderNumber}).</p>`;
+                const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@atelierabijoux.com';
+                const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${supportEmail} en précisant votre numéro de commande (${orderData.orderNumber}).`;
+                const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${supportEmail}">${supportEmail}</a> en précisant votre numéro de commande (${orderData.orderNumber}).</p>`;
 
                 const mailText = `Bonjour,\n\nVotre commande n°${orderData.orderNumber} a été annulée.\n\nMotif : ${cancellationReason}\n\nLe remboursement complet a été initié et devrait apparaître sur votre compte d'ici quelques jours.\n\nNous nous excusons pour ce désagrément.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
                 const mailHtml = `<h1>Votre commande n°${orderData.orderNumber} a été annulée</h1><p>Bonjour,</p><p>Votre commande n°<strong>${orderData.orderNumber}</strong> a été annulée.</p><p><strong>Motif de l'annulation :</strong> ${cancellationReason}</p><p>Le remboursement complet a été initié et devrait apparaître sur votre compte d'ici quelques jours.</p><p>Nous nous excusons pour ce désagrément.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
@@ -1076,4 +1065,18 @@ export async function updateOrderItemStatus(formData: FormData): Promise<{ succe
     }
 }
 
-    
+// AI Actions
+export async function getCharmSuggestionsAction(input: CharmSuggestionInput): Promise<{
+    success: boolean;
+    suggestions?: CharmSuggestionOutput['suggestions'];
+    error?: string;
+}> {
+    try {
+        console.log('[SERVER ACTION] Calling getCharmSuggestionsFlow with input:', input);
+        const result = await getCharmSuggestionsFlow(input);
+        return { success: true, suggestions: result.suggestions };
+    } catch (error: any) {
+        console.error('[SERVER ACTION] Error calling AI flow:', error);
+        return { success: false, error: error.message || "Une erreur est survenue lors de la génération des suggestions." };
+    }
+}

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React from 'react';
@@ -32,21 +33,9 @@ export function SupportDialog() {
 
   return (
     <Dialog>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <LifeBuoy className="h-6 w-6" />
-                <span className="sr-only">{t('contact_support_link')}</span>
-              </Button>
-            </DialogTrigger>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{t('contact_support_link')}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <DialogTrigger asChild>
+        <button className="hover:underline">{t('contact_support_link')}</button>
+      </DialogTrigger>
 
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

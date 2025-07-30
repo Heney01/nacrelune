@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -10,8 +11,9 @@ import { ModelsManager } from "@/components/models-manager";
 import { CharmsManager } from "@/components/charms-manager";
 import { PreferencesManager } from "@/components/preferences-manager";
 import { OrdersManager } from "@/components/orders-manager";
-import { Gem, User, Wrench, ChevronRight, ArrowLeft, Settings, AlertTriangle, Package, PackageCheck, CookingPot, Truck, Home } from "lucide-react";
-import type { JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderStatus } from "@/lib/types";
+import { MailManager } from "@/components/mail-manager";
+import { Gem, User, Wrench, ChevronRight, ArrowLeft, Settings, AlertTriangle, Package, PackageCheck, CookingPot, Truck, Mail } from "lucide-react";
+import type { JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderStatus, MailLog, JewelryModel } from "@/lib/types";
 import Link from "next/link";
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -22,31 +24,27 @@ interface AdminDashboardProps {
     locale: string;
 }
 
-const getModelsAlertState = (
-    jewelryTypes: Omit<JewelryType, 'icon'>[], 
-    preferences: GeneralPreferences
-): 'critical' | 'alert' | 'none' => {
-    const allModels = jewelryTypes.flatMap(jt => jt.models);
-    if (allModels.some(m => (m.quantity ?? Infinity) <= preferences.criticalThreshold && !m.lastOrderedAt)) {
-        return 'critical';
-    }
-    if (allModels.some(m => (m.quantity ?? Infinity) <= preferences.alertThreshold && !m.lastOrderedAt)) {
-        return 'alert';
-    }
-    return 'none';
-};
+type StockableItem = Charm | JewelryModel;
 
-const getCharmsAlertState = (
-    charms: Charm[], 
-    preferences: GeneralPreferences
+const getItemsAlertState = (
+  items: StockableItem[],
+  preferences: GeneralPreferences
 ): 'critical' | 'alert' | 'none' => {
-    if (charms.some(c => (c.quantity ?? Infinity) <= preferences.criticalThreshold && !c.lastOrderedAt)) {
-        return 'critical';
-    }
-    if (charms.some(c => (c.quantity ?? Infinity) <= preferences.alertThreshold && !c.lastOrderedAt)) {
-        return 'alert';
-    }
-    return 'none';
+  if (
+    items.some(
+      (item) => (item.quantity ?? Infinity) <= preferences.criticalThreshold && !item.lastOrderedAt
+    )
+  ) {
+    return 'critical';
+  }
+  if (
+    items.some(
+      (item) => (item.quantity ?? Infinity) <= preferences.alertThreshold && !item.lastOrderedAt
+    )
+  ) {
+    return 'alert';
+  }
+  return 'none';
 };
 
 const getOrdersAlertCounts = (orders: Order[]): { [key in OrderStatus]?: number } => {
@@ -87,6 +85,7 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
     charmCategories: CharmCategory[],
     preferences: GeneralPreferences,
     orders: Order[],
+    mailLogs: MailLog[],
   } | null>(null);
 
   useEffect(() => {
@@ -114,11 +113,13 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
       );
   }
 
-  const { jewelryTypes, charms, charmCategories, preferences, orders } = initialData;
+  const { jewelryTypes, charms, charmCategories, preferences, orders, mailLogs } = initialData;
   
-  const modelsAlertState = getModelsAlertState(jewelryTypes, preferences);
-  const charmsAlertState = getCharmsAlertState(charms, preferences);
+  const modelsAlertState = getItemsAlertState(jewelryTypes.flatMap(jt => jt.models), preferences);
+  const charmsAlertState = getItemsAlertState(charms, preferences);
   const ordersAlertCounts = getOrdersAlertCounts(orders);
+  const mailErrorCount = mailLogs.filter(log => log.delivery?.state === 'ERROR').length;
+
 
   const OrderStatusIndicator = ({status, count}: {status: OrderStatus, count: number}) => {
     const ICONS: Record<OrderStatus, React.ElementType> = {
@@ -186,6 +187,16 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
       alertState: (ordersAlertCounts['commandée'] || ordersAlertCounts['en cours de préparation']) ? 'alert' : 'none',
       alertMessage: "Des commandes sont en attente de préparation.",
     },
+     {
+      value: 'mails',
+      title: 'Gérer les e-mails',
+      description: 'Consulter l\'historique des e-mails transactionnels.',
+      icon: Mail,
+      component: <MailManager initialMailLogs={mailLogs} />,
+      disabled: false,
+      alertState: mailErrorCount > 0 ? 'critical' : 'none',
+      alertMessage: `Il y a ${mailErrorCount} e-mail(s) en échec de livraison.`,
+    },
     {
       value: 'preferences',
       title: 'Gérer les préférences',
@@ -214,15 +225,9 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
     <div className="bg-muted/40 min-h-screen">
       <div className="flex-col md:flex">
         <div className="border-b">
-          <div className="flex h-16 items-center px-4">
+          <div className="flex h-16 items-center px-4 flex-wrap">
             <BrandLogo className="h-8 w-auto" />
-            <div className="ml-auto flex items-center space-x-4">
-               <Button variant="ghost" asChild>
-                <Link href={`/${locale}`} className="flex items-center">
-                    <Home className="mr-2 h-4 w-4" />
-                    Boutique
-                </Link>
-              </Button>
+            <div className="ml-auto flex items-center space-x-4 flex-wrap">
               <form action={logout}>
                   <input type="hidden" name="locale" value={locale} />
                   <Button variant="ghost">

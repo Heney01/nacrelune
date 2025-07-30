@@ -2,89 +2,86 @@
 'use server';
 
 /**
- * @fileOverview A charm placement suggestion AI agent.
+ * @fileOverview Un agent IA pour suggérer le placement de breloques sur des bijoux.
  *
- * - suggestCharmPlacement - A function that suggests charm placements.
- * - SuggestCharmPlacementInput - The input type for the suggestCharmPlacement function.
- * - SuggestCharmPlacementOutput - The return type for the suggestCharmPlacement function.
+ * - getCharmSuggestions: Une fonction qui gère le processus de suggestion de placement de breloques.
+ * - CharmSuggestionInput: Le type d'entrée pour la fonction getCharmSuggestions.
+ * - CharmSuggestionOutput: Le type de retour pour la fonction getCharmSuggestions.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'zod';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
+import {googleAI} from '@genkit-ai/googleai';
 
 
-const SuggestCharmPlacementInputSchema = z.object({
-  jewelryType: z.string().describe('The type of jewelry (necklace, bracelet, earrings).'),
-  modelDescription: z.string().describe('The description of the selected jewelry model.'),
-  charmOptions: z.array(z.string()).describe('The available charm options.'),
-  userPreferences: z.string().optional().describe('Optional user preferences for charm placement.'),
+const CharmSuggestionInputSchema = z.object({
+  jewelryType: z.string().describe('Le type de bijou (ex: "collier", "bracelet").'),
+  existingCharms: z.array(z.string()).describe('La liste des noms des breloques déjà placées sur le bijou.'),
+  allCharms: z.array(z.string()).describe('La liste de toutes les breloques disponibles que l\'IA peut suggérer.'),
+  userPreferences: z.string().optional().describe('Les préférences de style de l\'utilisateur (ex: "minimaliste", "chargé", "asymétrique").'),
 });
-export type SuggestCharmPlacementInput = z.infer<typeof SuggestCharmPlacementInputSchema>;
+export type CharmSuggestionInput = z.infer<typeof CharmSuggestionInputSchema>;
 
-const SuggestionSchema = z.object({
-  charm: z.string().describe('The suggested charm.'),
-  placementDescription: z.string().describe('The suggested placement description.'),
-  position: z
-    .object({
-      x: z.number().describe('The x coordinate for the placement, as a percentage from 0 to 100.'),
-      y: z.number().describe('The y coordinate for the placement, as a percentage from 0 to 100.'),
+const CharmSuggestionOutputSchema = z.object({
+  suggestions: z.array(
+    z.object({
+      charmName: z.string().describe('Le nom de la breloque à placer.'),
+      position: z.object({
+        x: z.number().describe('La coordonnée X en pourcentage (de 0 à 100) depuis le bord gauche.'),
+        y: z.number().describe('La coordonnée Y en pourcentage (de 0 à 100) depuis le bord supérieur.'),
+      }),
+      justification: z.string().describe('Une courte explication (1-2 phrases) de la raison pour laquelle cette suggestion est bonne.'),
     })
-    .describe('The suggested coordinates for the charm placement.'),
-  shouldIntegrate: z.boolean().describe('Whether to recommend integrating this suggestion into the design based on aesthetics and user preferences.'),
+  ).describe('Une liste de 3 à 5 suggestions de placement de breloques.'),
 });
-export type Suggestion = z.infer<typeof SuggestionSchema>;
+export type CharmSuggestionOutput = z.infer<typeof CharmSuggestionOutputSchema>;
 
 
-const SuggestCharmPlacementOutputSchema = z.object({
-  suggestions: z.array(SuggestionSchema).describe('The list of charm placement suggestions.'),
+const placementPrompt = ai.definePrompt({
+  name: 'charmPlacementPrompt',
+  input: { schema: CharmSuggestionInputSchema },
+  output: { schema: CharmSuggestionOutputSchema },
+  model: googleAI.model('gemini-1.5-pro'),
+  prompt: `Tu es un expert en design de bijoux pour un atelier de création personnalisée.
+Ton rôle est de suggérer des emplacements créatifs et esthétiques pour des breloques sur un bijou.
+
+Voici la situation actuelle :
+- Type de bijou : {{{jewelryType}}}
+- Breloques déjà placées : {{#if existingCharms}}{{#each existingCharms}} - {{{this}}} {{/each}}{{else}}Aucune{{/if}}
+- Préférences de l'utilisateur : {{{userPreferences}}}
+
+Voici la liste complète des breloques disponibles que tu peux suggérer :
+{{#each allCharms}} - {{{this}}}
+{{/each}}
+
+Ta tâche :
+Propose une liste de 3 à 5 suggestions de placement de breloques. Pour chaque suggestion :
+1.  Choisis une breloque pertinente dans la liste des breloques disponibles. Ne suggère pas une breloque qui est déjà placée.
+2.  Détermine des coordonnées (x, y) en pourcentage pour son placement. L'origine (0,0) est en haut à gauche du canevas de l'éditeur. Le centre approximatif est (50,50). Pense à la manière dont les bijoux sont portés pour suggérer des placements naturels (par exemple, pour un collier, les breloques sont généralement sur la moitié inférieure).
+3.  Fournis une brève justification pour ton choix, en expliquant pourquoi cela créerait un design harmonieux ou intéressant. Tiens compte des préférences de l'utilisateur et des breloques déjà présentes.
+`,
 });
-export type SuggestCharmPlacementOutput = z.infer<typeof SuggestCharmPlacementOutputSchema>;
-
-export async function suggestCharmPlacement(input: SuggestCharmPlacementInput): Promise<SuggestCharmPlacementOutput> {
-  return suggestCharmPlacementFlow(input);
-}
 
 const suggestCharmPlacementFlow = ai.defineFlow(
   {
     name: 'suggestCharmPlacementFlow',
-    inputSchema: SuggestCharmPlacementInputSchema,
-    outputSchema: SuggestCharmPlacementOutputSchema,
+    inputSchema: CharmSuggestionInputSchema,
+    outputSchema: CharmSuggestionOutputSchema,
   },
   async (input) => {
-     if (input.charmOptions.length === 0) {
-      return { suggestions: [] };
-    }
-
-    const llmResponse = await ai.generate({
-      prompt: `You are a jewelry design assistant. Your task is to suggest creative and aesthetically pleasing charm placements.
-
-You will be given the type of jewelry, a description of the model, a list of available charms, and optional user preferences.
-
-Your goal is to provide a few (2-4) placement suggestions for the available charms. For each suggestion:
-1.  **Placement:** Describe where the charm should be placed in a descriptive way (e.g., "centered on the main pendant", "dangling from the left side").
-2.  **Coordinates:** Provide precise x and y coordinates as percentages (from 0 to 100). The (0, 0) coordinate is the top-left corner, (50, 50) is the center, and (100, 100) is the bottom-right.
-3.  **Recommendation:** Based on design principles (balance, symmetry, storytelling) and the user's preferences, decide if this is a good suggestion that should be integrated. Set the 'shouldIntegrate' flag to true for your best recommendations.
-
-**IMPORTANT:** You MUST strictly adhere to any negative constraints in the user's preferences (e.g., "I hate...", "no red," "I don't like..."). Do not suggest anything that violates these constraints.
-
-Here is the information for your task:
-- Jewelry Type: ${input.jewelryType}
-- Model Description: ${input.modelDescription}
-- Available Charms: ${input.charmOptions.join(', ')}
-- User Preferences: ${input.userPreferences || 'None'}
-
-Please provide your suggestions in the required output format.`,
-      output: {
-        schema: SuggestCharmPlacementOutputSchema
-      }
-    });
-    
+    const llmResponse = await placementPrompt(input);
     const output = llmResponse.output;
+
     if (!output) {
-      throw new Error('No output from prompt');
+      console.error('[AI FLOW] LLM returned no output.');
+      throw new Error("L'IA n'a retourné aucune suggestion.");
     }
     
     return output;
   }
 );
 
+
+export async function getCharmSuggestions(input: CharmSuggestionInput): Promise<CharmSuggestionOutput> {
+  return suggestCharmPlacementFlow(input);
+}
