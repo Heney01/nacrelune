@@ -535,7 +535,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                           </Link>
                       </Button>
                       <h2 className="text-xl md:text-2xl font-headline tracking-tight text-center flex-grow truncate">
-                        {t('customize_title', { modelName: model.name })}
+                        {t('customize_title')}
                       </h2>
                       {isEditing ? (
                           <Button onClick={handleUpdateCart} disabled={captureRequest}>
@@ -636,7 +636,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
         </main>
 
          {isMobile && (
-            <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-2 flex justify-around">
+            <div className="sticky bottom-0 left-0 right-0 bg-background border-t p-2 flex justify-around">
               <Sheet open={isCharmsSheetOpen} onOpenChange={setIsCharmsSheetOpen}>
                   <SheetTrigger asChild>
                       <Button variant="ghost" className="flex flex-col h-auto p-2">

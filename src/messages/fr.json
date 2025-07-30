@@ -1,5 +1,4 @@
 
-
 {
   "HomePage": {
     "title": "Commencez Votre Création",
@@ -30,7 +29,7 @@
     "charms_title": "Breloques",
     "search_placeholder": "Rechercher des breloques...",
     "add_to_design_button": "Ajouter à la création",
-    "customize_title": "Personnalisez votre {modelName}",
+    "customize_title": "Personnalisation",
     "add_to_cart_button": "Ajouter au Panier",
     "update_item_button": "Mettre à jour l'article",
     "added_charms_title": "Breloques ajoutées ({count})",

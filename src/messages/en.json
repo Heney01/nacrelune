@@ -1,5 +1,4 @@
 
-
 {
   "HomePage": {
     "title": "Begin Your Creation",
@@ -30,7 +29,7 @@
     "charms_title": "Charms",
     "search_placeholder": "Search charms...",
     "add_to_design_button": "Add to Design",
-    "customize_title": "Customize Your {modelName}",
+    "customize_title": "Customization",
     "add_to_cart_button": "Add to Cart",
     "update_item_button": "Update Item",
     "added_charms_title": "Added Charms ({count})",
