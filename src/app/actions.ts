@@ -7,6 +7,7 @@
 
 
 
+
 'use server';
 
 import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
@@ -547,91 +548,97 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
     }
 
     try {
-        // Step 1: Upload all preview images to Firebase Storage
-        const uploadPromises = cartItems.map(async (item) => {
-            const storageRef = ref(storage, `order_previews/${item.id}-${Date.now()}.png`);
-            // The previewImage is a base64 data URL, so we use uploadString
-            const uploadResult = await uploadString(storageRef, item.previewImage, 'data_url');
-            return getDownloadURL(uploadResult.ref);
-        });
+         const orderData = await runTransaction(db, async (transaction) => {
+            // Step 1: Check stock and prepare updates
+            const stockUpdates: { ref: any, newQuantity: number }[] = [];
+            for (const item of cartItems) {
+                // Check model stock
+                const modelRef = doc(db, item.jewelryType.id, item.model.id);
+                const modelDoc = await transaction.get(modelRef);
+                if (!modelDoc.exists()) throw new Error(`Le modèle ${item.model.name} n'existe plus.`);
+                const modelStock = modelDoc.data().quantity || 0;
+                if (modelStock < 1) throw new Error(`Le modèle ${item.model.name} est en rupture de stock.`);
+                stockUpdates.push({ ref: modelRef, newQuantity: modelStock - 1 });
 
-        const previewImageUrls = await Promise.all(uploadPromises);
+                // Check charms stock
+                for (const pc of item.placedCharms) {
+                    const charmRef = doc(db, 'charms', pc.charm.id);
+                    const charmDoc = await transaction.get(charmRef);
+                    if (!charmDoc.exists()) throw new Error(`La breloque ${pc.charm.name} n'existe plus.`);
+                    const charmStock = charmDoc.data().quantity || 0;
+                    if (charmStock < 1) throw new Error(`La breloque ${pc.charm.name} est en rupture de stock.`);
+                    stockUpdates.push({ ref: charmRef, newQuantity: charmStock - 1 });
+                }
+            }
 
-        // Step 2: Prepare the order data for Firestore
-        const totalOrderPrice = cartItems.reduce((sum, item) => {
-            const modelPrice = item.model.price || 0;
-            const charmsPrice = item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
-            return sum + modelPrice + charmsPrice;
-        }, 0);
+            // Step 2: Upload all preview images to Firebase Storage
+            const uploadPromises = cartItems.map(async (item) => {
+                const storageRef = ref(storage, `order_previews/${item.id}-${Date.now()}.png`);
+                const uploadResult = await uploadString(storageRef, item.previewImage, 'data_url');
+                return getDownloadURL(uploadResult.ref);
+            });
+            const previewImageUrls = await Promise.all(uploadPromises);
 
-        const orderItems: Omit<OrderItem, 'modelImageUrl' | 'charms'>[] = cartItems.map((item, index) => {
-             const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
-            return {
-                modelId: item.model.id,
-                modelName: item.model.name,
-                jewelryTypeId: item.jewelryType.id,
-                jewelryTypeName: item.jewelryType.name,
-                charmIds: item.placedCharms.map(pc => pc.charm.id),
-                price: itemPrice,
-                previewImageUrl: previewImageUrls[index], // Get the corresponding uploaded image URL
-                isCompleted: false, // Initialize as not completed
+            // Step 3: Apply stock updates
+            stockUpdates.forEach(update => {
+                transaction.update(update.ref, { quantity: update.newQuantity });
+            });
+
+            // Step 4: Prepare the order data
+            const totalOrderPrice = cartItems.reduce((sum, item) => {
+                const modelPrice = item.model.price || 0;
+                const charmsPrice = item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+                return sum + modelPrice + charmsPrice;
+            }, 0);
+
+            const orderItems: Omit<OrderItem, 'modelImageUrl' | 'charms'>[] = cartItems.map((item, index) => {
+                const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+                return {
+                    modelId: item.model.id,
+                    modelName: item.model.name,
+                    jewelryTypeId: item.jewelryType.id,
+                    jewelryTypeName: item.jewelryType.name,
+                    charmIds: item.placedCharms.map(pc => pc.charm.id),
+                    price: itemPrice,
+                    previewImageUrl: previewImageUrls[index],
+                    isCompleted: false,
+                };
+            });
+            
+            const initialStatus: OrderStatus = 'commandée';
+            const orderNumber = generateOrderNumber();
+            
+            const newOrderData: Omit<Order, 'id' | 'createdAt'> = {
+                orderNumber,
+                customerEmail: email,
+                totalPrice: totalOrderPrice,
+                items: orderItems,
+                status: initialStatus,
             };
+
+            const orderRef = doc(collection(db, 'orders'));
+            transaction.set(orderRef, { ...newOrderData, createdAt: serverTimestamp() });
+            
+            // Step 5: Prepare email data
+            const mailDocData = {
+                to: [email],
+                message: {
+                    subject: `Confirmation de votre commande n°${orderNumber}`,
+                    text: `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalOrderPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.model.name} avec ${item.placedCharms.length} breloque(s)`).join('\n')}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux`.trim(),
+                    html: `<h1>Merci pour votre commande !</h1><p>Bonjour,</p><p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${totalOrderPrice.toFixed(2)}€.</p><h2>Récapitulatif :</h2><ul>${cartItems.map(item => `<li>${item.model.name} avec ${item.placedCharms.length} breloque(s)</li>`).join('')}</ul><p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p><p>L'équipe Atelier à bijoux</p>`,
+                },
+            };
+
+            const mailRef = doc(collection(db, 'mail'));
+            transaction.set(mailRef, mailDocData);
+            
+            return { success: true, message: 'Votre commande a été passée avec succès !', orderNumber, email };
         });
-        
-        const initialStatus: OrderStatus = 'commandée';
-        const orderNumber = generateOrderNumber();
-        
-        const orderData: Omit<Order, 'id' | 'createdAt'> = {
-            orderNumber,
-            customerEmail: email,
-            totalPrice: totalOrderPrice,
-            items: orderItems,
-            status: initialStatus,
-        };
 
-        // Step 3: Create the order document in Firestore
-        const finalOrderData = {
-            ...orderData,
-            createdAt: serverTimestamp(),
-        }
-        await addDoc(collection(db, 'orders'), finalOrderData);
-
-        // Step 4: Create a document in the 'mail' collection to trigger the 'Trigger Email' extension
-        const mailDoc = {
-            to: [email],
-            message: {
-                subject: `Confirmation de votre commande n°${orderNumber}`,
-                text: `
-Bonjour,
-
-Nous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalOrderPrice.toFixed(2)}€.
-                    
-Récapitulatif :
-${cartItems.map(item => `- ${item.model.name} avec ${item.placedCharms.length} breloque(s)`).join('\n')}
-                    
-Vous recevrez un autre e-mail lorsque votre commande sera expédiée.
-                    
-L'équipe Atelier à bijoux`.trim(),
-                html: `
-                    <h1>Merci pour votre commande !</h1>
-                    <p>Bonjour,</p>
-                    <p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${totalOrderPrice.toFixed(2)}€.</p>
-                    <h2>Récapitulatif :</h2>
-                    <ul>
-                        ${cartItems.map(item => `<li>${item.model.name} avec ${item.placedCharms.length} breloque(s)</li>`).join('')}
-                    </ul>
-                    <p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p>
-                    <p>L'équipe Atelier à bijoux</p>
-                `,
-            },
-        };
-
-        await addDoc(collection(db, 'mail'), mailDoc);
-        
-        return { success: true, message: 'Votre commande a été passée avec succès !', orderNumber, email };
-    } catch (error) {
+        return orderData;
+    } catch (error: any) {
         console.error("Error creating order:", error);
-        return { success: false, message: "Une erreur est survenue lors du passage de la commande." };
+        return { success: false, message: error.message || "Une erreur est survenue lors du passage de la commande." };
     }
 }
 
@@ -795,34 +802,70 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
     try {
         const orderRef = doc(db, 'orders', orderId);
         
-        let dataToUpdate: Partial<Order> = { status: newStatus };
-
-        if (newStatus === 'expédiée') {
-            const shippingCarrier = formData.get('shippingCarrier') as string;
-            const trackingNumber = formData.get('trackingNumber') as string;
-            if (!shippingCarrier || !trackingNumber) {
-                return { success: false, message: "Le transporteur et le numéro de suivi sont obligatoires pour une expédition." };
+        await runTransaction(db, async (transaction) => {
+            const orderDoc = await transaction.get(orderRef);
+            if (!orderDoc.exists()) {
+                throw new Error("Commande non trouvée.");
             }
-            dataToUpdate.shippingCarrier = shippingCarrier;
-            dataToUpdate.trackingNumber = trackingNumber;
-        }
+            
+            const orderData = orderDoc.data();
+            const currentStatus = orderData.status;
 
-        if (newStatus === 'annulée') {
-            const cancellationReason = formData.get('cancellationReason') as string;
-            if (!cancellationReason) {
-                return { success: false, message: "Le motif de l'annulation est obligatoire." };
+            // Prevent re-cancelling or re-stocking
+            if (currentStatus === 'annulée' && newStatus === 'annulée') {
+                throw new Error("La commande est déjà annulée.");
             }
-            dataToUpdate.cancellationReason = cancellationReason;
-            // Here you would also trigger an email to the customer with the cancellationReason.
-        }
 
-        await updateDoc(orderRef, dataToUpdate);
+            let dataToUpdate: Partial<Order> = { status: newStatus };
+
+            if (newStatus === 'expédiée') {
+                const shippingCarrier = formData.get('shippingCarrier') as string;
+                const trackingNumber = formData.get('trackingNumber') as string;
+                if (!shippingCarrier || !trackingNumber) {
+                    throw new Error("Le transporteur et le numéro de suivi sont obligatoires pour une expédition.");
+                }
+                dataToUpdate.shippingCarrier = shippingCarrier;
+                dataToUpdate.trackingNumber = trackingNumber;
+            }
+
+            if (newStatus === 'annulée') {
+                const cancellationReason = formData.get('cancellationReason') as string;
+                if (!cancellationReason) {
+                    throw new Error("Le motif de l'annulation est obligatoire.");
+                }
+                dataToUpdate.cancellationReason = cancellationReason;
+
+                // Restock items only if the order was not already cancelled
+                if (currentStatus !== 'annulée') {
+                    for (const item of orderData.items as OrderItem[]) {
+                        // Restock model
+                        const modelRef = doc(db, item.jewelryTypeId, item.modelId);
+                        const modelDoc = await transaction.get(modelRef);
+                        if (modelDoc.exists()) {
+                            const newQuantity = (modelDoc.data().quantity || 0) + 1;
+                            transaction.update(modelRef, { quantity: newQuantity });
+                        }
+
+                        // Restock charms
+                        for (const charmId of item.charmIds) {
+                            const charmRef = doc(db, 'charms', charmId);
+                            const charmDoc = await transaction.get(charmRef);
+                            if (charmDoc.exists()) {
+                                const newQuantity = (charmDoc.data().quantity || 0) + 1;
+                                transaction.update(charmRef, { quantity: newQuantity });
+                            }
+                        }
+                    }
+                }
+            }
+            transaction.update(orderRef, dataToUpdate);
+        });
 
         revalidatePath(`/${locale}/admin/dashboard`);
         return { success: true, message: "Le statut de la commande a été mis à jour." };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error updating order status:", error);
-        return { success: false, message: "Une erreur est survenue." };
+        return { success: false, message: error.message || "Une erreur est survenue." };
     }
 }
 
