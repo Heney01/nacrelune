@@ -41,7 +41,14 @@ const SuggestCharmPlacementOutputSchema = z.object({
 export type SuggestCharmPlacementOutput = z.infer<typeof SuggestCharmPlacementOutputSchema>;
 
 export async function suggestCharmPlacement(input: SuggestCharmPlacementInput): Promise<SuggestCharmPlacementOutput> {
-  return suggestCharmPlacementFlow(input);
+  try {
+    const suggestions = await suggestCharmPlacementFlow(input);
+    return suggestions;
+  } catch (error: any) {
+    console.error('Error in suggestCharmPlacement action:', error);
+    // Return the actual error message to the client for better debugging
+    throw new Error(error.message || 'Failed to generate suggestions.');
+  }
 }
 
 const suggestCharmPlacementFlow = ai.defineFlow(
@@ -80,10 +87,30 @@ Here is the information for your task:
 Please provide your suggestions in the required output format.`,
       output: {
         schema: SuggestCharmPlacementOutputSchema
+      },
+      config: {
+        safetySettings: [
+          {
+            category: 'HARM_CATEGORY_HATE_SPEECH',
+            threshold: 'BLOCK_NONE',
+          },
+          {
+            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+            threshold: 'BLOCK_NONE',
+          },
+          {
+            category: 'HARM_CATEGORY_HARASSMENT',
+            threshold: 'BLOCK_NONE',
+          },
+          {
+            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+            threshold: 'BLOCK_NONE',
+          },
+        ],
       }
     });
     
-    const output = llmResponse.output;
+    const output = await llmResponse.output();
     if (!output) {
       console.error('[AI Flow] No output from prompt.');
       throw new Error('No output from prompt');
