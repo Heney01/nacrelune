@@ -6,7 +6,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-import { Lightbulb, Sparkles, WandSparkles } from 'lucide-react';
+import { Lightbulb, Sparkles, WandSparkles, Loader2, PlusCircle } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Badge } from './ui/badge';
@@ -14,22 +14,32 @@ import Image from 'next/image';
 import { Charm } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useTranslations } from '@/hooks/use-translations';
+import { Suggestion } from './editor';
+import { ScrollArea } from './ui/scroll-area';
 
 interface SuggestionSidebarProps {
   charms: Charm[];
   isMobile?: boolean;
+  onGenerate: (preferences: string) => void;
+  isLoading: boolean;
+  suggestions: Suggestion[];
+  onApplySuggestion: (suggestion: Suggestion) => void;
 }
 
 export function SuggestionSidebar({
   charms,
   isMobile = false,
+  onGenerate,
+  isLoading,
+  suggestions,
+  onApplySuggestion,
 }: SuggestionSidebarProps) {
   const [preferences, setPreferences] = useState('');
   const t = useTranslations('Editor');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // AI generation logic is removed.
+    onGenerate(preferences);
   };
 
 
@@ -56,15 +66,67 @@ export function SuggestionSidebar({
               className="mt-2"
             />
           </div>
-          <Button type="submit" className="w-full" disabled={true || charms.length === 0}>
-            <> <Sparkles className="mr-2 h-4 w-4" /> {t('generate_ideas_button')}</>
+          <Button type="submit" className="w-full" disabled={isLoading || charms.length === 0}>
+             {isLoading ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('generating_button')}</>
+            ) : (
+              <> <Sparkles className="mr-2 h-4 w-4" /> {t('generate_ideas_button')}</>
+            )}
           </Button>
         </form>
         <div className="flex-grow mt-4">
-            <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-full p-4 border border-dashed rounded-lg">
-                <Lightbulb className="w-10 h-10 mb-4" />
-                <p>{t('suggestions_placeholder_title')}</p>
-            </div>
+            {isLoading && (
+              <div className="space-y-4">
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+            )}
+            {!isLoading && suggestions.length === 0 && (
+                <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-full p-4 border border-dashed rounded-lg">
+                    <Lightbulb className="w-10 h-10 mb-4" />
+                    <p>{t('suggestions_placeholder_title')}</p>
+                </div>
+            )}
+             {!isLoading && suggestions.length > 0 && (
+              <ScrollArea className="h-full pr-4 -mr-4">
+                <div className="space-y-4">
+                  {suggestions.map((suggestion, index) => {
+                    const charm = charms.find(c => c.name === suggestion.charmName);
+                    return (
+                      <Card key={index} className="bg-muted/50">
+                        <CardHeader className="pb-4">
+                           <div className="flex items-start gap-4">
+                            {charm && (
+                                <Image 
+                                    src={charm.imageUrl} 
+                                    alt={charm.name}
+                                    width={40}
+                                    height={40}
+                                    className="rounded-md border bg-white p-1"
+                                />
+                            )}
+                            <div className="flex-grow">
+                                <CardTitle className="text-base">{suggestion.charmName}</CardTitle>
+                                <Badge variant="outline" className="mt-1 border-primary/50 text-primary bg-primary/10">{t('recommended_badge')}</Badge>
+                            </div>
+                           </div>
+                        </CardHeader>
+                        <CardContent className="pt-0 pb-4">
+                          <p className="text-sm text-muted-foreground italic">"{suggestion.justification}"</p>
+                        </CardContent>
+                        <CardFooter>
+                           <Button size="sm" className="w-full" onClick={() => onApplySuggestion(suggestion)}>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Appliquer la suggestion
+                           </Button>
+                        </CardFooter>
+                      </Card>
+                    )
+                  })}
+                </div>
+              </ScrollArea>
+             )}
         </div>
       </CardContent>
     </Card>

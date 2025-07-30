@@ -10,6 +10,7 @@ import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
 import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm } from '@/lib/types';
+import { getCharmSuggestions as getCharmSuggestionsFlow, CharmSuggestionInput, CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 
 
 const getFileNameFromUrl = (url: string) => {
@@ -1064,4 +1065,18 @@ export async function updateOrderItemStatus(formData: FormData): Promise<{ succe
     }
 }
 
-    
+// AI Actions
+export async function getCharmSuggestionsAction(input: CharmSuggestionInput): Promise<{
+    success: boolean;
+    suggestions?: CharmSuggestionOutput['suggestions'];
+    error?: string;
+}> {
+    try {
+        console.log('[SERVER ACTION] Calling getCharmSuggestionsFlow with input:', input);
+        const result = await getCharmSuggestionsFlow(input);
+        return { success: true, suggestions: result.suggestions };
+    } catch (error: any) {
+        console.error('[SERVER ACTION] Error calling AI flow:', error);
+        return { success: false, error: error.message || "Une erreur est survenue lors de la génération des suggestions." };
+    }
+}

@@ -23,6 +23,8 @@ import { CartSheet } from './cart-sheet';
 import html2canvas from 'html2canvas';
 import { CartWidget } from './cart-widget';
 import { useTranslations } from '@/hooks/use-translations';
+import { getCharmSuggestionsAction } from '@/app/actions';
+import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -115,6 +117,8 @@ interface EditorProps {
   allCharms: Charm[];
 }
 
+export type Suggestion = CharmSuggestionOutput['suggestions'][0];
+
 export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   const isMobile = useIsMobile();
   const { cart, addToCart, updateCartItem } = useCart();
@@ -145,6 +149,9 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   const [charmsSearchTerm, setCharmsSearchTerm] = useState('');
 
   const [captureRequest, setCaptureRequest] = useState(false);
+
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   
   const isEditing = cartItemId !== null;
 
@@ -472,6 +479,50 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     />
   ), [allCharms, addCharmFromCharmList, charmsSearchTerm]);
 
+  const handleGenerateSuggestions = async (userPreferences: string) => {
+    setIsGenerating(true);
+    setSuggestions([]);
+    try {
+        const result = await getCharmSuggestionsAction({
+            jewelryType: jewelryType.name,
+            existingCharms: placedCharms.map(pc => pc.charm.name),
+            allCharms: allCharms.map(c => c.name),
+            userPreferences,
+        });
+
+        if (result.success && result.suggestions) {
+            setSuggestions(result.suggestions);
+        } else {
+            throw new Error(result.error || "Une erreur inconnue est survenue.");
+        }
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: t('toast_error_title'),
+            description: t('error_generating_suggestions') + " " + error.message,
+        });
+    } finally {
+        setIsGenerating(false);
+    }
+  };
+  
+  const applySuggestion = (suggestion: Suggestion) => {
+    const charmToAdd = allCharms.find(c => c.name === suggestion.charmName);
+    if (charmToAdd) {
+      addCharmToCanvas(charmToAdd, {
+        source: 'suggestionsPanel',
+        position: suggestion.position
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Breloque non trouvée",
+        description: `La breloque "${suggestion.charmName}" n'a pas pu être trouvée.`,
+      });
+    }
+  };
+
+
   return (
     <>
       <CartSheet open={isCartSheetOpen} onOpenChange={setIsCartSheetOpen} />
@@ -593,6 +644,10 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
               {!isMobile && <div className="lg:col-span-3">
                   <SuggestionSidebar
                       charms={allCharms}
+                      onGenerate={handleGenerateSuggestions}
+                      isLoading={isGenerating}
+                      suggestions={suggestions}
+                      onApplySuggestion={applySuggestion}
                   />
               </div>}
               </div>
@@ -648,6 +703,10 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                       <SuggestionSidebar 
                           charms={allCharms} 
                           isMobile={true}
+                          onGenerate={handleGenerateSuggestions}
+                          isLoading={isGenerating}
+                          suggestions={suggestions}
+                          onApplySuggestion={applySuggestion}
                       />
                   </SheetContent>
               </Sheet>
