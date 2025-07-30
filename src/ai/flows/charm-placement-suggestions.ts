@@ -51,6 +51,41 @@ export async function suggestCharmPlacement(input: SuggestCharmPlacementInput): 
   }
 }
 
+const prompt = ai.definePrompt(
+    {
+        name: 'suggestCharmPlacementPrompt',
+        input: { schema: SuggestCharmPlacementInputSchema },
+        output: { schema: SuggestCharmPlacementOutputSchema },
+        config: {
+            safetySettings: [
+                { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+                { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+                { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+                { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+            ],
+        },
+        prompt: `You are a jewelry design assistant. Your task is to suggest creative and aesthetically pleasing charm placements.
+
+You will be given the type of jewelry, a description of the model, a list of available charms, and optional user preferences.
+
+Your goal is to provide a few (2-4) placement suggestions for the available charms. For each suggestion:
+1.  **Placement:** Describe where the charm should be placed in a descriptive way (e.g., "centered on the main pendant", "dangling from the left side").
+2.  **Coordinates:** Provide precise x and y coordinates as percentages (from 0 to 100). The (0, 0) coordinate is the top-left corner, (50, 50) is the center, and (100, 100) is the bottom-right.
+3.  **Recommendation:** Based on design principles (balance, symmetry, storytelling) and the user's preferences, decide if this is a good suggestion that should be integrated. Set the 'shouldIntegrate' flag to true for your best recommendations.
+
+**IMPORTANT:** You MUST strictly adhere to any negative constraints in the user's preferences (e.g., "I hate...", "no red," "I don't like..."). Do not suggest anything that violates these constraints.
+
+Here is the information for your task:
+- Jewelry Type: {{{jewelryType}}}
+- Model Description: {{{modelDescription}}}
+- Available Charms: {{{charmOptions}}}
+- User Preferences: {{{userPreferences}}}
+
+Please provide your suggestions in the required output format.`,
+    }
+);
+
+
 const suggestCharmPlacementFlow = ai.defineFlow(
   {
     name: 'suggestCharmPlacementFlow',
@@ -65,55 +100,12 @@ const suggestCharmPlacementFlow = ai.defineFlow(
       return { suggestions: [] };
     }
 
-    console.log('[AI Flow] Calling AI.generate...');
-    const llmResponse = await ai.generate({
-      prompt: `You are a jewelry design assistant. Your task is to suggest creative and aesthetically pleasing charm placements.
+    console.log('[AI Flow] Calling prompt...');
+    const {output} = await prompt(input);
 
-You will be given the type of jewelry, a description of the model, a list of available charms, and optional user preferences.
-
-Your goal is to provide a few (2-4) placement suggestions for the available charms. For each suggestion:
-1.  **Placement:** Describe where the charm should be placed in a descriptive way (e.g., "centered on the main pendant", "dangling from the left side").
-2.  **Coordinates:** Provide precise x and y coordinates as percentages (from 0 to 100). The (0, 0) coordinate is the top-left corner, (50, 50) is the center, and (100, 100) is the bottom-right.
-3.  **Recommendation:** Based on design principles (balance, symmetry, storytelling) and the user's preferences, decide if this is a good suggestion that should be integrated. Set the 'shouldIntegrate' flag to true for your best recommendations.
-
-**IMPORTANT:** You MUST strictly adhere to any negative constraints in the user's preferences (e.g., "I hate...", "no red," "I don't like..."). Do not suggest anything that violates these constraints.
-
-Here is the information for your task:
-- Jewelry Type: ${input.jewelryType}
-- Model Description: ${input.modelDescription}
-- Available Charms: ${input.charmOptions.join(', ')}
-- User Preferences: ${input.userPreferences || 'None'}
-
-Please provide your suggestions in the required output format.`,
-      output: {
-        schema: SuggestCharmPlacementOutputSchema
-      },
-      config: {
-        safetySettings: [
-          {
-            category: 'HARM_CATEGORY_HATE_SPEECH',
-            threshold: 'BLOCK_NONE',
-          },
-          {
-            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-            threshold: 'BLOCK_NONE',
-          },
-          {
-            category: 'HARM_CATEGORY_HARASSMENT',
-            threshold: 'BLOCK_NONE',
-          },
-          {
-            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-            threshold: 'BLOCK_NONE',
-          },
-        ],
-      }
-    });
-    
-    const output = await llmResponse.output();
     if (!output) {
       console.error('[AI Flow] No output from prompt.');
-      throw new Error('No output from prompt');
+      throw new Error('No output from prompt. This could be due to API limits or safety settings.');
     }
     
     console.log('[AI Flow] Successfully received output from AI:', JSON.stringify(output, null, 2));
