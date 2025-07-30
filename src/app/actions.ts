@@ -1,14 +1,10 @@
 
-
-
-
-
 'use server';
 
 import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { revalidatePath } from 'next/cache';
 import { db, storage } from '@/lib/firebase';
-import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction, Timestamp, collectionGroup, documentId, orderBy } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction, Timestamp, collectionGroup, documentId, orderBy, DocumentReference, DocumentSnapshot } from 'firebase/firestore';
 import { ref, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
@@ -50,6 +46,20 @@ const getFileNameFromUrl = (url: string) => {
     const pathParts = url.split('/');
     const lastPart = pathParts[pathParts.length - 1];
     return lastPart.split('?')[0];
+};
+
+const getUrl = async (path: string | undefined | null, fallback: string): Promise<string> => {
+    if (!path) return fallback;
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+        return path;
+    }
+    try {
+        const storageRef = ref(storage, path);
+        return await getDownloadURL(storageRef);
+    } catch (error) {
+        console.error(`Error getting download URL for path "${path}":`, error);
+        return fallback;
+    }
 };
 
 const deleteFileFromStorage = async (fileUrl: string) => {
@@ -392,7 +402,7 @@ export async function deleteCharm(formData: FormData): Promise<{ success: boolea
 
     } catch (error) {
         console.error("Error deleting charm:", error);
-        return { success: false, message: "Une erreur est survenue lors de la suppression." };
+        return { success: false, message: "Une erreur est survenue." };
     }
 }
 
@@ -537,65 +547,136 @@ export async function markAsRestocked(formData: FormData): Promise<{ success: bo
 }
 
 
-export async function createOrder(cartItems: SerializableCartItem[], email: string): Promise<{ success: boolean; message: string; orderNumber?: string, email?: string }> {
+export async function createOrder(cartItems: SerializableCartItem[], email: string, locale: string): Promise<{ success: boolean; message: string; orderNumber?: string, email?: string }> {
     if (!cartItems || cartItems.length === 0) {
         return { success: false, message: 'Le panier est vide.' };
     }
 
     try {
-        // Step 1: Upload all preview images to Firebase Storage
-        const uploadPromises = cartItems.map(async (item) => {
-            const storageRef = ref(storage, `order_previews/${item.id}-${Date.now()}.png`);
-            // The previewImage is a base64 data URL, so we use uploadString
-            const uploadResult = await uploadString(storageRef, item.previewImage, 'data_url');
-            return getDownloadURL(uploadResult.ref);
-        });
+         const orderData = await runTransaction(db, async (transaction) => {
+            const stockUpdates: Map<DocumentReference, { newQuantity: number; name: string }> = new Map();
+            const itemDocsToFetch: Map<string, DocumentReference> = new Map();
+            
+            // Step 1: Consolidate stock deduction requests
+            const stockDeductions = new Map<string, { count: number, name: string, type: string }>();
 
-        const previewImageUrls = await Promise.all(uploadPromises);
+            for (const item of cartItems) {
+                // Models
+                const modelKey = `${item.jewelryType.id}/${item.model.id}`;
+                const currentModel = stockDeductions.get(modelKey) || { count: 0, name: item.model.name, type: item.jewelryType.id };
+                stockDeductions.set(modelKey, { ...currentModel, count: currentModel.count + 1 });
+                if (!itemDocsToFetch.has(modelKey)) {
+                    itemDocsToFetch.set(modelKey, doc(db, item.jewelryType.id, item.model.id));
+                }
 
-        // Step 2: Prepare the order data for Firestore
-        const totalOrderPrice = cartItems.reduce((sum, item) => {
-            const modelPrice = item.model.price || 0;
-            const charmsPrice = item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
-            return sum + modelPrice + charmsPrice;
-        }, 0);
+                // Charms
+                for (const pc of item.placedCharms) {
+                    const charmKey = `charms/${pc.charm.id}`;
+                    const currentCharm = stockDeductions.get(charmKey) || { count: 0, name: pc.charm.name, type: 'charms' };
+                    stockDeductions.set(charmKey, { ...currentCharm, count: currentCharm.count + 1 });
+                    if (!itemDocsToFetch.has(charmKey)) {
+                        itemDocsToFetch.set(charmKey, doc(db, 'charms', pc.charm.id));
+                    }
+                }
+            }
 
-        const orderItems: Omit<OrderItem, 'modelImageUrl' | 'charms'>[] = cartItems.map((item, index) => {
-             const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
-            return {
-                modelId: item.model.id,
-                modelName: item.model.name,
-                jewelryTypeId: item.jewelryType.id,
-                jewelryTypeName: item.jewelryType.name,
-                charmIds: item.placedCharms.map(pc => pc.charm.id),
-                price: itemPrice,
-                previewImageUrl: previewImageUrls[index], // Get the corresponding uploaded image URL
-                isCompleted: false, // Initialize as not completed
+            // Step 2: Fetch all item documents and check stock
+            const itemDocRefs = Array.from(itemDocsToFetch.values());
+            const itemDocsSnapshots: DocumentSnapshot[] = [];
+            for (const ref of itemDocRefs) {
+                const docSnap = await transaction.get(ref);
+                itemDocsSnapshots.push(docSnap);
+            }
+            const itemDocsMap = new Map(itemDocsSnapshots.map(d => [d.ref.path, d]));
+
+
+            for (const [key, deduction] of Array.from(stockDeductions.entries())) {
+                const itemDoc = itemDocsMap.get(itemDocsToFetch.get(key)!.path);
+                if (!itemDoc || !itemDoc.exists()) {
+                    throw new Error(`L'article ${deduction.name} n'existe plus.`);
+                }
+                const currentStock = itemDoc.data().quantity || 0;
+                if (currentStock < deduction.count) {
+                    throw new Error(`Le stock pour ${deduction.name} est insuffisant (${currentStock} disponibles, ${deduction.count} demandés).`);
+                }
+                stockUpdates.set(itemDoc.ref, { newQuantity: currentStock - deduction.count, name: deduction.name });
+            }
+
+            // Step 3: Upload all preview images to Firebase Storage
+            const uploadPromises = cartItems.map(async (item) => {
+                const storageRef = ref(storage, `order_previews/${item.id}-${Date.now()}.png`);
+                const uploadResult = await uploadString(storageRef, item.previewImage, 'data_url');
+                return getDownloadURL(uploadResult.ref);
+            });
+            const previewImageUrls = await Promise.all(uploadPromises);
+
+            // Step 4: Apply stock updates
+            for (const [ref, update] of Array.from(stockUpdates.entries())) {
+                transaction.update(ref, { quantity: update.newQuantity });
+            }
+
+            // Step 5: Prepare the order data
+            const totalOrderPrice = cartItems.reduce((sum, item) => {
+                const modelPrice = item.model.price || 0;
+                const charmsPrice = item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+                return sum + modelPrice + charmsPrice;
+            }, 0);
+
+            const orderItems: Omit<OrderItem, 'modelImageUrl' | 'charms'>[] = cartItems.map((item, index) => {
+                const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+                return {
+                    modelId: item.model.id,
+                    modelName: item.model.name,
+                    jewelryTypeId: item.jewelryType.id,
+                    jewelryTypeName: item.jewelryType.name,
+                    charmIds: item.placedCharms.map(pc => pc.charm.id),
+                    price: itemPrice,
+                    previewImageUrl: previewImageUrls[index],
+                    isCompleted: false,
+                };
+            });
+            
+            const initialStatus: OrderStatus = 'commandée';
+            const orderNumber = generateOrderNumber();
+            
+            const newOrderData: Omit<Order, 'id' | 'createdAt'> = {
+                orderNumber,
+                customerEmail: email,
+                totalPrice: totalOrderPrice,
+                items: orderItems,
+                status: initialStatus,
             };
-        });
-        
-        const initialStatus: OrderStatus = 'commandée';
-        const orderNumber = generateOrderNumber();
-        
-        const orderData: Omit<Order, 'id' | 'createdAt'> = {
-            orderNumber,
-            customerEmail: email,
-            totalPrice: totalOrderPrice,
-            items: orderItems,
-            status: initialStatus,
-        };
 
-        // Step 3: Create the order document in Firestore
-        const finalOrderData = {
-            ...orderData,
-            createdAt: serverTimestamp(),
-        }
-        await addDoc(collection(db, 'orders'), finalOrderData);
-        
-        return { success: true, message: 'Votre commande a été passée avec succès !', orderNumber, email };
-    } catch (error) {
+            const orderRef = doc(collection(db, 'orders'));
+            transaction.set(orderRef, { ...newOrderData, createdAt: serverTimestamp() });
+            
+            // Step 6: Prepare email data
+            const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${process.env.NEXT_PUBLIC_SUPPORT_EMAIL} en précisant votre numéro de commande (${orderNumber}).`;
+            const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}">${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}</a> en précisant votre numéro de commande (${orderNumber}).</p>`;
+            const trackingUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com'}/${locale}/orders/track`;
+
+            const mailText = `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalOrderPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.model.name} avec ${item.placedCharms.length} breloque(s)`).join('\n')}\n\nVous pouvez suivre votre commande ici : ${trackingUrl}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
+            const mailHtml = `<h1>Merci pour votre commande !</h1><p>Bonjour,</p><p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${totalOrderPrice.toFixed(2)}€.</p><h2>Récapitulatif :</h2><ul>${cartItems.map(item => `<li>${item.model.name} avec ${item.placedCharms.length} breloque(s)</li>`).join('')}</ul><p>Vous pouvez suivre l'avancement de votre commande en cliquant sur ce lien : <a href="${trackingUrl}">${trackingUrl}</a>.</p><p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
+
+            const mailDocData = {
+                to: [email],
+                message: {
+                    subject: `Confirmation de votre commande n°${orderNumber}`,
+                    text: mailText.trim(),
+                    html: mailHtml.trim(),
+                },
+            };
+
+            const mailRef = doc(collection(db, 'mail'));
+            transaction.set(mailRef, mailDocData);
+            
+            return { success: true, message: 'Votre commande a été passée avec succès !', orderNumber, email };
+        });
+
+        return orderData;
+    } catch (error: any) {
         console.error("Error creating order:", error);
-        return { success: false, message: "Une erreur est survenue lors du passage de la commande." };
+        return { success: false, message: error.message || "Une erreur est survenue lors du passage de la commande." };
     }
 }
 
@@ -628,7 +709,11 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
             const charmsSnapshot = await getDocs(charmsQuery);
             for (const charmDoc of charmsSnapshot.docs) {
                 const charmData = charmDoc.data() as Omit<Charm, 'id'>;
-                charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id });
+                charmsMap.set(charmDoc.id, {
+                    ...charmData,
+                    id: charmDoc.id,
+                    imageUrl: await getUrl(charmData.imageUrl, 'https://placehold.co/100x100.png')
+                });
             }
         }
         
@@ -651,7 +736,13 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
             for (const snap of modelSnapshots) {
                  for (const modelDoc of snap.docs) {
                     if (modelDoc.exists()) {
-                         modelsMap.set(modelDoc.id, { id: modelDoc.id, ...modelDoc.data() } as JewelryModel);
+                        const modelData = modelDoc.data();
+                        modelsMap.set(modelDoc.id, {
+                            id: modelDoc.id,
+                            ...modelData,
+                            displayImageUrl: await getUrl(modelData.displayImageUrl, 'https://placehold.co/400x400.png'),
+                            editorImageUrl: await getUrl(modelData.editorImageUrl, 'https://placehold.co/400x400.png'),
+                        } as JewelryModel);
                     }
                  }
             }
@@ -669,6 +760,7 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
             return {
                 ...item,
                 modelImageUrl: model?.displayImageUrl,
+                previewImageUrl: await getUrl(item.previewImageUrl, 'https://placehold.co/400x400.png'),
                 charms: enrichedCharms,
             };
         }));
@@ -687,34 +779,83 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
         
         return { success: true, message: "Commande trouvée.", order: order };
     } catch (error) {
+        console.error("Error finding order: ", error);
         return { success: false, message: "Une erreur est survenue lors de la recherche de la commande." };
     }
 }
 
 export async function getOrdersByEmail(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; orders?: Omit<Order, 'items' | 'totalPrice'>[] | null }> {
+    console.log("[DEBUG] getOrdersByEmail action started.");
     const email = formData.get('email') as string;
+    const locale = formData.get('locale') as string || 'fr';
+    console.log(`[DEBUG] Searching for orders with email: ${email}, locale: ${locale}`);
     
     if (!email) {
+        console.log("[DEBUG] No email provided.");
         return { success: false, message: "Veuillez fournir une adresse e-mail." };
     }
     
-    // For security reasons, we don't query the database here.
-    // In a real application, you would trigger a secure, rate-limited email sending service.
-    // Here, we just return a success message to the user.
-    // This prevents malicious users from checking if an email has an account.
+    try {
+        const q = query(
+            collection(db, 'orders'), 
+            where('customerEmail', '==', email.trim()),
+            orderBy('createdAt', 'desc')
+        );
+        const querySnapshot = await getDocs(q);
+        console.log(`[DEBUG] Firestore query returned ${querySnapshot.docs.length} documents.`);
+        
+        if (querySnapshot.empty) {
+            console.log("[DEBUG] No orders found for this email. Exiting silently.");
+            return { success: true, message: "email_sent_notice" };
+        }
 
-    // const q = query(
-    //     collection(db, 'orders'), 
-    //     where('customerEmail', '==', email.trim()),
-    //     orderBy('createdAt', 'desc')
-    // );
-    // const querySnapshot = await getDocs(q);
-    
-    // if (!querySnapshot.empty) {
-    //    // TODO: Send email with order numbers
-    // }
+        const orders = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                orderNumber: data.orderNumber,
+                status: data.status,
+                createdAt: (data.createdAt as Timestamp).toDate().toLocaleDateString(locale),
+            };
+        });
+        console.log("[DEBUG] Processed orders: ", orders);
 
-    return { success: true, message: "email_sent_notice" };
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com';
+        
+        const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}.`;
+        const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}">${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}</a>.</p>`;
+
+        const ordersListText = orders.map(o => 
+            `- Commande ${o.orderNumber} (du ${o.createdAt}) - Statut : ${o.status}`
+        ).join('\n');
+        
+        const ordersListHtml = orders.map(o => 
+            `<li>Commande <strong>${o.orderNumber}</strong> (du ${o.createdAt}) - Statut : ${o.status} - Suivre: <a href="${baseUrl}/${locale}/orders/track?orderNumber=${o.orderNumber}">Lien</a></li>`
+        ).join('');
+
+        const mailText = `Bonjour,\n\nVoici la liste de vos commandes récentes passées avec cette adresse e-mail :\n\n${ordersListText}\n\nVous pouvez suivre le statut de n'importe quelle commande sur notre page de suivi : ${baseUrl}/${locale}/orders/track${emailFooterText}`;
+        const mailHtml = `<h1>Vos commandes Atelier à bijoux</h1><p>Bonjour,</p><p>Voici la liste de vos commandes récentes passées avec cette adresse e-mail :</p><ul>${ordersListHtml}</ul><p>Vous pouvez suivre le statut de n'importe quelle commande sur notre <a href="${baseUrl}/${locale}/orders/track">page de suivi</a>.</p>${emailFooterHtml}`;
+        
+        const mailDocData = {
+            to: [email],
+            message: {
+                subject: "Vos commandes chez Atelier à bijoux",
+                text: mailText.trim(),
+                html: mailHtml.trim(),
+            },
+        };
+        console.log("[DEBUG] Mail document to be created: ", JSON.stringify(mailDocData, null, 2));
+
+        const mailRef = doc(collection(db, 'mail'));
+        await setDoc(mailRef, mailDocData);
+        console.log("[DEBUG] Mail document successfully created in 'mail' collection.");
+        
+        return { success: true, message: "email_sent_notice" };
+
+    } catch (error) {
+        console.error("[DEBUG] Error in getOrdersByEmail: ", error);
+        // Fail silently to the user to prevent errors from revealing information.
+        return { success: true, message: "email_sent_notice" };
+    }
 }
 
 
@@ -725,21 +866,62 @@ export async function getOrders(): Promise<Order[]> {
         const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
         const querySnapshot = await getDocs(q);
 
-        const orders: Order[] = querySnapshot.docs.map(doc => {
-            const data = doc.data();
+        if (querySnapshot.empty) {
+            return [];
+        }
+
+        // Get all unique charm IDs from all orders first
+        const allCharmIds = querySnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => item.charmIds) || []);
+        const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
+
+        // Fetch all required charms in a single query
+        let charmsMap = new Map<string, Charm>();
+        if (uniqueCharmIds.length > 0) {
+            const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', uniqueCharmIds));
+            const charmsSnapshot = await getDocs(charmsQuery);
+            for (const charmDoc of charmsSnapshot.docs) {
+                const charmData = charmDoc.data() as Omit<Charm, 'id'>;
+                const imageUrl = await getUrl(charmData.imageUrl, 'https://placehold.co/100x100.png');
+                charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id, imageUrl });
+            }
+        }
+        
+        const orders: Order[] = await Promise.all(querySnapshot.docs.map(async(orderDoc) => {
+            const data = orderDoc.data();
+            
+            const enrichedItems: OrderItem[] = (data.items || []).map((item: OrderItem) => {
+                const enrichedCharms = (item.charmIds || [])
+                    .map(id => charmsMap.get(id))
+                    .filter((c): c is Charm => !!c); // Filter out undefined charms
+
+                return {
+                    ...item,
+                    charms: enrichedCharms,
+                };
+            });
+            
+            const previewImageUrls = await Promise.all(
+                (data.items || []).map((item: OrderItem) => getUrl(item.previewImageUrl, 'https://placehold.co/400x400.png'))
+            );
+
+            enrichedItems.forEach((item, index) => {
+                item.previewImageUrl = previewImageUrls[index];
+            });
+
             return {
-                id: doc.id,
+                id: orderDoc.id,
                 orderNumber: data.orderNumber,
                 createdAt: (data.createdAt as Timestamp).toDate(),
                 customerEmail: data.customerEmail,
                 totalPrice: data.totalPrice,
                 status: data.status,
-                items: data.items, // Items are not fully enriched here
+                items: enrichedItems,
                 shippingCarrier: data.shippingCarrier,
                 trackingNumber: data.trackingNumber,
                 cancellationReason: data.cancellationReason,
             };
-        });
+        }));
+
         return orders;
     } catch (error) {
         console.error("Error fetching orders:", error);
@@ -759,34 +941,101 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
     try {
         const orderRef = doc(db, 'orders', orderId);
         
-        let dataToUpdate: Partial<Order> = { status: newStatus };
-
-        if (newStatus === 'expédiée') {
-            const shippingCarrier = formData.get('shippingCarrier') as string;
-            const trackingNumber = formData.get('trackingNumber') as string;
-            if (!shippingCarrier || !trackingNumber) {
-                return { success: false, message: "Le transporteur et le numéro de suivi sont obligatoires pour une expédition." };
+        await runTransaction(db, async (transaction) => {
+            // --- READ PHASE ---
+            const orderDoc = await transaction.get(orderRef);
+            if (!orderDoc.exists()) {
+                throw new Error("Commande non trouvée.");
             }
-            dataToUpdate.shippingCarrier = shippingCarrier;
-            dataToUpdate.trackingNumber = trackingNumber;
-        }
+            
+            const orderData = orderDoc.data();
+            const currentStatus = orderData.status;
 
-        if (newStatus === 'annulée') {
-            const cancellationReason = formData.get('cancellationReason') as string;
-            if (!cancellationReason) {
-                return { success: false, message: "Le motif de l'annulation est obligatoire." };
+            if (currentStatus === 'annulée' && newStatus === 'annulée') {
+                throw new Error("La commande est déjà annulée.");
             }
-            dataToUpdate.cancellationReason = cancellationReason;
-            // Here you would also trigger an email to the customer with the cancellationReason.
-        }
+            
+            let itemRefsToUpdate: DocumentReference[] = [];
+            const stockToRestore = new Map<string, number>();
 
-        await updateDoc(orderRef, dataToUpdate);
+            if (newStatus === 'annulée' && currentStatus !== 'annulée') {
+                const itemRefsToFetch = new Map<string, DocumentReference>();
+                
+                // Consolidate stock restoration requests
+                for (const item of orderData.items as OrderItem[]) {
+                    const modelRef = doc(db, item.jewelryTypeId, item.modelId);
+                    if (!itemRefsToFetch.has(modelRef.path)) itemRefsToFetch.set(modelRef.path, modelRef);
+                    stockToRestore.set(modelRef.path, (stockToRestore.get(modelRef.path) || 0) + 1);
+
+                    for (const charmId of item.charmIds) {
+                        const charmRef = doc(db, 'charms', charmId);
+                        if (!itemRefsToFetch.has(charmRef.path)) itemRefsToFetch.set(charmRef.path, charmRef);
+                        stockToRestore.set(charmRef.path, (stockToRestore.get(charmRef.path) || 0) + 1);
+                    }
+                }
+                itemRefsToUpdate = Array.from(itemRefsToFetch.values());
+            }
+            
+            const itemDocsPromises = itemRefsToUpdate.map(ref => transaction.get(ref));
+            const itemDocs = await Promise.all(itemDocsPromises);
+            
+            // --- WRITE PHASE ---
+            let dataToUpdate: Partial<Order> = { status: newStatus };
+
+            if (newStatus === 'expédiée') {
+                const shippingCarrier = formData.get('shippingCarrier') as string;
+                const trackingNumber = formData.get('trackingNumber') as string;
+                if (!shippingCarrier || !trackingNumber) {
+                    throw new Error("Le transporteur et le numéro de suivi sont obligatoires pour une expédition.");
+                }
+                dataToUpdate.shippingCarrier = shippingCarrier;
+                dataToUpdate.trackingNumber = trackingNumber;
+            }
+
+            if (newStatus === 'annulée') {
+                const cancellationReason = formData.get('cancellationReason') as string;
+                if (!cancellationReason) {
+                    throw new Error("Le motif de l'annulation est obligatoire.");
+                }
+                dataToUpdate.cancellationReason = cancellationReason;
+
+                if (currentStatus !== 'annulée') {
+                    for (const itemDoc of itemDocs) {
+                         if (itemDoc.exists()) {
+                            const quantityToRestore = stockToRestore.get(itemDoc.ref.path) || 0;
+                            const newQuantity = (itemDoc.data().quantity || 0) + quantityToRestore;
+                            transaction.update(itemDoc.ref, { quantity: newQuantity });
+                        }
+                    }
+                }
+
+                // Send cancellation email
+                const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${process.env.NEXT_PUBLIC_SUPPORT_EMAIL} en précisant votre numéro de commande (${orderData.orderNumber}).`;
+                const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}">${process.env.NEXT_PUBLIC_SUPPORT_EMAIL}</a> en précisant votre numéro de commande (${orderData.orderNumber}).</p>`;
+
+                const mailText = `Bonjour,\n\nVotre commande n°${orderData.orderNumber} a été annulée.\n\nMotif : ${cancellationReason}\n\nLe remboursement complet a été initié et devrait apparaître sur votre compte d'ici quelques jours.\n\nNous nous excusons pour ce désagrément.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
+                const mailHtml = `<h1>Votre commande n°${orderData.orderNumber} a été annulée</h1><p>Bonjour,</p><p>Votre commande n°<strong>${orderData.orderNumber}</strong> a été annulée.</p><p><strong>Motif de l'annulation :</strong> ${cancellationReason}</p><p>Le remboursement complet a été initié et devrait apparaître sur votre compte d'ici quelques jours.</p><p>Nous nous excusons pour ce désagrément.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
+                
+                const mailDocData = {
+                    to: [orderData.customerEmail],
+                    message: {
+                        subject: `Annulation de votre commande n°${orderData.orderNumber}`,
+                        text: mailText.trim(),
+                        html: mailHtml.trim(),
+                    },
+                };
+                const mailRef = doc(collection(db, 'mail'));
+                transaction.set(mailRef, mailDocData);
+            }
+            
+            transaction.update(orderRef, dataToUpdate);
+        });
 
         revalidatePath(`/${locale}/admin/dashboard`);
         return { success: true, message: "Le statut de la commande a été mis à jour." };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error updating order status:", error);
-        return { success: false, message: "Une erreur est survenue." };
+        return { success: false, message: error.message || "Une erreur est survenue." };
     }
 }
 
@@ -826,3 +1075,5 @@ export async function updateOrderItemStatus(formData: FormData): Promise<{ succe
         return { success: false, message: error.message || "Une erreur est survenue." };
     }
 }
+
+    

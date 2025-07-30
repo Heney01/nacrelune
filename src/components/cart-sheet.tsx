@@ -95,7 +95,7 @@ export function CartSheet({ children, open, onOpenChange }: {
 
       const compressedCart = await Promise.all(compressedCartPromises);
 
-      const result = await createOrder(compressedCart, email);
+      const result = await createOrder(compressedCart, email, locale);
       
       if (result.success && result.orderNumber && result.email) {
         clearCart();

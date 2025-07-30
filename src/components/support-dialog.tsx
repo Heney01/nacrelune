@@ -17,7 +17,7 @@ import { Copy, Mail, LifeBuoy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
-const SUPPORT_EMAIL = 'support@atelierabijoux.com';
+const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@example.com';
 
 export function SupportDialog() {
   const t = useTranslations('HomePage');

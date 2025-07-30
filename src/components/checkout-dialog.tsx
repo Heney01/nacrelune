@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreditCard, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -22,9 +21,10 @@ interface CheckoutDialogProps {
 
 export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }: CheckoutDialogProps) {
   const t = useTranslations('Checkout');
+  const tStatus = useTranslations('OrderStatus');
   const tCart = useTranslations('Cart');
   const { cart } = useCart();
-  const [email, setEmail] = useState('marie.dubois@example.com');
+  const [email, setEmail] = useState('');
 
   const subtotal = cart.reduce((sum, item) => {
     const modelPrice = item.model.price || 0;
@@ -46,71 +46,73 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl grid-cols-1 md:grid-cols-2 grid p-0">
-        <form onSubmit={handleConfirm} className="p-6 flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-headline">{t('title')}</DialogTitle>
-            <DialogDescription>{t('description')}</DialogDescription>
-          </DialogHeader>
-          <div className="mt-6 flex flex-col flex-grow overflow-hidden">
-            <ScrollArea className="flex-grow -mx-6">
-                <div className="space-y-6 px-6">
-                <div>
-                    <h3 className="text-lg font-medium">{t('shipping_info')}</h3>
-                    <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                        <Label htmlFor="name">{t('full_name')}</Label>
-                        <Input id="name" defaultValue="Marie Dubois" required />
-                    </div>
-                     <div className="space-y-2 sm:col-span-2">
-                        <Label htmlFor="email-address">{t('email_address')}</Label>
-                        <Input id="email-address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                    </div>
-                    <div className="space-y-2 sm:col-span-2">
-                        <Label htmlFor="address">{t('address')}</Label>
-                        <Input id="address" defaultValue="123 Rue de la Joie" required />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="city">{t('city')}</Label>
-                        <Input id="city" defaultValue="Paris" required />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="postal-code">{t('postal_code')}</Label>
-                        <Input id="postal-code" defaultValue="75001" required />
-                    </div>
-                     <div className="space-y-2 sm:col-span-2">
-                        <Label htmlFor="country">{t('country')}</Label>
-                        <Input id="country" defaultValue="France" required />
-                    </div>
-                    </div>
-                </div>
-                <div>
-                    <h3 className="text-lg font-medium">{t('payment_info')}</h3>
-                    <div className="mt-2 text-sm text-muted-foreground">{t('payment_simulation_notice')}</div>
-                    <div className="mt-4 grid grid-cols-1 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="card-number">{t('card_number')}</Label>
-                        <div className="relative">
-                        <Input id="card-number" defaultValue="**** **** **** 4242" required />
-                        <CreditCard className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+      <DialogContent 
+        className="max-w-4xl w-full grid p-0 max-h-[90vh] md:grid-cols-2"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <div className="flex flex-col h-full max-h-[90vh] md:max-h-none">
+            <DialogHeader className="p-6 pb-4 flex-shrink-0">
+                <DialogTitle className="text-2xl font-headline">{t('title')}</DialogTitle>
+                <DialogDescription>{t('description')}</DialogDescription>
+            </DialogHeader>
+            <div className="flex-grow overflow-y-auto px-6 no-scrollbar">
+                <form id="checkout-form" onSubmit={handleConfirm} className="py-4 space-y-6">
+                    <div>
+                        <h3 className="text-lg font-medium">{t('shipping_info')}</h3>
+                        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="name">{t('full_name')}</Label>
+                                <Input id="name" placeholder={t('full_name')} required />
+                            </div>
+                            <div className="space-y-2 sm:col-span-2">
+                                <Label htmlFor="email-address">{t('email_address')}</Label>
+                                <Input id="email-address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={tStatus('email_placeholder')} required />
+                            </div>
+                            <div className="space-y-2 sm:col-span-2">
+                                <Label htmlFor="address">{t('address')}</Label>
+                                <Input id="address" placeholder={t('address')} required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="city">{t('city')}</Label>
+                                <Input id="city" placeholder={t('city')} required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="postal-code">{t('postal_code')}</Label>
+                                <Input id="postal-code" placeholder={t('postal_code')} required />
+                            </div>
+                            <div className="space-y-2 sm:col-span-2">
+                                <Label htmlFor="country">{t('country')}</Label>
+                                <Input id="country" placeholder={t('country')} required />
+                            </div>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                        <Label htmlFor="expiry-date">{t('expiry_date')}</Label>
-                        <Input id="expiry-date" defaultValue="12/28" required />
-                        </div>
-                        <div className="space-y-2">
-                        <Label htmlFor="cvc">{t('cvc')}</Label>
-                        <Input id="cvc" defaultValue="123" required />
+                    <div>
+                        <h3 className="text-lg font-medium">{t('payment_info')}</h3>
+                        <div className="mt-2 text-sm text-muted-foreground">{t('payment_simulation_notice')}</div>
+                        <div className="mt-4 grid grid-cols-1 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="card-number">{t('card_number')}</Label>
+                                <div className="relative">
+                                    <Input id="card-number" placeholder="**** **** **** 4242" required />
+                                    <CreditCard className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="expiry-date">{t('expiry_date')}</Label>
+                                    <Input id="expiry-date" placeholder="MM/AA" required />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="cvc">{t('cvc')}</Label>
+                                    <Input id="cvc" placeholder="123" required />
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    </div>
-                </div>
-                </div>
-            </ScrollArea>
-            <DialogFooter className="mt-6 pt-6 border-t">
-              <Button type="submit" className="w-full" disabled={isProcessing}>
+                </form>
+            </div>
+             <DialogFooter className="p-6 pt-4 mt-auto border-t flex-shrink-0">
+              <Button type="submit" form="checkout-form" className="w-full" disabled={isProcessing}>
                 {isProcessing ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -121,12 +123,12 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
                 )}
               </Button>
             </DialogFooter>
-          </div>
-        </form>
-        <aside className="hidden md:flex flex-col bg-muted/50 p-6">
+        </div>
+        
+        <aside className="hidden md:flex flex-col bg-muted/50 p-6 overflow-hidden">
             <h3 className="text-lg font-medium">{t('order_summary')}</h3>
-            <ScrollArea className="mt-6 flex-grow -mx-6 px-6">
-                <div className="space-y-4">
+            <div className="mt-6 flex-grow -mx-6 overflow-y-auto no-scrollbar">
+                <div className="space-y-4 px-6">
                     {cart.map(item => {
                          const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
                         return (
@@ -147,7 +149,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
                         </div>
                     )})}
                 </div>
-            </ScrollArea>
+            </div>
             <Separator className="my-6" />
             <div className="space-y-2">
                 <div className="flex justify-between">

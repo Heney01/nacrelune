@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React from 'react';
@@ -261,43 +260,44 @@ export default function TrackOrderPage() {
 
             <Separator className="my-12" />
 
-             <Card>
-                <CardHeader>
-                    <CardTitle className="text-center text-2xl font-headline">{tStatus('find_orders_title')}</CardTitle>
-                    <CardDescription className="text-center">
-                        {tStatus('find_orders_description')}
-                    </CardDescription>
-                </CardHeader>
-                 <form action={emailAction}>
+             <form action={emailAction}>
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-center text-2xl font-headline">{tStatus('find_orders_title')}</CardTitle>
+                        <CardDescription className="text-center">
+                            {tStatus('find_orders_description')}
+                        </CardDescription>
+                    </CardHeader>
                     <CardContent className="space-y-4">
+                        <input type="hidden" name="locale" value={locale} />
                         <Input
                             name="email"
                             type="email"
                             placeholder={tStatus('email_placeholder')}
                             required
                         />
-                         <EmailSubmitButton />
-                         {emailState && !emailState.success && emailState.message && (
-                            <Alert variant="destructive" className="mt-4">
+                        <EmailSubmitButton />
+                    </CardContent>
+                    <CardFooter className="flex-col items-start">
+                        {emailState && !emailState.success && emailState.message && (
+                            <Alert variant="destructive" className="w-full">
                                 <AlertCircle className="h-4 w-4" />
                                 <AlertTitle>{tStatus('error_title')}</AlertTitle>
                                 <AlertDescription>{emailState.message}</AlertDescription>
                             </Alert>
                         )}
-                    </CardContent>
-                </form>
-                {emailState.success && emailState.message === 'email_sent_notice' && (
-                     <CardFooter>
-                         <Alert variant="default" className="w-full">
-                            <Mail className="h-4 w-4" />
-                            <AlertTitle>{tStatus('email_sent_title')}</AlertTitle>
-                            <AlertDescription>
-                                {tStatus('email_sent_description')}
-                            </AlertDescription>
-                        </Alert>
+                        {emailState.success && emailState.message === 'email_sent_notice' && (
+                            <Alert variant="default" className="w-full">
+                                <Mail className="h-4 w-4" />
+                                <AlertTitle>{tStatus('email_sent_title')}</AlertTitle>
+                                <AlertDescription>
+                                    {tStatus('email_sent_description')}
+                                </AlertDescription>
+                            </Alert>
+                        )}
                     </CardFooter>
-                )}
-            </Card>
+                </Card>
+            </form>
         </div>
     );
 }
