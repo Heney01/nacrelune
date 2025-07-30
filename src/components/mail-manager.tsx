@@ -43,7 +43,8 @@ export function MailManager({ initialMailLogs }: MailManagerProps) {
                 if (statusFilter !== 'all' && log.delivery?.state !== statusFilter) {
                     return false;
                 }
-                if (searchTerm && !log.to.join(', ').toLowerCase().includes(searchTerm.toLowerCase()) && !log.subject.toLowerCase().includes(searchTerm.toLowerCase())) {
+                const recipient = Array.isArray(log.to) ? log.to.join(', ') : String(log.to);
+                if (searchTerm && !recipient.toLowerCase().includes(searchTerm.toLowerCase()) && !log.subject.toLowerCase().includes(searchTerm.toLowerCase())) {
                     return false;
                 }
                 return true;
@@ -100,6 +101,7 @@ export function MailManager({ initialMailLogs }: MailManagerProps) {
                             filteredLogs.map(log => {
                                 const state = log.delivery?.state || 'PENDING';
                                 const Icon = statusIcons[state] || Clock;
+                                const recipient = Array.isArray(log.to) ? log.to.join(', ') : String(log.to);
                                 return (
                                 <TableRow key={log.id}>
                                     <TableCell>
@@ -108,7 +110,7 @@ export function MailManager({ initialMailLogs }: MailManagerProps) {
                                             {state}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell className="font-medium">{log.to.join(', ')}</TableCell>
+                                    <TableCell className="font-medium">{recipient}</TableCell>
                                     <TableCell className="max-w-xs truncate">{log.subject}</TableCell>
                                     <TableCell>{log.delivery?.startTime ? new Date(log.delivery.startTime).toLocaleString() : 'En attente'}</TableCell>
                                     <TableCell className="text-right">
