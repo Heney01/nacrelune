@@ -234,6 +234,7 @@ export default function TrackOrderPage() {
                     </Link>
                 </Button>
             </div>
+            
             <Card>
                 <CardHeader>
                     <CardTitle className="text-center text-2xl font-headline">{t('track_order_link')}</CardTitle>
@@ -266,8 +267,8 @@ export default function TrackOrderPage() {
 
             <Separator className="my-12" />
 
-             <form action={emailAction}>
-                <Card>
+            <Card>
+                 <form action={emailAction}>
                     <CardHeader>
                         <CardTitle className="text-center text-2xl font-headline">{tStatus('find_orders_title')}</CardTitle>
                         <CardDescription className="text-center">
@@ -302,8 +303,9 @@ export default function TrackOrderPage() {
                             </Alert>
                         )}
                     </CardFooter>
-                </Card>
-            </form>
+                </form>
+            </Card>
         </div>
     );
 }
+
