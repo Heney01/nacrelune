@@ -277,15 +277,17 @@ export default function TrackOrderPage() {
                             placeholder={tStatus('email_placeholder')}
                             required
                         />
-                         <EmailSubmitButton />
-                         {emailState && !emailState.success && emailState.message && (
-                            <Alert variant="destructive" className="mt-4">
+                        <EmailSubmitButton />
+                    </CardContent>
+                    {emailState && !emailState.success && emailState.message && (
+                        <CardFooter>
+                            <Alert variant="destructive" className="mt-4 w-full">
                                 <AlertCircle className="h-4 w-4" />
                                 <AlertTitle>{tStatus('error_title')}</AlertTitle>
                                 <AlertDescription>{emailState.message}</AlertDescription>
                             </Alert>
-                        )}
-                    </CardContent>
+                        </CardFooter>
+                    )}
                     {emailState.success && emailState.message === 'email_sent_notice' && (
                         <CardFooter>
                             <Alert variant="default" className="w-full">
