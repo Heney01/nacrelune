@@ -8,12 +8,13 @@
 
 
 
+
 'use server';
 
 import { suggestCharmPlacement, SuggestCharmPlacementInput, SuggestCharmPlacementOutput } from '@/ai/flows/charm-placement-suggestions';
 import { revalidatePath } from 'next/cache';
 import { db, storage } from '@/lib/firebase';
-import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction, Timestamp, collectionGroup, documentId, orderBy } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction, Timestamp, collectionGroup, documentId, orderBy, DocumentReference } from 'firebase/firestore';
 import { ref, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
@@ -803,6 +804,7 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
         const orderRef = doc(db, 'orders', orderId);
         
         await runTransaction(db, async (transaction) => {
+            // --- READ PHASE ---
             const orderDoc = await transaction.get(orderRef);
             if (!orderDoc.exists()) {
                 throw new Error("Commande non trouvée.");
@@ -815,7 +817,24 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
             if (currentStatus === 'annulée' && newStatus === 'annulée') {
                 throw new Error("La commande est déjà annulée.");
             }
+            
+            let itemRefsAndDocs: { ref: DocumentReference, doc: any }[] = [];
+            if (newStatus === 'annulée' && currentStatus !== 'annulée') {
+                 // Fetch all item documents that need to be restocked
+                for (const item of orderData.items as OrderItem[]) {
+                    const modelRef = doc(db, item.jewelryTypeId, item.modelId);
+                    const modelDoc = await transaction.get(modelRef);
+                    itemRefsAndDocs.push({ ref: modelRef, doc: modelDoc });
 
+                    for (const charmId of item.charmIds) {
+                        const charmRef = doc(db, 'charms', charmId);
+                        const charmDoc = await transaction.get(charmRef);
+                        itemRefsAndDocs.push({ ref: charmRef, doc: charmDoc });
+                    }
+                }
+            }
+            
+            // --- WRITE PHASE ---
             let dataToUpdate: Partial<Order> = { status: newStatus };
 
             if (newStatus === 'expédiée') {
@@ -835,29 +854,29 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
                 }
                 dataToUpdate.cancellationReason = cancellationReason;
 
-                // Restock items only if the order was not already cancelled
-                if (currentStatus !== 'annulée') {
+                // Perform the stock updates now that all reads are done
+                 if (currentStatus !== 'annulée') {
+                    let itemIndex = 0; // To keep track of which item we are processing
                     for (const item of orderData.items as OrderItem[]) {
                         // Restock model
-                        const modelRef = doc(db, item.jewelryTypeId, item.modelId);
-                        const modelDoc = await transaction.get(modelRef);
-                        if (modelDoc.exists()) {
-                            const newQuantity = (modelDoc.data().quantity || 0) + 1;
-                            transaction.update(modelRef, { quantity: newQuantity });
+                        const modelItem = itemRefsAndDocs[itemIndex++];
+                        if (modelItem.doc.exists()) {
+                            const newQuantity = (modelItem.doc.data().quantity || 0) + 1;
+                            transaction.update(modelItem.ref, { quantity: newQuantity });
                         }
 
                         // Restock charms
-                        for (const charmId of item.charmIds) {
-                            const charmRef = doc(db, 'charms', charmId);
-                            const charmDoc = await transaction.get(charmRef);
-                            if (charmDoc.exists()) {
-                                const newQuantity = (charmDoc.data().quantity || 0) + 1;
-                                transaction.update(charmRef, { quantity: newQuantity });
+                        for (let i = 0; i < item.charmIds.length; i++) {
+                            const charmItem = itemRefsAndDocs[itemIndex++];
+                            if (charmItem.doc.exists()) {
+                                const newQuantity = (charmItem.doc.data().quantity || 0) + 1;
+                                transaction.update(charmItem.ref, { quantity: newQuantity });
                             }
                         }
                     }
-                }
+                 }
             }
+            
             transaction.update(orderRef, dataToUpdate);
         });
 
