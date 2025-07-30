@@ -55,7 +55,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
                 <DialogTitle className="text-2xl font-headline">{t('title')}</DialogTitle>
                 <DialogDescription>{t('description')}</DialogDescription>
             </DialogHeader>
-            <div className="flex-grow overflow-y-auto px-6">
+            <div className="flex-grow overflow-y-auto px-6 no-scrollbar">
                 <form id="checkout-form" onSubmit={handleConfirm} className="py-4 space-y-6">
                     <div>
                         <h3 className="text-lg font-medium">{t('shipping_info')}</h3>
@@ -127,7 +127,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
         
         <aside className="hidden md:flex flex-col bg-muted/50 p-6 overflow-hidden">
             <h3 className="text-lg font-medium">{t('order_summary')}</h3>
-            <ScrollArea className="mt-6 flex-grow -mx-6">
+            <div className="mt-6 flex-grow -mx-6 overflow-y-auto no-scrollbar">
                 <div className="space-y-4 px-6">
                     {cart.map(item => {
                          const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
@@ -149,7 +149,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
                         </div>
                     )})}
                 </div>
-            </ScrollArea>
+            </div>
             <Separator className="my-6" />
             <div className="space-y-2">
                 <div className="flex justify-between">
