@@ -101,7 +101,7 @@ export function MailManager({ initialMailLogs }: MailManagerProps) {
                             filteredLogs.map(log => {
                                 const state = log.delivery?.state || 'PENDING';
                                 const Icon = statusIcons[state] || Clock;
-                                const recipient = Array.isArray(log.to) ? log.to.join(', ') : String(log.to);
+                                const recipient = Array.isArray(log.to) ? log.to.join(', ') : log.to;
                                 return (
                                 <TableRow key={log.id}>
                                     <TableCell>

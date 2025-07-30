@@ -77,35 +77,26 @@ const safeToLocaleDateString = (date: any) => {
 }
 
 function jewelryTypesReducer(state: State, action: OptimisticUpdate): State {
-    switch (action.type) {
-        case 'DELETE':
-            return state.map(jt => jt.id === action.payload.jewelryTypeId
-                ? { ...jt, models: jt.models.filter(m => m.id !== action.payload.modelId) }
-                : jt
-            );
-        case 'ADD':
-            return state.map(jt => jt.id === action.payload.jewelryTypeId
-                ? { ...jt, models: [...jt.models, action.payload.model] }
-                : jt
-            );
-        case 'UPDATE':
-             return state.map(jt => jt.id === action.payload.jewelryTypeId
-                ? { ...jt, models: jt.models.map(m => m.id === action.payload.model.id ? action.payload.model : m) }
-                : jt
-            );
-        case 'MARK_ORDERED':
-            return state.map(jt => jt.id === action.payload.jewelryTypeId
-                ? { ...jt, models: jt.models.map(m => m.id === action.payload.modelId ? { ...m, lastOrderedAt: new Date(), restockedAt: null } : m) }
-                : jt
-            );
-         case 'MARK_RESTOCKED':
-            return state.map(jt => jt.id === action.payload.jewelryTypeId
-                ? { ...jt, models: jt.models.map(m => m.id === action.payload.modelId ? { ...m, lastOrderedAt: null, restockedAt: new Date(), quantity: action.payload.newQuantity } : m) }
-                : jt
-            );
-        default:
-            return state;
-    }
+    return state.map(jt => {
+        if (jt.id !== action.payload.jewelryTypeId) {
+            return jt;
+        }
+
+        switch (action.type) {
+            case 'DELETE':
+                return { ...jt, models: jt.models.filter(m => m.id !== action.payload.modelId) };
+            case 'ADD':
+                return { ...jt, models: [...jt.models, action.payload.model] };
+            case 'UPDATE':
+                return { ...jt, models: jt.models.map(m => m.id === action.payload.model.id ? action.payload.model : m) };
+            case 'MARK_ORDERED':
+                return { ...jt, models: jt.models.map(m => m.id === action.payload.modelId ? { ...m, lastOrderedAt: new Date(), restockedAt: null } : m) };
+            case 'MARK_RESTOCKED':
+                return { ...jt, models: jt.models.map(m => m.id === action.payload.modelId ? { ...m, lastOrderedAt: null, restockedAt: new Date(), quantity: action.payload.newQuantity } : m) };
+            default:
+                return jt;
+        }
+    });
 }
 
 function ReorderDialog({ model, jewelryTypeId, locale, onOrder, onRestock, t }: {
@@ -274,8 +265,8 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
     };
     
     const getItemAlertState = (model: JewelryModel): 'reordered' | 'critical' | 'alert' | 'none' => {
-        if (model.lastOrderedAt && !model.restockedAt) return 'reordered';
         const q = model.quantity ?? Infinity;
+        if (model.lastOrderedAt && !model.restockedAt) return 'reordered';
         if (q <= preferences.criticalThreshold) return 'critical';
         if (q <= preferences.alertThreshold) return 'alert';
         return 'none';

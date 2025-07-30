@@ -28,29 +28,6 @@ import { SuccessDialog } from './success-dialog';
 import type { CartItem } from '@/lib/types';
 
 
-// Helper to compress a base64 PNG to a base64 JPEG
-const compressImage = (base64Png: string): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const img = new window.Image();
-    img.src = base64Png;
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        return reject(new Error('Could not get canvas context'));
-      }
-      ctx.drawImage(img, 0, 0);
-      resolve(canvas.toDataURL('image/jpeg', 0.7)); // 70% quality
-    };
-    img.onerror = (error) => {
-      reject(error);
-    };
-  });
-};
-
-
 export function CartSheet({ children, open, onOpenChange }: {
   children?: ReactNode;
   open?: boolean;
@@ -80,8 +57,8 @@ export function CartSheet({ children, open, onOpenChange }: {
   const handleCheckout = async (email: string) => {
     setIsProcessing(true);
     try {
-      // Compress images before sending to the server action
-      const compressedCartPromises = cart.map(async (item): Promise<SerializableCartItem> => ({
+      // Pass cart items directly, previewImage is already a data URL
+      const serializableCart: SerializableCartItem[] = cart.map(item => ({
         id: item.id,
         model: item.model,
         jewelryType: {
@@ -90,12 +67,10 @@ export function CartSheet({ children, open, onOpenChange }: {
           description: item.jewelryType.description
         },
         placedCharms: item.placedCharms,
-        previewImage: await compressImage(item.previewImage),
+        previewImage: item.previewImage, // Pass the base64 PNG directly
       }));
 
-      const compressedCart = await Promise.all(compressedCartPromises);
-
-      const result = await createOrder(compressedCart, email, locale);
+      const result = await createOrder(serializableCart, email, locale);
       
       if (result.success && result.orderNumber && result.email) {
         clearCart();

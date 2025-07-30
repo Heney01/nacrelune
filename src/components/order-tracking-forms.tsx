@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,32 +16,18 @@ import { useParams, useSearchParams } from 'next/navigation';
 const initialOrderState: { success: boolean; message: string; order?: Order | null } = { success: false, message: '', order: null };
 const initialEmailState: { success: boolean; message: string } = { success: false, message: '' };
 
-
-function TrackSubmitButton() {
+const SubmitButton = ({ children }: { children: React.ReactNode }) => {
     const { pending } = useFormStatus();
-    const t = useTranslations('OrderStatus');
     return (
         <Button type="submit" className="w-full" disabled={pending}>
             {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {t('track_button')}
+            {children}
         </Button>
-    )
-}
-
-function EmailSubmitButton() {
-    const { pending } = useFormStatus();
-    const t = useTranslations('OrderStatus');
-    return (
-        <Button type="submit" className="w-full" disabled={pending}>
-            {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {t('find_orders_button')}
-        </Button>
-    )
-}
+    );
+};
 
 export function TrackByNumberForm({ onOrderFound }: { onOrderFound: (order: Order | null) => void }) {
     const [orderState, orderAction] = useFormState(getOrderDetailsByNumber, initialOrderState);
-    const tHome = useTranslations('HomePage');
     const tStatus = useTranslations('OrderStatus');
     const searchParams = useSearchParams();
     const orderNumberFromUrl = searchParams.get('orderNumber');
@@ -69,7 +55,9 @@ export function TrackByNumberForm({ onOrderFound }: { onOrderFound: (order: Orde
         <Card>
             <form id="track-by-number-form" action={orderAction}>
                 <CardHeader>
-                    <CardTitle className="text-center text-2xl font-headline">{tHome('track_order_link')}</CardTitle>
+                    <CardTitle className="text-center text-2xl font-headline">
+                        {useTranslations('HomePage')('track_order_link')}
+                    </CardTitle>
                     <CardDescription className="text-center">
                         {tStatus('track_description')}
                     </CardDescription>
@@ -82,7 +70,7 @@ export function TrackByNumberForm({ onOrderFound }: { onOrderFound: (order: Orde
                         key={orderNumberFromUrl} // Force re-render if URL changes
                         required
                     />
-                    <TrackSubmitButton />
+                    <SubmitButton>{tStatus('track_button')}</SubmitButton>
                 </CardContent>
                 <CardFooter>
                     {orderState && !orderState.success && orderState.message && (
@@ -129,7 +117,7 @@ export function TrackByEmailForm() {
                         placeholder={tStatus('email_placeholder')}
                         required
                     />
-                    <EmailSubmitButton />
+                    <SubmitButton>{tStatus('find_orders_button')}</SubmitButton>
                 </CardContent>
                 <CardFooter className="flex-col items-start">
                     {emailState && !emailState.success && emailState.message && (

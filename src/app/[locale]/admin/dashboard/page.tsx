@@ -13,7 +13,7 @@ import { PreferencesManager } from "@/components/preferences-manager";
 import { OrdersManager } from "@/components/orders-manager";
 import { MailManager } from "@/components/mail-manager";
 import { Gem, User, Wrench, ChevronRight, ArrowLeft, Settings, AlertTriangle, Package, PackageCheck, CookingPot, Truck, Home, Mail } from "lucide-react";
-import type { JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderStatus, MailLog } from "@/lib/types";
+import type { JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderStatus, MailLog, JewelryModel } from "@/lib/types";
 import Link from "next/link";
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -24,31 +24,27 @@ interface AdminDashboardProps {
     locale: string;
 }
 
-const getModelsAlertState = (
-    jewelryTypes: Omit<JewelryType, 'icon'>[], 
-    preferences: GeneralPreferences
-): 'critical' | 'alert' | 'none' => {
-    const allModels = jewelryTypes.flatMap(jt => jt.models);
-    if (allModels.some(m => (m.quantity ?? Infinity) <= preferences.criticalThreshold && !m.lastOrderedAt)) {
-        return 'critical';
-    }
-    if (allModels.some(m => (m.quantity ?? Infinity) <= preferences.alertThreshold && !m.lastOrderedAt)) {
-        return 'alert';
-    }
-    return 'none';
-};
+type StockableItem = Charm | JewelryModel;
 
-const getCharmsAlertState = (
-    charms: Charm[], 
-    preferences: GeneralPreferences
+const getItemsAlertState = (
+  items: StockableItem[],
+  preferences: GeneralPreferences
 ): 'critical' | 'alert' | 'none' => {
-    if (charms.some(c => (c.quantity ?? Infinity) <= preferences.criticalThreshold && !c.lastOrderedAt)) {
-        return 'critical';
-    }
-    if (charms.some(c => (c.quantity ?? Infinity) <= preferences.alertThreshold && !c.lastOrderedAt)) {
-        return 'alert';
-    }
-    return 'none';
+  if (
+    items.some(
+      (item) => (item.quantity ?? Infinity) <= preferences.criticalThreshold && !item.lastOrderedAt
+    )
+  ) {
+    return 'critical';
+  }
+  if (
+    items.some(
+      (item) => (item.quantity ?? Infinity) <= preferences.alertThreshold && !item.lastOrderedAt
+    )
+  ) {
+    return 'alert';
+  }
+  return 'none';
 };
 
 const getOrdersAlertCounts = (orders: Order[]): { [key in OrderStatus]?: number } => {
@@ -119,8 +115,8 @@ function AdminDashboardClient({ locale }: AdminDashboardProps) {
 
   const { jewelryTypes, charms, charmCategories, preferences, orders, mailLogs } = initialData;
   
-  const modelsAlertState = getModelsAlertState(jewelryTypes, preferences);
-  const charmsAlertState = getCharmsAlertState(charms, preferences);
+  const modelsAlertState = getItemsAlertState(jewelryTypes.flatMap(jt => jt.models), preferences);
+  const charmsAlertState = getItemsAlertState(charms, preferences);
   const ordersAlertCounts = getOrdersAlertCounts(orders);
   const mailErrorCount = mailLogs.filter(log => log.delivery?.state === 'ERROR').length;
 

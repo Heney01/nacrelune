@@ -318,8 +318,8 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
     };
 
     const getItemAlertState = (charm: Charm): 'reordered' | 'critical' | 'alert' | 'none' => {
-        if(charm.lastOrderedAt && !charm.restockedAt) return 'reordered';
         const q = charm.quantity ?? Infinity;
+        if (charm.lastOrderedAt && !charm.restockedAt) return 'reordered';
         if (q <= preferences.criticalThreshold) return 'critical';
         if (q <= preferences.alertThreshold) return 'alert';
         return 'none';
