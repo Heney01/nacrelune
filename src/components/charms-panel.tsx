@@ -16,6 +16,7 @@ import { Input } from './ui/input';
 import { getCharmCategories } from '@/lib/data';
 import { useTranslations } from '@/hooks/use-translations';
 import { Badge } from './ui/badge';
+import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 
 interface CharmsPanelProps {
     allCharms: Charm[];
