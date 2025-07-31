@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState } from 'react';
@@ -9,17 +10,28 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { CreditCard, Loader2 } from 'lucide-react';
+import { CreditCard, Loader2, AlertCircle, Ban } from 'lucide-react';
 import Image from 'next/image';
+import { Alert, AlertTitle, AlertDescription } from './ui/alert';
+import { cn } from '@/lib/utils';
+import { Tooltip, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+
+
+export type StockErrorState = {
+  message: string;
+  unavailableModelIds: Set<string>;
+  unavailableCharmIds: Set<string>;
+} | null;
 
 interface CheckoutDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onConfirm: (email: string) => void;
   isProcessing: boolean;
+  stockError: StockErrorState;
 }
 
-export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }: CheckoutDialogProps) {
+export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing, stockError }: CheckoutDialogProps) {
   const t = useTranslations('Checkout');
   const tStatus = useTranslations('OrderStatus');
   const tCart = useTranslations('Cart');
@@ -55,6 +67,15 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
                 <DialogTitle className="text-2xl font-headline">{t('title')}</DialogTitle>
                 <DialogDescription>{t('description')}</DialogDescription>
             </DialogHeader>
+             {stockError && (
+                <div className="px-6">
+                    <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>{t('stock_error_title')}</AlertTitle>
+                        <AlertDescription>{t('stock_error_description')}</AlertDescription>
+                    </Alert>
+                </div>
+            )}
             <div className="flex-grow overflow-y-auto px-6 no-scrollbar">
                 <form id="checkout-form" onSubmit={handleConfirm} className="py-4 space-y-6">
                     <div>
@@ -131,8 +152,10 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
                 <div className="space-y-4 px-6">
                     {cart.map(item => {
                          const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+                         const isModelOutOfStock = stockError?.unavailableModelIds.has(item.model.id);
+
                         return (
-                        <div key={item.id} className="flex items-center gap-4">
+                        <div key={item.id} className={cn("flex items-center gap-4 p-2 rounded-md", isModelOutOfStock && 'bg-red-100 ring-2 ring-red-200')}>
                             <div className="relative w-16 h-16 rounded-md overflow-hidden border">
                                 <Image
                                     src={item.previewImage}
@@ -140,10 +163,30 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing }
                                     fill
                                     className="object-cover"
                                 />
+                                 {isModelOutOfStock && (
+                                    <div className="absolute inset-0 bg-red-800/50 flex items-center justify-center">
+                                        <Ban className="h-6 w-6 text-white" />
+                                    </div>
+                                )}
                             </div>
                             <div className="flex-grow">
                                 <p className="font-semibold">{item.model.name}</p>
-                                <p className="text-sm text-muted-foreground">{tCart('item_count', {count: item.placedCharms.length})}</p>
+                                <div className="text-sm text-muted-foreground">
+                                    {item.placedCharms.map(pc => {
+                                        const isCharmOutOfStock = stockError?.unavailableCharmIds.has(pc.charm.id);
+                                        return (
+                                            <div key={pc.id} className={cn("flex items-center gap-1", isCharmOutOfStock && 'text-red-600 font-medium')}>
+                                                {isCharmOutOfStock && 
+                                                    <TooltipProvider><Tooltip><TooltipTrigger>
+                                                        <Ban className="h-3 w-3" />
+                                                    </TooltipTrigger><TooltipContent><p>{tCart('sold_out')}</p></TooltipContent></Tooltip></TooltipProvider>
+                                                }
+                                                <span>{pc.charm.name}</span>
+                                            </div>
+                                        )
+                                    })}
+                                    {item.placedCharms.length === 0 && tCart('item_count_zero')}
+                                </div>
                             </div>
                             <p className="font-medium">{formatPrice(itemPrice)}</p>
                         </div>

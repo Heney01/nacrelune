@@ -64,6 +64,7 @@
   "Cart": {
     "title": "Votre Panier",
     "item_count": "({count})",
+    "item_count_zero": "Aucune breloque",
     "empty_title": "Votre panier est vide",
     "empty_description": "Trouvez la pièce parfaite pour commencer votre création.",
     "remove_item": "Supprimer l'article",
@@ -76,7 +77,8 @@
     "price": "{price, number, ::currency/EUR}",
     "checkout_success_title": "Commande passée !",
     "checkout_success_description": "Votre commande a été passée avec succès.",
-    "checkout_error_title": "Erreur de commande"
+    "checkout_error_title": "Erreur de commande",
+    "sold_out": "Épuisé"
   },
   "CharmsPanel": {
     "title": "Breloques",
@@ -159,7 +161,9 @@
     "success_title": "Merci pour votre commande !",
     "success_order_number": "Votre numéro de commande",
     "success_description": "Un résumé de votre commande a été envoyé à {email}. Vous serez notifié(e) lorsque votre création sera expédiée.",
-    "success_close_button": "Fermer"
+    "success_close_button": "Fermer",
+    "stock_error_title": "Certains articles sont en rupture de stock",
+    "stock_error_description": "Veuillez revoir les articles surlignés en rouge dans votre panier avant de continuer."
   },
    "OrderStatus": {
     "commandée": "Commandée",

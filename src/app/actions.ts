@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -473,6 +474,19 @@ export type SerializableCartItem = {
     previewImage: string;
 };
 
+export type StockError = {
+    unavailableModelIds: string[];
+    unavailableCharmIds: string[];
+}
+
+export type CreateOrderResult = {
+    success: boolean;
+    message: string;
+    orderNumber?: string;
+    email?: string;
+    stockError?: StockError;
+};
+
 export async function markAsOrdered(formData: FormData): Promise<{ success: boolean; message: string }> {
     const itemId = formData.get('itemId') as string;
     const itemType = formData.get('itemType') as string; // 'charms' or a jewelryTypeId like 'necklace'
@@ -542,7 +556,7 @@ export async function markAsRestocked(formData: FormData): Promise<{ success: bo
 }
 
 
-export async function createOrder(cartItems: SerializableCartItem[], email: string, locale: string): Promise<{ success: boolean; message: string; orderNumber?: string, email?: string }> {
+export async function createOrder(cartItems: SerializableCartItem[], email: string, locale: string): Promise<CreateOrderResult> {
     if (!cartItems || cartItems.length === 0) {
         return { success: false, message: 'Le panier est vide.' };
     }
@@ -552,22 +566,19 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
             const stockUpdates: Map<DocumentReference, { newQuantity: number; name: string }> = new Map();
             const itemDocsToFetch: Map<string, DocumentReference> = new Map();
             
-            // Step 1: Consolidate stock deduction requests
-            const stockDeductions = new Map<string, { count: number, name: string, type: string }>();
+            const stockDeductions = new Map<string, { count: number, name: string, type: string, id: string }>();
 
             for (const item of cartItems) {
-                // Models
                 const modelKey = `${item.jewelryType.id}/${item.model.id}`;
-                const currentModel = stockDeductions.get(modelKey) || { count: 0, name: item.model.name, type: item.jewelryType.id };
+                const currentModel = stockDeductions.get(modelKey) || { count: 0, name: item.model.name, type: item.jewelryType.id, id: item.model.id };
                 stockDeductions.set(modelKey, { ...currentModel, count: currentModel.count + 1 });
                 if (!itemDocsToFetch.has(modelKey)) {
                     itemDocsToFetch.set(modelKey, doc(db, item.jewelryType.id, item.model.id));
                 }
 
-                // Charms
                 for (const pc of item.placedCharms) {
                     const charmKey = `charms/${pc.charm.id}`;
-                    const currentCharm = stockDeductions.get(charmKey) || { count: 0, name: pc.charm.name, type: 'charms' };
+                    const currentCharm = stockDeductions.get(charmKey) || { count: 0, name: pc.charm.name, type: 'charms', id: pc.charm.id };
                     stockDeductions.set(charmKey, { ...currentCharm, count: currentCharm.count + 1 });
                     if (!itemDocsToFetch.has(charmKey)) {
                         itemDocsToFetch.set(charmKey, doc(db, 'charms', pc.charm.id));
@@ -575,29 +586,52 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
                 }
             }
 
-            // Step 2: Fetch all item documents and check stock
             const itemDocRefs = Array.from(itemDocsToFetch.values());
             const itemDocsSnapshots: DocumentSnapshot[] = [];
-            for (const ref of itemDocRefs) {
+             for (const ref of itemDocRefs) {
                 const docSnap = await transaction.get(ref);
                 itemDocsSnapshots.push(docSnap);
             }
             const itemDocsMap = new Map(itemDocsSnapshots.map(d => [d.ref.path, d]));
 
+            const unavailableItems = {
+                unavailableModelIds: new Set<string>(),
+                unavailableCharmIds: new Set<string>(),
+            };
 
             for (const [key, deduction] of Array.from(stockDeductions.entries())) {
                 const itemDoc = itemDocsMap.get(itemDocsToFetch.get(key)!.path);
                 if (!itemDoc || !itemDoc.exists()) {
-                    throw new Error(`L'article ${deduction.name} n'existe plus.`);
+                     if(deduction.type === 'charms') {
+                        unavailableItems.unavailableCharmIds.add(deduction.id);
+                     } else {
+                        unavailableItems.unavailableModelIds.add(deduction.id);
+                     }
+                } else {
+                    const currentStock = itemDoc.data().quantity || 0;
+                    if (currentStock < deduction.count) {
+                        if(deduction.type === 'charms') {
+                           unavailableItems.unavailableCharmIds.add(deduction.id);
+                        } else {
+                           unavailableItems.unavailableModelIds.add(deduction.id);
+                        }
+                    } else {
+                        stockUpdates.set(itemDoc.ref, { newQuantity: currentStock - deduction.count, name: deduction.name });
+                    }
                 }
-                const currentStock = itemDoc.data().quantity || 0;
-                if (currentStock < deduction.count) {
-                    throw new Error(`Le stock pour ${deduction.name} est insuffisant (${currentStock} disponibles, ${deduction.count} demandés).`);
-                }
-                stockUpdates.set(itemDoc.ref, { newQuantity: currentStock - deduction.count, name: deduction.name });
             }
 
-            // Step 3: Upload all preview images to Firebase Storage
+            if (unavailableItems.unavailableModelIds.size > 0 || unavailableItems.unavailableCharmIds.size > 0) {
+                 return { 
+                    success: false, 
+                    message: "Certains articles de votre panier ne sont plus en stock.",
+                    stockError: {
+                        unavailableModelIds: Array.from(unavailableItems.unavailableModelIds),
+                        unavailableCharmIds: Array.from(unavailableItems.unavailableCharmIds),
+                    }
+                };
+            }
+
             const uploadPromises = cartItems.map(async (item) => {
                 const storageRef = ref(storage, `order_previews/${item.id}-${Date.now()}.png`);
                 const uploadResult = await uploadString(storageRef, item.previewImage, 'data_url');
@@ -605,12 +639,10 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
             });
             const previewImageUrls = await Promise.all(uploadPromises);
 
-            // Step 4: Apply stock updates
             for (const [ref, update] of Array.from(stockUpdates.entries())) {
                 transaction.update(ref, { quantity: update.newQuantity });
             }
 
-            // Step 5: Prepare the order data
             const totalOrderPrice = cartItems.reduce((sum, item) => {
                 const modelPrice = item.model.price || 0;
                 const charmsPrice = item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
@@ -645,7 +677,6 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
             const orderRef = doc(collection(db, 'orders'));
             transaction.set(orderRef, { ...newOrderData, createdAt: serverTimestamp() });
             
-            // Step 6: Prepare email data
             const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@atelierabijoux.com';
             const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${supportEmail} en précisant votre numéro de commande (${orderNumber}).`;
             const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${supportEmail}">${supportEmail}</a> en précisant votre numéro de commande (${orderNumber}).</p>`;

@@ -64,6 +64,7 @@
   "Cart": {
     "title": "Your Cart",
     "item_count": "({count})",
+    "item_count_zero": "No charms",
     "empty_title": "Your cart is empty",
     "empty_description": "Find the perfect piece to start your creation.",
     "remove_item": "Remove item",
@@ -76,7 +77,8 @@
     "price": "{price, number, ::currency/USD}",
     "checkout_success_title": "Order Placed!",
     "checkout_success_description": "Your order has been successfully placed.",
-    "checkout_error_title": "Order Error"
+    "checkout_error_title": "Order Error",
+    "sold_out": "Sold Out"
   },
   "CharmsPanel": {
     "title": "Charms",
@@ -159,7 +161,9 @@
     "success_title": "Thank you for your order!",
     "success_order_number": "Your order number",
     "success_description": "A summary of your order has been sent to {email}. You will be notified when your creation is shipped.",
-    "success_close_button": "Close"
+    "success_close_button": "Close",
+    "stock_error_title": "Some Items Are Out of Stock",
+    "stock_error_description": "Please review the items highlighted in red in your cart before proceeding."
   },
   "OrderStatus": {
     "commandée": "Ordered",
