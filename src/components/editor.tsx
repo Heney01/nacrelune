@@ -9,7 +9,7 @@ import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem } from '@/lib/t
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BrandLogo } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -26,6 +26,7 @@ import { useTranslations } from '@/hooks/use-translations';
 import { getCharmSuggestionsAction, getRefreshedCharms } from '@/app/actions';
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -600,10 +601,26 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     };
   }, [calculatePixelsPerMm]);
 
-  const sortedPlacedCharms = useMemo(() => {
+  const { sortedPlacedCharms, hasStockIssues } = useMemo(() => {
+    const counts = new Map<string, number>();
+    const charmsWithStockInfo = placedCharms.map(pc => {
+      const charmInfo = allCharms.find(c => c.id === pc.charm.id);
+      const stock = charmInfo?.quantity ?? 0;
+      const count = (counts.get(pc.charm.id) || 0) + 1;
+      counts.set(pc.charm.id, count);
+      return {
+        ...pc,
+        isAvailable: stock >= count,
+      };
+    });
+
+    const hasIssues = charmsWithStockInfo.some(c => !c.isAvailable);
+
     // Sort from higher Y to lower Y so that lower charms are rendered last (and appear on top)
-    return [...placedCharms].sort((a, b) => a.position.y - b.position.y);
-  }, [placedCharms]);
+    const sorted = [...charmsWithStockInfo].sort((a, b) => a.position.y - b.position.y);
+    
+    return { sortedPlacedCharms: sorted, hasStockIssues: hasIssues };
+  }, [placedCharms, allCharms]);
 
 
   return (
@@ -641,12 +658,12 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                         {t('customize_title')}
                       </h2>
                       {isEditing ? (
-                          <Button onClick={handleUpdateCart} disabled={captureRequest}>
+                          <Button onClick={handleUpdateCart} disabled={captureRequest || hasStockIssues}>
                               <PlusCircle className="mr-2 h-4 w-4" />
                               {t('update_item_button')}
                           </Button>
                       ) : (
-                          <Button onClick={handleAddToCart} disabled={captureRequest}>
+                          <Button onClick={handleAddToCart} disabled={captureRequest || hasStockIssues}>
                               <ShoppingCart className="mr-2 h-4 w-4" />
                               {t('add_to_cart_button')}
                           </Button>
@@ -719,22 +736,37 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                 className="w-full"
                                 >
                                 <CarouselContent>
-                                    {placedCharms.map((pc) => (
+                                    {sortedPlacedCharms.map((pc) => (
                                     <CarouselItem key={pc.id} className={cn(isMobile ? "basis-1/4" : "basis-1/5")}>
                                         <div className="p-1">
                                              <Card 
                                                 className={cn("p-2 aspect-square flex flex-col items-center justify-center cursor-pointer relative group",
-                                                    selectedPlacedCharmId === pc.id ? 'border-primary' : 'hover:border-primary/50'
+                                                    selectedPlacedCharmId === pc.id ? 'border-primary' : 'hover:border-primary/50',
+                                                    !pc.isAvailable && "border-destructive hover:border-destructive/50"
                                                 )}
                                                 onClick={() => handleCharmListClick(pc.id)}
                                              >
+                                                {!pc.isAvailable && (
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <div className="absolute inset-0 bg-destructive/20 z-10 flex items-center justify-center">
+                                                                    <AlertCircle className="h-6 w-6 text-destructive" />
+                                                                </div>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>{t('stock_issue_tooltip')}</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                )}
                                                 <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={40} height={40} className="w-10 h-10 object-contain" data-ai-hint="jewelry charm" />
                                                 <p className="text-xs text-center mt-1 truncate w-full">{pc.charm.name}</p>
                                                 <Button 
                                                     variant="destructive" 
                                                     size="icon" 
                                                     className={cn(
-                                                        "absolute top-1 right-1 h-5 w-5 transition-opacity z-10",
+                                                        "absolute top-1 right-1 h-5 w-5 transition-opacity z-20",
                                                         selectedPlacedCharmId === pc.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                                                     )}
                                                     onClick={(e) => { e.stopPropagation(); removeCharm(pc.id); }}

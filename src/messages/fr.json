@@ -47,10 +47,6 @@
     "suggestions_placeholder_title": "Vos suggestions créatives apparaîtront ici.",
     "recommended_badge": "Recommandé",
     "toast_error_title": "Oups ! Un problème est survenu.",
-    "toast_item_added_title": "Ajouté au panier",
-    "toast_item_added_description": "{modelName} a été ajouté à votre panier.",
-    "toast_item_updated_title": "Article mis à jour",
-    "toast_item_updated_description": "Votre création pour {modelName} a été mise à jour dans le panier.",
     "photorealistic_preview_title": "Aperçu Photoréaliste",
     "photorealistic_preview_description": "Générez une photo réaliste de votre création.",
     "photorealistic_preview_prompt_label": "Contexte de la photo (facultatif)",
@@ -59,7 +55,8 @@
     "photorealistic_preview_modal_title": "Aperçu photoréaliste",
     "photorealistic_preview_modal_loading": "Votre image est en cours de création par notre IA. Cela peut prendre un moment...",
     "photorealistic_preview_modal_done": "Voici votre aperçu photoréaliste !",
-    "close_button": "Fermer"
+    "close_button": "Fermer",
+    "stock_issue_tooltip": "Stock insuffisant pour cette breloque."
   },
   "Cart": {
     "title": "Votre Panier",

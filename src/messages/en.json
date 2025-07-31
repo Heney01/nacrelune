@@ -55,7 +55,8 @@
     "photorealistic_preview_modal_title": "Photorealistic Preview",
     "photorealistic_preview_modal_loading": "Your image is being created by our AI. This may take a moment...",
     "photorealistic_preview_modal_done": "Here is your photorealistic preview!",
-    "close_button": "Close"
+    "close_button": "Close",
+    "stock_issue_tooltip": "Not enough stock for this charm."
   },
   "Cart": {
     "title": "Your Cart",
