@@ -273,23 +273,14 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     );
   }, []);
 
-  const handleZoom = useCallback((delta: number, centerX: number, centerY: number) => {
-      if (!canvasWrapperRef.current) return;
-  
-      const zoomSensitivity = 0.001;
-      const newScale = scaleRef.current - delta * zoomSensitivity;
-      const clampedScale = Math.min(Math.max(0.2, newScale), 5);
-  
-      const canvasRect = canvasWrapperRef.current.getBoundingClientRect();
-      const mouseX = centerX - canvasRect.left;
-      const mouseY = centerY - canvasRect.top;
-      
-      const newPanX = mouseX - (mouseX - panRef.current.x) * (clampedScale / scaleRef.current);
-      const newPanY = mouseY - (mouseY - panRef.current.y) * (clampedScale / scaleRef.current);
-  
-      setScale(clampedScale);
-      setPan({ x: newPanX, y: newPanY });
-    }, []);
+  const zoomToPoint = useCallback((newScale: number, pointX: number, pointY: number) => {
+    const clampedScale = Math.max(0.2, Math.min(newScale, 5));
+    const newPanX = pointX - (pointX - panRef.current.x) * (clampedScale / scaleRef.current);
+    const newPanY = pointY - (pointY - panRef.current.y) * (clampedScale / scaleRef.current);
+
+    setPan({ x: newPanX, y: newPanY });
+    setScale(clampedScale);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasWrapperRef.current;
@@ -326,7 +317,15 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
       const target = e.target as HTMLElement;
       if (target.closest('.charm-on-canvas')) return;
       e.preventDefault();
-      handleZoom(e.deltaY, e.clientX, e.clientY);
+      
+      const canvasRect = canvas.getBoundingClientRect();
+      const zoomFactor = e.deltaY * -0.005;
+      const newScale = scaleRef.current * (1 + zoomFactor);
+      
+      const pointX = e.clientX - canvasRect.left;
+      const pointY = e.clientY - canvasRect.top;
+
+      zoomToPoint(newScale, pointX, pointY);
     };
     
     const handleMove = (e: MouseEvent | TouchEvent) => {
@@ -364,9 +363,15 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         setPan({ x: newX, y: newY });
       } else if (interactionState.isPinching && 'touches' in e && e.touches.length === 2) {
           const newDist = getTouchDistance(e.touches);
+          const zoomFactor = newDist / interactionState.pinchInitialDist;
+          const newScale = scaleRef.current * zoomFactor;
+
           const touchCenter = getTouchCenter(e.touches);
-          const zoomFactor = (interactionState.pinchInitialDist - newDist);
-          handleZoom(zoomFactor * 2, touchCenter.x, touchCenter.y); // Multiply for more sensitivity
+          const canvasRect = canvas.getBoundingClientRect();
+          const pointX = touchCenter.x - canvasRect.left;
+          const pointY = touchCenter.y - canvasRect.top;
+          
+          zoomToPoint(newScale, pointX, pointY);
           interactionState.pinchInitialDist = newDist;
       }
     };
@@ -418,15 +423,18 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
       window.removeEventListener('touchmove', handleMove);
       window.removeEventListener('touchend', handleInteractionEnd);
     };
-  }, [interactionState, handleZoom]);
+  }, [interactionState, zoomToPoint]);
 
   const handleManualZoom = (direction: 'in' | 'out') => {
     if (!canvasWrapperRef.current) return;
+    const zoomFactor = direction === 'in' ? 1.2 : 1 / 1.2;
+    const newScale = scale * zoomFactor;
+
     const canvasRect = canvasWrapperRef.current.getBoundingClientRect();
-    const centerX = canvasRect.left + canvasRect.width / 2;
-    const centerY = canvasRect.top + canvasRect.height / 2;
-    const zoomFactor = -150 * (direction === 'in' ? -1 : 1);
-    handleZoom(zoomFactor, centerX, centerY);
+    const pointX = canvasRect.width / 2;
+    const pointY = canvasRect.height / 2;
+    
+    zoomToPoint(newScale, pointX, pointY);
   };
   
   const resetZoomAndPan = useCallback(() => {
