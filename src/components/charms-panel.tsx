@@ -26,6 +26,97 @@ interface CharmsPanelProps {
     isMobileSheet?: boolean;
 }
 
+const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Charm) => void }) => {
+    const isOutOfStock = (charm.quantity ?? 0) <= 0;
+    const t = useTranslations('CharmsPanel');
+    const [isPrewiewOpen, setIsPreviewOpen] = useState(false);
+
+    const handleCardClick = (e: React.MouseEvent) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('[data-trigger-preview]')) return;
+
+        if (isOutOfStock) {
+            setIsPreviewOpen(true);
+        } else {
+            onAddCharm(charm);
+        }
+    };
+
+    const handlePreviewClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsPreviewOpen(true);
+    }
+    
+    return (
+        <Dialog open={isPrewiewOpen} onOpenChange={setIsPreviewOpen}>
+            <Card
+                onClick={handleCardClick}
+                className={cn(
+                    "p-2 aspect-square flex flex-col items-center justify-center relative group",
+                    isOutOfStock ? "cursor-pointer bg-muted/60" : "hover:bg-muted cursor-pointer"
+                )}
+                title={charm.name}
+            >
+                {isOutOfStock && (
+                    <Badge variant="destructive" className="absolute top-1 left-1 z-10 text-xs px-1.5 py-0.5">
+                        <Ban className="w-3 h-3 mr-1"/>
+                        {t('sold_out')}
+                    </Badge>
+                )}
+                 <div className="flex-grow w-full relative grid place-items-center">
+                    <Image
+                        src={charm.imageUrl}
+                        alt={charm.name}
+                        fill
+                        sizes="(max-width: 768px) 10vw, 5vw"
+                        className={cn("object-contain p-1 pointer-events-none", isOutOfStock && "grayscale opacity-50")}
+                        data-ai-hint="jewelry charm"
+                    />
+                </div>
+                <div className="h-8 flex items-center justify-center">
+                    <p className="text-xs text-center line-clamp-2">{charm.name}</p>
+                </div>
+                
+                <Button 
+                    data-trigger-preview
+                    onClick={handlePreviewClick}
+                    variant="ghost" 
+                    size="icon" 
+                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6"
+                >
+                    <ZoomIn className="h-4 w-4" />
+                </Button>
+            </Card>
+
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
+                    <DialogDescription>{charm.description}</DialogDescription>
+                </DialogHeader>
+                <div className="mt-4 flex justify-center">
+                    <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
+                </div>
+                    {isOutOfStock && (
+                    <Alert variant="destructive" className="mt-4">
+                        <Ban className="h-4 w-4" />
+                        <AlertTitle>{t('out_of_stock_title')}</AlertTitle>
+                        <AlertDescription>{t('out_of_stock_description')}</AlertDescription>
+                    </Alert>
+                )}
+                <DialogFooter>
+                    <DialogClose asChild>
+                            <Button variant="outline">{t('close_button')}</Button>
+                    </DialogClose>
+                    <Button onClick={() => onAddCharm(charm)} disabled={isOutOfStock}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        {t('add_to_design_button')}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
 export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermChange, isMobileSheet = false }: CharmsPanelProps) {
     const isMobile = useIsMobile();
     const [charmCategories, setCharmCategories] = useState<CharmCategory[]>([]);
@@ -74,88 +165,6 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
         return result;
     }, [filteredCharms, charmCategories]);
     
-    const renderCharmItem = (charm: Charm) => {
-        const isOutOfStock = (charm.quantity ?? 0) <= 0;
-
-        const handleCardClick = (e: React.MouseEvent) => {
-            // Only add charm if it's in stock and the click is not on the preview button
-            const target = e.target as HTMLElement;
-            if (!isOutOfStock && !target.closest('button[data-trigger-preview]')) {
-                onAddCharm(charm);
-            }
-        };
-
-        return (
-             <Dialog key={charm.id}>
-                <Card
-                    onClick={handleCardClick}
-                    className={cn(
-                        "p-2 aspect-square flex flex-col items-center justify-center relative group",
-                        isOutOfStock ? "cursor-pointer bg-muted/60" : "hover:bg-muted cursor-pointer"
-                    )}
-                    title={charm.name}
-                >
-                    {isOutOfStock && (
-                        <Badge variant="destructive" className="absolute top-1 left-1 z-10 text-xs px-1.5 py-0.5">
-                            <Ban className="w-3 h-3 mr-1"/>
-                            {t('sold_out')}
-                        </Badge>
-                    )}
-                    <div className="relative w-10 h-10 flex-grow grid place-content-center">
-                         <Image
-                            src={charm.imageUrl}
-                            alt={charm.name}
-                            width={40}
-                            height={40}
-                            className={cn("w-full h-auto pointer-events-none object-contain", isOutOfStock && "grayscale opacity-50")}
-                            data-ai-hint="jewelry charm"
-                        />
-                    </div>
-                    <div className="h-8 flex items-center justify-center">
-                        <p className="text-xs text-center line-clamp-2">{charm.name}</p>
-                    </div>
-                    
-                    <DialogTrigger asChild>
-                        <Button 
-                            data-trigger-preview
-                            variant="ghost" 
-                            size="icon" 
-                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6"
-                        >
-                            <ZoomIn className="h-4 w-4" />
-                        </Button>
-                    </DialogTrigger>
-                </Card>
-
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
-                        <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
-                        <DialogDescription>{charm.description}</DialogDescription>
-                    </DialogHeader>
-                    <div className="mt-4 flex justify-center">
-                        <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
-                    </div>
-                     {isOutOfStock && (
-                        <Alert variant="destructive" className="mt-4">
-                            <Ban className="h-4 w-4" />
-                            <AlertTitle>{t('out_of_stock_title')}</AlertTitle>
-                            <AlertDescription>{t('out_of_stock_description')}</AlertDescription>
-                        </Alert>
-                    )}
-                    <DialogFooter>
-                        <DialogClose asChild>
-                             <Button variant="outline">{t('close_button')}</Button>
-                        </DialogClose>
-                        <Button onClick={() => onAddCharm(charm)} disabled={isOutOfStock}>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            {t('add_to_design_button')}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        );
-    };
-    
     const renderCharmGrid = () => (
          <div className="p-4">
              {isLoading ? (
@@ -171,7 +180,9 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                                 <AccordionTrigger className="text-base font-headline">{category.name}</AccordionTrigger>
                                 <AccordionContent>
                                     <div className={cn("grid gap-2 pt-2", isMobile ? "grid-cols-4" : "grid-cols-3")}>
-                                        {charmsByCategory[category.id].map(renderCharmItem)}
+                                        {charmsByCategory[category.id].map(charm => 
+                                            <CharmItem key={charm.id} charm={charm} onAddCharm={onAddCharm} />
+                                        )}
                                     </div>
                                 </AccordionContent>
                             </AccordionItem>
