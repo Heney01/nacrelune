@@ -662,6 +662,8 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                   />
                   <PhotorealisticPreviewer
                     jewelryType={jewelryType}
+                    model={model}
+                    placedCharms={placedCharms}
                     getCanvasDataUri={getCanvasDataUri}
                   />
                 </div>

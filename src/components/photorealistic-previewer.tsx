@@ -11,15 +11,18 @@ import { Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { useTranslations } from '@/hooks/use-translations';
 import Image from 'next/image';
-import { JewelryType } from '@/lib/types';
-import { generatePhotorealisticPreviewAction } from '@/app/actions';
+import { JewelryType, JewelryModel, PlacedCharm } from '@/lib/types';
+import { generatePhotorealisticPreviewAction, generatePhotorealisticPreviewActionV2 } from '@/app/actions';
+import { PhotorealisticPreviewV2Input } from '@/ai/flows/photorealistic-preview-v2';
 
 interface PhotorealisticPreviewerProps {
   jewelryType: Omit<JewelryType, 'models' | 'icon'>;
+  model: JewelryModel;
+  placedCharms: PlacedCharm[];
   getCanvasDataUri: () => Promise<string>;
 }
 
-export function PhotorealisticPreviewer({ jewelryType, getCanvasDataUri }: PhotorealisticPreviewerProps) {
+export function PhotorealisticPreviewer({ jewelryType, model, placedCharms, getCanvasDataUri }: PhotorealisticPreviewerProps) {
   const [userPrompt, setUserPrompt] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -27,6 +30,25 @@ export function PhotorealisticPreviewer({ jewelryType, getCanvasDataUri }: Photo
   const [sourceImage, setSourceImage] = useState<string | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const t = useTranslations('Editor');
+  
+  // Helper to get a data URI for an image URL
+  const toDataURL = async (url: string) => {
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    } catch(e) {
+        console.error("Failed to convert URL to Data URI:", e);
+        // Fallback for simplicity in this example
+        return url;
+    }
+  }
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,14 +59,25 @@ export function PhotorealisticPreviewer({ jewelryType, getCanvasDataUri }: Photo
     setSourceImage(null);
 
     try {
-      const designPreviewDataUri = await getCanvasDataUri();
-      setSourceImage(designPreviewDataUri);
+      const baseJewelryImageUri = await toDataURL(model.editorImageUrl);
+      setSourceImage(baseJewelryImageUri); // Show the base model as source
+
+      const charmsWithDataUris = await Promise.all(
+        placedCharms.map(async (pc) => ({
+          charmName: pc.charm.name,
+          charmImageUri: await toDataURL(pc.charm.imageUrl),
+          position: pc.position
+        }))
+      );
       
-      const result = await generatePhotorealisticPreviewAction({
-        designPreviewDataUri,
+      const input: PhotorealisticPreviewV2Input = {
+        baseJewelryImageUri,
         jewelryTypeName: jewelryType.name,
-        userPrompt,
-      });
+        charms: charmsWithDataUris,
+        userPrompt
+      };
+
+      const result = await generatePhotorealisticPreviewActionV2(input);
 
       if (result.success && result.imageDataUri) {
         setResultImage(result.imageDataUri);

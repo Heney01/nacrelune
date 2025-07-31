@@ -11,10 +11,11 @@ import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
 import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm } from '@/lib/types';
 import { getCharmSuggestions as getCharmSuggestionsFlow, CharmSuggestionInput, CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
-import { generatePhotorealisticPreview as generatePhotorealisticPreviewFlow } from '@/ai/flows/photorealistic-preview';
+import { generatePhotorealisticPreview as generatePhotorealisticPreviewFlow, PhotorealisticPreviewInput as PhotorealisticPreviewInputV1 } from '@/ai/flows/photorealistic-preview';
+import { generatePhotorealisticPreviewV2 as generatePhotorealisticPreviewV2Flow, PhotorealisticPreviewV2Input } from '@/ai/flows/photorealistic-preview-v2';
 import { z } from 'zod';
 
-const PhotorealisticPreviewInputSchema = z.object({
+const PhotorealisticPreviewInputSchemaV1 = z.object({
   designPreviewDataUri: z
     .string()
     .describe(
@@ -23,7 +24,6 @@ const PhotorealisticPreviewInputSchema = z.object({
   jewelryTypeName: z.string().describe('The type of jewelry (e.g., "necklace", "bracelet").'),
   userPrompt: z.string().optional().describe('Optional user prompt for additional context (e.g., "on a beach", "in a gift box").')
 });
-type PhotorealisticPreviewInput = z.infer<typeof PhotorealisticPreviewInputSchema>;
 
 const getFileNameFromUrl = (url: string) => {
     if (!url) return null;
@@ -1093,7 +1093,7 @@ export async function getCharmSuggestionsAction(input: CharmSuggestionInput): Pr
     }
 }
 
-export async function generatePhotorealisticPreviewAction(input: PhotorealisticPreviewInput): Promise<{
+export async function generatePhotorealisticPreviewAction(input: PhotorealisticPreviewInputV1): Promise<{
     success: boolean;
     imageDataUri?: string;
     error?: string;
@@ -1103,6 +1103,20 @@ export async function generatePhotorealisticPreviewAction(input: PhotorealisticP
         return { success: true, imageDataUri: result.imageDataUri };
     } catch (error: any) {
         console.error('[SERVER ACTION] Error calling Photorealistic Preview flow:', error);
+        return { success: false, error: error.message || "An unexpected error occurred while generating the preview." };
+    }
+}
+
+export async function generatePhotorealisticPreviewActionV2(input: PhotorealisticPreviewV2Input): Promise<{
+    success: boolean;
+    imageDataUri?: string;
+    error?: string;
+}> {
+    try {
+        const result = await generatePhotorealisticPreviewV2Flow(input);
+        return { success: true, imageDataUri: result.imageDataUri };
+    } catch (error: any) {
+        console.error('[SERVER ACTION] Error calling Photorealistic Preview flow V2:', error);
         return { success: false, error: error.message || "An unexpected error occurred while generating the preview." };
     }
 }
