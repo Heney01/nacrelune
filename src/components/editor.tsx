@@ -581,10 +581,10 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     if (jewelryType.id !== 'necklace') {
       return placedCharms;
     }
-    // For necklaces, sort by Y position so that lower charms are rendered first (and appear behind)
+    // For necklaces, sort by Y position so that higher charms are rendered last (and appear on top)
     // A higher Y value means lower on the screen.
-    // We sort ascending by Y so that higher-Y charms are rendered first.
-    return [...placedCharms].sort((a, b) => a.position.y - b.position.y);
+    // We sort descending by Y so that lower-Y charms are rendered last.
+    return [...placedCharms].sort((a, b) => b.position.y - a.position.y);
   }, [placedCharms, jewelryType.id]);
 
 
