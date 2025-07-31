@@ -29,7 +29,6 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
     isSelected: boolean;
-    isDimmed: boolean;
     onDragStart: (e: React.MouseEvent<HTMLDivElement> | TouchEvent, charmId: string) => void;
     onDelete: (charmId: string) => void;
     onRotate: (charmId: string, newRotation: number) => void;
@@ -37,7 +36,7 @@ interface PlacedCharmComponentProps {
     scale: number;
 }
   
-const PlacedCharmComponent = React.memo(({ placed, isSelected, isDimmed, onDragStart, onDelete, onRotate, pixelSize, scale }: PlacedCharmComponentProps) => {
+const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDelete, onRotate, pixelSize, scale }: PlacedCharmComponentProps) => {
     const charmRef = useRef<HTMLDivElement>(null);
 
     const handleDelete = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -78,11 +77,10 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, isDimmed, onDragS
             onMouseDown={(e) => onDragStart(e, placed.id)}
             onWheel={handleWheel}
             className={cn(
-                "absolute group charm-on-canvas cursor-pointer select-none flex items-center justify-center transition-opacity",
+                "absolute group charm-on-canvas cursor-pointer select-none flex items-center justify-center",
                 {
                     'outline-2 outline-primary outline-dashed': isSelected,
                     'hover:outline-2 hover:outline-primary/50 hover:outline-dashed': !isSelected,
-                    'opacity-40': isDimmed
                 }
             )}
             style={{
@@ -107,7 +105,7 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, isDimmed, onDragS
             <button
                 onMouseDown={handleDelete}
                 onTouchStart={handleDelete}
-                className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                 <X size={14} />
             </button>
         </div>
@@ -140,7 +138,6 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   
   const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
   const [selectedPlacedCharmId, setSelectedPlacedCharmId] = useState<string | null>(null);
-  const [dimmedCharmIds, setDimmedCharmIds] = useState<Set<string>>(new Set());
 
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -272,7 +269,6 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       interactionState.isDragging = false;
       interactionState.isPanning = false;
       interactionState.activeCharmId = null;
-      setDimmedCharmIds(new Set());
     };
     
     const handleZoom = (delta: number, centerX: number, centerY: number) => {
@@ -298,16 +294,6 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       if (target.closest('.charm-on-canvas')) return;
       e.preventDefault();
       handleZoom(e.deltaY, e.clientX, e.clientY);
-    };
-
-    const getPixelPosition = (
-        percentPos: { x: number; y: number },
-        canvasRect: DOMRect
-    ) => {
-        return {
-            x: (percentPos.x / 100) * canvasRect.width,
-            y: (percentPos.y / 100) * canvasRect.height,
-        };
     };
     
     const handleMove = (e: MouseEvent | TouchEvent) => {
@@ -336,25 +322,6 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
             : pc
             );
           setPlacedCharms(newPlacedCharms);
-        }
-
-        const canvasRect = canvasEl.getBoundingClientRect();
-        const draggedCharm = placedCharmsRef.current.find(c => c.id === interactionState.activeCharmId);
-        if (draggedCharm) {
-            const draggedPosPx = getPixelPosition(draggedCharm.position, canvasRect);
-            const newDimmedIds = new Set<string>();
-            const PROXIMITY_THRESHOLD = 50 * scaleRef.current; // 50px radius, adjusted for zoom
-
-            placedCharmsRef.current.forEach(otherCharm => {
-                if (otherCharm.id !== interactionState.activeCharmId) {
-                    const otherPosPx = getPixelPosition(otherCharm.position, canvasRect);
-                    const distance = Math.hypot(draggedPosPx.x - otherPosPx.x, draggedPosPx.y - otherPosPx.y);
-                    if (distance < PROXIMITY_THRESHOLD) {
-                        newDimmedIds.add(otherCharm.id);
-                    }
-                }
-            });
-            setDimmedCharmIds(newDimmedIds);
         }
         
         interactionState.dragStart = { x: point.clientX, y: point.clientY };
@@ -614,6 +581,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     if (jewelryType.id !== 'necklace') {
       return placedCharms;
     }
+    // Sort from higher Y to lower Y so that lower charms are rendered first (and appear behind)
     return [...placedCharms].sort((a, b) => b.position.y - a.position.y);
   }, [placedCharms, jewelryType.id]);
 
@@ -700,7 +668,6 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                                   key={placed.id}
                                   placed={placed}
                                   isSelected={selectedPlacedCharmId === placed.id}
-                                  isDimmed={dimmedCharmIds.has(placed.id)}
                                   onDragStart={handleDragStart}
                                   onDelete={removeCharm}
                                   onRotate={handleRotateCharm}
