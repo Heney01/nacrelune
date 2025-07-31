@@ -476,6 +476,23 @@ export async function createPaymentIntent(
   }
 }
 
+async function refundStripePayment(paymentIntentId: string): Promise<{ success: boolean; message: string }> {
+    try {
+        const refund = await stripe.refunds.create({
+            payment_intent: paymentIntentId,
+        });
+        if (refund.status === 'succeeded' || refund.status === 'pending') {
+            return { success: true, message: `Remboursement initié avec succès (Status: ${refund.status}).` };
+        } else {
+             return { success: false, message: `Le remboursement a échoué avec le statut : ${refund.status}.` };
+        }
+    } catch (error: any) {
+        console.error("Error creating Stripe refund:", error);
+        return { success: false, message: error.message || "Une erreur est survenue lors du remboursement Stripe." };
+    }
+}
+
+
 function generateOrderNumber(): string {
   const date = new Date();
   const year = date.getFullYear().toString().slice(-2);
@@ -580,7 +597,7 @@ export async function markAsRestocked(formData: FormData): Promise<{ success: bo
 }
 
 
-export async function createOrder(cartItems: SerializableCartItem[], email: string, locale: string): Promise<CreateOrderResult> {
+export async function createOrder(cartItems: SerializableCartItem[], email: string, locale: string, paymentIntentId: string): Promise<CreateOrderResult> {
     if (!cartItems || cartItems.length === 0) {
         return { success: false, message: 'Le panier est vide.' };
     }
@@ -696,6 +713,7 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
                 totalPrice: totalOrderPrice,
                 items: orderItems,
                 status: initialStatus,
+                paymentIntentId: paymentIntentId,
             };
 
             const orderRef = doc(collection(db, 'orders'));
@@ -970,6 +988,7 @@ export async function getOrders(): Promise<Order[]> {
                 shippingCarrier: data.shippingCarrier,
                 trackingNumber: data.trackingNumber,
                 cancellationReason: data.cancellationReason,
+                paymentIntentId: data.paymentIntentId
             };
         }));
 
@@ -1049,6 +1068,14 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
                     throw new Error("Le motif de l'annulation est obligatoire.");
                 }
                 dataToUpdate.cancellationReason = cancellationReason;
+
+                // If the order has a paymentIntentId, process a refund.
+                if (orderData.paymentIntentId) {
+                    const refundResult = await refundStripePayment(orderData.paymentIntentId);
+                    if (!refundResult.success) {
+                        throw new Error(`Le remboursement a échoué: ${refundResult.message}. L'annulation a été interrompue.`);
+                    }
+                }
 
                 if (currentStatus !== 'annulée') {
                     for (const itemDoc of itemDocs) {

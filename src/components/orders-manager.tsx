@@ -6,7 +6,7 @@ import React, { useState, useReducer, useTransition, Fragment, useMemo } from 'r
 import type { Order, OrderStatus, OrderItem, Charm, MailLog } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from './ui/card';
-import { Package, Search, ChevronDown, ChevronUp, Truck, FileX, Edit, Copy, Mail, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Package, Search, ChevronDown, ChevronUp, Truck, FileX, Edit, Copy, Mail, CheckCircle, XCircle, Clock, Undo2 } from 'lucide-react';
 import { useTranslations } from '@/hooks/use-translations';
 import { Badge } from './ui/badge';
 import { updateOrderStatus, updateOrderItemStatus } from '@/app/actions';
@@ -283,6 +283,18 @@ const OrderDetails = ({ order, onItemStatusChange, onStatusChange, t, onEditShip
                 </TabsList>
                 <TabsContent value="workshop">
                      <div className="p-4 md:p-6">
+                        {order.paymentIntentId && (
+                             <div className="mb-6">
+                                <h5 className="font-semibold mb-2 text-md flex items-center gap-2">
+                                    <Undo2 className="h-5 w-5 text-primary" /> Paiement et Remboursement
+                                </h5>
+                                <div className="flex items-start justify-between bg-background p-4 rounded-lg border">
+                                    <p className="text-sm">
+                                        Cette commande a été payée via Stripe. L'annulation de la commande déclenchera automatiquement un remboursement complet.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                         {order.shippingCarrier && order.trackingNumber && (
                             <div className="mb-6">
                                 <h5 className="font-semibold mb-2 text-md flex items-center gap-2"><Truck className="h-5 w-5 text-primary" /> Informations d'expédition</h5>

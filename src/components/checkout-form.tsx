@@ -81,7 +81,7 @@ export const CheckoutForm = ({
         previewImage: item.previewImage,
       }));
       
-      const orderResult = await createOrder(serializableCart, email, locale);
+      const orderResult = await createOrder(serializableCart, email, locale, paymentIntent.id);
       
       if (orderResult.success) {
         onOrderCreated(orderResult);
