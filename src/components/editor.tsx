@@ -275,12 +275,15 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
   const zoomToPoint = useCallback((newScale: number, pointX: number, pointY: number) => {
     const clampedScale = Math.max(0.2, Math.min(newScale, 5));
-    const newPanX = pointX - (pointX - panRef.current.x) * (clampedScale / scaleRef.current);
-    const newPanY = pointY - (pointY - panRef.current.y) * (clampedScale / scaleRef.current);
+    const currentPan = panRef.current;
+    const currentScale = scaleRef.current;
+
+    const newPanX = pointX - ((pointX - currentPan.x) * (clampedScale / currentScale));
+    const newPanY = pointY - ((pointY - currentPan.y) * (clampedScale / currentScale));
 
     setPan({ x: newPanX, y: newPanY });
     setScale(clampedScale);
-  }, []);
+}, []);
 
   useEffect(() => {
     const canvas = canvasWrapperRef.current;
@@ -792,7 +795,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                                         "absolute top-1 right-1 h-5 w-5 transition-opacity z-20",
                                                         selectedPlacedCharmId === pc.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                                                     )}
-                                                    onClick={(e) => { e.stopPropagation(); removeCharm(pc.id); }}
+                                                    onMouseDown={(e) => { e.stopPropagation(); removeCharm(pc.id); }}
+                                                    onTouchStart={(e) => { e.stopPropagation(); removeCharm(pc.id); }}
                                                 >
                                                     <X className="h-3 w-3" />
                                                 </Button>
@@ -890,3 +894,4 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
