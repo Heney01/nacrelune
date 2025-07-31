@@ -25,7 +25,6 @@ import { CartWidget } from './cart-widget';
 import { useTranslations } from '@/hooks/use-translations';
 import { getCharmSuggestionsAction } from '@/app/actions';
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
-import { PhotorealisticPreviewer } from './photorealistic-previewer';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -659,12 +658,6 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                       isLoading={isGenerating}
                       suggestions={suggestions}
                       onApplySuggestion={applySuggestion}
-                  />
-                  <PhotorealisticPreviewer
-                    jewelryType={jewelryType}
-                    model={model}
-                    placedCharms={placedCharms}
-                    getCanvasDataUri={getCanvasDataUri}
                   />
                 </div>
               )}

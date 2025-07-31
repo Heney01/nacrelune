@@ -10,5 +10,4 @@ genkit({
 });
 
 import './flows/charm-placement-suggestions.ts';
-import './flows/photorealistic-preview.ts';
-import './flows/photorealistic-preview-v2.ts';
+
