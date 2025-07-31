@@ -24,6 +24,7 @@ export function PhotorealisticPreviewer({ jewelryType, getCanvasDataUri }: Photo
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
+  const [sourceImage, setSourceImage] = useState<string | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const t = useTranslations('Editor');
 
@@ -33,9 +34,11 @@ export function PhotorealisticPreviewer({ jewelryType, getCanvasDataUri }: Photo
     setIsLoading(true);
     setIsPreviewOpen(true);
     setResultImage(null);
+    setSourceImage(null);
 
     try {
       const designPreviewDataUri = await getCanvasDataUri();
+      setSourceImage(designPreviewDataUri);
       
       const result = await generatePhotorealisticPreviewAction({
         designPreviewDataUri,
@@ -59,6 +62,7 @@ export function PhotorealisticPreviewer({ jewelryType, getCanvasDataUri }: Photo
     setIsPreviewOpen(false);
     setResultImage(null);
     setError(null);
+    setSourceImage(null);
   }
 
   return (
@@ -99,14 +103,14 @@ export function PhotorealisticPreviewer({ jewelryType, getCanvasDataUri }: Photo
       </Card>
 
       <Dialog open={isPreviewOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>{t('photorealistic_preview_modal_title')}</DialogTitle>
             <DialogDescription>
               {isLoading ? t('photorealistic_preview_modal_loading') : t('photorealistic_preview_modal_done')}
             </DialogDescription>
           </DialogHeader>
-          <div className="mt-4 min-h-[300px] grid place-items-center bg-muted/50 rounded-lg">
+          <div className="mt-4 min-h-[300px] grid place-items-center bg-muted/50 rounded-lg p-4">
             {isLoading && <Loader2 className="h-12 w-12 animate-spin text-primary" />}
             {error && (
                 <Alert variant="destructive" className="w-full">
@@ -114,14 +118,29 @@ export function PhotorealisticPreviewer({ jewelryType, getCanvasDataUri }: Photo
                     <AlertDescription>{error}</AlertDescription>
                 </Alert>
             )}
-            {resultImage && (
-                <Image 
-                    src={resultImage} 
+            {resultImage && sourceImage && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                <div>
+                  <Label className="text-center block mb-2 font-semibold">Source</Label>
+                  <Image 
+                    src={sourceImage}
+                    alt="Source design"
+                    width={512}
+                    height={512}
+                    className="rounded-lg object-contain w-full h-auto border bg-white"
+                  />
+                </div>
+                <div>
+                  <Label className="text-center block mb-2 font-semibold">Résultat</Label>
+                  <Image 
+                    src={resultImage}
                     alt={t('photorealistic_preview_modal_title')} 
-                    width={1024}
-                    height={1024}
-                    className="rounded-lg object-contain w-full h-auto"
-                />
+                    width={512}
+                    height={512}
+                    className="rounded-lg object-contain w-full h-auto border"
+                  />
+                </div>
+              </div>
             )}
           </div>
           <DialogFooter>
