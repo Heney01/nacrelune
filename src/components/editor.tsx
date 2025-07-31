@@ -5,7 +5,7 @@
 import React, { useState, useMemo, useRef, WheelEvent as ReactWheelEvent, useCallback, useEffect, TouchEvent as ReactTouchEvent } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem } from '@/lib/types';
+import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
@@ -120,11 +120,12 @@ interface EditorProps {
   model: JewelryModel;
   jewelryType: Omit<JewelryType, 'models' | 'icon'>;
   allCharms: Charm[];
+  charmCategories: CharmCategory[];
 }
 
 export type Suggestion = CharmSuggestionOutput['suggestions'][0];
 
-export default function Editor({ model, jewelryType, allCharms: initialAllCharms }: EditorProps) {
+export default function Editor({ model, jewelryType, allCharms: initialAllCharms, charmCategories }: EditorProps) {
   const isMobile = useIsMobile();
   const { cart, addToCart, updateCartItem } = useCart();
   const { toast } = useToast();
@@ -552,11 +553,12 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const charmsPanelDesktop = useMemo(() => (
     <CharmsPanel 
         allCharms={availableCharms}
+        charmCategories={charmCategories}
         onAddCharm={addCharmFromCharmList} 
         searchTerm={charmsSearchTerm}
         onSearchTermChange={setCharmsSearchTerm}
     />
-  ), [availableCharms, addCharmFromCharmList, charmsSearchTerm]);
+  ), [availableCharms, charmCategories, addCharmFromCharmList, charmsSearchTerm]);
 
   const handleGenerateSuggestions = async (userPreferences: string): Promise<string | null> => {
     setIsGenerating(true);
@@ -854,7 +856,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       </div>
                       <div className="flex-grow overflow-y-auto">
                           <CharmsPanel 
-                              allCharms={availableCharms} 
+                              allCharms={availableCharms}
+                              charmCategories={charmCategories}
                               onAddCharm={addCharmFromCharmList} 
                               isMobileSheet={true}
                               searchTerm={charmsSearchTerm}
@@ -894,6 +897,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
 
 
 

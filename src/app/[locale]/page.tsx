@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { getJewelryTypesAndModels, getCharms } from '@/lib/data';
-import type { JewelryType, Charm } from '@/lib/types';
+import { getJewelryTypesAndModels, getFullCharmData } from '@/lib/data';
+import type { JewelryType, Charm, CharmCategory } from '@/lib/types';
 import { HomePageClient } from '@/components/home-page-client';
 import { getStaticParams } from '@/lib/translations';
 
@@ -19,14 +19,17 @@ export default async function Home({ searchParams, params }: {
     { id: 'earring', name: "Earrings", description: "Stylish earrings to complete your look." },
   ];
 
-  const jewelryTypesData = await getJewelryTypesAndModels(JEWELRY_TYPES_INFO);
-  const charms = await getCharms();
+  const [jewelryTypesData, { charms, charmCategories }] = await Promise.all([
+    getJewelryTypesAndModels(JEWELRY_TYPES_INFO),
+    getFullCharmData(),
+  ]);
   
   return (
     <HomePageClient
       searchParams={searchParams}
       jewelryTypes={jewelryTypesData}
       allCharms={charms}
+      charmCategories={charmCategories}
       locale={params.locale}
     />
   );

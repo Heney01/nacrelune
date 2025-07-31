@@ -13,13 +13,13 @@ import { Loader2, Search, ZoomIn, PlusCircle, Ban } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Input } from './ui/input';
-import { getCharmCategories } from '@/lib/data';
 import { useTranslations } from '@/hooks/use-translations';
 import { Badge } from './ui/badge';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 
 interface CharmsPanelProps {
     allCharms: Charm[];
+    charmCategories: CharmCategory[];
     onAddCharm: (charm: Charm) => void;
     searchTerm: string;
     onSearchTermChange: (term: string) => void;
@@ -117,27 +117,10 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
     );
 };
 
-export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermChange, isMobileSheet = false }: CharmsPanelProps) {
+export function CharmsPanel({ allCharms, charmCategories, onAddCharm, searchTerm, onSearchTermChange, isMobileSheet = false }: CharmsPanelProps) {
     const isMobile = useIsMobile();
-    const [charmCategories, setCharmCategories] = useState<CharmCategory[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
     const t = useTranslations('CharmsPanel');
     
-    useEffect(() => {
-        const fetchCategories = async () => {
-            setIsLoading(true);
-            try {
-                const categories = await getCharmCategories();
-                setCharmCategories(categories);
-            } catch (error) {
-                console.error('Error loading charm categories', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchCategories();
-    }, []);
-
     const filteredCharms = useMemo(() => {
         if (!searchTerm) {
             return allCharms;
@@ -167,10 +150,9 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
     
     const renderCharmGrid = () => (
          <div className="p-4">
-             {isLoading ? (
-                <div className="flex justify-center items-center h-full p-8">
-                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                    <span className="sr-only">{t('loading')}</span>
+             {charmCategories.length === 0 ? (
+                <div className="flex justify-center items-center h-full p-8 text-center text-muted-foreground">
+                    <p>Aucune catégorie de breloque n'a été trouvée.</p>
                 </div>
             ) : (
                 <Accordion type="multiple" defaultValue={charmCategories.map(c => c.id)} className="w-full">
