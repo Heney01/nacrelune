@@ -516,6 +516,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     const timer = setTimeout(captureAndSave, 50);
   
     return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [captureRequest]);
 
   const charmsPanelDesktop = useMemo(() => (
