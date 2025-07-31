@@ -31,13 +31,14 @@ export type PhotorealisticPreviewOutput = z.infer<typeof PhotorealisticPreviewOu
 const previewPrompt = `Generate a photorealistic image of a custom piece of jewelry.
 
 **Instructions:**
-1. The user's design is provided as an image. This is the primary reference for the jewelry's appearance, including the model and the arrangement of charms.
-2. The jewelry type is a {{jewelryTypeName}}.
-3. Generate an image that looks like a real photograph. It should be high-quality, suitable for a product catalog.
-4. Place the jewelry in an elegant, neutral setting (e.g., on a soft fabric, a marble surface, or a simple wooden stand).
-5. Ensure the lighting is professional and highlights the details of the charms and the jewelry model.
+1.  The user's design is provided as an image. This is the primary reference for the jewelry's appearance, including the model and the arrangement of charms.
+2.  **IMPORTANT**: The charms in the provided design image are flat, 2D representations. In the generated photorealistic image, these charms should be rendered as realistic, three-dimensional metallic or enameled objects, matching their appearance. Give them volume, texture, and realistic reflections.
+3.  The jewelry type is a {{jewelryTypeName}}.
+4.  Generate an image that looks like a real photograph. It should be high-quality, suitable for a product catalog.
+5.  Place the jewelry in an elegant, neutral setting (e.g., on a soft fabric, a marble surface, or a simple wooden stand).
+6.  Ensure the lighting is professional and highlights the details of the charms and the jewelry model.
 {{#if userPrompt}}
-6. The user has provided additional context: "{{userPrompt}}". Incorporate this into the scene.
+7. The user has provided additional context: "{{userPrompt}}". Incorporate this into the scene.
 {{/if}}`;
 
 
