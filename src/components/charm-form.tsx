@@ -131,6 +131,17 @@ export function CharmForm({ isOpen, onOpenChange, charm, allCategories, onSave, 
                             </div>
                         </div>
 
+                         <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="width">Largeur (mm)</Label>
+                                <Input id="width" name="width" type="number" step="0.1" defaultValue={charm?.width || ''} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="height">Hauteur (mm)</Label>
+                                <Input id="height" name="height" type="number" step="0.1" defaultValue={charm?.height || ''} />
+                            </div>
+                        </div>
+
                         <div className="space-y-2">
                             <Label htmlFor="reorderUrl">URL de commande</Label>
                             <Input id="reorderUrl" name="reorderUrl" defaultValue={charm?.reorderUrl || ''} />

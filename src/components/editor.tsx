@@ -32,9 +32,11 @@ interface PlacedCharmComponentProps {
     onDragStart: (e: React.MouseEvent<HTMLDivElement> | TouchEvent, charmId: string) => void;
     onDelete: (charmId: string) => void;
     onRotate: (e: WheelEvent, charmId: string) => void;
+    pixelSize: { width: number; height: number; };
+    scale: number;
 }
   
-const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDelete, onRotate }: PlacedCharmComponentProps) => {
+const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDelete, onRotate, pixelSize, scale }: PlacedCharmComponentProps) => {
     const charmRef = useRef<HTMLDivElement>(null);
 
     const handleDelete = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -74,7 +76,7 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
             ref={charmRef}
             onMouseDown={(e) => onDragStart(e, placed.id)}
             className={cn(
-                "absolute group charm-on-canvas cursor-pointer p-1 rounded-full select-none",
+                "absolute group charm-on-canvas cursor-pointer p-1 rounded-full select-none flex items-center justify-center",
                 {
                     'border-2 border-primary border-dashed': isSelected,
                     'hover:border-2 hover:border-primary/50 hover:border-dashed': !isSelected,
@@ -83,19 +85,20 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
             style={{
                 left: `${placed.position.x}%`,
                 top: `${placed.position.y}%`,
+                width: pixelSize.width * scale,
+                height: pixelSize.height * scale,
                 transform: `translate(-50%, -50%) rotate(${placed.rotation}deg)`,
                 animation: placed.animation,
-                width: 48,
-                height: 48,
                 touchAction: 'none',
             }}
         >
             <Image
                 src={placed.charm.imageUrl}
                 alt={placed.charm.name}
-                width={40}
-                height={40}
+                width={pixelSize.width}
+                height={pixelSize.height}
                 className="pointer-events-none rounded-full select-none"
+                style={{ width: '100%', height: 'auto' }}
                 data-ai-hint="jewelry charm"
                 draggable="false"
             />
@@ -138,6 +141,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
 
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const modelImageRef = useRef<HTMLImageElement>(null);
   
   const [isCharmsSheetOpen, setIsCharmsSheetOpen] = useState(false);
   const [isSuggestionsSheetOpen, setIsSuggestionsSheetOpen] = useState(false);
@@ -152,6 +156,8 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+
+  const [pixelsPerMm, setPixelsPerMm] = useState<number | null>(null);
   
   const isEditing = cartItemId !== null;
 
@@ -392,7 +398,8 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   const triggerCapture = () => {
     resetZoomAndPan();
     setSelectedPlacedCharmId(null);
-    setCaptureRequest(true); // Request a capture after state updates
+    // Delay capture to allow state to update and UI to re-render
+    setTimeout(() => setCaptureRequest(true), 50);
   };
 
   const handleAddToCart = () => {
@@ -405,31 +412,25 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   }
 
   const getCanvasDataUri = useCallback(async (): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const performCapture = async () => {
-            if (!canvasRef.current) {
-                return reject(new Error("Canvas ref is not available"));
-            }
-            try {
-                const canvas = await html2canvas(canvasRef.current, {
-                    backgroundColor: null,
-                    logging: false,
-                    useCORS: true,
-                    allowTaint: true,
-                    scale: 1, // Use a smaller scale for faster previews
-                    width: canvasRef.current.offsetWidth,
-                    height: canvasRef.current.offsetHeight,
-                });
-                resolve(canvas.toDataURL('image/png', 0.9));
-            } catch (error) {
-                reject(error);
-            }
-        };
-
-        // Wait for state updates to apply and DOM to re-render
-        setTimeout(performCapture, 100);
-    });
-  }, [resetZoomAndPan]);
+    if (!canvasRef.current) {
+      throw new Error("Canvas ref is not available");
+    }
+    try {
+      const canvas = await html2canvas(canvasRef.current, {
+        backgroundColor: null,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        scale: 1,
+        width: canvasRef.current.offsetWidth,
+        height: canvasRef.current.offsetHeight,
+      });
+      return canvas.toDataURL('image/png', 0.9);
+    } catch (error) {
+      console.error("Error capturing canvas:", error);
+      throw error;
+    }
+  }, []);
 
   useEffect(() => {
     if (captureRequest) {
@@ -472,13 +473,13 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
             description: "La capture de l'image a échoué."
           });
         } finally {
-          setCaptureRequest(false); // Reset the request state
+          setCaptureRequest(false);
         }
       };
 
       captureAndSave();
     }
-  }, [captureRequest]);
+  }, [captureRequest, getCanvasDataUri, isEditing, cartItemId, model, jewelryType, placedCharms, updateCartItem, addToCart, toast, t]);
 
   const charmsPanelDesktop = useMemo(() => (
     <CharmsPanel 
@@ -529,6 +530,22 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       });
     }
   };
+
+  const calculatePixelsPerMm = useCallback(() => {
+    if (modelImageRef.current && model.width) {
+      const imageWidthInPixels = modelImageRef.current.offsetWidth;
+      setPixelsPerMm(imageWidthInPixels / model.width);
+    }
+  }, [model.width]);
+
+  useEffect(() => {
+    // Initial calculation
+    calculatePixelsPerMm();
+
+    // Recalculate on window resize
+    window.addEventListener('resize', calculatePixelsPerMm);
+    return () => window.removeEventListener('resize', calculatePixelsPerMm);
+  }, [calculatePixelsPerMm]);
 
 
   return (
@@ -590,16 +607,23 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                           }}
                       >
                           <Image
+                              ref={modelImageRef}
                               src={model.editorImageUrl}
                               alt={model.name}
                               width={1000}
                               height={1000}
+                              onLoad={calculatePixelsPerMm}
                               className="pointer-events-none max-w-full max-h-full object-contain"
                               data-ai-hint="jewelry model"
                               priority
                           />
                           
-                          {placedCharms.map((placed) => (
+                          {pixelsPerMm && placedCharms.map((placed) => {
+                            const pixelSize = {
+                              width: (placed.charm.width ?? 20) * pixelsPerMm,
+                              height: (placed.charm.height ?? 20) * pixelsPerMm,
+                            };
+                            return (
                               <PlacedCharmComponent
                                   key={placed.id}
                                   placed={placed}
@@ -607,8 +631,11 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                                   onDragStart={handleDragStart}
                                   onDelete={removeCharm}
                                   onRotate={handlePlacedCharmRotation}
+                                  pixelSize={pixelSize}
+                                  scale={scale}
                               />
-                          ))}
+                            )
+                          })}
                       </div>
                       <div className="absolute bottom-2 right-2 flex gap-2">
                           <Button variant="secondary" size="icon" onClick={() => handleZoom('in')}><ZoomIn /></Button>

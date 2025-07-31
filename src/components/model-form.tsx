@@ -137,6 +137,17 @@ export function ModelForm({ isOpen, onOpenChange, jewelryType, model, onSave, lo
                             </div>
                         </div>
 
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="width">Largeur (mm)</Label>
+                                <Input id="width" name="width" type="number" step="0.1" defaultValue={model?.width || ''} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="height">Hauteur (mm)</Label>
+                                <Input id="height" name="height" type="number" step="0.1" defaultValue={model?.height || ''} />
+                            </div>
+                        </div>
+
                         <div className="space-y-2">
                             <Label htmlFor="reorderUrl">URL de commande</Label>
                             <Input id="reorderUrl" name="reorderUrl" defaultValue={model?.reorderUrl || ''} />

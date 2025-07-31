@@ -122,6 +122,8 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
     const name = formData.get('name') as string;
     const price = parseFloat(formData.get('price') as string);
     const quantity = parseInt(formData.get('quantity') as string, 10);
+    const width = parseFloat(formData.get('width') as string) || null;
+    const height = parseFloat(formData.get('height') as string) || null;
     const reorderUrl = formData.get('reorderUrl') as string;
     const locale = formData.get('locale') as string || 'fr';
 
@@ -143,6 +145,8 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
             name,
             price,
             quantity,
+            width,
+            height,
             displayImageUrl,
             editorImageUrl,
             reorderUrl,
@@ -313,6 +317,8 @@ export async function saveCharm(prevState: any, formData: FormData): Promise<{ s
     const description = formData.get('description') as string;
     const price = parseFloat(formData.get('price') as string);
     const quantity = parseInt(formData.get('quantity') as string, 10);
+    const width = parseFloat(formData.get('width') as string) || null;
+    const height = parseFloat(formData.get('height') as string) || null;
     const categoryIds = formData.getAll('categoryIds') as string[];
     const reorderUrl = formData.get('reorderUrl') as string;
     const locale = formData.get('locale') as string || 'fr';
@@ -332,6 +338,8 @@ export async function saveCharm(prevState: any, formData: FormData): Promise<{ s
             description,
             price,
             quantity,
+            width,
+            height,
             categoryIds: categoryIds, // Store array of string IDs
             imageUrl,
             reorderUrl,
