@@ -177,7 +177,6 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     dragStart: { x: 0, y: 0 },
     activeCharmId: null as string | null,
     panStart: { x: 0, y: 0 },
-    pinchStart: { distance: 0, angle: 0 },
   }).current;
 
   const panRef = useRef(pan);
@@ -298,46 +297,32 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     };
 
     const handleMove = (e: MouseEvent | TouchEvent) => {
-      const canvasEl = canvasRef.current;
-      if (!canvasEl) return;
-      if ('preventDefault' in e && e.cancelable) e.preventDefault();
+        if (!interactionState.isDragging && !interactionState.isPanning) return;
+        
+        if ('preventDefault' in e && e.cancelable) e.preventDefault();
 
-      if (interactionState.isDragging && interactionState.activeCharmId) {
-        const point = getPoint(e);
-        const dx = point.clientX - interactionState.dragStart.x;
-        const dy = point.clientY - interactionState.dragStart.y;
-        const dxPercent = (dx / canvasEl.clientWidth) * 100 / scaleRef.current;
-        const dyPercent = (dy / canvasEl.clientHeight) * 100 / scaleRef.current;
+        const canvasEl = canvasRef.current;
+        if (!canvasEl) return;
 
-        setPlacedCharms(placedCharmsRef.current.map(pc =>
-          pc.id === interactionState.activeCharmId
-            ? { ...pc, position: { x: pc.position.x + dxPercent, y: pc.position.y + dyPercent } }
-            : pc
-        ));
-        interactionState.dragStart = { x: point.clientX, y: point.clientY };
-      } else if (interactionState.isPanning && 'touches' in e && e.touches.length === 1) {
-          const point = getPoint(e);
-          const newX = point.clientX - interactionState.panStart.x;
-          const newY = point.clientY - interactionState.panStart.y;
-          setPan({ x: newX, y: newY });
-      } else if (interactionState.isPanning && 'touches' in e && e.touches.length === 2) {
-          // Pinch to zoom and rotate
-          const t1 = e.touches[0];
-          const t2 = e.touches[1];
-          const distance = Math.sqrt(Math.pow(t1.clientX - t2.clientX, 2) + Math.pow(t1.clientY - t2.clientY, 2));
-          const angle = Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX) * (180 / Math.PI);
-          const centerX = (t1.clientX + t2.clientX) / 2;
-          const centerY = (t1.clientY + t2.clientY) / 2;
-          
-          const { distance: startDistance, angle: startAngle } = interactionState.pinchStart;
-          
-          if (startDistance > 0) {
-              const scaleDelta = -(distance - startDistance) * 2;
-              handleZoom(scaleDelta, centerX, centerY);
-          }
-          
-          interactionState.pinchStart = { distance, angle };
-      }
+        if (interactionState.isDragging && interactionState.activeCharmId) {
+            const point = getPoint(e);
+            const dx = point.clientX - interactionState.dragStart.x;
+            const dy = point.clientY - interactionState.dragStart.y;
+            const dxPercent = (dx / canvasEl.clientWidth) * 100 / scaleRef.current;
+            const dyPercent = (dy / canvasEl.clientHeight) * 100 / scaleRef.current;
+
+            setPlacedCharms(placedCharmsRef.current.map(pc =>
+              pc.id === interactionState.activeCharmId
+                ? { ...pc, position: { x: pc.position.x + dxPercent, y: pc.position.y + dyPercent } }
+                : pc
+            ));
+            interactionState.dragStart = { x: point.clientX, y: point.clientY };
+        } else if (interactionState.isPanning) {
+            const point = getPoint(e);
+            const newX = point.clientX - interactionState.panStart.x;
+            const newY = point.clientY - interactionState.panStart.y;
+            setPan({ x: newX, y: newY });
+        }
     };
     
     const handlePanStart = (e: MouseEvent | TouchEvent) => {
@@ -351,22 +336,8 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       interactionState.isPanning = true;
       interactionState.isDragging = false;
       
-      if ('touches' in e) {
-          if (e.touches.length === 2) {
-              const t1 = e.touches[0];
-              const t2 = e.touches[1];
-              interactionState.pinchStart = {
-                  distance: Math.sqrt(Math.pow(t1.clientX - t2.clientX, 2) + Math.pow(t1.clientY - t2.clientY, 2)),
-                  angle: Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX) * (180 / Math.PI)
-              };
-          } else if (e.touches.length === 1) {
-              const point = getPoint(e);
-              interactionState.panStart = { x: point.clientX - panRef.current.x, y: point.clientY - panRef.current.y };
-          }
-      } else {
-        const point = getPoint(e);
-        interactionState.panStart = { x: point.clientX - panRef.current.x, y: point.clientY - panRef.current.y };
-      }
+      const point = getPoint(e);
+      interactionState.panStart = { x: point.clientX - panRef.current.x, y: point.clientY - panRef.current.y };
     }
 
     // Desktop
@@ -432,7 +403,6 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   const triggerCapture = () => {
     resetZoomAndPan();
     setSelectedPlacedCharmId(null);
-    // Delay capture to allow state to update and UI to re-render
     setCaptureRequest(true);
   };
 
@@ -512,12 +482,10 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       }
     };
     
-    // Use a timeout to ensure the UI has re-rendered after resetZoomAndPan
     const timer = setTimeout(captureAndSave, 50);
   
     return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [captureRequest]);
+  }, [captureRequest, getCanvasDataUri, isEditing, cartItemId, model, jewelryType, placedCharms, updateCartItem, addToCart, t, toast]);
 
   const charmsPanelDesktop = useMemo(() => (
     <CharmsPanel 
