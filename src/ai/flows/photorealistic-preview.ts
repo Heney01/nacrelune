@@ -28,25 +28,45 @@ const PhotorealisticPreviewOutputSchema = z.object({
 });
 type PhotorealisticPreviewOutput = z.infer<typeof PhotorealisticPreviewOutputSchema>;
 
-const previewPrompt = `You are a professional jewelry photographer AI. Your task is to create a stunning, photorealistic studio image of a piece of jewelry worn by a person, based on a provided reference design image.
+const previewPrompt = `You are an expert image generation AI with a specialized task. Your mission is to transform a 2D jewelry design into a photorealistic image of that jewelry being worn. You must follow the instructions with perfect precision.
 
-**Reference Image:**
-You will be given a simple digital reference image showing a piece of jewelry (a chain or hoop) with several flat, 2D charms placed on it. This reference dictates the *type* and *position* of the charms.
+### Context: The Reference Image
+You will be provided with a reference image. This image is a simple 2D preview showing a flat representation of a {{jewelryTypeName}} with several charms placed on it. This reference image is the absolute source of truth for the design.
 
-**Critical Instructions - How to interpret the reference:**
-1.  **From 2D to 3D:** You MUST transform the flat 2D charms from the reference image into realistic, three-dimensional metallic or enameled objects. They should have depth, texture, and reflect light correctly.
-2.  **Physical Attachment:** The charms are NOT stickers. Each charm must be physically and believably attached to the main jewelry chain or hoop, typically with a small, realistic metallic loop or bail.
-3.  **Natural Draping:** The charms must hang naturally from the chain, following the laws of gravity and the curve of the body. They should not appear stiff or pasted on.
-4.  **Realistic Chain:** The main chain or hoop itself must also be rendered as a realistic, high-quality metallic object.
+### Your Task: Transformation from 2D to 3D Photorealism
 
-**Overall Scene Requirements:**
--   **Jewelry Type:** The item is a {{jewelryTypeName}}. It must be worn naturally on the appropriate body part.
--   **Faithful Replication:** The number, type, and relative positions of the charms must be accurately replicated from the reference image.
--   **Photorealism:** The final output must be a high-quality, close-up studio photograph. Lighting should be soft and even, highlighting the materials' textures (metal, enamel). The model's skin should be realistic and well-lit.
--   **Background:** Use a neutral, clean, or softly blurred background (like a marble surface, a soft fabric, or a simple studio backdrop) to ensure the jewelry is the main focus.
-{{#if userPrompt}}
-- **User Context:** Incorporate this user-provided context into the scene: "{{userPrompt}}".
-{{/if}}
+Your job is to create a single, high-quality, photorealistic studio photograph of this exact piece of jewelry, worn by a person.
+
+### Step-by-Step Instructions (Mandatory):
+
+1.  **Identify and Replicate:**
+    *   Carefully examine the reference image. Identify **each and every charm** present.
+    *   You MUST replicate **only** the charms you see in the reference image.
+    *   Do NOT add, remove, or change any charms. The final image must contain the **exact same number and type of charms** as the reference.
+    *   The relative positioning of the charms on the chain must be faithfully preserved.
+
+2.  **Render in 3D:**
+    *   Transform the flat, 2D charms into realistic, three-dimensional objects. They must have depth, texture, and reflect light correctly as if they were made of metal or enamel.
+    *   Render the main chain or hoop as a realistic, high-quality metallic object.
+
+3.  **Ensure Physical Realism:**
+    *   Each charm is NOT a sticker. You must render a small, realistic metallic loop or bail that physically attaches each charm to the main chain.
+    *   The charms must hang naturally from the chain, obeying the laws of gravity and following the curve of the model's body. They must not appear stiff or pasted on.
+
+4.  **Compose the Final Photograph:**
+    *   The jewelry is a {{jewelryTypeName}}. It must be worn naturally on the appropriate body part (neck, wrist, etc.).
+    *   The final image must be a close-up studio photograph with soft, even lighting.
+    *   The background must be neutral and clean (e.g., soft gray, marble, studio backdrop) to keep the focus entirely on the jewelry.
+    {{#if userPrompt}}
+    *   **User Context:** Incorporate this user-provided context into the scene: "{{userPrompt}}".
+    {{/if}}
+
+### Final Quality Check (Before Output):
+Before generating the final image, verify:
+- Does my result have the exact same charms as the reference image? Yes/No.
+- Are the charms attached physically and hanging realistically? Yes/No.
+- Is the overall image a high-quality, photorealistic photograph? Yes/No.
+If the answer to any of these is No, you must restart your generation process to correct the errors.
 `;
 
 
