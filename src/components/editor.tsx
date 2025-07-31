@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { SuggestionSidebar } from './suggestion-sidebar';
 import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -25,6 +24,7 @@ import { CartWidget } from './cart-widget';
 import { useTranslations } from '@/hooks/use-translations';
 import { getCharmSuggestionsAction } from '@/app/actions';
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -183,8 +183,6 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   panRef.current = pan;
   const scaleRef = useRef(scale);
   scaleRef.current = scale;
-  const placedCharmsRef = useRef(placedCharms);
-  placedCharmsRef.current = placedCharms;
 
   const addCharmToCanvas = useCallback((
     charm: Charm, 
@@ -295,36 +293,45 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       e.preventDefault();
       handleZoom(e.deltaY, e.clientX, e.clientY);
     };
-
-    const handleMove = (e: MouseEvent | TouchEvent) => {
-        if (!interactionState.isDragging && !interactionState.isPanning) return;
-        
-        if ('preventDefault' in e && e.cancelable) e.preventDefault();
-
-        const canvasEl = canvasRef.current;
-        if (!canvasEl) return;
-
-        if (interactionState.isDragging && interactionState.activeCharmId) {
-            const point = getPoint(e);
-            const dx = point.clientX - interactionState.dragStart.x;
-            const dy = point.clientY - interactionState.dragStart.y;
-            const dxPercent = (dx / canvasEl.clientWidth) * 100 / scaleRef.current;
-            const dyPercent = (dy / canvasEl.clientHeight) * 100 / scaleRef.current;
-
-            setPlacedCharms(placedCharmsRef.current.map(pc =>
-              pc.id === interactionState.activeCharmId
-                ? { ...pc, position: { x: pc.position.x + dxPercent, y: pc.position.y + dyPercent } }
-                : pc
-            ));
-            interactionState.dragStart = { x: point.clientX, y: point.clientY };
-        } else if (interactionState.isPanning) {
-            const point = getPoint(e);
-            const newX = point.clientX - interactionState.panStart.x;
-            const newY = point.clientY - interactionState.panStart.y;
-            setPan({ x: newX, y: newY });
-        }
-    };
     
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+      if (!interactionState.isDragging && !interactionState.isPanning) return;
+      
+      const canvasEl = canvasRef.current;
+      if (!canvasEl) return;
+      
+      if ('preventDefault' in e && e.cancelable) e.preventDefault();
+      
+      if (interactionState.isDragging && interactionState.activeCharmId) {
+        const point = getPoint(e);
+        const dx = point.clientX - interactionState.dragStart.x;
+        const dy = point.clientY - interactionState.dragStart.y;
+        
+        const currentPlacedCharms = placedCharmsRef.current;
+        const charmToMove = currentPlacedCharms.find(pc => pc.id === interactionState.activeCharmId);
+        
+        if (charmToMove) {
+          const dxPercent = (dx / canvasEl.clientWidth) * 100 / scaleRef.current;
+          const dyPercent = (dy / canvasEl.clientHeight) * 100 / scaleRef.current;
+          
+          const newPlacedCharms = currentPlacedCharms.map(pc =>
+            pc.id === interactionState.activeCharmId
+            ? { ...pc, position: { x: pc.position.x + dxPercent, y: pc.position.y + dyPercent } }
+            : pc
+            );
+          setPlacedCharms(newPlacedCharms);
+        }
+        
+        interactionState.dragStart = { x: point.clientX, y: point.clientY };
+
+      } else if (interactionState.isPanning) {
+        const point = getPoint(e);
+        const newX = point.clientX - interactionState.panStart.x;
+        const newY = point.clientY - interactionState.panStart.y;
+        setPan({ x: newX, y: newY });
+      }
+    };
+
     const handlePanStart = (e: MouseEvent | TouchEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('.charm-on-canvas')) return;
@@ -339,7 +346,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       const point = getPoint(e);
       interactionState.panStart = { x: point.clientX - panRef.current.x, y: point.clientY - panRef.current.y };
     }
-
+    
     // Desktop
     canvas.addEventListener('mousedown', handlePanStart);
     canvas.addEventListener('wheel', handleWheel, { passive: false });
@@ -435,6 +442,9 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       throw error;
     }
   }, []);
+  
+  const placedCharmsRef = useRef(placedCharms);
+  placedCharmsRef.current = placedCharms;
 
   useEffect(() => {
     if (!captureRequest) return;
@@ -442,13 +452,15 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     const captureAndSave = async () => {
       try {
         const previewImage = await getCanvasDataUri();
-
+        
+        const currentPlacedCharms = placedCharmsRef.current;
+  
         if (isEditing && cartItemId) {
           const updatedItem = {
             id: cartItemId,
             model,
             jewelryType,
-            placedCharms,
+            placedCharms: currentPlacedCharms,
             previewImage
           };
           updateCartItem(cartItemId, updatedItem);
@@ -460,7 +472,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
           const newItem: Omit<CartItem, 'id'> = {
             model,
             jewelryType,
-            placedCharms,
+            placedCharms: currentPlacedCharms,
             previewImage: previewImage
           };
           addToCart(newItem);
@@ -482,10 +494,11 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       }
     };
     
+    // Use a small timeout to ensure the UI has reset before capturing
     const timer = setTimeout(captureAndSave, 50);
   
     return () => clearTimeout(timer);
-  }, [captureRequest, getCanvasDataUri, isEditing, cartItemId, model, jewelryType, placedCharms, updateCartItem, addToCart, t, toast]);
+  }, [captureRequest]);
 
   const charmsPanelDesktop = useMemo(() => (
     <CharmsPanel 
@@ -580,17 +593,17 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
               </div>
             </div>
           </header>
-        <main className={cn("flex-grow p-4 md:p-8 min-h-0", isMobile && "p-0 overflow-y-auto pb-[80px]")}>
-          <div className={cn("container mx-auto h-full", isMobile && "px-0")}>
-              <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 h-full", isMobile && "grid-cols-1 gap-0")}>
+        <main className={cn("flex-grow flex flex-col p-4 md:p-8 min-h-0", isMobile && "p-0 overflow-y-auto pb-[80px]")}>
+          <div className={cn("container mx-auto h-full flex flex-col", isMobile && "px-0")}>
+              <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0", isMobile && "grid-cols-1 gap-0")}>
               {!isMobile && (
                   <div className="lg:col-span-3">
                       {charmsPanelDesktop}
                   </div>
               )}
 
-              <div className={cn("lg:col-span-6 flex flex-col gap-4", isMobile && "order-first")}>
-                  <div className={cn("flex justify-between items-center gap-4", isMobile && "px-4 pt-4")}>
+              <div className={cn("lg:col-span-6 flex flex-col gap-4 min-h-0", isMobile && "order-first")}>
+                  <div className={cn("flex justify-between items-center gap-4 flex-shrink-0", isMobile && "px-4 pt-4")}>
                     <Button variant="ghost" asChild className={cn(isMobile ? "p-0 h-auto" : "")}>
                           <Link href={`/${locale}/?type=${jewelryType.id}`}>
                               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -614,7 +627,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                   </div>
                   <div
                       ref={canvasWrapperRef}
-                      className={cn("relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none grid place-items-center", isMobile && "rounded-none border-x-0")}
+                      className={cn("relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none grid place-items-center flex-shrink-0", isMobile && "rounded-none border-x-0")}
                   >
                       <div
                           ref={canvasRef}
@@ -663,41 +676,56 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                           <Button variant="secondary" size="icon" onClick={resetZoomAndPan}><Maximize /></Button>
                       </div>
                   </div>
-                  <Card className={cn(isMobile && "rounded-none border-x-0")}>
+                  <Card className={cn("flex-shrink-0", isMobile && "rounded-none border-x-0")}>
                       <CardHeader>
                           <CardTitle className="font-headline text-lg">{t('added_charms_title', {count: placedCharms.length})}</CardTitle>
                       </CardHeader>
                       <CardContent>
                           {placedCharms.length === 0 ? (
-                              <p className="text-muted-foreground text-sm">{t('added_charms_placeholder')}</p>
+                              <p className="text-muted-foreground text-sm text-center py-4">{t('added_charms_placeholder')}</p>
                           ) : (
-                              <ScrollArea className="h-24">
-                                  <ul className="space-y-2">
-                                      {placedCharms.map(pc => (
-                                          <li key={pc.id} 
-                                              className={cn("flex items-center justify-between text-sm p-1 rounded-md cursor-pointer",
-                                              selectedPlacedCharmId === pc.id ? 'bg-muted' : 'hover:bg-muted/50'
-                                              )}
-                                              onClick={() => handleCharmListClick(pc.id)}
-                                          >
-                                              <div className="flex items-center gap-2">
-                                                  <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={24} height={24} className="rounded-sm" data-ai-hint="jewelry charm" />
-                                                  <span>{pc.charm.name}</span>
-                                              </div>
-                                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); removeCharm(pc.id); }}>
-                                                  <X className="h-4 w-4" />
-                                              </Button>
-                                          </li>
-                                      ))}
-                                  </ul>
-                              </ScrollArea>
+                               <Carousel
+                                opts={{
+                                    align: "start",
+                                    slidesToScroll: isMobile ? 2 : 4,
+                                }}
+                                className="w-full"
+                                >
+                                <CarouselContent>
+                                    {placedCharms.map((pc) => (
+                                    <CarouselItem key={pc.id} className={cn(isMobile ? "basis-1/4" : "basis-1/5")}>
+                                        <div className="p-1">
+                                             <Card 
+                                                className={cn("p-2 aspect-square flex flex-col items-center justify-center cursor-pointer relative group",
+                                                    selectedPlacedCharmId === pc.id ? 'border-primary' : 'hover:border-primary/50'
+                                                )}
+                                                onClick={() => handleCharmListClick(pc.id)}
+                                             >
+                                                <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={40} height={40} className="w-10 h-10 object-contain" data-ai-hint="jewelry charm" />
+                                                <p className="text-xs text-center mt-1 truncate w-full">{pc.charm.name}</p>
+                                                <Button 
+                                                    variant="destructive" 
+                                                    size="icon" 
+                                                    className="absolute -top-2 -right-2 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    onClick={(e) => { e.stopPropagation(); removeCharm(pc.id); }}
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </Button>
+                                            </Card>
+                                        </div>
+                                    </CarouselItem>
+                                    ))}
+                                </CarouselContent>
+                                <CarouselPrevious className="hidden sm:flex" />
+                                <CarouselNext className="hidden sm:flex"/>
+                                </Carousel>
                           )}
                       </CardContent>
                   </Card>
               </div>
 
               {!isMobile && (
-                <div className="lg:col-span-3 flex flex-col gap-6">
+                <div className="lg:col-span-3 flex flex-col gap-6 min-h-0">
                   <SuggestionSidebar
                       charms={allCharms}
                       onGenerate={handleGenerateSuggestions}
@@ -735,7 +763,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                               />
                           </div>
                       </div>
-                      <ScrollArea className="flex-grow">
+                      <div className="flex-grow overflow-y-auto">
                           <CharmsPanel 
                               allCharms={allCharms} 
                               onAddCharm={addCharmFromCharmList} 
@@ -743,7 +771,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                               searchTerm={charmsSearchTerm}
                               onSearchTermChange={setCharmsSearchTerm}
                           />
-                      </ScrollArea>
+                      </div>
                   </SheetContent>
               </Sheet>
               <Sheet open={isSuggestionsSheetOpen} onOpenChange={setIsSuggestionsSheetOpen}>
