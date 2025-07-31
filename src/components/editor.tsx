@@ -642,8 +642,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
     const hasIssues = charmsWithStockInfo.some(c => !c.isAvailable);
 
-    // Sort from higher Y to lower Y so that lower charms are rendered last (and appear on top)
-    const sorted = [...charmsWithStockInfo].sort((a, b) => a.position.y - b.position.y);
+    // Sort from lower Y to higher Y so that higher charms are rendered last (and appear on top)
+    const sorted = [...charmsWithStockInfo].sort((a, b) => b.position.y - a.position.y);
     
     return { sortedPlacedCharms: sorted, hasStockIssues: hasIssues };
   }, [placedCharms, allCharms]);
@@ -894,5 +894,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
 
 
