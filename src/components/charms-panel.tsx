@@ -9,12 +9,13 @@ import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, Search, ZoomIn, PlusCircle } from 'lucide-react';
+import { Loader2, Search, ZoomIn, PlusCircle, Ban } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Input } from './ui/input';
 import { getCharmCategories } from '@/lib/data';
 import { useTranslations } from '@/hooks/use-translations';
+import { Badge } from './ui/badge';
 
 interface CharmsPanelProps {
     allCharms: Charm[];
@@ -71,24 +72,38 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
     }, [filteredCharms, charmCategories]);
     
     const renderCharmItem = (charm: Charm) => {
+        const isOutOfStock = (charm.quantity ?? 0) <= 0;
+
         const charmContent = (
              <Dialog>
                 <div
-                    className="relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card hover:bg-muted transition-colors aspect-square cursor-pointer"
+                    className={cn(
+                        "relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card transition-colors aspect-square",
+                        isOutOfStock ? "cursor-not-allowed bg-muted/60" : "hover:bg-muted cursor-pointer"
+                    )}
                     title={charm.name}
-                    onClick={() => onAddCharm(charm)}
+                    onClick={() => !isOutOfStock && onAddCharm(charm)}
                 >
+                    {isOutOfStock && (
+                        <Badge variant="destructive" className="absolute top-1 left-1 z-10 text-xs px-1.5 py-0.5">
+                            <Ban className="w-3 h-3 mr-1"/>
+                            {t('sold_out')}
+                        </Badge>
+                    )}
                     <Image
                         src={charm.imageUrl}
                         alt={charm.name}
                         width={48}
                         height={48}
-                        className="pointer-events-none p-1"
+                        className={cn("pointer-events-none p-1", isOutOfStock && "grayscale opacity-50")}
                         data-ai-hint="jewelry charm"
                     />
                     <p className="text-xs text-center mt-1 truncate">{charm.name}</p>
                     <DialogTrigger asChild>
-                         <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); }}>
+                         <div 
+                           className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" 
+                           onClick={(e) => { e.stopPropagation(); }}
+                         >
                             <Button variant="ghost" size="icon" className="h-6 w-6">
                                 <ZoomIn className="h-4 w-4" />
                             </Button>
@@ -103,12 +118,22 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                     <div className="mt-4 flex justify-center">
                         <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
                     </div>
+                     {isOutOfStock && (
+                        <Alert variant="destructive" className="mt-4">
+                            <Ban className="h-4 w-4" />
+                            <AlertTitle>{t('out_of_stock_title')}</AlertTitle>
+                            <AlertDescription>{t('out_of_stock_description')}</AlertDescription>
+                        </Alert>
+                    )}
                     <DialogFooter>
                         <DialogClose asChild>
                              <Button variant="outline">{t('close_button')}</Button>
                         </DialogClose>
                         <DialogClose asChild>
-                            <Button onClick={() => onAddCharm(charm)}><PlusCircle className="mr-2 h-4 w-4" />{t('add_to_design_button')}</Button>
+                            <Button onClick={() => onAddCharm(charm)} disabled={isOutOfStock}>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                {t('add_to_design_button')}
+                            </Button>
                         </DialogClose>
                     </DialogFooter>
                 </DialogContent>

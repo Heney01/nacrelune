@@ -14,7 +14,7 @@
     "model_selection_title": "Sélectionnez un Modèle",
     "model_selection_subtitle": "Sélectionnez un magnifique modèle de {jewelryTypeName} comme base pour votre création personnalisée.",
     "back_button": "Retour",
-    "select_button": "Sélectionner",
+    "select_button": "Sélectioncher",
     "footer_text": "© {year} Atelier à bijoux. Tous droits réservés.",
     "admin_area_link": "Espace Administrateur",
     "track_order_link": "Suivre ma commande",
@@ -84,7 +84,10 @@
     "add_to_design_button": "Ajouter à la création",
     "loading_error": "Erreur lors de la récupération des catégories de breloques",
     "loading": "Chargement...",
-    "close_button": "Fermer"
+    "close_button": "Fermer",
+    "sold_out": "Épuisé",
+    "out_of_stock_title": "Article épuisé",
+    "out_of_stock_description": "Cette breloque n'est plus en stock et ne peut pas être ajoutée."
   },
   "Admin": {
     "reorder_dialog_title": "Gérer la commande pour {itemName}",

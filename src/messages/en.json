@@ -84,7 +84,10 @@
     "add_to_design_button": "Add to Design",
     "loading_error": "Error loading charm categories",
     "loading": "Loading...",
-    "close_button": "Close"
+    "close_button": "Close",
+    "sold_out": "Sold Out",
+    "out_of_stock_title": "Item Sold Out",
+    "out_of_stock_description": "This charm is no longer in stock and cannot be added."
   },
   "Admin": {
     "reorder_dialog_title": "Manage Order for {itemName}",
