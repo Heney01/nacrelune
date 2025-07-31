@@ -498,7 +498,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     const timer = setTimeout(captureAndSave, 50);
   
     return () => clearTimeout(timer);
-  }, [captureRequest, getCanvasDataUri, isEditing, cartItemId, model, jewelryType, updateCartItem, addToCart, toast, t]);
+  }, [captureRequest]);
 
   const charmsPanelDesktop = useMemo(() => (
     <CharmsPanel 
@@ -706,7 +706,10 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                                                 <Button 
                                                     variant="destructive" 
                                                     size="icon" 
-                                                    className="absolute -top-2 -right-2 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    className={cn(
+                                                        "absolute -top-1.5 -right-1.5 h-5 w-5 transition-opacity",
+                                                        selectedPlacedCharmId === pc.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                                                    )}
                                                     onClick={(e) => { e.stopPropagation(); removeCharm(pc.id); }}
                                                 >
                                                     <X className="h-3 w-3" />
