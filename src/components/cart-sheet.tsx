@@ -7,7 +7,7 @@ import { useCart } from '@/hooks/use-cart';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, ShoppingCart, PlusCircle, Loader2 } from 'lucide-react';
+import { Trash2, ShoppingCart, PlusCircle, Loader2, Edit } from 'lucide-react';
 import React, { ReactNode, useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Card } from './ui/card';
@@ -22,8 +22,8 @@ import {
 import { useTranslations } from '@/hooks/use-translations';
 import { useParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { createOrder, SerializableCartItem } from '@/app/actions';
-import { CheckoutDialog } from './checkout-dialog';
+import { createOrder, SerializableCartItem, CreateOrderResult } from '@/app/actions';
+import { CheckoutDialog, StockErrorState } from './checkout-dialog';
 import { SuccessDialog } from './success-dialog';
 import type { CartItem } from '@/lib/types';
 
@@ -41,6 +41,8 @@ export function CartSheet({ children, open, onOpenChange }: {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [successData, setSuccessData] = useState<{orderNumber: string, email: string} | null>(null);
+  const [stockError, setStockError] = useState<StockErrorState | null>(null);
+
 
   const totalItems = cart.length;
   
@@ -56,8 +58,8 @@ export function CartSheet({ children, open, onOpenChange }: {
   
   const handleCheckout = async (email: string) => {
     setIsProcessing(true);
+    setStockError(null);
     try {
-      // Pass cart items directly, previewImage is already a data URL
       const serializableCart: SerializableCartItem[] = cart.map(item => ({
         id: item.id,
         model: item.model,
@@ -67,16 +69,23 @@ export function CartSheet({ children, open, onOpenChange }: {
           description: item.jewelryType.description
         },
         placedCharms: item.placedCharms,
-        previewImage: item.previewImage, // Pass the base64 PNG directly
+        previewImage: item.previewImage,
       }));
 
-      const result = await createOrder(serializableCart, email, locale);
+      const result: CreateOrderResult = await createOrder(serializableCart, email, locale);
       
       if (result.success && result.orderNumber && result.email) {
         clearCart();
-        setIsCheckoutOpen(false); // Close checkout dialog on success
+        setIsCheckoutOpen(false);
         setSuccessData({orderNumber: result.orderNumber, email: result.email});
-      } else {
+      } else if (!result.success && result.stockError) {
+        setStockError({
+          message: result.message,
+          unavailableModelIds: new Set(result.stockError.unavailableModelIds),
+          unavailableCharmIds: new Set(result.stockError.unavailableCharmIds),
+        });
+      }
+      else {
         throw new Error(result.message);
       }
     } catch (error: any) {
@@ -128,6 +137,7 @@ export function CartSheet({ children, open, onOpenChange }: {
               <Accordion type="multiple" className="space-y-4">
                 {cart.map((item) => {
                   const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+                  const editUrl = `/${locale}/?type=${item.jewelryType.id}&model=${item.model.id}&cartItemId=${item.id}`;
                   return (
                     <Card key={item.id} className="overflow-hidden">
                       <div className="p-4 flex items-start gap-4">
@@ -169,6 +179,14 @@ export function CartSheet({ children, open, onOpenChange }: {
                           <p className="text-sm font-bold mt-1">
                             {formatPrice(itemPrice)}
                           </p>
+                          <SheetClose asChild>
+                            <Button variant="outline" size="sm" asChild className="mt-2">
+                               <Link href={editUrl}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  {t('edit_item_button')}
+                               </Link>
+                            </Button>
+                          </SheetClose>
                         </div>
                         <Button
                           variant="ghost"
@@ -228,6 +246,7 @@ export function CartSheet({ children, open, onOpenChange }: {
         onOpenChange={setIsCheckoutOpen}
         onConfirm={handleCheckout}
         isProcessing={isProcessing}
+        stockError={stockError}
     />
     {successData && (
         <SuccessDialog

@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -11,7 +12,8 @@ import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
 import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm } from '@/lib/types';
 import { getCharmSuggestions as getCharmSuggestionsFlow, CharmSuggestionInput, CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
-
+import { z } from 'zod';
+import { getCharms as fetchCharms } from '@/lib/data';
 
 const getFileNameFromUrl = (url: string) => {
     if (!url) return null;
@@ -19,7 +21,7 @@ const getFileNameFromUrl = (url: string) => {
         const urlObj = new URL(url);
         if (urlObj.hostname === 'firebasestorage.googleapis.com') {
             const decodedPath = decodeURIComponent(urlObj.pathname);
-            const pathRegex = /\/o\/(.*)/;
+            const pathRegex = /o\/(.*)/;
             const match = decodedPath.match(pathRegex);
             if (match && match[1]) {
                 return match[1].split('?')[0]; // Remove query params
@@ -122,6 +124,8 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
     const name = formData.get('name') as string;
     const price = parseFloat(formData.get('price') as string);
     const quantity = parseInt(formData.get('quantity') as string, 10);
+    const width = parseFloat(formData.get('width') as string) || undefined;
+    const height = parseFloat(formData.get('height') as string) || undefined;
     const reorderUrl = formData.get('reorderUrl') as string;
     const locale = formData.get('locale') as string || 'fr';
 
@@ -143,6 +147,8 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
             name,
             price,
             quantity,
+            width,
+            height,
             displayImageUrl,
             editorImageUrl,
             reorderUrl,
@@ -313,6 +319,8 @@ export async function saveCharm(prevState: any, formData: FormData): Promise<{ s
     const description = formData.get('description') as string;
     const price = parseFloat(formData.get('price') as string);
     const quantity = parseInt(formData.get('quantity') as string, 10);
+    const width = parseFloat(formData.get('width') as string) || undefined;
+    const height = parseFloat(formData.get('height') as string) || undefined;
     const categoryIds = formData.getAll('categoryIds') as string[];
     const reorderUrl = formData.get('reorderUrl') as string;
     const locale = formData.get('locale') as string || 'fr';
@@ -332,6 +340,8 @@ export async function saveCharm(prevState: any, formData: FormData): Promise<{ s
             description,
             price,
             quantity,
+            width,
+            height,
             categoryIds: categoryIds, // Store array of string IDs
             imageUrl,
             reorderUrl,
@@ -465,6 +475,19 @@ export type SerializableCartItem = {
     previewImage: string;
 };
 
+export type StockError = {
+    unavailableModelIds: string[];
+    unavailableCharmIds: string[];
+}
+
+export type CreateOrderResult = {
+    success: boolean;
+    message: string;
+    orderNumber?: string;
+    email?: string;
+    stockError?: StockError;
+};
+
 export async function markAsOrdered(formData: FormData): Promise<{ success: boolean; message: string }> {
     const itemId = formData.get('itemId') as string;
     const itemType = formData.get('itemType') as string; // 'charms' or a jewelryTypeId like 'necklace'
@@ -534,7 +557,7 @@ export async function markAsRestocked(formData: FormData): Promise<{ success: bo
 }
 
 
-export async function createOrder(cartItems: SerializableCartItem[], email: string, locale: string): Promise<{ success: boolean; message: string; orderNumber?: string, email?: string }> {
+export async function createOrder(cartItems: SerializableCartItem[], email: string, locale: string): Promise<CreateOrderResult> {
     if (!cartItems || cartItems.length === 0) {
         return { success: false, message: 'Le panier est vide.' };
     }
@@ -544,22 +567,19 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
             const stockUpdates: Map<DocumentReference, { newQuantity: number; name: string }> = new Map();
             const itemDocsToFetch: Map<string, DocumentReference> = new Map();
             
-            // Step 1: Consolidate stock deduction requests
-            const stockDeductions = new Map<string, { count: number, name: string, type: string }>();
+            const stockDeductions = new Map<string, { count: number, name: string, type: string, id: string }>();
 
             for (const item of cartItems) {
-                // Models
                 const modelKey = `${item.jewelryType.id}/${item.model.id}`;
-                const currentModel = stockDeductions.get(modelKey) || { count: 0, name: item.model.name, type: item.jewelryType.id };
+                const currentModel = stockDeductions.get(modelKey) || { count: 0, name: item.model.name, type: item.jewelryType.id, id: item.model.id };
                 stockDeductions.set(modelKey, { ...currentModel, count: currentModel.count + 1 });
                 if (!itemDocsToFetch.has(modelKey)) {
                     itemDocsToFetch.set(modelKey, doc(db, item.jewelryType.id, item.model.id));
                 }
 
-                // Charms
                 for (const pc of item.placedCharms) {
                     const charmKey = `charms/${pc.charm.id}`;
-                    const currentCharm = stockDeductions.get(charmKey) || { count: 0, name: pc.charm.name, type: 'charms' };
+                    const currentCharm = stockDeductions.get(charmKey) || { count: 0, name: pc.charm.name, type: 'charms', id: pc.charm.id };
                     stockDeductions.set(charmKey, { ...currentCharm, count: currentCharm.count + 1 });
                     if (!itemDocsToFetch.has(charmKey)) {
                         itemDocsToFetch.set(charmKey, doc(db, 'charms', pc.charm.id));
@@ -567,29 +587,52 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
                 }
             }
 
-            // Step 2: Fetch all item documents and check stock
             const itemDocRefs = Array.from(itemDocsToFetch.values());
             const itemDocsSnapshots: DocumentSnapshot[] = [];
-            for (const ref of itemDocRefs) {
+             for (const ref of itemDocRefs) {
                 const docSnap = await transaction.get(ref);
                 itemDocsSnapshots.push(docSnap);
             }
             const itemDocsMap = new Map(itemDocsSnapshots.map(d => [d.ref.path, d]));
 
+            const unavailableItems = {
+                unavailableModelIds: new Set<string>(),
+                unavailableCharmIds: new Set<string>(),
+            };
 
             for (const [key, deduction] of Array.from(stockDeductions.entries())) {
                 const itemDoc = itemDocsMap.get(itemDocsToFetch.get(key)!.path);
                 if (!itemDoc || !itemDoc.exists()) {
-                    throw new Error(`L'article ${deduction.name} n'existe plus.`);
+                     if(deduction.type === 'charms') {
+                        unavailableItems.unavailableCharmIds.add(deduction.id);
+                     } else {
+                        unavailableItems.unavailableModelIds.add(deduction.id);
+                     }
+                } else {
+                    const currentStock = itemDoc.data().quantity || 0;
+                    if (currentStock < deduction.count) {
+                        if(deduction.type === 'charms') {
+                           unavailableItems.unavailableCharmIds.add(deduction.id);
+                        } else {
+                           unavailableItems.unavailableModelIds.add(deduction.id);
+                        }
+                    } else {
+                        stockUpdates.set(itemDoc.ref, { newQuantity: currentStock - deduction.count, name: deduction.name });
+                    }
                 }
-                const currentStock = itemDoc.data().quantity || 0;
-                if (currentStock < deduction.count) {
-                    throw new Error(`Le stock pour ${deduction.name} est insuffisant (${currentStock} disponibles, ${deduction.count} demandés).`);
-                }
-                stockUpdates.set(itemDoc.ref, { newQuantity: currentStock - deduction.count, name: deduction.name });
             }
 
-            // Step 3: Upload all preview images to Firebase Storage
+            if (unavailableItems.unavailableModelIds.size > 0 || unavailableItems.unavailableCharmIds.size > 0) {
+                 return { 
+                    success: false, 
+                    message: "Certains articles de votre panier ne sont plus en stock.",
+                    stockError: {
+                        unavailableModelIds: Array.from(unavailableItems.unavailableModelIds),
+                        unavailableCharmIds: Array.from(unavailableItems.unavailableCharmIds),
+                    }
+                };
+            }
+
             const uploadPromises = cartItems.map(async (item) => {
                 const storageRef = ref(storage, `order_previews/${item.id}-${Date.now()}.png`);
                 const uploadResult = await uploadString(storageRef, item.previewImage, 'data_url');
@@ -597,12 +640,10 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
             });
             const previewImageUrls = await Promise.all(uploadPromises);
 
-            // Step 4: Apply stock updates
             for (const [ref, update] of Array.from(stockUpdates.entries())) {
                 transaction.update(ref, { quantity: update.newQuantity });
             }
 
-            // Step 5: Prepare the order data
             const totalOrderPrice = cartItems.reduce((sum, item) => {
                 const modelPrice = item.model.price || 0;
                 const charmsPrice = item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
@@ -637,13 +678,12 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
             const orderRef = doc(collection(db, 'orders'));
             transaction.set(orderRef, { ...newOrderData, createdAt: serverTimestamp() });
             
-            // Step 6: Prepare email data
             const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@atelierabijoux.com';
             const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${supportEmail} en précisant votre numéro de commande (${orderNumber}).`;
             const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${supportEmail}">${supportEmail}</a> en précisant votre numéro de commande (${orderNumber}).</p>`;
             const trackingUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com'}/${locale}/orders/track?orderNumber=${orderNumber}`;
 
-            const mailText = `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalOrderPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.model.name} avec ${item.placedCharms.length} breloque(s)`).join('\n')}\n\nVous pouvez suivre votre commande ici : ${trackingUrl}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
+            const mailText = `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalOrderPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.model.name} avec ${item.placedCharms.length} breloque(s)`).join('\\n')}\n\nVous pouvez suivre votre commande ici : ${trackingUrl}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
             const mailHtml = `<h1>Merci pour votre commande !</h1><p>Bonjour,</p><p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${totalOrderPrice.toFixed(2)}€.</p><h2>Récapitulatif :</h2><ul>${cartItems.map(item => `<li>${item.model.name} avec ${item.placedCharms.length} breloque(s)</li>`).join('')}</ul><p>Vous pouvez suivre l'avancement de votre commande en cliquant sur ce lien : <a href="${trackingUrl}">${trackingUrl}</a>.</p><p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
 
             const mailDocData = {
@@ -810,7 +850,7 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
             returnMessage = `Email sent. ${orders.length} order(s) found.`;
             const ordersListText = orders.map(o => 
                 `- Commande ${o.orderNumber} (du ${o.createdAt}) - Statut : ${o.status}`
-            ).join('\n');
+            ).join('\\n');
             const ordersListHtml = orders.map(o => 
                 `<li>Commande <strong>${o.orderNumber}</strong> (du ${o.createdAt}) - Statut : ${o.status} - <a href="${baseUrl}/${locale}/orders/track?orderNumber=${o.orderNumber}">Suivre cette commande</a></li>`
             ).join('');
@@ -1078,5 +1118,15 @@ export async function getCharmSuggestionsAction(input: CharmSuggestionInput): Pr
     } catch (error: any) {
         console.error('[SERVER ACTION] Error calling AI flow:', error);
         return { success: false, error: error.message || "Une erreur est survenue lors de la génération des suggestions." };
+    }
+}
+
+export async function getRefreshedCharms(): Promise<{ success: boolean; charms?: Charm[], error?: string; }> {
+    try {
+        const charms = await fetchCharms();
+        return { success: true, charms };
+    } catch (error: any) {
+        console.error('[SERVER ACTION] Error refreshing charms:', error);
+        return { success: false, error: error.message || "Une erreur est survenue lors du rafraîchissement des breloques." };
     }
 }

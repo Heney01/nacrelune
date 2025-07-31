@@ -14,7 +14,7 @@
     "model_selection_title": "Sélectionnez un Modèle",
     "model_selection_subtitle": "Sélectionnez un magnifique modèle de {jewelryTypeName} comme base pour votre création personnalisée.",
     "back_button": "Retour",
-    "select_button": "Sélectionctionner",
+    "select_button": "Sélectioncher",
     "footer_text": "© {year} Atelier à bijoux. Tous droits réservés.",
     "admin_area_link": "Espace Administrateur",
     "track_order_link": "Suivre ma commande",
@@ -23,7 +23,10 @@
     "support_dialog_description": "Vous avez une question ou besoin d'aide avec votre commande ?",
     "support_dialog_instructions": "Vous pouvez nous joindre par e-mail. Copiez l'adresse ci-dessous ou utilisez le bouton pour ouvrir directement votre client de messagerie.",
     "support_email_copied": "Adresse e-mail du support copiée !",
-    "support_open_mail_button": "Ouvrir l'application de messagerie"
+    "support_open_mail_button": "Ouvrir l'application de messagerie",
+    "coming_soon": "Bientôt disponible",
+    "wip_title": "Projet en Construction",
+    "wip_description": "Bienvenue ! Ce projet est actuellement en cours de développement. De nouvelles fonctionnalités et de nouveaux modèles de bijoux seront ajoutés prochainement."
   },
   "Editor": {
     "charms_title": "Breloques",
@@ -33,7 +36,7 @@
     "add_to_cart_button": "Ajouter au Panier",
     "update_item_button": "Mettre à jour l'article",
     "added_charms_title": "Breloques ajoutées ({count})",
-    "added_charms_placeholder": "Faites glisser ou cliquez sur les breloques pour les ajouter à votre bijou.",
+    "added_charms_placeholder": "Cliquez sur les breloques pour les ajouter à votre bijou.",
     "ai_suggestions_title": "Suggestions de l'IA",
     "ai_suggestions_description": "Laissez notre IA vous aider à trouver l'emplacement parfait pour vos breloques.",
     "preferences_label": "Vos préférences (Facultatif)",
@@ -44,17 +47,25 @@
     "suggestions_placeholder_title": "Vos suggestions créatives apparaîtront ici.",
     "recommended_badge": "Recommandé",
     "toast_error_title": "Oups ! Un problème est survenu.",
-    "toast_item_added_title": "Ajouté au panier",
-    "toast_item_added_description": "{modelName} a été ajouté à votre panier.",
-    "toast_item_updated_title": "Article mis à jour",
-    "toast_item_updated_description": "Votre création pour {modelName} a été mise à jour dans le panier."
+    "photorealistic_preview_title": "Aperçu Photoréaliste",
+    "photorealistic_preview_description": "Générez une photo réaliste de votre création.",
+    "photorealistic_preview_prompt_label": "Contexte de la photo (facultatif)",
+    "photorealistic_preview_prompt_placeholder": "ex: sur une plage, dans une boîte cadeau, sur du marbre...",
+    "photorealistic_preview_button": "Générer l'aperçu",
+    "photorealistic_preview_modal_title": "Aperçu photoréaliste",
+    "photorealistic_preview_modal_loading": "Votre image est en cours de création par notre IA. Cela peut prendre un moment...",
+    "photorealistic_preview_modal_done": "Voici votre aperçu photoréaliste !",
+    "close_button": "Fermer",
+    "stock_issue_tooltip": "Stock insuffisant pour cette breloque."
   },
   "Cart": {
     "title": "Votre Panier",
     "item_count": "({count})",
+    "item_count_zero": "Aucune breloque",
     "empty_title": "Votre panier est vide",
     "empty_description": "Trouvez la pièce parfaite pour commencer votre création.",
     "remove_item": "Supprimer l'article",
+    "edit_item_button": "Modifier",
     "total": "Total",
     "create_new_jewel_button": "Créer un nouveau bijou",
     "view_charms_action": "Voir les breloques ({count})",
@@ -64,7 +75,8 @@
     "price": "{price, number, ::currency/EUR}",
     "checkout_success_title": "Commande passée !",
     "checkout_success_description": "Votre commande a été passée avec succès.",
-    "checkout_error_title": "Erreur de commande"
+    "checkout_error_title": "Erreur de commande",
+    "sold_out": "Épuisé"
   },
   "CharmsPanel": {
     "title": "Breloques",
@@ -72,7 +84,10 @@
     "add_to_design_button": "Ajouter à la création",
     "loading_error": "Erreur lors de la récupération des catégories de breloques",
     "loading": "Chargement...",
-    "close_button": "Fermer"
+    "close_button": "Fermer",
+    "sold_out": "Épuisé",
+    "out_of_stock_title": "Article épuisé",
+    "out_of_stock_description": "Cette breloque n'est plus en stock et ne peut pas être ajoutée."
   },
   "Admin": {
     "reorder_dialog_title": "Gérer la commande pour {itemName}",
@@ -144,7 +159,9 @@
     "success_title": "Merci pour votre commande !",
     "success_order_number": "Votre numéro de commande",
     "success_description": "Un résumé de votre commande a été envoyé à {email}. Vous serez notifié(e) lorsque votre création sera expédiée.",
-    "success_close_button": "Fermer"
+    "success_close_button": "Fermer",
+    "stock_error_title": "Certains articles sont en rupture de stock",
+    "stock_error_description": "Veuillez revoir les articles surlignés en rouge dans votre panier avant de continuer."
   },
    "OrderStatus": {
     "commandée": "Commandée",
@@ -172,5 +189,3 @@
     "tracking_number_copied": "Numéro de suivi copié !"
   }
 }
-
-    

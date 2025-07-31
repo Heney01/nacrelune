@@ -45,7 +45,7 @@ const ImagePicker = ({ name, label, defaultUrl }: { name: string; label: string;
             <div className="flex items-center gap-4">
                 <div className="w-24 h-24 border rounded-md flex items-center justify-center bg-muted overflow-hidden">
                     {preview ? (
-                        <Image src={preview} alt="Aperçu" width={96} height={96} className="object-cover" />
+                        <Image src={preview} alt="Aperçu" width={96} height={96} className="object-contain" />
                     ) : (
                         <UploadCloud className="text-muted-foreground" />
                     )}

@@ -23,7 +23,10 @@
     "support_dialog_description": "Have a question or need help with your order?",
     "support_dialog_instructions": "You can reach us by email. Copy the address below or use the button to open your mail client directly.",
     "support_email_copied": "Support email address copied!",
-    "support_open_mail_button": "Open Mail App"
+    "support_open_mail_button": "Open Mail App",
+    "coming_soon": "Coming Soon",
+    "wip_title": "Project Under Construction",
+    "wip_description": "Welcome! This project is currently under development. New features and jewelry models will be added soon."
   },
   "Editor": {
     "charms_title": "Charms",
@@ -33,7 +36,7 @@
     "add_to_cart_button": "Add to Cart",
     "update_item_button": "Update Item",
     "added_charms_title": "Added Charms ({count})",
-    "added_charms_placeholder": "Drag or click charms to add them to your jewelry.",
+    "added_charms_placeholder": "Click charms to add them to your jewelry.",
     "ai_suggestions_title": "AI Suggestions",
     "ai_suggestions_description": "Let our AI help you find the perfect placement for your charms.",
     "preferences_label": "Your Preferences (Optional)",
@@ -44,17 +47,25 @@
     "suggestions_placeholder_title": "Your creative suggestions will appear here.",
     "recommended_badge": "Recommended",
     "toast_error_title": "Oops! Something went wrong.",
-    "toast_item_added_title": "Added to Cart",
-    "toast_item_added_description": "{modelName} has been added to your cart.",
-    "toast_item_updated_title": "Item Updated",
-    "toast_item_updated_description": "Your design for {modelName} has been updated in the cart."
+    "photorealistic_preview_title": "Photorealistic Preview",
+    "photorealistic_preview_description": "Generate a lifelike photo of your creation.",
+    "photorealistic_preview_prompt_label": "Photo Context (Optional)",
+    "photorealistic_preview_prompt_placeholder": "e.g., on a beach, in a gift box, on marble...",
+    "photorealistic_preview_button": "Generate Preview",
+    "photorealistic_preview_modal_title": "Photorealistic Preview",
+    "photorealistic_preview_modal_loading": "Your image is being created by our AI. This may take a moment...",
+    "photorealistic_preview_modal_done": "Here is your photorealistic preview!",
+    "close_button": "Close",
+    "stock_issue_tooltip": "Not enough stock for this charm."
   },
   "Cart": {
     "title": "Your Cart",
     "item_count": "({count})",
+    "item_count_zero": "No charms",
     "empty_title": "Your cart is empty",
     "empty_description": "Find the perfect piece to start your creation.",
     "remove_item": "Remove item",
+    "edit_item_button": "Edit",
     "total": "Total",
     "create_new_jewel_button": "Create a New Jewel",
     "view_charms_action": "View Charms ({count})",
@@ -62,9 +73,8 @@
     "preview_description": "Here is a preview of your custom creation.",
     "checkout_button": "Checkout",
     "price": "{price, number, ::currency/USD}",
-    "checkout_success_title": "Order Placed!",
-    "checkout_success_description": "Your order has been successfully placed.",
-    "checkout_error_title": "Order Error"
+    "checkout_error_title": "Order Error",
+    "sold_out": "Sold Out"
   },
   "CharmsPanel": {
     "title": "Charms",
@@ -72,7 +82,10 @@
     "add_to_design_button": "Add to Design",
     "loading_error": "Error loading charm categories",
     "loading": "Loading...",
-    "close_button": "Close"
+    "close_button": "Close",
+    "sold_out": "Sold Out",
+    "out_of_stock_title": "Item Sold Out",
+    "out_of_stock_description": "This charm is no longer in stock and cannot be added."
   },
   "Admin": {
     "reorder_dialog_title": "Manage Order for {itemName}",
@@ -144,7 +157,9 @@
     "success_title": "Thank you for your order!",
     "success_order_number": "Your order number",
     "success_description": "A summary of your order has been sent to {email}. You will be notified when your creation is shipped.",
-    "success_close_button": "Close"
+    "success_close_button": "Close",
+    "stock_error_title": "Some Items Are Out of Stock",
+    "stock_error_description": "Please review the items highlighted in red in your cart before proceeding."
   },
   "OrderStatus": {
     "commandée": "Ordered",
@@ -172,5 +187,3 @@
     "tracking_number_copied": "Tracking number copied!"
   }
 }
-
-    

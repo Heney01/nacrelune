@@ -424,8 +424,8 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                                             <TableRow key={charm.id}>
                                                                 <TableCell>
                                                                     <Dialog><DialogTrigger asChild>
-                                                                        <div className="relative w-16 h-16 cursor-pointer group">
-                                                                            <Image src={charm.imageUrl} alt={charm.name} width={64} height={64} className="w-16 h-16 object-cover rounded-md bg-white p-1 border group-hover:opacity-75" />
+                                                                        <div className="relative w-16 h-16 cursor-pointer group bg-white rounded-md p-1 border">
+                                                                            <Image src={charm.imageUrl} alt={charm.name} width={64} height={64} className="object-contain w-full h-full group-hover:opacity-75" />
                                                                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-md"><ZoomIn className="text-white h-6 w-6" /></div>
                                                                         </div>
                                                                     </DialogTrigger><DialogContent>
@@ -487,8 +487,8 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                                     <Card key={charm.id} className="p-4">
                                                         <div className="flex gap-4">
                                                             <Dialog><DialogTrigger asChild>
-                                                                <div className="relative w-16 h-16 cursor-pointer group flex-shrink-0">
-                                                                    <Image src={charm.imageUrl} alt={charm.name} width={64} height={64} className="w-16 h-16 object-cover rounded-md group-hover:opacity-75" />
+                                                                <div className="relative w-16 h-16 cursor-pointer group flex-shrink-0 bg-white rounded-md p-1 border">
+                                                                    <Image src={charm.imageUrl} alt={charm.name} width={64} height={64} className="object-contain w-full h-full group-hover:opacity-75" />
                                                                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
                                                                         <ZoomIn className="text-white h-6 w-6" />
                                                                     </div>

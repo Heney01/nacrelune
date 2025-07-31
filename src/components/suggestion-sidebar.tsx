@@ -63,7 +63,7 @@ export function SuggestionSidebar({
           {t('ai_suggestions_description')}
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex-grow flex flex-col gap-4">
+      <CardContent className="flex-grow flex flex-col gap-4 min-h-0">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="preferences" className="font-bold">{t('preferences_label')}</Label>
@@ -91,7 +91,7 @@ export function SuggestionSidebar({
             </Alert>
         )}
 
-        <div className="flex-grow mt-4">
+        <div className="flex-grow mt-4 min-h-0">
             {isLoading && (
               <div className="space-y-4">
                 <Skeleton className="h-24 w-full" />
@@ -106,43 +106,43 @@ export function SuggestionSidebar({
                 </div>
             )}
              {!isLoading && suggestions.length > 0 && (
-              <ScrollArea className="h-full pr-4 -mr-4">
-                <div className="space-y-4">
-                  {suggestions.map((suggestion, index) => {
-                    const charm = charms.find(c => c.name === suggestion.charmName);
-                    return (
-                      <Card key={index} className="bg-muted/50">
-                        <CardHeader className="pb-4">
-                           <div className="flex items-start gap-4">
-                            {charm && (
-                                <Image 
-                                    src={charm.imageUrl} 
-                                    alt={charm.name}
-                                    width={40}
-                                    height={40}
-                                    className="rounded-md border bg-white p-1"
-                                />
-                            )}
-                            <div className="flex-grow">
-                                <CardTitle className="text-base">{suggestion.charmName}</CardTitle>
-                                <Badge variant="outline" className="mt-1 border-primary/50 text-primary bg-primary/10">{t('recommended_badge')}</Badge>
-                            </div>
-                           </div>
-                        </CardHeader>
-                        <CardContent className="pt-0 pb-4">
-                          <p className="text-sm text-muted-foreground italic">"{suggestion.justification}"</p>
-                        </CardContent>
-                        <CardFooter>
-                           <Button size="sm" className="w-full" onClick={() => onApplySuggestion(suggestion)}>
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                Appliquer la suggestion
-                           </Button>
-                        </CardFooter>
-                      </Card>
-                    )
-                  })}
-                </div>
-              </ScrollArea>
+                <ScrollArea className={cn("h-full", isMobile ? "h-[300px]" : "h-full")}>
+                  <div className="space-y-4 pr-4">
+                    {suggestions.map((suggestion, index) => {
+                      const charm = charms.find(c => c.name === suggestion.charmName);
+                      return (
+                        <Card key={index} className="bg-muted/50">
+                          <CardHeader className="pb-4">
+                             <div className="flex items-start gap-4">
+                              {charm && (
+                                  <Image 
+                                      src={charm.imageUrl} 
+                                      alt={charm.name}
+                                      width={40}
+                                      height={40}
+                                      className="rounded-md border bg-white p-1"
+                                  />
+                              )}
+                              <div className="flex-grow">
+                                  <CardTitle className="text-base">{suggestion.charmName}</CardTitle>
+                                  <Badge variant="outline" className="mt-1 border-primary/50 text-primary bg-primary/10">{t('recommended_badge')}</Badge>
+                              </div>
+                             </div>
+                          </CardHeader>
+                          <CardContent className="pt-0 pb-4">
+                            <p className="text-sm text-muted-foreground italic">"{suggestion.justification}"</p>
+                          </CardContent>
+                          <CardFooter>
+                             <Button size="sm" className="w-full" onClick={() => onApplySuggestion(suggestion)}>
+                                  <PlusCircle className="mr-2 h-4 w-4" />
+                                  Appliquer la suggestion
+                             </Button>
+                          </CardFooter>
+                        </Card>
+                      )
+                    })}
+                  </div>
+                </ScrollArea>
              )}
         </div>
       </CardContent>
