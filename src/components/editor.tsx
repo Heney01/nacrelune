@@ -76,10 +76,10 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
             ref={charmRef}
             onMouseDown={(e) => onDragStart(e, placed.id)}
             className={cn(
-                "absolute group charm-on-canvas cursor-pointer p-1 rounded-full select-none flex items-center justify-center",
+                "absolute group charm-on-canvas cursor-pointer select-none flex items-center justify-center",
                 {
-                    'border-2 border-primary border-dashed': isSelected,
-                    'hover:border-2 hover:border-primary/50 hover:border-dashed': !isSelected,
+                    'outline-2 outline-primary outline-dashed': isSelected,
+                    'hover:outline-2 hover:outline-primary/50 hover:outline-dashed': !isSelected,
                 }
             )}
             style={{
@@ -97,8 +97,8 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
                 alt={placed.charm.name}
                 width={pixelSize.width}
                 height={pixelSize.height}
-                className="pointer-events-none rounded-full select-none"
-                style={{ width: '100%', height: 'auto' }}
+                className="pointer-events-none select-none object-contain"
+                style={{ width: '100%', height: '100%' }}
                 data-ai-hint="jewelry charm"
                 draggable="false"
             />
@@ -433,53 +433,53 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   }, []);
 
   useEffect(() => {
-    if (captureRequest) {
-      const captureAndSave = async () => {
-        try {
-          const previewImage = await getCanvasDataUri();
+    if (!captureRequest) return;
+  
+    const captureAndSave = async () => {
+      try {
+        const previewImage = await getCanvasDataUri();
 
-          if (isEditing && cartItemId) {
-            const updatedItem = {
-              id: cartItemId,
-              model,
-              jewelryType,
-              placedCharms,
-              previewImage
-            };
-            updateCartItem(cartItemId, updatedItem);
-            toast({
-              title: t('toast_item_updated_title'),
-              description: t('toast_item_updated_description', { modelName: model.name }),
-            });
-          } else {
-            const newItem: Omit<CartItem, 'id'> = {
-              model,
-              jewelryType,
-              placedCharms,
-              previewImage: previewImage
-            };
-            addToCart(newItem);
-            toast({
-              title: t('toast_item_added_title'),
-              description: t('toast_item_added_description', { modelName: model.name }),
-            });
-          }
-          setIsCartSheetOpen(true);
-        } catch (error) {
-          console.error("Erreur lors de la capture du canvas:", error);
+        if (isEditing && cartItemId) {
+          const updatedItem = {
+            id: cartItemId,
+            model,
+            jewelryType,
+            placedCharms,
+            previewImage
+          };
+          updateCartItem(cartItemId, updatedItem);
           toast({
-            variant: "destructive",
-            title: t('toast_error_title'),
-            description: "La capture de l'image a échoué."
+            title: t('toast_item_updated_title'),
+            description: t('toast_item_updated_description', { modelName: model.name }),
           });
-        } finally {
-          setCaptureRequest(false);
+        } else {
+          const newItem: Omit<CartItem, 'id'> = {
+            model,
+            jewelryType,
+            placedCharms,
+            previewImage: previewImage
+          };
+          addToCart(newItem);
+          toast({
+            title: t('toast_item_added_title'),
+            description: t('toast_item_added_description', { modelName: model.name }),
+          });
         }
-      };
+        setIsCartSheetOpen(true);
+      } catch (error) {
+        console.error("Erreur lors de la capture du canvas:", error);
+        toast({
+          variant: "destructive",
+          title: t('toast_error_title'),
+          description: "La capture de l'image a échoué."
+        });
+      } finally {
+        setCaptureRequest(false);
+      }
+    };
 
-      captureAndSave();
-    }
-  }, [captureRequest, getCanvasDataUri, isEditing, cartItemId, model, jewelryType, placedCharms, updateCartItem, addToCart, toast, t]);
+    captureAndSave();
+  }, [captureRequest]);
 
   const charmsPanelDesktop = useMemo(() => (
     <CharmsPanel 
