@@ -30,25 +30,6 @@ export function PhotorealisticPreviewer({ jewelryType, model, placedCharms, getC
   const [sourceImage, setSourceImage] = useState<string | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const t = useTranslations('Editor');
-  
-  // Helper to get a data URI for an image URL
-  const toDataURL = async (url: string) => {
-    try {
-        const response = await fetch(url);
-        const blob = await response.blob();
-        return new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-    } catch(e) {
-        console.error("Failed to convert URL to Data URI:", e);
-        // Fallback for simplicity in this example
-        return url;
-    }
-  }
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,21 +40,19 @@ export function PhotorealisticPreviewer({ jewelryType, model, placedCharms, getC
     setSourceImage(null);
 
     try {
-      const baseJewelryImageUri = await toDataURL(model.editorImageUrl);
+      const baseJewelryImageUri = model.editorImageUrl;
       setSourceImage(baseJewelryImageUri); // Show the base model as source
 
-      const charmsWithDataUris = await Promise.all(
-        placedCharms.map(async (pc) => ({
-          charmName: pc.charm.name,
-          charmImageUri: await toDataURL(pc.charm.imageUrl),
-          position: pc.position
-        }))
-      );
+      const charmsWithUris = placedCharms.map((pc) => ({
+        charmName: pc.charm.name,
+        charmImageUri: pc.charm.imageUrl, // Pass URL directly
+        position: pc.position
+      }));
       
       const input: PhotorealisticPreviewV2Input = {
         baseJewelryImageUri,
         jewelryTypeName: jewelryType.name,
-        charms: charmsWithDataUris,
+        charms: charmsWithUris,
         userPrompt
       };
 

@@ -15,7 +15,7 @@ import { z } from 'genkit';
 
 const CharmPlacementSchema = z.object({
   charmName: z.string().describe('The name of the charm.'),
-  charmImageUri: z.string().describe('The data URI of the charm\'s image.'),
+  charmImageUri: z.string().describe("The URL of the charm's image."),
   position: z.object({
     x: z.number().describe('The X coordinate in percentage (0-100) from the left edge.'),
     y: z.number().describe('The Y coordinate in percentage (0-100) from the top edge.'),
@@ -24,7 +24,7 @@ const CharmPlacementSchema = z.object({
 
 export const PhotorealisticPreviewV2InputSchema = z.object({
   baseJewelryImageUri: z.string().describe(
-    "The data URI of the base jewelry image (necklace, bracelet, etc.)."
+    "The URL of the base jewelry image (necklace, bracelet, etc.)."
   ),
   jewelryTypeName: z.string().describe('The type of jewelry (e.g., "necklace", "bracelet").'),
   charms: z.array(CharmPlacementSchema).describe('An array of charms to be placed on the jewelry.'),
