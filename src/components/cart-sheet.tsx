@@ -219,13 +219,15 @@ export function CartSheet({ children, open, onOpenChange }: {
         )}
       </SheetContent>
     </Sheet>
-    <CheckoutDialog 
-        isOpen={isCheckoutOpen} 
-        onOpenChange={setIsCheckoutOpen}
-        onOrderCreated={handleOrderCreated}
-        stockError={stockError}
-        setStockError={setStockError}
-    />
+    {isCheckoutOpen && (
+      <CheckoutDialog 
+          isOpen={isCheckoutOpen} 
+          onOpenChange={setIsCheckoutOpen}
+          onOrderCreated={handleOrderCreated}
+          stockError={stockError}
+          setStockError={setStockError}
+      />
+    )}
     {successData && (
         <SuccessDialog
             isOpen={!!successData}
