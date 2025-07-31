@@ -82,7 +82,7 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                 <Component
                     asChild={isDialogTrigger}
                     onClick={() => {
-                        if (!isOutOfStock) {
+                        if (!isDialogTrigger && !isOutOfStock) {
                             onAddCharm(charm);
                         }
                     }}
@@ -90,7 +90,7 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                      <div
                         className={cn(
                             "relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card transition-colors aspect-[3/4]",
-                            isOutOfStock ? "cursor-pointer bg-muted/60" : "hover:bg-muted cursor-pointer"
+                             isOutOfStock ? "cursor-pointer bg-muted/60" : "hover:bg-muted cursor-pointer"
                         )}
                         title={charm.name}
                     >
@@ -212,4 +212,3 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
         </Card>
     );
 }
-
