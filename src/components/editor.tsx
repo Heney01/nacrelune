@@ -31,11 +31,12 @@ interface PlacedCharmComponentProps {
     isSelected: boolean;
     onDragStart: (e: React.MouseEvent<HTMLDivElement> | TouchEvent, charmId: string) => void;
     onDelete: (charmId: string) => void;
+    onRotate: (charmId: string, newRotation: number) => void;
     pixelSize: { width: number; height: number; };
     scale: number;
 }
   
-const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDelete, pixelSize, scale }: PlacedCharmComponentProps) => {
+const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDelete, onRotate, pixelSize, scale }: PlacedCharmComponentProps) => {
     const charmRef = useRef<HTMLDivElement>(null);
 
     const handleDelete = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -62,11 +63,19 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
         };
     }, [onDragStart, placed.id]);
 
+    const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const rotationAmount = e.deltaY > 0 ? 10 : -10; // Rotate by 10 degrees
+        onRotate(placed.id, placed.rotation + rotationAmount);
+    };
+
 
     return (
         <div
             ref={charmRef}
             onMouseDown={(e) => onDragStart(e, placed.id)}
+            onWheel={handleWheel}
             className={cn(
                 "absolute group charm-on-canvas cursor-pointer select-none flex items-center justify-center",
                 {
@@ -243,6 +252,12 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     const point = 'touches' in e ? e.touches[0] : e;
     interactionState.dragStart = { x: point.clientX, y: point.clientY };
   }, [interactionState]);
+  
+  const handleRotateCharm = useCallback((charmId: string, newRotation: number) => {
+    setPlacedCharms(prev =>
+      prev.map(pc => (pc.id === charmId ? { ...pc, rotation: newRotation } : pc))
+    );
+  }, []);
 
 
   useEffect(() => {
@@ -276,6 +291,8 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     };
 
     const handleWheel = (e: WheelEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('.charm-on-canvas')) return;
       e.preventDefault();
       handleZoom(e.deltaY, e.clientX, e.clientY);
     };
@@ -416,7 +433,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     resetZoomAndPan();
     setSelectedPlacedCharmId(null);
     // Delay capture to allow state to update and UI to re-render
-    setTimeout(() => setCaptureRequest(true), 50);
+    setCaptureRequest(true);
   };
 
   const handleAddToCart = () => {
@@ -495,8 +512,11 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       }
     };
     
-    captureAndSave();
-  }, [captureRequest, getCanvasDataUri, isEditing, cartItemId, model, jewelryType, placedCharms, updateCartItem, addToCart, toast, t]);
+    // Use a timeout to ensure the UI has re-rendered after resetZoomAndPan
+    const timer = setTimeout(captureAndSave, 50);
+  
+    return () => clearTimeout(timer);
+  }, [captureRequest]);
 
   const charmsPanelDesktop = useMemo(() => (
     <CharmsPanel 
@@ -661,6 +681,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                                   isSelected={selectedPlacedCharmId === placed.id}
                                   onDragStart={handleDragStart}
                                   onDelete={removeCharm}
+                                  onRotate={handleRotateCharm}
                                   pixelSize={pixelSize}
                                   scale={scale}
                               />
