@@ -569,8 +569,8 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   return (
     <>
       <CartSheet open={isCartSheetOpen} onOpenChange={setIsCartSheetOpen} />
-      <div className={cn("flex flex-col", isMobile ? "h-[calc(100dvh)]" : "min-h-screen")}>
-        <header className="p-4 border-b">
+      <div className={cn("flex flex-col", isMobile ? "h-[calc(100dvh)]" : "h-screen")}>
+        <header className="p-4 border-b flex-shrink-0">
             <div className="container mx-auto flex justify-between items-center">
               <Link href={`/${locale}`} className="flex items-center gap-2">
                 <BrandLogo className="h-8 w-auto text-foreground" />
@@ -580,8 +580,8 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
               </div>
             </div>
           </header>
-        <main className={cn("flex-grow p-4 md:p-8", isMobile && "p-0 overflow-y-auto pb-[80px]")}>
-          <div className={cn("container mx-auto", isMobile && "px-0")}>
+        <main className={cn("flex-grow p-4 md:p-8 min-h-0", isMobile && "p-0 overflow-y-auto pb-[80px]")}>
+          <div className={cn("container mx-auto h-full", isMobile && "px-0")}>
               <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 h-full", isMobile && "grid-cols-1 gap-0")}>
               {!isMobile && (
                   <div className="lg:col-span-3">
