@@ -177,6 +177,8 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     dragStart: { x: 0, y: 0 },
     activeCharmId: null as string | null,
     panStart: { x: 0, y: 0 },
+    isPinching: false,
+    pinchInitialDist: 0,
   }).current;
 
   const panRef = useRef(pan);
@@ -258,20 +260,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     );
   }, []);
 
-
-  useEffect(() => {
-    const canvas = canvasWrapperRef.current;
-    if (!canvas) return;
-
-    const getPoint = (e: MouseEvent | TouchEvent) => 'touches' in e ? e.touches[0] : e;
-
-    const handleInteractionEnd = () => {
-      interactionState.isDragging = false;
-      interactionState.isPanning = false;
-      interactionState.activeCharmId = null;
-    };
-    
-    const handleZoom = (delta: number, centerX: number, centerY: number) => {
+  const handleZoom = useCallback((delta: number, centerX: number, centerY: number) => {
       if (!canvasWrapperRef.current) return;
   
       const zoomSensitivity = 0.001;
@@ -287,8 +276,39 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   
       setScale(clampedScale);
       setPan({ x: newPanX, y: newPanY });
+    }, []);
+
+  useEffect(() => {
+    const canvas = canvasWrapperRef.current;
+    if (!canvas) return;
+
+    const getPoint = (e: MouseEvent | TouchEvent) => 'touches' in e ? e.touches[0] : e;
+    
+    const getTouchCenter = (touches: TouchList) => {
+        const t1 = touches[0];
+        const t2 = touches[1];
+        return {
+            x: (t1.clientX + t2.clientX) / 2,
+            y: (t1.clientY + t2.clientY) / 2,
+        };
     };
 
+    const getTouchDistance = (touches: TouchList) => {
+        const t1 = touches[0];
+        const t2 = touches[1];
+        return Math.sqrt(
+            Math.pow(t1.clientX - t2.clientX, 2) +
+            Math.pow(t1.clientY - t2.clientY, 2)
+        );
+    };
+
+    const handleInteractionEnd = () => {
+      interactionState.isDragging = false;
+      interactionState.isPanning = false;
+      interactionState.isPinching = false;
+      interactionState.activeCharmId = null;
+    };
+    
     const handleWheel = (e: globalThis.WheelEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('.charm-on-canvas')) return;
@@ -297,14 +317,12 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     };
     
     const handleMove = (e: MouseEvent | TouchEvent) => {
-      if (!interactionState.isDragging && !interactionState.isPanning) return;
-      
-      const canvasEl = canvasRef.current;
-      if (!canvasEl) return;
       
       if ('preventDefault' in e && e.cancelable) e.preventDefault();
-      
+
       if (interactionState.isDragging && interactionState.activeCharmId) {
+        const canvasEl = canvasRef.current;
+        if (!canvasEl) return;
         const point = getPoint(e);
         const dx = point.clientX - interactionState.dragStart.x;
         const dy = point.clientY - interactionState.dragStart.y;
@@ -331,6 +349,12 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
         const newX = point.clientX - interactionState.panStart.x;
         const newY = point.clientY - interactionState.panStart.y;
         setPan({ x: newX, y: newY });
+      } else if (interactionState.isPinching && 'touches' in e && e.touches.length === 2) {
+          const newDist = getTouchDistance(e.touches);
+          const touchCenter = getTouchCenter(e.touches);
+          const zoomFactor = (interactionState.pinchInitialDist - newDist);
+          handleZoom(zoomFactor * 2, touchCenter.x, touchCenter.y); // Multiply for more sensitivity
+          interactionState.pinchInitialDist = newDist;
       }
     };
 
@@ -342,8 +366,20 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       
       setSelectedPlacedCharmId(null);
       
+      if ('touches' in e) {
+          if (e.touches.length === 2) {
+              interactionState.isPinching = true;
+              interactionState.isPanning = false;
+              interactionState.isDragging = false;
+              interactionState.pinchInitialDist = getTouchDistance(e.touches);
+              return;
+          }
+          if (e.touches.length !== 1) return;
+      }
+
       interactionState.isPanning = true;
       interactionState.isDragging = false;
+      interactionState.isPinching = false;
       
       const point = getPoint(e);
       interactionState.panStart = { x: point.clientX - panRef.current.x, y: point.clientY - panRef.current.y };
@@ -369,7 +405,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       window.removeEventListener('touchmove', handleMove);
       window.removeEventListener('touchend', handleInteractionEnd);
     };
-  }, [interactionState]);
+  }, [interactionState, handleZoom]);
 
   const handleManualZoom = (direction: 'in' | 'out') => {
     if (!canvasWrapperRef.current) return;
@@ -377,19 +413,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     const centerX = canvasRect.left + canvasRect.width / 2;
     const centerY = canvasRect.top + canvasRect.height / 2;
     const zoomFactor = -150 * (direction === 'in' ? -1 : 1);
-    
-    const zoomSensitivity = 0.001;
-    const newScale = scaleRef.current - zoomFactor * zoomSensitivity;
-    const clampedScale = Math.min(Math.max(0.2, newScale), 5);
-
-    const mouseX = centerX - canvasRect.left;
-    const mouseY = centerY - canvasRect.top;
-    
-    const newPanX = mouseX - (mouseX - panRef.current.x) * (clampedScale / scaleRef.current);
-    const newPanY = mouseY - (mouseY - panRef.current.y) * (clampedScale / scaleRef.current);
-
-    setScale(clampedScale);
-    setPan({ x: newPanX, y: newPanY });
+    handleZoom(zoomFactor, centerX, centerY);
   };
   
   const resetZoomAndPan = useCallback(() => {
@@ -815,4 +839,3 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     </>
   );
 }
-
