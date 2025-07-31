@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useRef, WheelEvent, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useRef, WheelEvent as ReactWheelEvent, useCallback, useEffect, TouchEvent as ReactTouchEvent } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem } from '@/lib/types';
@@ -39,7 +39,7 @@ interface PlacedCharmComponentProps {
 const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDelete, onRotate, pixelSize, scale }: PlacedCharmComponentProps) => {
     const charmRef = useRef<HTMLDivElement>(null);
 
-    const handleDelete = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    const handleDelete = useCallback((e: React.MouseEvent | ReactTouchEvent) => {
         e.stopPropagation();
         e.preventDefault();
         onDelete(placed.id);
@@ -63,7 +63,7 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
         };
     }, [onDragStart, placed.id]);
 
-    const handleWheel = (e: WheelEvent<HTMLDivElement>) => {
+    const handleWheel = (e: ReactWheelEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
         const rotationAmount = e.deltaY > 0 ? 10 : -10; // Rotate by 10 degrees
@@ -289,7 +289,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       setPan({ x: newPanX, y: newPanY });
     };
 
-    const handleWheel = (e: WheelEvent) => {
+    const handleWheel = (e: globalThis.WheelEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('.charm-on-canvas')) return;
       e.preventDefault();
@@ -369,7 +369,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       window.removeEventListener('touchmove', handleMove);
       window.removeEventListener('touchend', handleInteractionEnd);
     };
-  }, [interactionState, handleRotateCharm]);
+  }, [interactionState]);
 
   const handleManualZoom = (direction: 'in' | 'out') => {
     if (!canvasWrapperRef.current) return;
@@ -581,8 +581,8 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     if (jewelryType.id !== 'necklace') {
       return placedCharms;
     }
-    // Sort from higher Y to lower Y so that lower charms are rendered first (and appear behind)
-    return [...placedCharms].sort((a, b) => b.position.y - a.position.y);
+    // Sort from lower Y to higher Y so that higher charms are rendered last (and appear on top)
+    return [...placedCharms].sort((a, b) => a.position.y - b.position.y);
   }, [placedCharms, jewelryType.id]);
 
 
@@ -815,3 +815,4 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     </>
   );
 }
+
