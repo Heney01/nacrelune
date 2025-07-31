@@ -12,12 +12,10 @@ import Image from 'next/image';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { loadStripe } from '@stripe/stripe-js';
+import { loadStripe, Stripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { createPaymentIntent, CreateOrderResult } from '@/app/actions';
 import { CheckoutForm } from './checkout-form';
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 export type StockErrorState = {
   message: string;
@@ -39,6 +37,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
   const tCart = useTranslations('Cart');
   const { cart } = useCart();
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
 
   const subtotal = cart.reduce((sum, item) => {
     const modelPrice = item.model.price || 0;
@@ -54,20 +53,28 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
   };
   
   useEffect(() => {
-    if(isOpen && total > 0) {
-      setClientSecret(null); // Reset on open
-      createPaymentIntent(total).then(res => {
-        if (res.clientSecret) {
-          setClientSecret(res.clientSecret);
-        } else {
-            console.error(res.error);
-             onOpenChange(false);
-        }
-      });
+    if (isOpen) {
+      if (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+        setStripePromise(loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY));
+      } else {
+        console.error("Stripe publishable key is not set.");
+      }
+
+      if (total > 0) {
+        setClientSecret(null); // Reset on open
+        createPaymentIntent(total).then(res => {
+          if (res.clientSecret) {
+            setClientSecret(res.clientSecret);
+          } else {
+              console.error(res.error);
+               onOpenChange(false);
+          }
+        });
+      }
     }
   }, [isOpen, total, onOpenChange]);
 
-  const options = {
+  const options = clientSecret ? {
     clientSecret,
     appearance: {
       theme: 'stripe' as const,
@@ -81,7 +88,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
         borderRadius: '4px',
       }
     },
-  };
+  } : {};
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -104,7 +111,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
                 </div>
             )}
             <div className="flex-grow overflow-y-auto px-6 no-scrollbar">
-              {clientSecret ? (
+              {clientSecret && stripePromise ? (
                 <Elements stripe={stripePromise} options={options}>
                   <CheckoutForm 
                     onOrderCreated={onOrderCreated} 
