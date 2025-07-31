@@ -76,23 +76,23 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
     const renderCharmItem = (charm: Charm) => {
         const isOutOfStock = (charm.quantity ?? 0) <= 0;
 
-        const charmContent = (
-             <Dialog>
-                <DialogTrigger asChild>
-                    <div
+        const CharmCard = ({ isDialogTrigger = false }: { isDialogTrigger?: boolean }) => {
+            const Component = isDialogTrigger ? DialogTrigger : 'div';
+            return (
+                <Component
+                    asChild={isDialogTrigger}
+                    onClick={() => {
+                        if (!isOutOfStock) {
+                            onAddCharm(charm);
+                        }
+                    }}
+                >
+                     <div
                         className={cn(
                             "relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card transition-colors aspect-[3/4]",
                             isOutOfStock ? "cursor-pointer bg-muted/60" : "hover:bg-muted cursor-pointer"
                         )}
                         title={charm.name}
-                        onClick={(e) => {
-                            if (isOutOfStock) {
-                                // Prevent the dialog trigger from activating if we're just adding the charm
-                                e.preventDefault();
-                            } else {
-                                onAddCharm(charm);
-                            }
-                        }}
                     >
                         {isOutOfStock && (
                             <Badge variant="destructive" className="absolute top-1 left-1 z-10 text-xs px-1.5 py-0.5">
@@ -112,16 +112,24 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                         </div>
                         <p className="text-xs text-center mt-1 truncate w-full h-7 flex items-center justify-center px-1">{charm.name}</p>
                         
-                        <div 
-                           className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" 
-                           onClick={(e) => { e.stopPropagation(); }}
-                         >
-                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                        <DialogTrigger asChild>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6"
+                                onClick={(e) => { e.stopPropagation() }} // Prevent adding charm when clicking the loupe
+                            >
                                 <ZoomIn className="h-4 w-4" />
                             </Button>
-                        </div>
+                        </DialogTrigger>
                     </div>
-                </DialogTrigger>
+                </Component>
+            );
+        };
+
+        return (
+             <Dialog key={charm.id}>
+                <CharmCard isDialogTrigger={isOutOfStock} />
                 <DialogContent className="max-w-md">
                     <DialogHeader>
                         <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
@@ -149,65 +157,6 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                 </DialogContent>
             </Dialog>
         );
-
-        if (isOutOfStock) {
-            return (
-                 <Dialog>
-                    <DialogTrigger asChild>
-                        <div className={cn(
-                            "relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card transition-colors aspect-[3/4] cursor-pointer bg-muted/60"
-                        )}
-                        title={charm.name}>
-                        {isOutOfStock && (
-                            <Badge variant="destructive" className="absolute top-1 left-1 z-10 text-xs px-1.5 py-0.5">
-                                <Ban className="w-3 h-3 mr-1"/>
-                                {t('sold_out')}
-                            </Badge>
-                        )}
-                        <div className="flex-grow flex items-center justify-center p-1 w-full">
-                            <Image
-                                src={charm.imageUrl}
-                                alt={charm.name}
-                                width={48}
-                                height={48}
-                                className="pointer-events-none object-contain w-full h-auto grayscale opacity-50"
-                                data-ai-hint="jewelry charm"
-                            />
-                        </div>
-                        <p className="text-xs text-center mt-1 truncate w-full h-7 flex items-center justify-center px-1">{charm.name}</p>
-                        
-                        <div 
-                           className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                           onClick={(e) => e.stopPropagation()}
-                         >
-                            <Button variant="ghost" size="icon" className="h-6 w-6">
-                                <ZoomIn className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    </div>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-md">
-                        <DialogHeader>
-                            <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
-                            <DialogDescription>{charm.description}</DialogDescription>
-                        </DialogHeader>
-                        <div className="mt-4 flex justify-center">
-                            <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
-                        </div>
-                        <Alert variant="destructive" className="mt-4">
-                            <Ban className="h-4 w-4" />
-                            <AlertTitle>{t('out_of_stock_title')}</AlertTitle>
-                            <AlertDescription>{t('out_of_stock_description')}</AlertDescription>
-                        </Alert>
-                        <DialogFooter>
-                            <DialogClose asChild><Button variant="outline">{t('close_button')}</Button></DialogClose>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-            );
-        }
-
-        return <div key={charm.id}>{charmContent}</div>
     };
     
     const renderCharmGrid = () => (
@@ -263,3 +212,4 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
         </Card>
     );
 }
+
