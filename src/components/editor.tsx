@@ -523,14 +523,29 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     return () => clearTimeout(timer);
   }, [captureRequest, getCanvasDataUri, isEditing, cartItemId, model, jewelryType, updateCartItem, addToCart]);
 
+  const placedCharmCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    placedCharms.forEach(pc => {
+        counts.set(pc.charm.id, (counts.get(pc.charm.id) || 0) + 1);
+    });
+    return counts;
+  }, [placedCharms]);
+
+  const availableCharms = useMemo(() => {
+    return allCharms.map(charm => ({
+      ...charm,
+      quantity: (charm.quantity ?? 0) - (placedCharmCounts.get(charm.id) || 0)
+    }));
+  }, [allCharms, placedCharmCounts]);
+
   const charmsPanelDesktop = useMemo(() => (
     <CharmsPanel 
-        allCharms={allCharms}
+        allCharms={availableCharms}
         onAddCharm={addCharmFromCharmList} 
         searchTerm={charmsSearchTerm}
         onSearchTermChange={setCharmsSearchTerm}
     />
-  ), [allCharms, addCharmFromCharmList, charmsSearchTerm]);
+  ), [availableCharms, addCharmFromCharmList, charmsSearchTerm]);
 
   const handleGenerateSuggestions = async (userPreferences: string): Promise<string | null> => {
     setIsGenerating(true);
@@ -827,7 +842,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       </div>
                       <div className="flex-grow overflow-y-auto">
                           <CharmsPanel 
-                              allCharms={allCharms} 
+                              allCharms={availableCharms} 
                               onAddCharm={addCharmFromCharmList} 
                               isMobileSheet={true}
                               searchTerm={charmsSearchTerm}
