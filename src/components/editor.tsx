@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useMemo, useRef, WheelEvent as ReactWheelEvent, useCallback, useEffect, TouchEvent as ReactTouchEvent } from 'react';
@@ -22,7 +23,7 @@ import { CartSheet } from './cart-sheet';
 import html2canvas from 'html2canvas';
 import { CartWidget } from './cart-widget';
 import { useTranslations } from '@/hooks/use-translations';
-import { getCharmSuggestionsAction } from '@/app/actions';
+import { getCharmSuggestionsAction, getRefreshedCharms } from '@/app/actions';
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
@@ -122,7 +123,7 @@ interface EditorProps {
 
 export type Suggestion = CharmSuggestionOutput['suggestions'][0];
 
-export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
+export default function Editor({ model, jewelryType, allCharms: initialAllCharms }: EditorProps) {
   const isMobile = useIsMobile();
   const { cart, addToCart, updateCartItem } = useCart();
   const { toast } = useToast();
@@ -135,6 +136,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   const locale = params.locale as string;
 
   const cartItemId = searchParams.get('cartItemId');
+  const [allCharms, setAllCharms] = useState(initialAllCharms);
   
   const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
   const [selectedPlacedCharmId, setSelectedPlacedCharmId] = useState<string | null>(null);
@@ -167,6 +169,16 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       if (itemToEdit) {
         setPlacedCharms(itemToEdit.placedCharms);
       }
+      
+      const refreshCharmStocks = async () => {
+        const result = await getRefreshedCharms();
+        if (result.success && result.charms) {
+          setAllCharms(result.charms);
+        } else {
+            console.error("Failed to refresh charm stocks:", result.error);
+        }
+      }
+      refreshCharmStocks();
     }
   }, [isEditing, cart, cartItemId]);
 
@@ -499,11 +511,6 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
         setIsCartSheetOpen(true);
       } catch (error) {
         console.error("Erreur lors de la capture du canvas:", error);
-        toast({
-          variant: "destructive",
-          title: t('toast_error_title'),
-          description: "La capture de l'image a échoué."
-        });
       } finally {
         setCaptureRequest(false);
       }
@@ -513,7 +520,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     const timer = setTimeout(captureAndSave, 50);
   
     return () => clearTimeout(timer);
-  }, [captureRequest, getCanvasDataUri, isEditing, cartItemId, model, jewelryType, updateCartItem, addToCart, toast, t]);
+  }, [captureRequest, getCanvasDataUri, isEditing, cartItemId, model, jewelryType, updateCartItem, addToCart]);
 
   const charmsPanelDesktop = useMemo(() => (
     <CharmsPanel 

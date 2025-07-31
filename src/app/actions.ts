@@ -13,6 +13,7 @@ import { redirect } from 'next/navigation';
 import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm } from '@/lib/types';
 import { getCharmSuggestions as getCharmSuggestionsFlow, CharmSuggestionInput, CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { z } from 'zod';
+import { getCharms as fetchCharms } from '@/lib/data';
 
 const getFileNameFromUrl = (url: string) => {
     if (!url) return null;
@@ -1117,5 +1118,15 @@ export async function getCharmSuggestionsAction(input: CharmSuggestionInput): Pr
     } catch (error: any) {
         console.error('[SERVER ACTION] Error calling AI flow:', error);
         return { success: false, error: error.message || "Une erreur est survenue lors de la génération des suggestions." };
+    }
+}
+
+export async function getRefreshedCharms(): Promise<{ success: boolean; charms?: Charm[], error?: string; }> {
+    try {
+        const charms = await fetchCharms();
+        return { success: true, charms };
+    } catch (error: any) {
+        console.error('[SERVER ACTION] Error refreshing charms:', error);
+        return { success: false, error: error.message || "Une erreur est survenue lors du rafraîchissement des breloques." };
     }
 }
