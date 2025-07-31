@@ -183,6 +183,8 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   panRef.current = pan;
   const scaleRef = useRef(scale);
   scaleRef.current = scale;
+  const placedCharmsRef = useRef(placedCharms);
+  placedCharmsRef.current = placedCharms;
 
   const addCharmToCanvas = useCallback((
     charm: Charm, 
@@ -367,7 +369,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
       window.removeEventListener('touchmove', handleMove);
       window.removeEventListener('touchend', handleInteractionEnd);
     };
-  }, [interactionState]);
+  }, [interactionState, handleRotateCharm]);
 
   const handleManualZoom = (direction: 'in' | 'out') => {
     if (!canvasWrapperRef.current) return;
@@ -443,9 +445,6 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     }
   }, []);
   
-  const placedCharmsRef = useRef(placedCharms);
-  placedCharmsRef.current = placedCharms;
-
   useEffect(() => {
     if (!captureRequest) return;
   
@@ -498,7 +497,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     const timer = setTimeout(captureAndSave, 50);
   
     return () => clearTimeout(timer);
-  }, [captureRequest]);
+  }, [captureRequest, getCanvasDataUri, isEditing, cartItemId, model, jewelryType, updateCartItem, addToCart, toast, t]);
 
   const charmsPanelDesktop = useMemo(() => (
     <CharmsPanel 
@@ -707,7 +706,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                                                     variant="destructive" 
                                                     size="icon" 
                                                     className={cn(
-                                                        "absolute -top-1.5 -right-1.5 h-5 w-5 transition-opacity",
+                                                        "absolute top-1 right-1 h-5 w-5 transition-opacity z-10",
                                                         selectedPlacedCharmId === pc.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                                                     )}
                                                     onClick={(e) => { e.stopPropagation(); removeCharm(pc.id); }}
@@ -808,5 +807,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     </>
   );
 }
+
+    
 
     
