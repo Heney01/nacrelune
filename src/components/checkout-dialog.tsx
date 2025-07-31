@@ -39,10 +39,12 @@ interface CheckoutDialogProps {
 
 const CheckoutForm = ({
   onOrderCreated,
-  setStockError
+  setStockError,
+  clientSecret
 }: {
   onOrderCreated: (result: CreateOrderResult) => void,
-  setStockError: (error: StockErrorState) => void
+  setStockError: (error: StockErrorState) => void,
+  clientSecret: string
 }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -51,8 +53,7 @@ const CheckoutForm = ({
   const [name, setName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const { cart, clearCart } = useCart();
-  const { toast } = useToast();
+  const { cart } = useCart();
   const params = useParams();
   const locale = params.locale as string;
 
@@ -73,50 +74,10 @@ const CheckoutForm = ({
       return;
     }
 
-    // Call server to create order in DB, check stock, etc.
-    const serializableCart: SerializableCartItem[] = cart.map(item => ({
-      id: item.id,
-      model: item.model,
-      jewelryType: {
-        id: item.jewelryType.id,
-        name: item.jewelryType.name,
-        description: item.jewelryType.description
-      },
-      placedCharms: item.placedCharms,
-      previewImage: item.previewImage,
-    }));
-    
-    const orderResult = await createOrder(serializableCart, email, locale);
-    
-    if (!orderResult.success) {
-      if(orderResult.stockError) {
-        setStockError({
-          message: orderResult.message,
-          unavailableModelIds: new Set(orderResult.stockError.unavailableModelIds),
-          unavailableCharmIds: new Set(orderResult.stockError.unavailableCharmIds),
-        });
-      } else {
-        setErrorMessage(orderResult.message);
-      }
-      setIsProcessing(false);
-      return;
-    }
-
-    // Now try to confirm payment with Stripe
-    const { clientSecret } = await createPaymentIntent(orderResult.totalPrice!);
-    
-    if (!clientSecret) {
-      setErrorMessage(t('payment_intent_error'));
-      setIsProcessing(false);
-      // Here we should ideally handle the case where the order was created in the DB but payment failed to initiate.
-      return;
-    }
-    
-    const { error } = await stripe.confirmPayment({
+    const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       clientSecret,
       confirmParams: {
-        return_url: `${window.location.origin}/${locale}/orders/track?orderNumber=${orderResult.orderNumber}`,
         receipt_email: email,
       },
       redirect: 'if_required'
@@ -124,11 +85,39 @@ const CheckoutForm = ({
 
     if (error) {
       setErrorMessage(error.message || t('payment_error_default'));
-    } else {
-      // Payment successful, order already created.
-      onOrderCreated(orderResult);
+      setIsProcessing(false);
+      return;
     }
-    
+
+    if (paymentIntent && paymentIntent.status === 'succeeded') {
+      const serializableCart: SerializableCartItem[] = cart.map(item => ({
+        id: item.id,
+        model: item.model,
+        jewelryType: {
+          id: item.jewelryType.id,
+          name: item.jewelryType.name,
+          description: item.jewelryType.description
+        },
+        placedCharms: item.placedCharms,
+        previewImage: item.previewImage,
+      }));
+      
+      const orderResult = await createOrder(serializableCart, email, locale);
+      
+      if (orderResult.success) {
+        onOrderCreated(orderResult);
+      } else {
+        setErrorMessage(orderResult.message);
+        if (orderResult.stockError) {
+           setStockError({
+              message: orderResult.message,
+              unavailableModelIds: new Set(orderResult.stockError.unavailableModelIds),
+              unavailableCharmIds: new Set(orderResult.stockError.unavailableCharmIds),
+            });
+        }
+      }
+    }
+
     setIsProcessing(false);
   };
   
@@ -246,7 +235,11 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
             <div className="flex-grow overflow-y-auto px-6 no-scrollbar">
               {clientSecret ? (
                 <Elements stripe={stripePromise} options={options}>
-                  <CheckoutForm onOrderCreated={onOrderCreated} setStockError={setStockError} />
+                  <CheckoutForm 
+                    onOrderCreated={onOrderCreated} 
+                    setStockError={setStockError}
+                    clientSecret={clientSecret}
+                  />
                 </Elements>
               ) : (
                 <div className="flex justify-center items-center h-full">

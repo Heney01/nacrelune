@@ -467,9 +467,7 @@ export async function createPaymentIntent(
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Amount in cents
       currency: 'eur',
-      automatic_payment_methods: {
-        enabled: true,
-      },
+      payment_method_types: ['card'],
     });
     return { clientSecret: paymentIntent.client_secret };
   } catch (error: any) {
@@ -1155,4 +1153,3 @@ export async function getRefreshedCharms(): Promise<{ success: boolean; charms?:
         return { success: false, error: error.message || "Une erreur est survenue lors du rafraîchissement des breloques." };
     }
 }
-
