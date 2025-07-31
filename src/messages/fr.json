@@ -68,6 +68,7 @@
     "empty_title": "Votre panier est vide",
     "empty_description": "Trouvez la pièce parfaite pour commencer votre création.",
     "remove_item": "Supprimer l'article",
+    "edit_item_button": "Modifier",
     "total": "Total",
     "create_new_jewel_button": "Créer un nouveau bijou",
     "view_charms_action": "Voir les breloques ({count})",

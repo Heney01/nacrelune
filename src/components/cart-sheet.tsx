@@ -7,7 +7,7 @@ import { useCart } from '@/hooks/use-cart';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, ShoppingCart, PlusCircle, Loader2 } from 'lucide-react';
+import { Trash2, ShoppingCart, PlusCircle, Loader2, Edit } from 'lucide-react';
 import React, { ReactNode, useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Card } from './ui/card';
@@ -137,6 +137,7 @@ export function CartSheet({ children, open, onOpenChange }: {
               <Accordion type="multiple" className="space-y-4">
                 {cart.map((item) => {
                   const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+                  const editUrl = `/${locale}/?type=${item.jewelryType.id}&model=${item.model.id}&cartItemId=${item.id}`;
                   return (
                     <Card key={item.id} className="overflow-hidden">
                       <div className="p-4 flex items-start gap-4">
@@ -178,6 +179,14 @@ export function CartSheet({ children, open, onOpenChange }: {
                           <p className="text-sm font-bold mt-1">
                             {formatPrice(itemPrice)}
                           </p>
+                          <SheetClose asChild>
+                            <Button variant="outline" size="sm" asChild className="mt-2">
+                               <Link href={editUrl}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  {t('edit_item_button')}
+                               </Link>
+                            </Button>
+                          </SheetClose>
                         </div>
                         <Button
                           variant="ghost"
