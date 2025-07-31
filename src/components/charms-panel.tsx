@@ -77,31 +77,34 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
 
         const charmContent = (
              <Dialog>
-                <div
-                    className={cn(
-                        "relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card transition-colors aspect-square",
-                        isOutOfStock ? "cursor-not-allowed bg-muted/60" : "hover:bg-muted cursor-pointer"
-                    )}
-                    title={charm.name}
-                    onClick={() => !isOutOfStock && onAddCharm(charm)}
-                >
-                    {isOutOfStock && (
-                        <Badge variant="destructive" className="absolute top-1 left-1 z-10 text-xs px-1.5 py-0.5">
-                            <Ban className="w-3 h-3 mr-1"/>
-                            {t('sold_out')}
-                        </Badge>
-                    )}
-                    <Image
-                        src={charm.imageUrl}
-                        alt={charm.name}
-                        width={48}
-                        height={48}
-                        className={cn("pointer-events-none p-1", isOutOfStock && "grayscale opacity-50")}
-                        data-ai-hint="jewelry charm"
-                    />
-                    <p className="text-xs text-center mt-1 truncate">{charm.name}</p>
-                    <DialogTrigger asChild>
-                         <div 
+                <DialogTrigger asChild>
+                    <div
+                        className={cn(
+                            "relative group p-1 border rounded-md flex flex-col items-center justify-between bg-card transition-colors h-full",
+                            isOutOfStock ? "cursor-pointer bg-muted/60" : "hover:bg-muted cursor-pointer"
+                        )}
+                        title={charm.name}
+                        onClick={() => !isOutOfStock && onAddCharm(charm)}
+                    >
+                        {isOutOfStock && (
+                            <Badge variant="destructive" className="absolute top-1 left-1 z-10 text-xs px-1.5 py-0.5">
+                                <Ban className="w-3 h-3 mr-1"/>
+                                {t('sold_out')}
+                            </Badge>
+                        )}
+                        <div className="flex-grow flex items-center justify-center p-1">
+                            <Image
+                                src={charm.imageUrl}
+                                alt={charm.name}
+                                width={48}
+                                height={48}
+                                className={cn("pointer-events-none", isOutOfStock && "grayscale opacity-50")}
+                                data-ai-hint="jewelry charm"
+                            />
+                        </div>
+                        <p className="text-xs text-center mt-1 truncate w-full h-7 flex items-center justify-center px-1">{charm.name}</p>
+                        
+                        <div 
                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" 
                            onClick={(e) => { e.stopPropagation(); }}
                          >
@@ -109,8 +112,8 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                                 <ZoomIn className="h-4 w-4" />
                             </Button>
                         </div>
-                    </DialogTrigger>
-                </div>
+                    </div>
+                </DialogTrigger>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
                         <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
@@ -130,12 +133,10 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                         <DialogClose asChild>
                              <Button variant="outline">{t('close_button')}</Button>
                         </DialogClose>
-                        <DialogClose asChild>
-                            <Button onClick={() => onAddCharm(charm)} disabled={isOutOfStock}>
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                {t('add_to_design_button')}
-                            </Button>
-                        </DialogClose>
+                        <Button onClick={() => onAddCharm(charm)} disabled={isOutOfStock}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            {t('add_to_design_button')}
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
