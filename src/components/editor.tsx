@@ -487,10 +487,6 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
             previewImage
           };
           updateCartItem(cartItemId, updatedItem);
-          toast({
-            title: t('toast_item_updated_title'),
-            description: t('toast_item_updated_description', { modelName: model.name }),
-          });
         } else {
           const newItem: Omit<CartItem, 'id'> = {
             model,
@@ -499,10 +495,6 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
             previewImage: previewImage
           };
           addToCart(newItem);
-          toast({
-            title: t('toast_item_added_title'),
-            description: t('toast_item_added_description', { modelName: model.name }),
-          });
         }
         setIsCartSheetOpen(true);
       } catch (error) {
@@ -602,12 +594,9 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   }, [calculatePixelsPerMm]);
 
   const sortedPlacedCharms = useMemo(() => {
-    if (jewelryType.id !== 'necklace') {
-      return placedCharms;
-    }
-    // Sort from lower Y to higher Y so that higher charms are rendered last (and appear on top)
+    // Sort from higher Y to lower Y so that lower charms are rendered last (and appear on top)
     return [...placedCharms].sort((a, b) => a.position.y - b.position.y);
-  }, [placedCharms, jewelryType.id]);
+  }, [placedCharms]);
 
 
   return (
