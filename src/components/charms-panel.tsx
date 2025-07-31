@@ -91,7 +91,7 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                 >
                      <div
                         className={cn(
-                            "relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card transition-colors aspect-[3/4]",
+                            "relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card transition-colors aspect-square",
                              isOutOfStock ? "cursor-pointer bg-muted/60" : "hover:bg-muted cursor-pointer"
                         )}
                         title={charm.name}
