@@ -82,16 +82,14 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                     asChild={isDialogTrigger}
                     onClick={() => {
                         if (isOutOfStock) {
-                            // If out of stock, the DialogTrigger will handle opening the dialog
                             return;
                         }
-                        // If in stock, add the charm directly
                         onAddCharm(charm);
                     }}
                 >
-                     <div
+                     <Card
                         className={cn(
-                            "relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card transition-colors aspect-square",
+                            "p-2 aspect-square flex flex-col items-center justify-center relative group",
                              isOutOfStock ? "cursor-pointer bg-muted/60" : "hover:bg-muted cursor-pointer"
                         )}
                         title={charm.name}
@@ -102,17 +100,15 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                                 {t('sold_out')}
                             </Badge>
                         )}
-                        <div className="flex-grow flex items-center justify-center p-1 w-full h-full">
-                            <Image
-                                src={charm.imageUrl}
-                                alt={charm.name}
-                                width={48}
-                                height={48}
-                                className={cn("pointer-events-none object-contain w-full h-auto", isOutOfStock && "grayscale opacity-50")}
-                                data-ai-hint="jewelry charm"
-                            />
-                        </div>
-                        <p className="text-xs text-center mt-1 h-7 flex items-center justify-center px-1">{charm.name}</p>
+                         <Image
+                            src={charm.imageUrl}
+                            alt={charm.name}
+                            width={40}
+                            height={40}
+                            className={cn("w-10 h-10 pointer-events-none object-contain", isOutOfStock && "grayscale opacity-50")}
+                            data-ai-hint="jewelry charm"
+                        />
+                        <p className="text-xs text-center mt-1 truncate w-full">{charm.name}</p>
                         
                         <DialogTrigger asChild>
                             <Button 
@@ -124,7 +120,7 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                                 <ZoomIn className="h-4 w-4" />
                             </Button>
                         </DialogTrigger>
-                    </div>
+                    </Card>
                 </Component>
             );
         };
