@@ -55,7 +55,7 @@ const generatePhotorealisticPreviewFlow = ai.defineFlow(
         { media: { url: input.designPreviewDataUri } }
       ],
       config: {
-        responseModalities: ['IMAGE'],
+        responseModalities: ['IMAGE', 'TEXT'],
       },
     });
 
