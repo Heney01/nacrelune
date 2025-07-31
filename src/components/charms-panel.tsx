@@ -63,11 +63,13 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
         });
 
         filteredCharms.forEach(charm => {
-            charm.categoryIds.forEach(categoryId => {
-                if (result[categoryId]) {
-                    result[categoryId].push(charm);
-                }
-            });
+            if (charm.categoryIds) {
+                charm.categoryIds.forEach(categoryId => {
+                    if (result[categoryId]) {
+                        result[categoryId].push(charm);
+                    }
+                });
+            }
         });
         return result;
     }, [filteredCharms, charmCategories]);
@@ -75,59 +77,56 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
     const renderCharmItem = (charm: Charm) => {
         const isOutOfStock = (charm.quantity ?? 0) <= 0;
 
-        const CharmCard = ({ isDialogTrigger = false }: { isDialogTrigger?: boolean }) => {
-            const Component = isDialogTrigger ? DialogTrigger : 'div';
-            return (
-                <Component
-                    asChild={isDialogTrigger}
-                    onClick={() => {
-                        if (isOutOfStock) {
-                            return;
-                        }
-                        onAddCharm(charm);
-                    }}
+        const handleCardClick = (e: React.MouseEvent) => {
+            // Only add charm if it's in stock and the click is not on the preview button
+            const target = e.target as HTMLElement;
+            if (!isOutOfStock && !target.closest('button[data-trigger-preview]')) {
+                onAddCharm(charm);
+            }
+        };
+
+        return (
+             <Dialog key={charm.id}>
+                <Card
+                    onClick={handleCardClick}
+                    className={cn(
+                        "p-2 aspect-square flex flex-col items-center justify-center relative group",
+                        isOutOfStock ? "cursor-pointer bg-muted/60" : "hover:bg-muted cursor-pointer"
+                    )}
+                    title={charm.name}
                 >
-                     <Card
-                        className={cn(
-                            "p-2 aspect-square flex flex-col items-center justify-center relative group",
-                             isOutOfStock ? "cursor-pointer bg-muted/60" : "hover:bg-muted cursor-pointer"
-                        )}
-                        title={charm.name}
-                    >
-                        {isOutOfStock && (
-                            <Badge variant="destructive" className="absolute top-1 left-1 z-10 text-xs px-1.5 py-0.5">
-                                <Ban className="w-3 h-3 mr-1"/>
-                                {t('sold_out')}
-                            </Badge>
-                        )}
+                    {isOutOfStock && (
+                        <Badge variant="destructive" className="absolute top-1 left-1 z-10 text-xs px-1.5 py-0.5">
+                            <Ban className="w-3 h-3 mr-1"/>
+                            {t('sold_out')}
+                        </Badge>
+                    )}
+                    <div className="relative w-10 h-10 flex-grow grid place-content-center">
                          <Image
                             src={charm.imageUrl}
                             alt={charm.name}
                             width={40}
                             height={40}
-                            className={cn("w-10 h-10 pointer-events-none object-contain", isOutOfStock && "grayscale opacity-50")}
+                            className={cn("w-full h-auto pointer-events-none object-contain", isOutOfStock && "grayscale opacity-50")}
                             data-ai-hint="jewelry charm"
                         />
-                        <p className="text-xs text-center mt-1 truncate w-full">{charm.name}</p>
-                        
-                        <DialogTrigger asChild>
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6"
-                                onClick={(e) => { e.stopPropagation() }}
-                            >
-                                <ZoomIn className="h-4 w-4" />
-                            </Button>
-                        </DialogTrigger>
-                    </Card>
-                </Component>
-            );
-        };
+                    </div>
+                    <div className="h-8 flex items-center justify-center">
+                        <p className="text-xs text-center line-clamp-2">{charm.name}</p>
+                    </div>
+                    
+                    <DialogTrigger asChild>
+                        <Button 
+                            data-trigger-preview
+                            variant="ghost" 
+                            size="icon" 
+                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6"
+                        >
+                            <ZoomIn className="h-4 w-4" />
+                        </Button>
+                    </DialogTrigger>
+                </Card>
 
-        return (
-             <Dialog key={charm.id}>
-                <CharmCard isDialogTrigger={true} />
                 <DialogContent className="max-w-md">
                     <DialogHeader>
                         <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
