@@ -63,7 +63,7 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
         };
     }, [onDragStart, placed.id]);
 
-    const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const handleWheel = (e: WheelEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
         const rotationAmount = e.deltaY > 0 ? 10 : -10; // Rotate by 10 degrees
@@ -577,6 +577,16 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     };
   }, [calculatePixelsPerMm]);
 
+  const sortedPlacedCharms = useMemo(() => {
+    if (jewelryType.id !== 'necklace') {
+      return placedCharms;
+    }
+    // For necklaces, sort by Y position so that lower charms are rendered first (and appear behind)
+    // A higher Y value means lower on the screen.
+    // We sort ascending by Y so that higher-Y charms are rendered first.
+    return [...placedCharms].sort((a, b) => a.position.y - b.position.y);
+  }, [placedCharms, jewelryType.id]);
+
 
   return (
     <>
@@ -650,7 +660,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                               priority
                           />
                           
-                          {pixelsPerMm && placedCharms.map((placed) => {
+                          {pixelsPerMm && sortedPlacedCharms.map((placed) => {
                             const pixelSize = {
                               width: (placed.charm.width ?? 20) * pixelsPerMm,
                               height: (placed.charm.height ?? 20) * pixelsPerMm,
