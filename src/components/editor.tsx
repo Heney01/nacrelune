@@ -95,12 +95,11 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
             <Image
                 src={placed.charm.imageUrl}
                 alt={placed.charm.name}
-                width={pixelSize.width}
-                height={pixelSize.height}
-                className="pointer-events-none select-none object-contain"
-                style={{ width: '100%', height: '100%' }}
+                className="pointer-events-none select-none object-contain w-full h-auto"
                 data-ai-hint="jewelry charm"
                 draggable="false"
+                width={pixelSize.width}
+                height={pixelSize.height}
             />
             <button
                 onMouseDown={handleDelete}
@@ -477,7 +476,8 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
         setCaptureRequest(false);
       }
     };
-
+    
+    // Only run if captureRequest is true
     captureAndSave();
   }, [captureRequest]);
 
@@ -600,7 +600,10 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                   >
                       <div
                           ref={canvasRef}
-                          className="relative w-full h-full grid place-items-center"
+                          className={cn(
+                            "relative w-full h-full grid", 
+                            jewelryType.id === 'necklace' ? 'items-start justify-center' : 'place-items-center'
+                          )}
                           style={{
                               transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
                               transformOrigin: '0 0',
@@ -753,3 +756,4 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     </>
   );
 }
+
