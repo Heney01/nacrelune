@@ -426,23 +426,17 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
             }
         };
 
-        // Reset view for capture
-        resetZoomAndPan();
-        setSelectedPlacedCharmId(null);
-        
         // Wait for state updates to apply and DOM to re-render
         setTimeout(performCapture, 100);
     });
   }, [resetZoomAndPan]);
 
   useEffect(() => {
-    // This effect runs when a capture is requested and the canvas is reset.
-    if (captureRequest && scale === 1 && pan.x === 0 && pan.y === 0) {
-      
+    if (captureRequest) {
       const captureAndSave = async () => {
         try {
           const previewImage = await getCanvasDataUri();
-      
+
           if (isEditing && cartItemId) {
             const updatedItem = {
               id: cartItemId,
@@ -462,7 +456,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
               jewelryType,
               placedCharms,
               previewImage: previewImage
-            }
+            };
             addToCart(newItem);
             toast({
               title: t('toast_item_added_title'),
@@ -472,14 +466,19 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
           setIsCartSheetOpen(true);
         } catch (error) {
           console.error("Erreur lors de la capture du canvas:", error);
+          toast({
+            variant: "destructive",
+            title: t('toast_error_title'),
+            description: "La capture de l'image a échoué."
+          });
         } finally {
-          setCaptureRequest(false);
+          setCaptureRequest(false); // Reset the request state
         }
       };
-  
+
       captureAndSave();
     }
-  }, [captureRequest, scale, pan, getCanvasDataUri, isEditing, cartItemId, model, jewelryType, placedCharms, updateCartItem, toast, t, addToCart]);
+  }, [captureRequest]);
 
   const charmsPanelDesktop = useMemo(() => (
     <CharmsPanel 
