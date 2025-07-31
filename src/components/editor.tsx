@@ -41,7 +41,7 @@ interface PlacedCharmComponentProps {
 const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDelete, onRotate, pixelSize, scale }: PlacedCharmComponentProps) => {
     const charmRef = useRef<HTMLDivElement>(null);
 
-    const handleDelete = useCallback((e: React.MouseEvent | ReactTouchEvent) => {
+    const handleDelete = useCallback((e: React.MouseEvent | React.TouchEvent) => {
         e.stopPropagation();
         e.preventDefault();
         onDelete(placed.id);
@@ -894,4 +894,5 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
 

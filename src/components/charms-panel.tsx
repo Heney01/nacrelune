@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -80,11 +81,18 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                 <DialogTrigger asChild>
                     <div
                         className={cn(
-                            "relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card transition-colors aspect-square",
+                            "relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card transition-colors aspect-[3/4]",
                             isOutOfStock ? "cursor-pointer bg-muted/60" : "hover:bg-muted cursor-pointer"
                         )}
                         title={charm.name}
-                        onClick={() => isOutOfStock ? undefined : onAddCharm(charm)}
+                        onClick={(e) => {
+                            if (isOutOfStock) {
+                                // Prevent the dialog trigger from activating if we're just adding the charm
+                                e.preventDefault();
+                            } else {
+                                onAddCharm(charm);
+                            }
+                        }}
                     >
                         {isOutOfStock && (
                             <Badge variant="destructive" className="absolute top-1 left-1 z-10 text-xs px-1.5 py-0.5">
@@ -92,13 +100,13 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                                 {t('sold_out')}
                             </Badge>
                         )}
-                        <div className="flex-grow flex items-center justify-center p-1">
+                        <div className="flex-grow flex items-center justify-center p-1 w-full">
                             <Image
                                 src={charm.imageUrl}
                                 alt={charm.name}
                                 width={48}
                                 height={48}
-                                className={cn("pointer-events-none", isOutOfStock && "grayscale opacity-50")}
+                                className={cn("pointer-events-none object-contain w-full h-auto", isOutOfStock && "grayscale opacity-50")}
                                 data-ai-hint="jewelry charm"
                             />
                         </div>
@@ -144,9 +152,39 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
 
         if (isOutOfStock) {
             return (
-                <Dialog>
+                 <Dialog>
                     <DialogTrigger asChild>
-                        <div className="contents">{charmContent}</div>
+                        <div className={cn(
+                            "relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card transition-colors aspect-[3/4] cursor-pointer bg-muted/60"
+                        )}
+                        title={charm.name}>
+                        {isOutOfStock && (
+                            <Badge variant="destructive" className="absolute top-1 left-1 z-10 text-xs px-1.5 py-0.5">
+                                <Ban className="w-3 h-3 mr-1"/>
+                                {t('sold_out')}
+                            </Badge>
+                        )}
+                        <div className="flex-grow flex items-center justify-center p-1 w-full">
+                            <Image
+                                src={charm.imageUrl}
+                                alt={charm.name}
+                                width={48}
+                                height={48}
+                                className="pointer-events-none object-contain w-full h-auto grayscale opacity-50"
+                                data-ai-hint="jewelry charm"
+                            />
+                        </div>
+                        <p className="text-xs text-center mt-1 truncate w-full h-7 flex items-center justify-center px-1">{charm.name}</p>
+                        
+                        <div 
+                           className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                           onClick={(e) => e.stopPropagation()}
+                         >
+                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                                <ZoomIn className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
                     </DialogTrigger>
                     <DialogContent className="max-w-md">
                         <DialogHeader>
