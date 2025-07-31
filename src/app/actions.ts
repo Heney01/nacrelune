@@ -461,7 +461,7 @@ export async function createPaymentIntent(
   amount: number
 ): Promise<{ clientSecret: string | null; error?: string }> {
   if (amount <= 0) {
-    return { error: 'Invalid amount.' };
+    return { error: 'Invalid amount.', clientSecret: null };
   }
   try {
     const paymentIntent = await stripe.paymentIntents.create({
@@ -472,7 +472,7 @@ export async function createPaymentIntent(
     return { clientSecret: paymentIntent.client_secret };
   } catch (error: any) {
     console.error('Error creating payment intent:', error);
-    return { error: error.message };
+    return { error: error.message, clientSecret: null };
   }
 }
 
