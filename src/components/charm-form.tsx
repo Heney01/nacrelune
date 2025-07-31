@@ -46,11 +46,14 @@ const ImagePicker = ({ name, label, defaultUrl }: { name: string; label: string;
         <div className="space-y-2">
             <Label htmlFor={name}>{label}</Label>
             <div className="flex items-center gap-4">
-                <div className="w-24 h-24 border rounded-md flex items-center justify-center bg-muted overflow-hidden">
+                <div className="w-24 h-24 border rounded-md flex items-center justify-center bg-white p-1 overflow-hidden">
                     {preview ? (
-                        <Image src={preview} alt="Aperçu" width={96} height={96} className="object-contain" />
+                        <Image src={preview} alt="Aperçu" width={96} height={96} className="object-contain w-full h-full" />
                     ) : (
-                        <UploadCloud className="text-muted-foreground" />
+                        <div className="flex flex-col items-center justify-center text-muted-foreground">
+                            <UploadCloud />
+                            <span className="text-xs mt-1">Aucune image</span>
+                        </div>
                     )}
                 </div>
                 <Input id={name} type="file" onChange={handleFileChange} className="max-w-xs" accept="image/png, image/jpeg, image/webp" />
