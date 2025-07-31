@@ -28,16 +28,24 @@ const PhotorealisticPreviewOutputSchema = z.object({
 });
 type PhotorealisticPreviewOutput = z.infer<typeof PhotorealisticPreviewOutputSchema>;
 
-const previewPrompt = `You will be provided with a reference image showing a digital design of a custom piece of jewelry. Your task is to generate a new, close-up photorealistic image of a person wearing that jewelry.
+const previewPrompt = `You are a professional jewelry photographer AI. Your task is to create a stunning, photorealistic studio image of a piece of jewelry worn by a person, based on a provided reference design image.
 
-**Key requirements:**
+**Reference Image:**
+You will be given a simple digital reference image showing a piece of jewelry (a chain or hoop) with several flat, 2D charms placed on it. This reference dictates the *type* and *position* of the charms.
 
-1.  **Jewelry Type:** The jewelry item is a {{jewelryTypeName}}. It should be worn naturally on the appropriate body part (neck, wrist, or ear).
-2.  **Faithful Replication:** You must faithfully replicate the number, type, and exact positions of the charms as shown in the reference image. The charms should be rendered as glossy or enameled three-dimensional objects, accurately sized and spaced.
-3.  **Realism:** The overall image should look like a high-quality studio photograph suitable for a jewelry catalog. The lighting should be soft and even to enhance the material's texture and shine. The person's skin should appear realistic and well-lit.
-4.  **Background:** The background should be neutral or softly blurred to maintain focus on the jewelry.
+**Critical Instructions - How to interpret the reference:**
+1.  **From 2D to 3D:** You MUST transform the flat 2D charms from the reference image into realistic, three-dimensional metallic or enameled objects. They should have depth, texture, and reflect light correctly.
+2.  **Physical Attachment:** The charms are NOT stickers. Each charm must be physically and believably attached to the main jewelry chain or hoop, typically with a small, realistic metallic loop or bail.
+3.  **Natural Draping:** The charms must hang naturally from the chain, following the laws of gravity and the curve of the body. They should not appear stiff or pasted on.
+4.  **Realistic Chain:** The main chain or hoop itself must also be rendered as a realistic, high-quality metallic object.
+
+**Overall Scene Requirements:**
+-   **Jewelry Type:** The item is a {{jewelryTypeName}}. It must be worn naturally on the appropriate body part.
+-   **Faithful Replication:** The number, type, and relative positions of the charms must be accurately replicated from the reference image.
+-   **Photorealism:** The final output must be a high-quality, close-up studio photograph. Lighting should be soft and even, highlighting the materials' textures (metal, enamel). The model's skin should be realistic and well-lit.
+-   **Background:** Use a neutral, clean, or softly blurred background (like a marble surface, a soft fabric, or a simple studio backdrop) to ensure the jewelry is the main focus.
 {{#if userPrompt}}
-5. **User Context:** The user has provided additional context for the scene: "{{userPrompt}}". Please incorporate this into the image.
+- **User Context:** Incorporate this user-provided context into the scene: "{{userPrompt}}".
 {{/if}}
 `;
 
@@ -73,3 +81,4 @@ const generatePhotorealisticPreviewFlow = ai.defineFlow(
 export async function generatePhotorealisticPreview(input: PhotorealisticPreviewInput): Promise<PhotorealisticPreviewOutput> {
   return generatePhotorealisticPreviewFlow(input);
 }
+
