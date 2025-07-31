@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -82,9 +81,12 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                 <Component
                     asChild={isDialogTrigger}
                     onClick={() => {
-                        if (!isDialogTrigger && !isOutOfStock) {
-                            onAddCharm(charm);
+                        if (isOutOfStock) {
+                            // If out of stock, the DialogTrigger will handle opening the dialog
+                            return;
                         }
+                        // If in stock, add the charm directly
+                        onAddCharm(charm);
                     }}
                 >
                      <div
@@ -100,7 +102,7 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                                 {t('sold_out')}
                             </Badge>
                         )}
-                        <div className="flex-grow flex items-center justify-center p-1 w-full">
+                        <div className="flex-grow flex items-center justify-center p-1 w-full h-full">
                             <Image
                                 src={charm.imageUrl}
                                 alt={charm.name}
@@ -110,14 +112,14 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                                 data-ai-hint="jewelry charm"
                             />
                         </div>
-                        <p className="text-xs text-center mt-1 truncate w-full h-7 flex items-center justify-center px-1">{charm.name}</p>
+                        <p className="text-xs text-center mt-1 h-7 flex items-center justify-center px-1">{charm.name}</p>
                         
                         <DialogTrigger asChild>
                             <Button 
                                 variant="ghost" 
                                 size="icon" 
                                 className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6"
-                                onClick={(e) => { e.stopPropagation() }} // Prevent adding charm when clicking the loupe
+                                onClick={(e) => { e.stopPropagation() }}
                             >
                                 <ZoomIn className="h-4 w-4" />
                             </Button>
@@ -129,7 +131,7 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
 
         return (
              <Dialog key={charm.id}>
-                <CharmCard isDialogTrigger={isOutOfStock} />
+                <CharmCard isDialogTrigger={true} />
                 <DialogContent className="max-w-md">
                     <DialogHeader>
                         <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
