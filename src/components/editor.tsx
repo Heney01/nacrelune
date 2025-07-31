@@ -498,7 +498,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     const timer = setTimeout(captureAndSave, 50);
   
     return () => clearTimeout(timer);
-  }, [captureRequest]);
+  }, [captureRequest, getCanvasDataUri, isEditing, cartItemId, model, jewelryType, updateCartItem, addToCart, toast, t]);
 
   const charmsPanelDesktop = useMemo(() => (
     <CharmsPanel 
@@ -582,7 +582,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
   return (
     <>
       <CartSheet open={isCartSheetOpen} onOpenChange={setIsCartSheetOpen} />
-      <div className={cn("flex flex-col", isMobile ? "h-[calc(100dvh)]" : "h-screen")}>
+      <div className={cn("flex flex-col h-screen", isMobile && "h-[calc(100dvh)]")}>
         <header className="p-4 border-b flex-shrink-0">
             <div className="container mx-auto flex justify-between items-center">
               <Link href={`/${locale}`} className="flex items-center gap-2">
@@ -594,7 +594,7 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
             </div>
           </header>
         <main className={cn("flex-grow flex flex-col p-4 md:p-8 min-h-0", isMobile && "p-0 overflow-y-auto pb-[80px]")}>
-          <div className={cn("container mx-auto h-full flex flex-col", isMobile && "px-0")}>
+          <div className={cn("container mx-auto flex-1 flex flex-col min-h-0", isMobile && "px-0")}>
               <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0", isMobile && "grid-cols-1 gap-0")}>
               {!isMobile && (
                   <div className="lg:col-span-3">
@@ -687,13 +687,13 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                                <Carousel
                                 opts={{
                                     align: "start",
-                                    slidesToScroll: isMobile ? 2 : 4,
+                                    slidesToScroll: isMobile ? 3 : 5,
                                 }}
                                 className="w-full"
                                 >
                                 <CarouselContent>
                                     {placedCharms.map((pc) => (
-                                    <CarouselItem key={pc.id} className={cn(isMobile ? "basis-1/4" : "basis-1/5")}>
+                                    <CarouselItem key={pc.id} className={cn(isMobile ? "basis-1/4" : "basis-1/6")}>
                                         <div className="p-1">
                                              <Card 
                                                 className={cn("p-2 aspect-square flex flex-col items-center justify-center cursor-pointer relative group",
@@ -785,14 +785,18 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                      <SheetHeader className="p-4 border-b">
                           <SheetTitle>{t('ai_suggestions_title')}</SheetTitle>
                      </SheetHeader>
-                      <SuggestionSidebar 
-                          charms={allCharms} 
-                          isMobile={true}
-                          onGenerate={handleGenerateSuggestions}
-                          isLoading={isGenerating}
-                          suggestions={suggestions}
-                          onApplySuggestion={applySuggestion}
-                      />
+                     <div className="relative flex-1">
+                        <div className="absolute inset-0">
+                            <SuggestionSidebar 
+                                charms={allCharms} 
+                                isMobile={true}
+                                onGenerate={handleGenerateSuggestions}
+                                isLoading={isGenerating}
+                                suggestions={suggestions}
+                                onApplySuggestion={applySuggestion}
+                            />
+                        </div>
+                     </div>
                   </SheetContent>
               </Sheet>
             </div>
