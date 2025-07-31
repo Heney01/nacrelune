@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -11,7 +12,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-export const PhotorealisticPreviewInputSchema = z.object({
+const PhotorealisticPreviewInputSchema = z.object({
   designPreviewDataUri: z
     .string()
     .describe(
@@ -22,7 +23,7 @@ export const PhotorealisticPreviewInputSchema = z.object({
 });
 export type PhotorealisticPreviewInput = z.infer<typeof PhotorealisticPreviewInputSchema>;
 
-export const PhotorealisticPreviewOutputSchema = z.object({
+const PhotorealisticPreviewOutputSchema = z.object({
   imageDataUri: z.string().describe("The generated photorealistic image, as a data URI."),
 });
 export type PhotorealisticPreviewOutput = z.infer<typeof PhotorealisticPreviewOutputSchema>;
