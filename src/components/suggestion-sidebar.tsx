@@ -63,7 +63,7 @@ export function SuggestionSidebar({
           {t('ai_suggestions_description')}
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex-grow flex flex-col gap-4">
+      <CardContent className="flex-grow flex flex-col gap-4 min-h-0">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="preferences" className="font-bold">{t('preferences_label')}</Label>
@@ -91,7 +91,7 @@ export function SuggestionSidebar({
             </Alert>
         )}
 
-        <div className="flex-grow mt-4">
+        <div className="flex-grow mt-4 flex-1 min-h-0">
             {isLoading && (
               <div className="space-y-4">
                 <Skeleton className="h-24 w-full" />
