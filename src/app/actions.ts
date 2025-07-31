@@ -11,8 +11,19 @@ import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
 import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm } from '@/lib/types';
 import { getCharmSuggestions as getCharmSuggestionsFlow, CharmSuggestionInput, CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
-import { generatePhotorealisticPreview as generatePhotorealisticPreviewFlow, PhotorealisticPreviewInput, PhotorealisticPreviewOutput } from '@/ai/flows/photorealistic-preview';
+import { generatePhotorealisticPreview as generatePhotorealisticPreviewFlow } from '@/ai/flows/photorealistic-preview';
+import { z } from 'zod';
 
+const PhotorealisticPreviewInputSchema = z.object({
+  designPreviewDataUri: z
+    .string()
+    .describe(
+      "A preview image of the user's jewelry design, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+    ),
+  jewelryTypeName: z.string().describe('The type of jewelry (e.g., "necklace", "bracelet").'),
+  userPrompt: z.string().optional().describe('Optional user prompt for additional context (e.g., "on a beach", "in a gift box").')
+});
+type PhotorealisticPreviewInput = z.infer<typeof PhotorealisticPreviewInputSchema>;
 
 const getFileNameFromUrl = (url: string) => {
     if (!url) return null;
@@ -20,7 +31,7 @@ const getFileNameFromUrl = (url: string) => {
         const urlObj = new URL(url);
         if (urlObj.hostname === 'firebasestorage.googleapis.com') {
             const decodedPath = decodeURIComponent(urlObj.pathname);
-            const pathRegex = /\/o\/(.*)/;
+            const pathRegex = /o\/(.*)/;
             const match = decodedPath.match(pathRegex);
             if (match && match[1]) {
                 return match[1].split('?')[0]; // Remove query params
