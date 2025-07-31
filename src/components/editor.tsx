@@ -25,6 +25,7 @@ import { CartWidget } from './cart-widget';
 import { useTranslations } from '@/hooks/use-translations';
 import { getCharmSuggestionsAction } from '@/app/actions';
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
+import { PhotorealisticPreviewer } from './photorealistic-previewer';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -404,33 +405,44 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
     triggerCapture();
   }
 
+  const getCanvasDataUri = useCallback(async (): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const performCapture = async () => {
+            if (!canvasRef.current) {
+                return reject(new Error("Canvas ref is not available"));
+            }
+            try {
+                const canvas = await html2canvas(canvasRef.current, {
+                    backgroundColor: null,
+                    logging: false,
+                    useCORS: true,
+                    allowTaint: true,
+                    scale: 1, // Use a smaller scale for faster previews
+                    width: canvasRef.current.offsetWidth,
+                    height: canvasRef.current.offsetHeight,
+                });
+                resolve(canvas.toDataURL('image/png', 0.9));
+            } catch (error) {
+                reject(error);
+            }
+        };
+
+        // Reset view for capture
+        resetZoomAndPan();
+        setSelectedPlacedCharmId(null);
+        
+        // Wait for state updates to apply and DOM to re-render
+        setTimeout(performCapture, 100);
+    });
+  }, [resetZoomAndPan]);
+
   useEffect(() => {
     // This effect runs when a capture is requested and the canvas is reset.
     if (captureRequest && scale === 1 && pan.x === 0 && pan.y === 0) {
       
-      const capture = async () => {
-        // Attendre que le DOM soit mis à jour
-        await new Promise(resolve => setTimeout(resolve, 100));
-      
-        if (!canvasRef.current) {
-          setCaptureRequest(false);
-          return;
-        }
-      
+      const captureAndSave = async () => {
         try {
-          const html2canvasOptions = {
-            backgroundColor: null,
-            logging: false,
-            useCORS: true,
-            allowTaint: true,
-            scale: isMobile ? 1 : 2,
-            width: canvasRef.current.offsetWidth,
-            height: canvasRef.current.offsetHeight,
-          };
-      
-          const canvas = await html2canvas(canvasRef.current, html2canvasOptions);
-  
-          const previewImage = canvas.toDataURL('image/png', 0.9);
+          const previewImage = await getCanvasDataUri();
       
           if (isEditing && cartItemId) {
             const updatedItem = {
@@ -466,9 +478,9 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
         }
       };
   
-      capture();
+      captureAndSave();
     }
-  }, [captureRequest, scale, pan, addToCart, cartItemId, isEditing, jewelryType, model, placedCharms, t, toast, updateCartItem, isMobile]);
+  }, [captureRequest, scale, pan, getCanvasDataUri, isEditing, cartItemId, model, jewelryType, placedCharms, updateCartItem, toast, t, addToCart]);
 
   const charmsPanelDesktop = useMemo(() => (
     <CharmsPanel 
@@ -639,7 +651,8 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                   </Card>
               </div>
 
-              {!isMobile && <div className="lg:col-span-3">
+              {!isMobile && (
+                <div className="lg:col-span-3 flex flex-col gap-6">
                   <SuggestionSidebar
                       charms={allCharms}
                       onGenerate={handleGenerateSuggestions}
@@ -647,7 +660,12 @@ export default function Editor({ model, jewelryType, allCharms }: EditorProps) {
                       suggestions={suggestions}
                       onApplySuggestion={applySuggestion}
                   />
-              </div>}
+                  <PhotorealisticPreviewer
+                    jewelryType={jewelryType}
+                    getCanvasDataUri={getCanvasDataUri}
+                  />
+                </div>
+              )}
               </div>
           </div>
         </main>

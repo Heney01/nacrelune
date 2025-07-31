@@ -50,7 +50,16 @@
     "toast_item_added_title": "Added to Cart",
     "toast_item_added_description": "{modelName} has been added to your cart.",
     "toast_item_updated_title": "Item Updated",
-    "toast_item_updated_description": "Your design for {modelName} has been updated in the cart."
+    "toast_item_updated_description": "Your design for {modelName} has been updated in the cart.",
+    "photorealistic_preview_title": "Photorealistic Preview",
+    "photorealistic_preview_description": "Generate a lifelike photo of your creation.",
+    "photorealistic_preview_prompt_label": "Photo Context (Optional)",
+    "photorealistic_preview_prompt_placeholder": "e.g., on a beach, in a gift box, on marble...",
+    "photorealistic_preview_button": "Generate Preview",
+    "photorealistic_preview_modal_title": "Photorealistic Preview",
+    "photorealistic_preview_modal_loading": "Your image is being created by our AI. This may take a moment...",
+    "photorealistic_preview_modal_done": "Here is your photorealistic preview!",
+    "close_button": "Close"
   },
   "Cart": {
     "title": "Your Cart",

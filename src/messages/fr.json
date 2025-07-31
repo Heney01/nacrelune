@@ -50,7 +50,16 @@
     "toast_item_added_title": "Ajouté au panier",
     "toast_item_added_description": "{modelName} a été ajouté à votre panier.",
     "toast_item_updated_title": "Article mis à jour",
-    "toast_item_updated_description": "Votre création pour {modelName} a été mise à jour dans le panier."
+    "toast_item_updated_description": "Votre création pour {modelName} a été mise à jour dans le panier.",
+    "photorealistic_preview_title": "Aperçu Photoréaliste",
+    "photorealistic_preview_description": "Générez une photo réaliste de votre création.",
+    "photorealistic_preview_prompt_label": "Contexte de la photo (facultatif)",
+    "photorealistic_preview_prompt_placeholder": "ex: sur une plage, dans une boîte cadeau, sur du marbre...",
+    "photorealistic_preview_button": "Générer l'aperçu",
+    "photorealistic_preview_modal_title": "Aperçu photoréaliste",
+    "photorealistic_preview_modal_loading": "Votre image est en cours de création par notre IA. Cela peut prendre un moment...",
+    "photorealistic_preview_modal_done": "Voici votre aperçu photoréaliste !",
+    "close_button": "Fermer"
   },
   "Cart": {
     "title": "Votre Panier",
