@@ -80,11 +80,11 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                 <DialogTrigger asChild>
                     <div
                         className={cn(
-                            "relative group p-1 border rounded-md flex flex-col items-center justify-between bg-card transition-colors h-full",
+                            "relative group p-1 border rounded-md flex flex-col items-center justify-center bg-card transition-colors aspect-square",
                             isOutOfStock ? "cursor-pointer bg-muted/60" : "hover:bg-muted cursor-pointer"
                         )}
                         title={charm.name}
-                        onClick={() => !isOutOfStock && onAddCharm(charm)}
+                        onClick={() => isOutOfStock ? undefined : onAddCharm(charm)}
                     >
                         {isOutOfStock && (
                             <Badge variant="destructive" className="absolute top-1 left-1 z-10 text-xs px-1.5 py-0.5">
@@ -141,6 +141,33 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                 </DialogContent>
             </Dialog>
         );
+
+        if (isOutOfStock) {
+            return (
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <div className="contents">{charmContent}</div>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
+                            <DialogDescription>{charm.description}</DialogDescription>
+                        </DialogHeader>
+                        <div className="mt-4 flex justify-center">
+                            <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
+                        </div>
+                        <Alert variant="destructive" className="mt-4">
+                            <Ban className="h-4 w-4" />
+                            <AlertTitle>{t('out_of_stock_title')}</AlertTitle>
+                            <AlertDescription>{t('out_of_stock_description')}</AlertDescription>
+                        </Alert>
+                        <DialogFooter>
+                            <DialogClose asChild><Button variant="outline">{t('close_button')}</Button></DialogClose>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            );
+        }
 
         return <div key={charm.id}>{charmContent}</div>
     };
