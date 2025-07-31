@@ -56,25 +56,8 @@ export function CartSheet({ children, open, onOpenChange }: {
     return t('price', { price });
   };
   
-  const handleCheckout = async (email: string) => {
-    setIsProcessing(true);
-    setStockError(null);
-    try {
-      const serializableCart: SerializableCartItem[] = cart.map(item => ({
-        id: item.id,
-        model: item.model,
-        jewelryType: {
-          id: item.jewelryType.id,
-          name: item.jewelryType.name,
-          description: item.jewelryType.description
-        },
-        placedCharms: item.placedCharms,
-        previewImage: item.previewImage,
-      }));
-
-      const result: CreateOrderResult = await createOrder(serializableCart, email, locale);
-      
-      if (result.success && result.orderNumber && result.email) {
+  const handleOrderCreated = (result: CreateOrderResult) => {
+     if (result.success && result.orderNumber && result.email) {
         clearCart();
         setIsCheckoutOpen(false);
         setSuccessData({orderNumber: result.orderNumber, email: result.email});
@@ -86,18 +69,13 @@ export function CartSheet({ children, open, onOpenChange }: {
         });
       }
       else {
-        throw new Error(result.message);
+        toast({
+          variant: 'destructive',
+          title: t('checkout_error_title'),
+          description: result.message || "Une erreur inattendue est survenue.",
+        });
       }
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: t('checkout_error_title'),
-        description: error.message || "Une erreur inattendue est survenue.",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+  }
 
   return (
     <>
@@ -232,7 +210,7 @@ export function CartSheet({ children, open, onOpenChange }: {
                   <span>{t('total')}</span>
                   <span>{formatPrice(totalPrice)}</span>
                 </div>
-                  <Button className="w-full" disabled={totalItems === 0 || isProcessing} onClick={() => setIsCheckoutOpen(true)}>
+                  <Button className="w-full" disabled={totalItems === 0 || isCheckoutOpen} onClick={() => setIsCheckoutOpen(true)}>
                      {isProcessing ? <Loader2 className="animate-spin" /> : t('checkout_button')}
                   </Button>
               </div>
@@ -244,9 +222,9 @@ export function CartSheet({ children, open, onOpenChange }: {
     <CheckoutDialog 
         isOpen={isCheckoutOpen} 
         onOpenChange={setIsCheckoutOpen}
-        onConfirm={handleCheckout}
-        isProcessing={isProcessing}
+        onOrderCreated={handleOrderCreated}
         stockError={stockError}
+        setStockError={setStockError}
     />
     {successData && (
         <SuccessDialog

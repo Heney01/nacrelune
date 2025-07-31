@@ -151,7 +151,7 @@
     "shipping": "Shipping",
     "total": "Total",
     "shipping_cost_free": "Free",
-    "confirm_order_button": "Confirm Order",
+    "confirm_order_button": "Pay and Confirm Order",
     "processing_button": "Processing...",
     "email_address": "Email Address",
     "success_title": "Thank you for your order!",
@@ -159,7 +159,10 @@
     "success_description": "A summary of your order has been sent to {email}. You will be notified when your creation is shipped.",
     "success_close_button": "Close",
     "stock_error_title": "Some Items Are Out of Stock",
-    "stock_error_description": "Please review the items highlighted in red in your cart before proceeding."
+    "stock_error_description": "Please review the items highlighted in red in your cart before proceeding.",
+    "payment_error_title": "Payment Error",
+    "payment_error_default": "An error occurred during payment. Please try again.",
+    "payment_intent_error": "Could not initialize payment. Please try again."
   },
   "OrderStatus": {
     "commandée": "Ordered",

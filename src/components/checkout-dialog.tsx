@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCart } from '@/hooks/use-cart';
 import { useTranslations } from '@/hooks/use-translations';
 import { Button } from '@/components/ui/button';
@@ -10,12 +10,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { CreditCard, Loader2, AlertCircle, Ban } from 'lucide-react';
+import { Loader2, AlertCircle, Ban } from 'lucide-react';
 import Image from 'next/image';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { loadStripe, Stripe } from '@stripe/stripe-js';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { createPaymentIntent, createOrder, CreateOrderResult, SerializableCartItem } from '@/app/actions';
+import { useToast } from '@/hooks/use-toast';
+import { useParams } from 'next/navigation';
 
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 export type StockErrorState = {
   message: string;
@@ -26,17 +32,155 @@ export type StockErrorState = {
 interface CheckoutDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onConfirm: (email: string) => void;
-  isProcessing: boolean;
+  onOrderCreated: (result: CreateOrderResult) => void;
   stockError: StockErrorState;
+  setStockError: (error: StockErrorState) => void;
 }
 
-export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing, stockError }: CheckoutDialogProps) {
+const CheckoutForm = ({
+  onOrderCreated,
+  setStockError
+}: {
+  onOrderCreated: (result: CreateOrderResult) => void,
+  setStockError: (error: StockErrorState) => void
+}) => {
+  const stripe = useStripe();
+  const elements = useElements();
   const t = useTranslations('Checkout');
-  const tStatus = useTranslations('OrderStatus');
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { cart, clearCart } = useCart();
+  const { toast } = useToast();
+  const params = useParams();
+  const locale = params.locale as string;
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage(null);
+
+    if (!stripe || !elements) {
+      return;
+    }
+
+    setIsProcessing(true);
+
+    const { error: submitError } = await elements.submit();
+    if (submitError) {
+      setErrorMessage(submitError.message || t('payment_error_default'));
+      setIsProcessing(false);
+      return;
+    }
+
+    // Call server to create order in DB, check stock, etc.
+    const serializableCart: SerializableCartItem[] = cart.map(item => ({
+      id: item.id,
+      model: item.model,
+      jewelryType: {
+        id: item.jewelryType.id,
+        name: item.jewelryType.name,
+        description: item.jewelryType.description
+      },
+      placedCharms: item.placedCharms,
+      previewImage: item.previewImage,
+    }));
+    
+    const orderResult = await createOrder(serializableCart, email, locale);
+    
+    if (!orderResult.success) {
+      if(orderResult.stockError) {
+        setStockError({
+          message: orderResult.message,
+          unavailableModelIds: new Set(orderResult.stockError.unavailableModelIds),
+          unavailableCharmIds: new Set(orderResult.stockError.unavailableCharmIds),
+        });
+      } else {
+        setErrorMessage(orderResult.message);
+      }
+      setIsProcessing(false);
+      return;
+    }
+
+    // Now try to confirm payment with Stripe
+    const { clientSecret } = await createPaymentIntent(orderResult.totalPrice!);
+    
+    if (!clientSecret) {
+      setErrorMessage(t('payment_intent_error'));
+      setIsProcessing(false);
+      // Here we should ideally handle the case where the order was created in the DB but payment failed to initiate.
+      return;
+    }
+    
+    const { error } = await stripe.confirmPayment({
+      elements,
+      clientSecret,
+      confirmParams: {
+        return_url: `${window.location.origin}/${locale}/orders/track?orderNumber=${orderResult.orderNumber}`,
+        receipt_email: email,
+      },
+      redirect: 'if_required'
+    });
+
+    if (error) {
+      setErrorMessage(error.message || t('payment_error_default'));
+    } else {
+      // Payment successful, order already created.
+      onOrderCreated(orderResult);
+    }
+    
+    setIsProcessing(false);
+  };
+  
+  return (
+     <form id="checkout-form" onSubmit={handleSubmit} className="py-4 space-y-6">
+      <div>
+        <h3 className="text-lg font-medium">{t('shipping_info')}</h3>
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="name">{t('full_name')}</Label>
+            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t('full_name')} required />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="email-address">{t('email_address')}</Label>
+            <Input id="email-address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={useTranslations('OrderStatus')('email_placeholder')} required />
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3 className="text-lg font-medium">{t('payment_info')}</h3>
+        <div className="mt-4">
+          <PaymentElement />
+        </div>
+      </div>
+       {errorMessage && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>{t('payment_error_title')}</AlertTitle>
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        )}
+      <DialogFooter className="pt-4 mt-auto border-t">
+        <Button type="submit" className="w-full" disabled={isProcessing || !stripe || !elements}>
+          {isProcessing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {t('processing_button')}
+            </>
+          ) : (
+            t('confirm_order_button')
+          )}
+        </Button>
+      </DialogFooter>
+    </form>
+  )
+}
+
+export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockError, setStockError }: CheckoutDialogProps) {
+  const t = useTranslations('Checkout');
   const tCart = useTranslations('Cart');
   const { cart } = useCart();
-  const [email, setEmail] = useState('');
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
 
   const subtotal = cart.reduce((sum, item) => {
     const modelPrice = item.model.price || 0;
@@ -51,10 +195,33 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing, 
     return tCart('price', { price });
   };
   
-  const handleConfirm = (e: React.FormEvent) => {
-    e.preventDefault();
-    onConfirm(email);
-  }
+  useEffect(() => {
+    if(isOpen && total > 0) {
+      createPaymentIntent(total).then(res => {
+        if (res.clientSecret) {
+          setClientSecret(res.clientSecret);
+        } else {
+            console.error(res.error);
+        }
+      });
+    }
+  }, [isOpen, total]);
+
+  const options = {
+    clientSecret,
+    appearance: {
+      theme: 'stripe' as const,
+       variables: {
+        colorPrimary: '#ef4444',
+        colorBackground: '#ffffff',
+        colorText: '#333333',
+        colorDanger: '#df1b41',
+        fontFamily: 'Alegreya, Ideal Sans, system-ui, sans-serif',
+        spacingUnit: '4px',
+        borderRadius: '4px',
+      }
+    },
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -77,73 +244,16 @@ export function CheckoutDialog({ isOpen, onOpenChange, onConfirm, isProcessing, 
                 </div>
             )}
             <div className="flex-grow overflow-y-auto px-6 no-scrollbar">
-                <form id="checkout-form" onSubmit={handleConfirm} className="py-4 space-y-6">
-                    <div>
-                        <h3 className="text-lg font-medium">{t('shipping_info')}</h3>
-                        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div className="space-y-2">
-                                <Label htmlFor="name">{t('full_name')}</Label>
-                                <Input id="name" placeholder={t('full_name')} required />
-                            </div>
-                            <div className="space-y-2 sm:col-span-2">
-                                <Label htmlFor="email-address">{t('email_address')}</Label>
-                                <Input id="email-address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={tStatus('email_placeholder')} required />
-                            </div>
-                            <div className="space-y-2 sm:col-span-2">
-                                <Label htmlFor="address">{t('address')}</Label>
-                                <Input id="address" placeholder={t('address')} required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="city">{t('city')}</Label>
-                                <Input id="city" placeholder={t('city')} required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="postal-code">{t('postal_code')}</Label>
-                                <Input id="postal-code" placeholder={t('postal_code')} required />
-                            </div>
-                            <div className="space-y-2 sm:col-span-2">
-                                <Label htmlFor="country">{t('country')}</Label>
-                                <Input id="country" placeholder={t('country')} required />
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <h3 className="text-lg font-medium">{t('payment_info')}</h3>
-                        <div className="mt-2 text-sm text-muted-foreground">{t('payment_simulation_notice')}</div>
-                        <div className="mt-4 grid grid-cols-1 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="card-number">{t('card_number')}</Label>
-                                <div className="relative">
-                                    <Input id="card-number" placeholder="**** **** **** 4242" required />
-                                    <CreditCard className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="expiry-date">{t('expiry_date')}</Label>
-                                    <Input id="expiry-date" placeholder="MM/AA" required />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="cvc">{t('cvc')}</Label>
-                                    <Input id="cvc" placeholder="123" required />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </form>
+              {clientSecret ? (
+                <Elements stripe={stripePromise} options={options}>
+                  <CheckoutForm onOrderCreated={onOrderCreated} setStockError={setStockError} />
+                </Elements>
+              ) : (
+                <div className="flex justify-center items-center h-full">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              )}
             </div>
-             <DialogFooter className="p-6 pt-4 mt-auto border-t flex-shrink-0">
-              <Button type="submit" form="checkout-form" className="w-full" disabled={isProcessing}>
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t('processing_button')}
-                  </>
-                ) : (
-                  t('confirm_order_button')
-                )}
-              </Button>
-            </DialogFooter>
         </div>
         
         <aside className="hidden md:flex flex-col bg-muted/50 p-6 overflow-hidden">

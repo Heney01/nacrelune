@@ -14,6 +14,9 @@ import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, 
 import { getCharmSuggestions as getCharmSuggestionsFlow, CharmSuggestionInput, CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { z } from 'zod';
 import { getCharms as fetchCharms } from '@/lib/data';
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 const getFileNameFromUrl = (url: string) => {
     if (!url) return null;
@@ -454,6 +457,27 @@ export async function savePreferences(prevState: any, formData: FormData): Promi
 
 // --- Order Actions ---
 
+export async function createPaymentIntent(
+  amount: number
+): Promise<{ clientSecret: string | null; error?: string }> {
+  if (amount <= 0) {
+    return { error: 'Invalid amount.' };
+  }
+  try {
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount * 100), // Amount in cents
+      currency: 'eur',
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
+    return { clientSecret: paymentIntent.client_secret };
+  } catch (error: any) {
+    console.error('Error creating payment intent:', error);
+    return { error: error.message };
+  }
+}
+
 function generateOrderNumber(): string {
   const date = new Date();
   const year = date.getFullYear().toString().slice(-2);
@@ -486,6 +510,7 @@ export type CreateOrderResult = {
     orderNumber?: string;
     email?: string;
     stockError?: StockError;
+    totalPrice?: number;
 };
 
 export async function markAsOrdered(formData: FormData): Promise<{ success: boolean; message: string }> {
@@ -698,7 +723,7 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
             const mailRef = doc(collection(db, 'mail'));
             transaction.set(mailRef, mailDocData);
             
-            return { success: true, message: 'Votre commande a été passée avec succès !', orderNumber, email };
+            return { success: true, message: 'Votre commande a été passée avec succès !', orderNumber, email, totalPrice: totalOrderPrice };
         });
 
         return orderData;
@@ -1130,3 +1155,4 @@ export async function getRefreshedCharms(): Promise<{ success: boolean; charms?:
         return { success: false, error: error.message || "Une erreur est survenue lors du rafraîchissement des breloques." };
     }
 }
+
