@@ -91,7 +91,7 @@ export function SuggestionSidebar({
             </Alert>
         )}
 
-        <div className="flex-grow mt-4 relative">
+        <div className="flex-grow mt-4 min-h-0">
             {isLoading && (
               <div className="space-y-4">
                 <Skeleton className="h-24 w-full" />
@@ -106,9 +106,8 @@ export function SuggestionSidebar({
                 </div>
             )}
              {!isLoading && suggestions.length > 0 && (
-              <div className="absolute inset-0">
-                <ScrollArea className="h-full pr-4">
-                  <div className="space-y-4">
+                <ScrollArea className={cn("h-full", isMobile ? "h-[300px]" : "h-full")}>
+                  <div className="space-y-4 pr-4">
                     {suggestions.map((suggestion, index) => {
                       const charm = charms.find(c => c.name === suggestion.charmName);
                       return (
@@ -144,7 +143,6 @@ export function SuggestionSidebar({
                     })}
                   </div>
                 </ScrollArea>
-              </div>
              )}
         </div>
       </CardContent>
