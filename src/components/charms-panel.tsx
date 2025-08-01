@@ -34,10 +34,8 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
 
     const handleCardClick = (e: React.MouseEvent) => {
         if (isMobile) {
-            // On mobile, always open the preview dialog.
             setIsPreviewOpen(true);
         } else {
-            // On desktop, add charm directly, unless the loupe is clicked.
             const target = e.target as HTMLElement;
             if (target.closest('[data-trigger-preview]')) return;
 
@@ -54,8 +52,7 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
             <Card
                 onClick={handleCardClick}
                 className={cn(
-                    "p-0 aspect-square flex flex-col items-center justify-center relative group",
-                    "cursor-pointer",
+                    "p-0 flex flex-col relative group cursor-pointer",
                     isOutOfStock ? "bg-muted/60" : "hover:bg-muted"
                 )}
                 title={charm.name}
@@ -66,15 +63,36 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
                         {t('sold_out')}
                     </Badge>
                 )}
-                 <div className="flex-grow w-full h-full relative grid place-items-center">
+
+                {!isMobile && (
+                     <DialogTrigger asChild>
+                        <Button 
+                            variant="secondary" 
+                            size="icon" 
+                            className="absolute top-1 right-1 h-6 w-6 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+                            data-trigger-preview
+                            aria-label={t('view_details_button')}
+                        >
+                            <ZoomIn className="h-4 w-4" />
+                        </Button>
+                    </DialogTrigger>
+                )}
+                 
+                 <div className="aspect-square w-full h-full relative grid place-items-center">
                     <Image
                         src={charm.imageUrl}
                         alt={charm.name}
                         fill
-                        className={cn("object-contain pointer-events-none", isOutOfStock && "grayscale opacity-50")}
+                        className={cn("object-contain pointer-events-none p-2", isOutOfStock && "grayscale opacity-50")}
                         data-ai-hint="jewelry charm"
                     />
                 </div>
+                 
+                 {!isMobile && (
+                    <div className="p-2 pt-0 text-center">
+                        <p className="text-xs font-medium truncate w-full">{charm.name}</p>
+                    </div>
+                )}
             </Card>
 
             <DialogContent className="max-w-md">
