@@ -16,22 +16,29 @@ import { useParams } from 'next/navigation';
 import { StockErrorState } from './checkout-dialog';
 import type { ShippingAddress, DeliveryMethod } from '@/lib/types';
 import { Progress } from './ui/progress';
-import { RadioGroup, RadioGroupItem } from './ui/radio-group';
-import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 
 type Step = 'customer' | 'shipping' | 'payment';
 
 const StripeCheckoutForm = ({
-  clientSecret,
   onOrderCreated,
+  total,
+  email,
+  deliveryMethod,
+  shippingAddress,
 }: {
-  clientSecret: string;
   onOrderCreated: (result: CreateOrderResult) => void;
+  total: number;
+  email: string;
+  deliveryMethod: DeliveryMethod;
+  shippingAddress?: ShippingAddress;
 }) => {
   const stripe = useStripe();
   const elements = useElements();
   const t = useTranslations('Checkout');
+  const { cart } = useCart();
+  const locale = useParams().locale as string;
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -46,28 +53,58 @@ const StripeCheckoutForm = ({
     setIsProcessing(true);
     setErrorMessage(null);
 
-    const { error } = await stripe.confirmPayment({
+    const serializableCart: SerializableCartItem[] = cart.map(item => ({
+        id: item.id,
+        model: item.model,
+        jewelryType: {
+          id: item.jewelryType.id,
+          name: item.jewelryType.name,
+          description: item.jewelryType.description
+        },
+        placedCharms: item.placedCharms,
+        previewImage: item.previewImage,
+      }));
+
+    // We create the payment intent here, right before confirming the payment.
+    const { clientSecret, error: intentError } = await createPaymentIntent(total);
+
+    if (intentError || !clientSecret) {
+        setErrorMessage(intentError || t('payment_intent_error'));
+        setIsProcessing(false);
+        return;
+    }
+
+    const { error: paymentError } = await stripe.confirmPayment({
       elements,
+      clientSecret,
       confirmParams: {
-        // We will pass shipping and receipt_email on the server side when creating the order
+        receipt_email: email,
       },
       redirect: 'if_required',
     });
 
-    if (error) {
-      setErrorMessage(error.message || t('payment_error_default'));
+    if (paymentError) {
+      setErrorMessage(paymentError.message || t('payment_error_default'));
       setIsProcessing(false);
       return;
     }
 
-    // The parent component will handle order creation after this succeeds.
-    // This component's only job is to confirm the payment.
-    onOrderCreated({ success: true, message: "Paiement réussi."}); // This is a simplified success message
+    // If payment is successful, create the order in our database
+    const orderResult = await createOrder(
+        serializableCart,
+        email,
+        locale,
+        clientSecret, // Pass the real payment intent ID now
+        deliveryMethod,
+        shippingAddress
+    );
+
+    onOrderCreated(orderResult);
     setIsProcessing(false);
   };
 
   return (
-     <form id="payment-form" onSubmit={handleSubmit} className="space-y-4">
+    <form id="payment-form" onSubmit={handleSubmit} className="space-y-4">
       {errorMessage && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -76,16 +113,15 @@ const StripeCheckoutForm = ({
         </Alert>
       )}
       <PaymentElement />
-      <Button type="submit" className="w-full" disabled={isProcessing || !stripe || !elements}>
-        {isProcessing ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            {t('processing_button')}
-          </>
-        ) : (
-          t('confirm_order_button')
-        )}
-      </Button>
+       <DialogFooter className="pt-4 mt-auto px-0">
+         <Button type="submit" form="payment-form" className="w-full" disabled={isProcessing || !stripe || !elements}>
+            {isProcessing ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('processing_button')}</>
+            ) : (
+                t('confirm_order_button', { total: total.toFixed(2) })
+            )}
+         </Button>
+      </DialogFooter>
     </form>
   )
 };
@@ -95,16 +131,15 @@ export const CheckoutForm = ({
   total,
   onOrderCreated,
   setStockError,
+  clientSecret, // Now receiving the clientSecret as a prop
 }: {
   total: number;
   onOrderCreated: (result: CreateOrderResult) => void;
   setStockError: (error: StockErrorState) => void;
+  clientSecret: string | null;
 }) => {
   const t = useTranslations('Checkout');
   const tStatus = useTranslations('OrderStatus');
-  const { cart } = useCart();
-  const params = useParams();
-  const locale = params.locale as string;
 
   const [currentStep, setCurrentStep] = useState<Step>('customer');
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('home');
@@ -117,7 +152,6 @@ export const CheckoutForm = ({
   });
   const [email, setEmail] = useState('');
 
-  const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -141,33 +175,6 @@ export const CheckoutForm = ({
       setCurrentStep('payment');
       return;
     }
-    
-    if (currentStep === 'payment') {
-        setIsProcessing(true);
-        const serializableCart: SerializableCartItem[] = cart.map(item => ({
-            id: item.id,
-            model: item.model,
-            jewelryType: {
-              id: item.jewelryType.id,
-              name: item.jewelryType.name,
-              description: item.jewelryType.description
-            },
-            placedCharms: item.placedCharms,
-            previewImage: item.previewImage,
-          }));
-          
-          const orderResult = await createOrder(
-            serializableCart, 
-            email, 
-            locale, 
-            "pi_placeholder_will_be_replaced", // This is now a placeholder
-            deliveryMethod, 
-            shippingAddress
-          );
-
-          onOrderCreated(orderResult);
-          setIsProcessing(false);
-    }
   };
 
   const handleBackStep = () => {
@@ -178,6 +185,38 @@ export const CheckoutForm = ({
   
   const stepNumber = currentStep === 'customer' ? 1 : currentStep === 'shipping' ? 2 : 3;
   const progressValue = (stepNumber / 3) * 100;
+  
+  if (currentStep === 'payment') {
+      if (!clientSecret) {
+          return (
+              <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                  <p className="text-muted-foreground">Initializing payment...</p>
+              </div>
+          )
+      }
+      return (
+          <div className="flex flex-col h-full">
+            <DialogHeader className="p-6 pb-4 flex-shrink-0 flex-row items-center gap-4">
+                <Button type="button" variant="ghost" size="icon" onClick={handleBackStep} id="checkout-back-button-payment">
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <div>
+                  <DialogTitle className="text-2xl font-headline">{t('payment_info')}</DialogTitle>
+                </div>
+            </DialogHeader>
+             <div className="px-6 pb-6 flex-grow">
+                  <StripeCheckoutForm 
+                      onOrderCreated={onOrderCreated}
+                      total={total}
+                      email={email}
+                      deliveryMethod={deliveryMethod}
+                      shippingAddress={shippingAddress}
+                  />
+             </div>
+          </div>
+      )
+  }
 
   return (
     <>
@@ -230,8 +269,8 @@ export const CheckoutForm = ({
                     <h3 className="text-lg font-medium">{t('shipping_title')}</h3>
                     <Tabs value={deliveryMethod} onValueChange={(v) => setDeliveryMethod(v as DeliveryMethod)} className="w-full">
                       <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="home"><Home className="mr-2"/>{t('delivery_method_home')}</TabsTrigger>
-                        <TabsTrigger value="pickup"><Store className="mr-2"/>{t('delivery_method_pickup')}</TabsTrigger>
+                        <TabsTrigger value="home"><Home className="mr-2 h-4 w-4"/>{t('delivery_method_home')}</TabsTrigger>
+                        <TabsTrigger value="pickup"><Store className="mr-2 h-4 w-4"/>{t('delivery_method_pickup')}</TabsTrigger>
                       </TabsList>
                       <TabsContent value="home" className="pt-4 space-y-4">
                          <div className="space-y-2">
@@ -269,32 +308,13 @@ export const CheckoutForm = ({
                       </TabsContent>
                     </Tabs>
                   </div>
-
-                  <div style={{ display: currentStep === 'payment' ? 'block' : 'none' }} className="space-y-4">
-                      <h3 className="text-lg font-medium">{t('payment_info')}</h3>
-                      <Alert>
-                          <AlertCircle className="h-4 w-4" />
-                          <AlertTitle>{t('payment_simulation_title')}</AlertTitle>
-                          <AlertDescription>{t('payment_simulation_notice')}</AlertDescription>
-                      </Alert>
-                  </div>
                 </div>
             </div>
             
             <DialogFooter className="pt-4 pb-6 mt-auto border-t px-6">
-                 {currentStep === 'payment' ? (
-                     <Button type="submit" form="checkout-form" className="w-full" disabled={isProcessing}>
-                        {isProcessing ? (
-                            <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('processing_button')}</>
-                        ) : (
-                            t('confirm_order_button_no_payment')
-                        )}
-                     </Button>
-                ) : (
-                    <Button type="submit" form="checkout-form" className="w-full">
-                        {t('next_step_button')}
-                    </Button>
-                )}
+                <Button type="submit" form="checkout-form" className="w-full">
+                    {t('next_step_button')}
+                </Button>
             </DialogFooter>
         </form>
       </div>
