@@ -56,7 +56,7 @@
     "photorealistic_preview_modal_done": "Here is your photorealistic preview!",
     "close_button": "Close",
     "stock_issue_tooltip": "Not enough stock for this charm.",
-    "editor_disclaimer": "This editor is a faithful representation, but final colors and dimensions may vary slightly."
+    "editor_disclaimer": "This editor is a faithful representation, but final colors and dimensions may vary slightly. Some charm images may be AI-enhanced for better integration. Click on a charm to see its original photo."
   },
   "Cart": {
     "title": "Your Cart",
@@ -85,7 +85,8 @@
     "close_button": "Close",
     "sold_out": "Sold Out",
     "out_of_stock_title": "Item Sold Out",
-    "out_of_stock_description": "This charm is no longer in stock and cannot be added."
+    "out_of_stock_description": "This charm is no longer in stock and cannot be added.",
+    "view_details_button": "View details and original photo"
   },
   "Admin": {
     "reorder_dialog_title": "Manage Order for {itemName}",

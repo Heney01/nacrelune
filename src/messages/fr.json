@@ -56,7 +56,7 @@
     "photorealistic_preview_modal_done": "Voici votre aperçu photoréaliste !",
     "close_button": "Fermer",
     "stock_issue_tooltip": "Stock insuffisant pour cette breloque.",
-    "editor_disclaimer": "Cet éditeur est une représentation fidèle, mais les couleurs et dimensions finales peuvent légèrement varier."
+    "editor_disclaimer": "Cet éditeur est une représentation fidèle, mais les couleurs et dimensions finales peuvent légèrement varier. Certaines images de breloques peuvent être optimisées par IA pour une meilleure intégration. Cliquez sur une breloque pour voir sa photo originale."
   },
   "Cart": {
     "title": "Votre Panier",
@@ -87,7 +87,8 @@
     "close_button": "Fermer",
     "sold_out": "Épuisé",
     "out_of_stock_title": "Article épuisé",
-    "out_of_stock_description": "Cette breloque n'est plus en stock et ne peut pas être ajoutée."
+    "out_of_stock_description": "Cette breloque n'est plus en stock et ne peut pas être ajoutée.",
+    "view_details_button": "Voir les détails et la photo originale"
   },
   "Admin": {
     "reorder_dialog_title": "Gérer la commande pour {itemName}",

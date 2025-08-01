@@ -33,6 +33,7 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
 
     const handleCardClick = (e: React.MouseEvent) => {
         const target = e.target as HTMLElement;
+        // Do not trigger onAddCharm if the detail view button is clicked
         if (target.closest('[data-trigger-preview]')) return;
 
         if (isOutOfStock) {
@@ -72,10 +73,7 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
                         data-ai-hint="jewelry charm"
                     />
                 </div>
-                <div className="h-8 flex items-center justify-center md:hidden">
-                    <p className="text-xs text-center line-clamp-2">{charm.name}</p>
-                </div>
-                 <div className="h-8 hidden items-center justify-center md:flex">
+                <div className="h-8 hidden items-center justify-center md:flex">
                     <p className="text-xs text-center line-clamp-2">{charm.name}</p>
                 </div>
                 
@@ -85,6 +83,7 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
                     variant="ghost" 
                     size="icon" 
                     className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6"
+                    title={t('view_details_button')}
                 >
                     <ZoomIn className="h-4 w-4" />
                 </Button>

@@ -9,7 +9,7 @@ import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle } from 'lucide-react';
+import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BrandLogo } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -818,11 +818,19 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                           })}
                       </div>
 
-                      <div className={cn(
-                          "absolute bottom-2 left-0 right-0 px-4 text-xs text-muted-foreground text-center",
-                           isMobile ? "text-[10px] pr-4" : "pr-32"
-                        )}>
-                        <p>{t('editor_disclaimer')}</p>
+                      <div className={cn("absolute bottom-2 left-0 right-0 px-4 flex justify-center items-center gap-2", isMobile ? "pr-4" : "pr-32")}>
+                          <TooltipProvider>
+                              <Tooltip>
+                                  <TooltipTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground rounded-full hover:bg-muted/50 hover:text-foreground">
+                                          <Info />
+                                      </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" align="center" className="max-w-xs text-center">
+                                      <p>{t('editor_disclaimer')}</p>
+                                  </TooltipContent>
+                              </Tooltip>
+                          </TooltipProvider>
                       </div>
 
                       {!isMobile && (
@@ -845,7 +853,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                <Carousel
                                 opts={{
                                     align: "start",
-                                    slidesToScroll: isMobile ? 3 : 5,
                                 }}
                                 className="w-full"
                                 >
@@ -893,8 +900,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                     </CarouselItem>
                                     ))}
                                 </CarouselContent>
-                                <CarouselPrevious />
-                                <CarouselNext />
+                                <CarouselPrevious className="hidden sm:flex" />
+                                <CarouselNext className="hidden sm:flex" />
                                 </Carousel>
                           )}
                       </CardContent>
@@ -989,6 +996,3 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
-
-
-
