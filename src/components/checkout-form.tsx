@@ -128,7 +128,7 @@ const PaymentStep = ({
         </Alert>
       )}
       <PaymentElement />
-       <DialogFooter className="pt-4 pb-2 mt-auto px-0">
+       <DialogFooter className="pt-4 pb-6 mt-auto px-0">
          <Button type="submit" form="payment-form" className="w-full" disabled={isProcessing || !stripe || !elements}>
             {isProcessing ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('processing_button')}</>
@@ -384,4 +384,3 @@ export const CheckoutForm = ({
     </>
   );
 };
-
