@@ -151,7 +151,7 @@ export function SuggestionSidebar({
                 </div>
             </TabsContent>
 
-             <TabsContent value="analysis" className="flex-grow flex flex-col gap-4 min-h-0 mt-4">
+             <TabsContent value="analysis" className="flex flex-col gap-4 mt-4">
                 <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">Obtenez un avis constructif sur votre création actuelle de la part de notre IA designer.</p>
                     <Button variant="outline" className="w-full" onClick={handleCritique} disabled={isLoading}>
