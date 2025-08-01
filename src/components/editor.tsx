@@ -682,9 +682,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                               {!isMobile && tHome('back_button')}
                           </Link>
                       </Button>
-                      <h2 className="text-xl md:text-2xl font-headline tracking-tight text-center flex-grow truncate">
-                        {t('customize_title')}
-                      </h2>
+                      <div className="flex-grow"></div>
                       {isEditing ? (
                           <Button onClick={handleUpdateCart} disabled={captureRequest || hasStockIssues}>
                               <PlusCircle className="mr-2 h-4 w-4" />
@@ -899,6 +897,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
 
 
 
