@@ -751,8 +751,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       </div>
 
                       <div className={cn(
-                          "absolute bottom-0 left-0 right-0 p-2 text-xs text-white bg-black/40 text-center",
-                          isMobile && "text-[10px] p-1"
+                          "absolute bottom-2 left-0 right-0 px-4 text-xs text-muted-foreground text-center",
+                           isMobile ? "text-[10px] pr-4" : "pr-32"
                         )}>
                         <p>{t('editor_disclaimer')}</p>
                       </div>
