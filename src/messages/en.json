@@ -56,7 +56,7 @@
     "photorealistic_preview_modal_done": "Here is your photorealistic preview!",
     "close_button": "Close",
     "stock_issue_tooltip": "Not enough stock for this charm.",
-    "editor_disclaimer": "This editor is a faithful representation, but final colors and dimensions may vary slightly. Some charm images may be AI-enhanced for better integration. Click on a charm to see its original photo.",
+    "editor_disclaimer": "This editor is a faithful representation, but final colors and dimensions may vary slightly. Some charm images may be AI-enhanced for better integration. To see the original photo of a charm, click the magnifying glass icon at the top right of its card in the charm selection panel.",
     "editor_disclaimer_title": "Editor Disclaimer"
   },
   "Cart": {

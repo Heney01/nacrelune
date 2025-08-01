@@ -30,6 +30,7 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
     const isOutOfStock = (charm.quantity ?? 0) <= 0;
     const t = useTranslations('CharmsPanel');
     const [isPrewiewOpen, setIsPreviewOpen] = useState(false);
+    const isMobile = useIsMobile();
 
     const handleCardClick = (e: React.MouseEvent) => {
         const target = e.target as HTMLElement;
@@ -69,12 +70,9 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
                         src={charm.imageUrl}
                         alt={charm.name}
                         fill
-                        className={cn("object-contain pointer-events-none", isOutOfStock && "grayscale opacity-50")}
+                        className={cn("object-contain pointer-events-none p-2", isOutOfStock && "grayscale opacity-50")}
                         data-ai-hint="jewelry charm"
                     />
-                </div>
-                <div className="h-8 hidden items-center justify-center md:flex">
-                    <p className="text-xs text-center line-clamp-2">{charm.name}</p>
                 </div>
                 
                 <Button 
@@ -82,7 +80,10 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
                     onClick={handlePreviewClick}
                     variant="ghost" 
                     size="icon" 
-                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6"
+                    className={cn(
+                        "absolute top-1 right-1 transition-opacity h-6 w-6",
+                        isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    )}
                     title={t('view_details_button')}
                 >
                     <ZoomIn className="h-4 w-4" />
