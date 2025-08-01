@@ -86,12 +86,11 @@ export function SuggestionSidebar({
 
             <TabsContent value="suggestions" className="flex-grow flex flex-col gap-4 min-h-0 mt-4">
                 <div className="space-y-2">
-                    <Label className="font-bold">Suggestions basées sur votre design</Label>
                      <Button variant="outline" className="w-full" onClick={handleAnalysis} disabled={isLoading}>
                          {isLoading ? (
                             <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('generating_button')}</>
                         ): (
-                            <> <Scan className="mr-2 h-4 w-4" /> {t('generate_ideas_button')}</>
+                            <> <Scan className="mr-2 h-4 w-4" /> Analyser ma création</>
                         )}
                     </Button>
                 </div>
@@ -154,7 +153,6 @@ export function SuggestionSidebar({
 
              <TabsContent value="analysis" className="flex-grow flex flex-col gap-4 min-h-0 mt-4">
                 <div className="space-y-2">
-                    <Label className="font-bold">Analyse textuelle du design</Label>
                     <p className="text-sm text-muted-foreground">Obtenez un avis constructif sur votre création actuelle de la part de notre IA designer.</p>
                     <Button variant="outline" className="w-full" onClick={handleCritique} disabled={isLoading}>
                          {isLoading ? (
