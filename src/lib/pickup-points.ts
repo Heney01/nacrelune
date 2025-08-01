@@ -2,7 +2,6 @@
 'use server';
 
 import type { PickupPoint } from './types';
-import fetch from 'node-fetch';
 
 export type FindPickupPointsResult = {
   success: boolean;
@@ -16,11 +15,12 @@ export type FindPickupPointsResult = {
  * @returns A promise that resolves to a FindPickupPointsResult object.
  */
 export async function findPickupPoints(postcode: string): Promise<FindPickupPointsResult> {
-  const publicKey = process.env.SENDCLOUD_PUBLIC_KEY;
-  const secretKey = process.env.SENDCLOUD_SECRET_KEY;
+  // Use NEXT_PUBLIC_ prefixes to make env vars available in server components/actions
+  const publicKey = process.env.NEXT_PUBLIC_SENDCLOUD_PUBLIC_KEY;
+  const secretKey = process.env.NEXT_PUBLIC_SENDCLOUD_SECRET_KEY;
 
   if (!publicKey || !secretKey) {
-    console.error("Sendcloud API keys are not configured in .env file.");
+    console.error("Sendcloud API keys are not configured in .env file with NEXT_PUBLIC_ prefix.");
     return { success: false, error: "Le service de points relais est temporairement indisponible." };
   }
 
@@ -32,6 +32,7 @@ export async function findPickupPoints(postcode: string): Promise<FindPickupPoin
   const url = `https://api.sendcloud.dev/v2/service-points?country=${country}&postcode=${postcode}&carrier=${carriers}`;
 
   try {
+    // Use the native fetch provided by Next.js environment
     const response = await fetch(url, {
       method: 'GET',
       headers: {
