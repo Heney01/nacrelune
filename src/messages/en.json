@@ -57,7 +57,19 @@
     "close_button": "Close",
     "stock_issue_tooltip": "Not enough stock for this charm.",
     "editor_disclaimer": "This editor is a faithful representation, but final colors and dimensions may vary slightly. Some charm images may be AI-enhanced for better integration. To see the original photo of a charm, click the magnifying glass icon at the top right of its card in the charm selection panel.",
-    "editor_disclaimer_title": "Editor Disclaimer"
+    "editor_disclaimer_title": "Editor Disclaimer",
+    "share_button": "Share",
+    "share_creation_title": "Share your creation",
+    "share_creation_description": "Give your creation a name and share it!",
+    "share_title_label": "Title of your creation",
+    "share_title_placeholder": "e.g., My summer necklace",
+    "share_description_label": "Description (optional)",
+    "share_description_placeholder": "e.g., A creation that reminds me of holidays...",
+    "share_error_image": "Could not load the image of your creation.",
+    "share_not_supported": "Sharing is not supported by this browser.",
+    "share_error_generic": "An error occurred while sharing.",
+    "share_default_title": "My creation from Atelier à bijoux",
+    "share_default_text": "Check out my latest creation on Atelier à bijoux!"
   },
   "Cart": {
     "title": "Your Cart",

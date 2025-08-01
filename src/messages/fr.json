@@ -57,7 +57,19 @@
     "close_button": "Fermer",
     "stock_issue_tooltip": "Stock insuffisant pour cette breloque.",
     "editor_disclaimer": "Cet éditeur est une représentation fidèle, mais les couleurs et dimensions finales peuvent légèrement varier. Certaines images de breloques peuvent être optimisées par IA pour une meilleure intégration. Pour voir la photo originale d'une breloque, cliquez sur l'icône loupe en haut à droite de sa carte dans le panneau de sélection.",
-    "editor_disclaimer_title": "Avertissement de l'éditeur"
+    "editor_disclaimer_title": "Avertissement de l'éditeur",
+    "share_button": "Partager",
+    "share_creation_title": "Partager votre création",
+    "share_creation_description": "Donnez un nom à votre création et partagez-la !",
+    "share_title_label": "Titre de votre création",
+    "share_title_placeholder": "ex: Mon collier d'été",
+    "share_description_label": "Description (facultatif)",
+    "share_description_placeholder": "ex: Une création qui me rappelle les vacances...",
+    "share_error_image": "Impossible de charger l'image de votre création.",
+    "share_not_supported": "Le partage n'est pas supporté par ce navigateur.",
+    "share_error_generic": "Une erreur est survenue lors du partage.",
+    "share_default_title": "Ma création Atelier à bijoux",
+    "share_default_text": "Découvrez ma dernière création sur Atelier à bijoux !"
   },
   "Cart": {
     "title": "Votre Panier",

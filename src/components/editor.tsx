@@ -9,7 +9,7 @@ import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info } from 'lucide-react';
+import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BrandLogo } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -29,6 +29,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ShareDialog } from './share-dialog';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -152,6 +153,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const [isCharmsSheetOpen, setIsCharmsSheetOpen] = useState(false);
   const [isSuggestionsSheetOpen, setIsSuggestionsSheetOpen] = useState(false);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -712,6 +714,14 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   return (
     <>
       <CartSheet open={isCartSheetOpen} onOpenChange={setIsCartSheetOpen} />
+      {isShareOpen && (
+        <ShareDialog
+          isOpen={isShareOpen}
+          onOpenChange={setIsShareOpen}
+          getCanvasDataUri={getCanvasDataUri}
+          t={t}
+        />
+      )}
       <div className={cn("flex flex-col h-screen", isMobile && "h-[calc(100dvh)]")}>
         <header className="p-4 border-b flex-shrink-0">
             <div className="container mx-auto flex justify-between items-center">
@@ -741,17 +751,23 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                           </Link>
                       </Button>
                       <div className="flex-grow"></div>
-                      {isEditing ? (
-                          <Button onClick={handleUpdateCart} disabled={captureRequest || hasStockIssues}>
-                              <PlusCircle className="mr-2 h-4 w-4" />
-                              {t('update_item_button')}
-                          </Button>
-                      ) : (
-                          <Button onClick={handleAddToCart} disabled={captureRequest || hasStockIssues}>
-                              <ShoppingCart className="mr-2 h-4 w-4" />
-                              {t('add_to_cart_button')}
-                          </Button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" onClick={() => setIsShareOpen(true)}>
+                          <Share2 className="mr-2 h-4 w-4" />
+                          {t('share_button')}
+                        </Button>
+                        {isEditing ? (
+                            <Button onClick={handleUpdateCart} disabled={captureRequest || hasStockIssues}>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                {t('update_item_button')}
+                            </Button>
+                        ) : (
+                            <Button onClick={handleAddToCart} disabled={captureRequest || hasStockIssues}>
+                                <ShoppingCart className="mr-2 h-4 w-4" />
+                                {t('add_to_cart_button')}
+                            </Button>
+                        )}
+                      </div>
                   </div>
                   <div
                       ref={canvasWrapperRef}
