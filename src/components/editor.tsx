@@ -354,7 +354,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
             pc.id === interactionState.activeCharmId
             ? { ...pc, position: { x: pc.position.x + dxPercent, y: pc.position.y + dyPercent } }
             : pc
-            );
+          );
           setPlacedCharms(newPlacedCharms);
         }
         
@@ -602,11 +602,19 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   };
 
   const calculatePixelsPerMm = useCallback(() => {
-    if (modelImageRef.current && model.width) {
-      const imageWidthInPixels = modelImageRef.current.offsetWidth;
-      setPixelsPerMm(imageWidthInPixels / model.width);
-    }
-  }, [model.width]);
+      if (modelImageRef.current && (model.width || model.height)) {
+          const imageWidthPx = modelImageRef.current.offsetWidth;
+          const imageHeightPx = modelImageRef.current.offsetHeight;
+          const modelWidthMm = model.width || model.height || 1; // Use height as fallback
+          const modelHeightMm = model.height || model.width || 1; // Use width as fallback
+
+          const pxPerMmWidth = imageWidthPx / modelWidthMm;
+          const pxPerMmHeight = imageHeightPx / modelHeightMm;
+          
+          // Use an average to account for non-uniform scaling
+          setPixelsPerMm((pxPerMmWidth + pxPerMmHeight) / 2);
+      }
+  }, [model.width, model.height]);
 
   useEffect(() => {
     const imageEl = modelImageRef.current;
@@ -897,6 +905,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
 
 
 
