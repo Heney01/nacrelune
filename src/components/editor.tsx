@@ -23,7 +23,7 @@ import { CartSheet } from './cart-sheet';
 import html2canvas from 'html2canvas';
 import { CartWidget } from './cart-widget';
 import { useTranslations } from '@/hooks/use-translations';
-import { getCharmSuggestionsAction, getRefreshedCharms } from '@/app/actions';
+import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction } from '@/app/actions';
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -202,6 +202,35 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   scaleRef.current = scale;
   const placedCharmsRef = useRef(placedCharms);
   placedCharmsRef.current = placedCharms;
+
+  const getCanvasDataUri = useCallback(async (): Promise<string> => {
+    if (!canvasRef.current) {
+      throw new Error("Canvas ref is not available");
+    }
+    resetZoomAndPan();
+    setSelectedPlacedCharmId(null);
+    
+    return new Promise((resolve, reject) => {
+        setTimeout(async () => {
+            try {
+                const canvas = await html2canvas(canvasRef.current!, {
+                    backgroundColor: null,
+                    logging: false,
+                    useCORS: true,
+                    allowTaint: true,
+                    scale: 1,
+                    width: canvasRef.current!.offsetWidth,
+                    height: canvasRef.current!.offsetHeight,
+                });
+                resolve(canvas.toDataURL('image/png', 0.9));
+            } catch (error) {
+                console.error("Error capturing canvas:", error);
+                reject(error);
+            }
+        }, 50);
+    });
+  }, [resetZoomAndPan]);
+
 
   const addCharmToCanvas = useCallback((
     charm: Charm, 
@@ -474,27 +503,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     triggerCapture();
   }
 
-  const getCanvasDataUri = useCallback(async (): Promise<string> => {
-    if (!canvasRef.current) {
-      throw new Error("Canvas ref is not available");
-    }
-    try {
-      const canvas = await html2canvas(canvasRef.current, {
-        backgroundColor: null,
-        logging: false,
-        useCORS: true,
-        allowTaint: true,
-        scale: 1,
-        width: canvasRef.current.offsetWidth,
-        height: canvasRef.current.offsetHeight,
-      });
-      return canvas.toDataURL('image/png', 0.9);
-    } catch (error) {
-      console.error("Error capturing canvas:", error);
-      throw error;
-    }
-  }, []);
-  
   useEffect(() => {
     if (!captureRequest) return;
   
@@ -601,6 +609,35 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
       });
     }
   };
+
+  const handleAnalyzeCurrentDesign = async (): Promise<string | null> => {
+    setIsGenerating(true);
+    setSuggestions([]);
+
+    try {
+      const photoDataUri = await getCanvasDataUri();
+
+      const analysisResult = await getCharmAnalysisSuggestionsAction({
+        photoDataUri: photoDataUri,
+        allCharms: allCharms.map(c => c.name),
+      });
+
+      if (analysisResult.success && analysisResult.suggestions) {
+        const textPreferences = analysisResult.suggestions.join(', ');
+        const placementError = await handleGenerateSuggestions(textPreferences);
+        if (placementError) return placementError;
+      } else {
+        throw new Error(analysisResult.error || "Une erreur inconnue est survenue lors de l'analyse.");
+      }
+      return null;
+    } catch (error: any) {
+      console.error("Error in handleAnalyzeCurrentDesign:", error.message);
+      return error.message;
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
 
   const calculatePixelsPerMm = useCallback(() => {
     if (modelImageRef.current && (model.width || model.height)) {
@@ -838,6 +875,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   <SuggestionSidebar
                       charms={allCharms}
                       onGenerate={handleGenerateSuggestions}
+                      onAnalyze={handleAnalyzeCurrentDesign}
                       isLoading={isGenerating}
                       suggestions={suggestions}
                       onApplySuggestion={applySuggestion}
@@ -901,6 +939,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                 charms={allCharms} 
                                 isMobile={true}
                                 onGenerate={handleGenerateSuggestions}
+                                onAnalyze={handleAnalyzeCurrentDesign}
                                 isLoading={isGenerating}
                                 suggestions={suggestions}
                                 onApplySuggestion={applySuggestion}
