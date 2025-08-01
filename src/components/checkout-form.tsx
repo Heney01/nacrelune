@@ -8,30 +8,36 @@ import { Button } from '@/components/ui/button';
 import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, AlertCircle, ArrowLeft, Home, Store } from 'lucide-react';
+import { Loader2, AlertCircle, ArrowLeft, Home, Store, Search, CheckCircle } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
 import { createOrder, createPaymentIntent, CreateOrderResult, SerializableCartItem } from '@/app/actions';
 import { useParams } from 'next/navigation';
 import { StockErrorState } from './checkout-dialog';
-import type { ShippingAddress, DeliveryMethod } from '@/lib/types';
+import type { ShippingAddress, DeliveryMethod, PickupPoint } from '@/lib/types';
 import { Progress } from './ui/progress';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
+import { findPickupPoints, FindPickupPointsResult } from '@/lib/pickup-points';
+import { ScrollArea } from './ui/scroll-area';
+import { Card } from './ui/card';
+import { cn } from '@/lib/utils';
 
 type Step = 'customer' | 'shipping' | 'payment';
 
-const StripeCheckoutForm = ({
+const PaymentStep = ({
   onOrderCreated,
   total,
   email,
   deliveryMethod,
   shippingAddress,
+  selectedPickupPoint,
 }: {
   onOrderCreated: (result: CreateOrderResult) => void;
   total: number;
   email: string;
   deliveryMethod: DeliveryMethod;
   shippingAddress?: ShippingAddress;
+  selectedPickupPoint?: PickupPoint;
 }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -65,7 +71,6 @@ const StripeCheckoutForm = ({
         previewImage: item.previewImage,
       }));
 
-    // We create the payment intent here, right before confirming the payment.
     const { clientSecret, error: intentError } = await createPaymentIntent(total);
 
     if (intentError || !clientSecret) {
@@ -89,14 +94,24 @@ const StripeCheckoutForm = ({
       return;
     }
 
-    // If payment is successful, create the order in our database
+    const finalShippingAddress = deliveryMethod === 'pickup' && selectedPickupPoint
+      ? {
+          name: shippingAddress?.name || '', // Customer name
+          addressLine1: selectedPickupPoint.name, // Relay name
+          addressLine2: `${selectedPickupPoint.address}, ${selectedPickupPoint.city}`, // Relay address
+          city: selectedPickupPoint.city,
+          postalCode: selectedPickupPoint.postcode,
+          country: selectedPickupPoint.country,
+        }
+      : shippingAddress;
+    
     const orderResult = await createOrder(
         serializableCart,
         email,
         locale,
-        clientSecret, // Pass the real payment intent ID now
+        clientSecret,
         deliveryMethod,
-        shippingAddress
+        finalShippingAddress,
     );
 
     onOrderCreated(orderResult);
@@ -113,7 +128,7 @@ const StripeCheckoutForm = ({
         </Alert>
       )}
       <PaymentElement />
-       <DialogFooter className="pt-4 mt-auto px-0">
+       <DialogFooter className="pt-4 pb-2 mt-auto px-0">
          <Button type="submit" form="payment-form" className="w-full" disabled={isProcessing || !stripe || !elements}>
             {isProcessing ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('processing_button')}</>
@@ -131,12 +146,10 @@ export const CheckoutForm = ({
   total,
   onOrderCreated,
   setStockError,
-  clientSecret, // Now receiving the clientSecret as a prop
 }: {
   total: number;
   onOrderCreated: (result: CreateOrderResult) => void;
   setStockError: (error: StockErrorState) => void;
-  clientSecret: string | null;
 }) => {
   const t = useTranslations('Checkout');
   const tStatus = useTranslations('OrderStatus');
@@ -151,9 +164,32 @@ export const CheckoutForm = ({
     country: 'France',
   });
   const [email, setEmail] = useState('');
-
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  
+
+  const [postcode, setPostcode] = useState('');
+  const [pickupPoints, setPickupPoints] = useState<PickupPoint[]>([]);
+  const [selectedPickupPoint, setSelectedPickupPoint] = useState<PickupPoint | null>(null);
+  const [isFindingPoints, setIsFindingPoints] = useState(false);
+  const [pickupPointError, setPickupPointError] = useState<string | null>(null);
+
+  const handleFindPickupPoints = async () => {
+    if (!postcode) {
+      setPickupPointError(t('pickup_postcode_error'));
+      return;
+    }
+    setIsFindingPoints(true);
+    setPickupPointError(null);
+    setPickupPoints([]);
+    setSelectedPickupPoint(null);
+    const result: FindPickupPointsResult = await findPickupPoints(postcode);
+    if (result.success && result.points) {
+      setPickupPoints(result.points);
+    } else {
+      setPickupPointError(result.error || t('pickup_generic_error'));
+    }
+    setIsFindingPoints(false);
+  }
+
   const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage(null);
@@ -172,6 +208,10 @@ export const CheckoutForm = ({
         setErrorMessage(t('shipping_info_error'));
         return;
       }
+      if (deliveryMethod === 'pickup' && !selectedPickupPoint) {
+        setErrorMessage(t('pickup_selection_error'));
+        return;
+      }
       setCurrentStep('payment');
       return;
     }
@@ -187,14 +227,6 @@ export const CheckoutForm = ({
   const progressValue = (stepNumber / 3) * 100;
   
   if (currentStep === 'payment') {
-      if (!clientSecret) {
-          return (
-              <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
-                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                  <p className="text-muted-foreground">Initializing payment...</p>
-              </div>
-          )
-      }
       return (
           <div className="flex flex-col h-full">
             <DialogHeader className="p-6 pb-4 flex-shrink-0 flex-row items-center gap-4">
@@ -206,12 +238,13 @@ export const CheckoutForm = ({
                 </div>
             </DialogHeader>
              <div className="px-6 pb-6 flex-grow">
-                  <StripeCheckoutForm 
+                  <PaymentStep
                       onOrderCreated={onOrderCreated}
                       total={total}
                       email={email}
                       deliveryMethod={deliveryMethod}
                       shippingAddress={shippingAddress}
+                      selectedPickupPoint={selectedPickupPoint || undefined}
                   />
              </div>
           </div>
@@ -269,8 +302,8 @@ export const CheckoutForm = ({
                     <h3 className="text-lg font-medium">{t('shipping_title')}</h3>
                     <Tabs value={deliveryMethod} onValueChange={(v) => setDeliveryMethod(v as DeliveryMethod)} className="w-full">
                       <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="home"><Home className="mr-2 h-4 w-4"/>{t('delivery_method_home')}</TabsTrigger>
-                        <TabsTrigger value="pickup"><Store className="mr-2 h-4 w-4"/>{t('delivery_method_pickup')}</TabsTrigger>
+                        <TabsTrigger value="home"><Home className="mr-2 h-4 w-4"/>{t('delivery_method_home_tab')}</TabsTrigger>
+                        <TabsTrigger value="pickup"><Store className="mr-2 h-4 w-4"/>{t('delivery_method_pickup_tab')}</TabsTrigger>
                       </TabsList>
                       <TabsContent value="home" className="pt-4 space-y-4">
                          <div className="space-y-2">
@@ -299,12 +332,42 @@ export const CheckoutForm = ({
                             <Input id="country" name="country" value={shippingAddress.country} onChange={(e) => setShippingAddress(prev => ({...prev, country: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
                         </div>
                       </TabsContent>
-                      <TabsContent value="pickup" className="pt-4">
-                        <Alert>
-                           <AlertCircle className="h-4 w-4" />
-                           <AlertTitle>{t('pickup_info_title')}</AlertTitle>
-                           <AlertDescription>{t('pickup_info_description')}</AlertDescription>
-                       </Alert>
+                      <TabsContent value="pickup" className="pt-4 space-y-4">
+                         <div className="flex gap-2">
+                            <div className="flex-grow space-y-2">
+                                <Label htmlFor="postcode">{t('postal_code')}</Label>
+                                <Input id="postcode" value={postcode} onChange={e => setPostcode(e.target.value)} placeholder="e.g. 75001" />
+                            </div>
+                            <Button type="button" onClick={handleFindPickupPoints} disabled={isFindingPoints} className="self-end">
+                                {isFindingPoints ? <Loader2 className="animate-spin" /> : <Search />}
+                            </Button>
+                         </div>
+                         {pickupPointError && <Alert variant="destructive"><AlertCircle className="h-4 w-4"/><AlertDescription>{pickupPointError}</AlertDescription></Alert>}
+
+                         {pickupPoints.length > 0 && (
+                            <div className="space-y-2">
+                                <Label>{t('pickup_select_point')}</Label>
+                                <ScrollArea className="h-48 rounded-md border">
+                                    <div className="p-2 space-y-2">
+                                        {pickupPoints.map(point => (
+                                            <Card 
+                                                key={point.id} 
+                                                className={cn("p-3 cursor-pointer hover:bg-muted/50", selectedPickupPoint?.id === point.id && "bg-muted ring-2 ring-primary")}
+                                                onClick={() => setSelectedPickupPoint(point)}
+                                            >
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <p className="font-semibold text-sm">{point.name}</p>
+                                                        <p className="text-xs text-muted-foreground">{point.address}, {point.city}</p>
+                                                    </div>
+                                                    {selectedPickupPoint?.id === point.id && <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />}
+                                                </div>
+                                            </Card>
+                                        ))}
+                                    </div>
+                                </ScrollArea>
+                            </div>
+                         )}
                       </TabsContent>
                     </Tabs>
                   </div>
@@ -321,3 +384,4 @@ export const CheckoutForm = ({
     </>
   );
 };
+

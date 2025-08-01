@@ -111,6 +111,15 @@ export interface ShippingAddress {
 
 export type DeliveryMethod = 'home' | 'pickup';
 
+export interface PickupPoint {
+    id: string;
+    name: string;
+    address: string;
+    postcode: string;
+    city: string;
+    country: string;
+}
+
 export interface Order {
     id: string;
     orderNumber: string;
