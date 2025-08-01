@@ -59,7 +59,7 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
             <Card
                 onClick={handleCardClick}
                 className={cn(
-                    "p-2 aspect-square flex flex-col items-center justify-center relative group",
+                    "p-0 aspect-square flex flex-col items-center justify-center relative group",
                     "cursor-pointer",
                     isOutOfStock ? "bg-muted/60" : "hover:bg-muted"
                 )}
@@ -71,7 +71,7 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
                         {t('sold_out')}
                     </Badge>
                 )}
-                 <div className="flex-grow w-full relative grid place-items-center">
+                 <div className="flex-grow w-full h-full relative grid place-items-center">
                     <Image
                         src={charm.imageUrl}
                         alt={charm.name}
@@ -113,7 +113,7 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
                         <AlertDescription>{t('out_of_stock_description')}</AlertDescription>
                     </Alert>
                 )}
-                <DialogFooter>
+                <DialogFooter className="gap-2">
                     <DialogClose asChild>
                             <Button variant="outline">{t('close_button')}</Button>
                     </DialogClose>
