@@ -21,7 +21,7 @@ const getUrl = async (path: string, fallback: string) => {
     return fallback;
 };
 
-const toDate = (timestamp: Timestamp | null | undefined): Date | null => {
+export const toDate = (timestamp: Timestamp | null | undefined): Date | null => {
     return timestamp ? timestamp.toDate() : null;
 }
 
@@ -345,6 +345,8 @@ export async function getOrders(): Promise<Order[]> {
                 totalPrice: data.totalPrice,
                 status: data.status,
                 items: enrichedItems,
+                deliveryMethod: data.deliveryMethod || 'home',
+                shippingAddress: data.shippingAddress,
                 shippingCarrier: data.shippingCarrier,
                 trackingNumber: data.trackingNumber,
                 cancellationReason: data.cancellationReason,
