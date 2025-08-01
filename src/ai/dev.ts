@@ -7,4 +7,5 @@ genkit({ plugins: [googleAI()] });
 
 import './flows/charm-placement-suggestions.ts';
 import './flows/charm-analysis-suggestions.ts';
+import './flows/charm-design-critique.ts';
 

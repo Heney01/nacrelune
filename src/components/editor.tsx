@@ -23,11 +23,10 @@ import { CartSheet } from './cart-sheet';
 import html2canvas from 'html2canvas';
 import { CartWidget } from './cart-widget';
 import { useTranslations } from '@/hooks/use-translations';
-import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction } from '@/app/actions';
+import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction, getCharmDesignCritiqueAction } from '@/app/actions';
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Alert, AlertDescription } from './ui/alert';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -161,6 +160,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [critique, setCritique] = useState<string | null>(null);
 
   const [pixelsPerMm, setPixelsPerMm] = useState<number | null>(null);
   
@@ -572,6 +572,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const handleGenerateSuggestions = async (userPreferences: string): Promise<string | null> => {
     setIsGenerating(true);
     setSuggestions([]);
+    setCritique(null);
     try {
         const result = await getCharmSuggestionsAction({
             jewelryType: jewelryType.name,
@@ -610,9 +611,10 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     }
   };
 
-  const handleAnalyzeCurrentDesign = async (): Promise<string | null> => {
+  const handleAnalyzeForSuggestions = async (): Promise<string | null> => {
     setIsGenerating(true);
     setSuggestions([]);
+    setCritique(null);
 
     try {
       const photoDataUri = await getCanvasDataUri();
@@ -637,6 +639,33 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
       setIsGenerating(false);
     }
   };
+  
+  const handleCritiqueDesign = async (): Promise<string | null> => {
+    setIsGenerating(true);
+    setSuggestions([]);
+    setCritique(null);
+
+    try {
+      const photoDataUri = await getCanvasDataUri();
+
+      const critiqueResult = await getCharmDesignCritiqueAction({
+        photoDataUri: photoDataUri,
+      });
+      
+      if (critiqueResult.success && critiqueResult.critique) {
+        setCritique(critiqueResult.critique);
+        return null;
+      } else {
+         throw new Error(critiqueResult.error || "Une erreur inconnue est survenue lors de l'analyse.");
+      }
+      
+    } catch (error: any) {
+        console.error("Error in handleCritiqueDesign:", error.message);
+        return error.message;
+    } finally {
+        setIsGenerating(false);
+    }
+  }
 
 
   const calculatePixelsPerMm = useCallback(() => {
@@ -875,9 +904,11 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   <SuggestionSidebar
                       charms={allCharms}
                       onGenerate={handleGenerateSuggestions}
-                      onAnalyze={handleAnalyzeCurrentDesign}
+                      onAnalyze={handleAnalyzeForSuggestions}
+                      onCritique={handleCritiqueDesign}
                       isLoading={isGenerating}
                       suggestions={suggestions}
+                      critique={critique}
                       onApplySuggestion={applySuggestion}
                   />
                 </div>
@@ -939,9 +970,11 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                 charms={allCharms} 
                                 isMobile={true}
                                 onGenerate={handleGenerateSuggestions}
-                                onAnalyze={handleAnalyzeCurrentDesign}
+                                onAnalyze={handleAnalyzeForSuggestions}
+                                onCritique={handleCritiqueDesign}
                                 isLoading={isGenerating}
                                 suggestions={suggestions}
+                                critique={critique}
                                 onApplySuggestion={applySuggestion}
                             />
                         </div>
@@ -954,4 +987,5 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
 

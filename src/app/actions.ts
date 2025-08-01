@@ -13,6 +13,7 @@ import { redirect } from 'next/navigation';
 import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm, ShippingAddress, DeliveryMethod } from '@/lib/types';
 import { getCharmSuggestions as getCharmSuggestionsFlow, CharmSuggestionInput, CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { getCharmAnalysisSuggestions as getCharmAnalysisSuggestionsFlow, CharmAnalysisSuggestionInput, CharmAnalysisSuggestionOutput } from '@/ai/flows/charm-analysis-suggestions';
+import { getCharmDesignCritique as getCharmDesignCritiqueFlow, CharmDesignCritiqueInput, CharmDesignCritiqueOutput } from '@/ai/flows/charm-design-critique';
 import { z } from 'zod';
 import { getCharms as fetchCharms } from '@/lib/data';
 import Stripe from 'stripe';
@@ -1230,6 +1231,21 @@ export async function getCharmAnalysisSuggestionsAction(input: CharmAnalysisSugg
     } catch (error: any) {
         console.error('[SERVER ACTION] Error calling AI analysis flow:', error);
         return { success: false, error: error.message || "Une erreur est survenue lors de l'analyse de l'image." };
+    }
+}
+
+export async function getCharmDesignCritiqueAction(input: CharmDesignCritiqueInput): Promise<{
+    success: boolean;
+    critique?: string;
+    error?: string;
+}> {
+    try {
+        console.log('[SERVER ACTION] Calling getCharmDesignCritiqueFlow');
+        const result = await getCharmDesignCritiqueFlow(input);
+        return { success: true, critique: result.critique };
+    } catch (error: any) {
+        console.error('[SERVER ACTION] Error calling AI critique flow:', error);
+        return { success: false, error: error.message || "Une erreur est survenue lors de l'analyse." };
     }
 }
 
