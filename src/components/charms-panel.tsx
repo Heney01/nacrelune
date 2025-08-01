@@ -49,11 +49,6 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
         }
     };
 
-    const handlePreviewClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setIsPreviewOpen(true);
-    };
-
     return (
         <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
             <Card
@@ -76,26 +71,10 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
                         src={charm.imageUrl}
                         alt={charm.name}
                         fill
-                        className={cn("object-contain pointer-events-none p-2", isOutOfStock && "grayscale opacity-50")}
+                        className={cn("object-contain pointer-events-none", isOutOfStock && "grayscale opacity-50")}
                         data-ai-hint="jewelry charm"
                     />
                 </div>
-                
-                {!isMobile && (
-                    <Button 
-                        data-trigger-preview
-                        onClick={handlePreviewClick}
-                        variant="ghost" 
-                        size="icon" 
-                        className={cn(
-                            "absolute top-1 right-1 transition-opacity h-6 w-6",
-                            "opacity-0 group-hover:opacity-100"
-                        )}
-                        title={t('view_details_button')}
-                    >
-                        <ZoomIn className="h-4 w-4" />
-                    </Button>
-                )}
             </Card>
 
             <DialogContent className="max-w-md">
@@ -206,7 +185,7 @@ export function CharmsPanel({ allCharms, charmCategories, onAddCharm, searchTerm
                 </div>
             </div>
             <Separator />
-            <CardContent className="p-0 flex-grow overflow-y-auto">
+            <CardContent className="p-0 flex-grow overflow-y-auto no-scrollbar">
                 {renderCharmGrid()}
             </CardContent>
         </Card>
