@@ -59,7 +59,7 @@ export interface PlacedCharm {
 export interface CartItem {
     id: string;
     model: JewelryModel;
-    jewelryType: Omit<Jewe -lryType, 'models' | 'icon'>;
+    jewelryType: Omit<JewelryType, 'models' | 'icon'>;
     placedCharms: PlacedCharm[];
     previewImage: string; // URL to a generated preview of the final design
 }
