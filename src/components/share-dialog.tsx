@@ -75,9 +75,16 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t }: Share
     }
   }, [isOpen, getCanvasDataUri, t]);
 
+  const downloadImage = (canvas: HTMLCanvasElement) => {
+    const link = document.createElement('a');
+    link.download = 'ma-creation.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+
   const handleShare = async () => {
-    if (!polaroidRef.current || !navigator.share) {
-        setError(t('share_not_supported'));
+    if (!polaroidRef.current) {
+        setError(t('share_error_generic'));
         return;
     }
     
@@ -91,6 +98,13 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t }: Share
             allowTaint: true,
             scale: 2 // Higher scale for better quality
         });
+        
+        if (!navigator.share) {
+            downloadImage(canvas);
+            setIsSharing(false);
+            return;
+        }
+
         const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
         
         if (!blob) {
@@ -106,8 +120,20 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t }: Share
             url: window.location.origin
         });
 
-    } catch (err) {
-        if (!(err instanceof DOMException && err.name === 'AbortError')) {
+    } catch (err: any) {
+        if (err instanceof DOMException && (err.name === 'AbortError')) {
+          // User cancelled the share sheet
+        } else if (err instanceof DOMException && err.name === 'NotAllowedError') {
+           console.warn("Share API permission denied, falling back to download.");
+            try {
+                const canvas = await html2canvas(polaroidRef.current!, { backgroundColor: null, useCORS: true, allowTaint: true, scale: 2 });
+                downloadImage(canvas);
+            } catch (downloadErr) {
+                 console.error('Download fallback error:', downloadErr);
+                 setError(t('share_error_generic'));
+            }
+        }
+        else {
           console.error('Share error:', err);
           setError(t('share_error_generic'));
         }
@@ -180,7 +206,7 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t }: Share
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             {t('close_button')}
           </Button>
-          <Button onClick={handleShare} disabled={isLoading || isSharing || isGeneratingContent || !creationImage || !navigator.share}>
+          <Button onClick={handleShare} disabled={isLoading || isSharing || isGeneratingContent || !creationImage}>
             {isSharing ? <Loader2 className="animate-spin" /> : <Share2 />}
             {t('share_button')}
           </Button>
