@@ -24,8 +24,6 @@ export type StockErrorState = {
   unavailableCharmIds: Set<string>;
 } | null;
 
-type Step = 'customer' | 'shipping' | 'payment';
-
 interface CheckoutDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
@@ -34,20 +32,12 @@ interface CheckoutDialogProps {
   setStockError: (error: StockErrorState) => void;
 }
 
-
 export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockError, setStockError }: CheckoutDialogProps) {
   const t = useTranslations('Checkout');
   const tCart = useTranslations('Cart');
   const { cart } = useCart();
-  const [currentStep, setCurrentStep] = useState<Step>('customer');
-
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
-
-  const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
-      name: '', addressLine1: '', city: '', postalCode: '', country: 'France'
-  });
-  const [email, setEmail] = useState('');
 
   const subtotal = cart.reduce((sum, item) => {
     const modelPrice = item.model.price || 0;
@@ -60,39 +50,14 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
   
   const formatPrice = (price: number) => tCart('price', { price });
 
-  const handleGoToPayment = useCallback(async (email: string, address: ShippingAddress) => {
-    setEmail(email);
-    setShippingAddress(address);
-    setClientSecret(null);
-
-    if (total > 0) {
-      const res = await createPaymentIntent(total);
-      if (res.clientSecret) {
-        setClientSecret(res.clientSecret);
-        if (!stripePromise) {
-            if (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
-                setStripePromise(loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY));
-            } else {
-                console.error("Stripe publishable key is not set.");
-            }
-        }
-        setCurrentStep('payment');
-      } else {
-        console.error(res.error);
-        onOpenChange(false);
-      }
+   useEffect(() => {
+    if (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+      setStripePromise(loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY));
     } else {
-        setCurrentStep('payment');
+      console.error("Stripe publishable key is not set.");
     }
-  }, [total, onOpenChange, stripePromise]);
+  }, []);
 
-  const handleBack = () => {
-    if(currentStep === 'payment') setCurrentStep('shipping');
-    if(currentStep === 'shipping') setCurrentStep('customer');
-  }
-  
-  const stepNumber = currentStep === 'customer' ? 1 : currentStep === 'shipping' ? 2 : 3;
-  
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent 
@@ -100,39 +65,18 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <div className="flex flex-col h-full max-h-[90vh] md:max-h-none">
-            <DialogHeader className="p-6 pb-4 flex-shrink-0 flex-row items-center gap-4">
-                {currentStep !== 'customer' && (
-                     <Button type="button" variant="ghost" size="icon" onClick={handleBack} id="checkout-back-button-main">
-                        <ArrowLeft className="h-5 w-5" />
-                    </Button>
-                )}
-                <div>
-                    <DialogTitle className="text-2xl font-headline">{t('title')}</DialogTitle>
-                    <DialogDescription>{t('description')}</DialogDescription>
-                </div>
-            </DialogHeader>
-             {stockError && (
-                <div className="px-6">
-                    <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>{t('stock_error_title')}</AlertTitle>
-                        <AlertDescription>{t('stock_error_description')}</AlertDescription>
-                    </Alert>
-                </div>
-            )}
-            <div className="flex-grow overflow-y-auto no-scrollbar">
+          <Elements stripe={stripePromise} options={{
+                appearance: { theme: 'stripe' as const, variables: { colorPrimary: '#ef4444', fontFamily: 'Alegreya, Ideal Sans, system-ui, sans-serif' } },
+                mode: 'payment',
+                amount: Math.round(total * 100),
+                currency: 'eur'
+          }}>
               <CheckoutForm 
-                currentStep={currentStep}
-                setCurrentStep={setCurrentStep}
-                onGoToPayment={handleGoToPayment}
-                onOrderCreated={onOrderCreated} 
-                setStockError={setStockError}
-                stripePromise={stripePromise}
-                clientSecret={clientSecret}
-                shippingAddress={shippingAddress}
-                email={email}
+                  total={total}
+                  onOrderCreated={onOrderCreated}
+                  setStockError={setStockError}
               />
-            </div>
+          </Elements>
         </div>
         
         <aside className="hidden md:flex flex-col bg-muted/50 p-6 overflow-hidden">
