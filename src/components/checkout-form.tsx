@@ -302,8 +302,8 @@ export const CheckoutForm = ({
                     <h3 className="text-lg font-medium">{t('shipping_title')}</h3>
                     <Tabs value={deliveryMethod} onValueChange={(v) => setDeliveryMethod(v as DeliveryMethod)} className="w-full">
                       <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="home"><Home className="mr-2 h-4 w-4"/>{t('delivery_method_home_tab')}</TabsTrigger>
-                        <TabsTrigger value="pickup"><Store className="mr-2 h-4 w-4"/>{t('delivery_method_pickup_tab')}</TabsTrigger>
+                        <TabsTrigger value="home"><Home className="mr-2 h-4 w-4"/>{t('delivery_method_home')}</TabsTrigger>
+                        <TabsTrigger value="pickup"><Store className="mr-2 h-4 w-4"/>{t('delivery_method_pickup')}</TabsTrigger>
                       </TabsList>
                       <TabsContent value="home" className="pt-4 space-y-4">
                          <div className="space-y-2">

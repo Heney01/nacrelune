@@ -2,6 +2,7 @@
 'use server';
 
 import type { PickupPoint } from './types';
+import fetch from 'node-fetch';
 
 export type FindPickupPointsResult = {
   success: boolean;
@@ -10,36 +11,61 @@ export type FindPickupPointsResult = {
 };
 
 /**
- * Finds pickup points for a given postcode.
- * This is a placeholder and should be replaced with a real API call to a carrier service.
+ * Finds pickup points for a given postcode using the Sendcloud API.
  * @param postcode The postcode to search for.
  * @returns A promise that resolves to a FindPickupPointsResult object.
  */
 export async function findPickupPoints(postcode: string): Promise<FindPickupPointsResult> {
-  console.log(`[SERVER ACTION] Searching for pickup points for postcode: ${postcode}`);
+  const publicKey = process.env.SENDCLOUD_PUBLIC_KEY;
+  const secretKey = process.env.SENDCLOUD_SECRET_KEY;
 
-  // --- THIS IS MOCK DATA ---
-  // In a real application, you would make an API call here to a service like
-  // Mondial Relay, Colissimo, etc., using a secret API key.
-  // The API key should be stored as an environment variable and not exposed to the client.
-
-  await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
-
-  if (postcode.startsWith('75')) {
-    const mockPoints: PickupPoint[] = [
-      { id: 'MR-01', name: 'Tabac Le Diplomate', address: '123 Rue de Rivoli', postcode, city: 'Paris', country: 'FR' },
-      { id: 'MR-02', name: 'Boulangerie Patachou', address: '45 Avenue des Champs-Élysées', postcode, city: 'Paris', country: 'FR' },
-      { id: 'MR-03', name: 'Librairie Le Quartier Latin', address: '88 Boulevard Saint-Germain', postcode, city: 'Paris', country: 'FR' },
-      { id: 'MR-04', name: 'Superette de la Motte-Picquet', address: '22 Avenue de la Motte-Picquet-Grenelle', postcode, city: 'Paris', country: 'FR' },
-    ];
-    return { success: true, points: mockPoints };
-  }
-  
-  if (postcode === "00000") {
-     return { success: false, error: "Le service de points relais est actuellement indisponible. Veuillez réessayer plus tard." };
+  if (!publicKey || !secretKey) {
+    console.error("Sendcloud API keys are not configured in .env file.");
+    return { success: false, error: "Le service de points relais est temporairement indisponible." };
   }
 
-  // --- END OF MOCK DATA ---
+  // We primarily target France, but this could be extended.
+  const country = "FR";
+  // We can add more carriers as needed, e.g., 'mondial_relay', 'chronopost', 'colis_prive'
+  const carriers = 'colissimo'; 
 
-  return { success: true, points: [] };
+  const url = `https://api.sendcloud.dev/v2/service-points?country=${country}&postcode=${postcode}&carrier=${carriers}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': 'Basic ' + Buffer.from(`${publicKey}:${secretKey}`).toString('base64'),
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Sendcloud API error:", errorData);
+      const errorMessage = errorData.error?.message || `Erreur API: ${response.statusText}`;
+      return { success: false, error: errorMessage };
+    }
+
+    const data = await response.json();
+
+    if (!Array.isArray(data) || data.length === 0) {
+      return { success: true, points: [] };
+    }
+    
+    const points: PickupPoint[] = data.map((point: any) => ({
+      id: point.id.toString(),
+      name: point.name,
+      address: `${point.street} ${point.house_number || ''}`.trim(),
+      postcode: point.postal_code,
+      city: point.city,
+      country: point.country,
+    }));
+
+    return { success: true, points: points };
+
+  } catch (error: any) {
+    console.error("Failed to fetch from Sendcloud API:", error);
+    return { success: false, error: "Une erreur de communication est survenue avec le service de points relais." };
+  }
 }
