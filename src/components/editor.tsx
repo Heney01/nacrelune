@@ -650,6 +650,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
       const critiqueResult = await getCharmDesignCritiqueAction({
         photoDataUri: photoDataUri,
+        locale: locale,
       });
       
       if (critiqueResult.success && critiqueResult.critique) {

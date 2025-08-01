@@ -19,6 +19,7 @@ const CharmDesignCritiqueInputSchema = z.object({
     .describe(
       "A photo of a piece of jewelry, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
+  locale: z.string().describe('The language for the response (e.g., "fr" or "en").'),
 });
 export type CharmDesignCritiqueInput = z.infer<typeof CharmDesignCritiqueInputSchema>;
 
@@ -35,6 +36,7 @@ const critiquePrompt = ai.definePrompt({
   model: googleAI.model('gemini-1.5-pro'),
   prompt: `You are a friendly and encouraging jewelry design expert for a custom creation workshop.
 Your role is to provide a constructive critique of a user's jewelry design based on a photo they provide.
+Your response MUST be written in the following language: {{{locale}}}.
 
 Here is the photo of the user's creation:
 {{media url=photoDataUri}}
