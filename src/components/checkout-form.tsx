@@ -153,7 +153,7 @@ export const CheckoutForm = ({
             </p>
         </div>
       
-        <div className="flex-grow overflow-y-auto px-6 space-y-6 no-scrollbar">
+        <div className="flex-grow overflow-y-auto px-6 space-y-6 no-scrollbar pb-6">
             {currentStep === 'customer' && (
                 <div className="space-y-4">
                     <h3 className="text-lg font-medium">{t('customer_info')}</h3>
