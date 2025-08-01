@@ -27,6 +27,7 @@ import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggesti
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -873,7 +874,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                                         </Tooltip>
                                                     </TooltipProvider>
                                                 )}
-                                                <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={40} height={40} className="w-10 h-10 object-contain" data-ai-hint="jewelry charm" />
+                                                <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={48} height={48} className="w-12 h-12 object-contain" data-ai-hint="jewelry charm" />
                                                 <p className="text-xs text-center mt-1 truncate w-full">{pc.charm.name}</p>
                                                 <Button 
                                                     variant="destructive" 
@@ -892,8 +893,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                     </CarouselItem>
                                     ))}
                                 </CarouselContent>
-                                <CarouselPrevious className="hidden sm:flex" />
-                                <CarouselNext className="hidden sm:flex"/>
+                                <CarouselPrevious />
+                                <CarouselNext />
                                 </Carousel>
                           )}
                       </CardContent>
@@ -988,5 +989,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
 
 
