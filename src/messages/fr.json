@@ -56,7 +56,8 @@
     "photorealistic_preview_modal_done": "Voici votre aperçu photoréaliste !",
     "close_button": "Fermer",
     "stock_issue_tooltip": "Stock insuffisant pour cette breloque.",
-    "editor_disclaimer": "Cet éditeur est une représentation fidèle, mais les couleurs et dimensions finales peuvent légèrement varier. Certaines images de breloques peuvent être optimisées par IA pour une meilleure intégration. Cliquez sur une breloque pour voir sa photo originale."
+    "editor_disclaimer": "Cet éditeur est une représentation fidèle, mais les couleurs et dimensions finales peuvent légèrement varier. Certaines images de breloques peuvent être optimisées par IA pour une meilleure intégration. Cliquez sur une breloque pour voir sa photo originale.",
+    "editor_disclaimer_title": "Avertissement de l'éditeur"
   },
   "Cart": {
     "title": "Votre Panier",

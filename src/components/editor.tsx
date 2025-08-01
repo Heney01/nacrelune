@@ -28,6 +28,7 @@ import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -186,6 +187,10 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     }
   }, [isEditing, cart, cartItemId]);
 
+  const resetZoomAndPan = useCallback(() => {
+    setScale(1);
+    setPan({ x: 0, y: 0 });
+  }, []);
 
   const interactionState = useRef({
     isDragging: false,
@@ -203,11 +208,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   scaleRef.current = scale;
   const placedCharmsRef = useRef(placedCharms);
   placedCharmsRef.current = placedCharms;
-
-  const resetZoomAndPan = useCallback(() => {
-    setScale(1);
-    setPan({ x: 0, y: 0 });
-  }, []);
 
   const getCanvasDataUri = useCallback(async (): Promise<string> => {
     if (!canvasRef.current) {
@@ -674,13 +674,12 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     if (modelImageRef.current && (model.width || model.height)) {
         const imageWidthPx = modelImageRef.current.offsetWidth;
         const imageHeightPx = modelImageRef.current.offsetHeight;
-        const modelWidthMm = model.width || model.height || 1; // Use height as fallback
-        const modelHeightMm = model.height || model.width || 1; // Use width as fallback
+        const modelWidthMm = model.width || (imageWidthPx / imageHeightPx) * (model.height || 1);
+        const modelHeightMm = model.height || (imageHeightPx / imageWidthPx) * (model.width || 1);
 
         const pxPerMmWidth = imageWidthPx / modelWidthMm;
         const pxPerMmHeight = imageHeightPx / modelHeightMm;
         
-        // Use an average to account for non-uniform scaling
         setPixelsPerMm((pxPerMmWidth + pxPerMmHeight) / 2);
     }
   }, [model.width, model.height]);
@@ -819,18 +818,21 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       </div>
 
                       <div className={cn("absolute bottom-2 left-0 right-0 px-4 flex justify-center items-center gap-2", isMobile ? "pr-4" : "pr-32")}>
-                          <TooltipProvider>
-                              <Tooltip>
-                                  <TooltipTrigger asChild>
-                                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground rounded-full hover:bg-muted/50 hover:text-foreground">
-                                          <Info />
-                                      </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="top" align="center" className="max-w-xs text-center">
-                                      <p>{t('editor_disclaimer')}</p>
-                                  </TooltipContent>
-                              </Tooltip>
-                          </TooltipProvider>
+                           <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground rounded-full hover:bg-muted/50 hover:text-foreground">
+                                        <Info />
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-md">
+                                    <DialogHeader>
+                                    <DialogTitle className="font-headline text-xl">{t('editor_disclaimer_title')}</DialogTitle>
+                                    </DialogHeader>
+                                    <p className="text-sm text-muted-foreground mt-2">
+                                    {t('editor_disclaimer')}
+                                    </p>
+                                </DialogContent>
+                           </Dialog>
                       </div>
 
                       {!isMobile && (
@@ -900,8 +902,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                     </CarouselItem>
                                     ))}
                                 </CarouselContent>
-                                <CarouselPrevious className="hidden sm:flex" />
-                                <CarouselNext className="hidden sm:flex" />
+                                <CarouselPrevious />
+                                <CarouselNext />
                                 </Carousel>
                           )}
                       </CardContent>
