@@ -228,13 +228,13 @@ export const CheckoutForm = ({
 
                   <div style={{ display: currentStep === 'payment' ? 'block' : 'none' }} className="space-y-4">
                       <h3 className="text-lg font-medium">{t('payment_info')}</h3>
-                      <PaymentElement />
+                      {stripe && elements && <PaymentElement />}
                   </div>
                 </div>
             </div>
             
-            <DialogFooter className="pt-4 mt-auto border-t px-6">
-                <Button type="submit" className="w-full" disabled={isProcessing}>
+            <DialogFooter className="pt-4 pb-6 mt-auto border-t px-6">
+                <Button type="submit" className="w-full" disabled={isProcessing || (currentStep === 'payment' && (!stripe || !elements))}>
                   {currentStep !== 'payment' ? (
                      t('next_step_button')
                   ) : isProcessing ? (
