@@ -68,12 +68,14 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
                         src={charm.imageUrl}
                         alt={charm.name}
                         fill
-                        sizes="5vw"
                         className={cn("object-contain pointer-events-none", isOutOfStock && "grayscale opacity-50")}
                         data-ai-hint="jewelry charm"
                     />
                 </div>
-                <div className="h-8 flex items-center justify-center">
+                <div className="h-8 flex items-center justify-center md:hidden">
+                    <p className="text-xs text-center line-clamp-2">{charm.name}</p>
+                </div>
+                 <div className="h-8 hidden items-center justify-center md:flex">
                     <p className="text-xs text-center line-clamp-2">{charm.name}</p>
                 </div>
                 
