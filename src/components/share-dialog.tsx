@@ -7,10 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Loader2, Share2, AlertCircle } from 'lucide-react';
+import { Loader2, Share2, AlertCircle, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import html2canvas from 'html2canvas';
+import { generateShareContentAction } from '@/app/actions';
+import { useParams } from 'next/navigation';
 
 interface ShareDialogProps {
   isOpen: boolean;
@@ -41,8 +43,11 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t }: Share
   const [description, setDescription] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSharing, setIsSharing] = useState(false);
+  const [isGeneratingContent, setIsGeneratingContent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const polaroidRef = useRef<HTMLDivElement>(null);
+  const params = useParams();
+  const locale = params.locale as string;
 
   useEffect(() => {
     if (isOpen) {
@@ -111,6 +116,31 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t }: Share
     }
   };
 
+  const handleGenerateContent = async () => {
+    if (!creationImage) return;
+
+    setIsGeneratingContent(true);
+    setError(null);
+
+    try {
+      const result = await generateShareContentAction({
+        photoDataUri: creationImage,
+        locale: locale,
+      });
+
+      if (result.success && result.content) {
+        setTitle(result.content.title);
+        setDescription(result.content.description);
+      } else {
+        throw new Error(result.error || t('ai_error_generic'));
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsGeneratingContent(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -128,7 +158,12 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t }: Share
                     <Polaroid ref={polaroidRef} creationImage={creationImage} title={title} description={description} />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="share-title">{t('share_title_label')}</Label>
+                    <div className="flex justify-between items-center">
+                        <Label htmlFor="share-title">{t('share_title_label')}</Label>
+                         <Button variant="ghost" size="sm" onClick={handleGenerateContent} disabled={isGeneratingContent}>
+                             {isGeneratingContent ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                        </Button>
+                    </div>
                     <Input id="share-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('share_title_placeholder')} />
                 </div>
                  <div className="space-y-2">
@@ -145,7 +180,7 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t }: Share
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             {t('close_button')}
           </Button>
-          <Button onClick={handleShare} disabled={isLoading || isSharing || !creationImage || !navigator.share}>
+          <Button onClick={handleShare} disabled={isLoading || isSharing || isGeneratingContent || !creationImage || !navigator.share}>
             {isSharing ? <Loader2 className="animate-spin" /> : <Share2 />}
             {t('share_button')}
           </Button>

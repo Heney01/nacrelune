@@ -14,6 +14,7 @@ import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, 
 import { getCharmSuggestions as getCharmSuggestionsFlow, CharmSuggestionInput, CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { getCharmAnalysisSuggestions as getCharmAnalysisSuggestionsFlow, CharmAnalysisSuggestionInput, CharmAnalysisSuggestionOutput } from '@/ai/flows/charm-analysis-suggestions';
 import { getCharmDesignCritique as getCharmDesignCritiqueFlow, CharmDesignCritiqueInput, CharmDesignCritiqueOutput } from '@/ai/flows/charm-design-critique';
+import { generateShareContent as generateShareContentFlow, GenerateShareContentInput, GenerateShareContentOutput } from '@/ai/flows/share-content-generation';
 import { z } from 'zod';
 import { getCharms as fetchCharms, toDate } from '@/lib/data';
 import Stripe from 'stripe';
@@ -1248,6 +1249,22 @@ export async function getCharmDesignCritiqueAction(input: CharmDesignCritiqueInp
         return { success: false, error: error.message || "Une erreur est survenue lors de l'analyse." };
     }
 }
+
+export async function generateShareContentAction(input: GenerateShareContentInput): Promise<{
+    success: boolean;
+    content?: GenerateShareContentOutput;
+    error?: string;
+}> {
+    try {
+        console.log('[SERVER ACTION] Calling generateShareContentFlow');
+        const result = await generateShareContentFlow(input);
+        return { success: true, content: result };
+    } catch (error: any) {
+        console.error('[SERVER ACTION] Error calling AI share content flow:', error);
+        return { success: false, error: error.message || "Une erreur est survenue lors de la génération du contenu." };
+    }
+}
+
 
 export async function getRefreshedCharms(): Promise<{ success: boolean; charms?: Charm[], error?: string; }> {
     try {
