@@ -161,7 +161,7 @@ export const CheckoutForm = ({
                         <Label htmlFor="name">{t('full_name')}</Label>
                         <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t('full_name')} required />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-2 pb-2">
                         <Label htmlFor="email-address">{t('email_address')}</Label>
                         <Input id="email-address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={useTranslations('OrderStatus')('email_placeholder')} required />
                     </div>

@@ -110,7 +110,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
                     </Alert>
                 </div>
             )}
-            <div className="flex-grow overflow-y-auto px-6 no-scrollbar">
+            <div className="flex-grow overflow-y-auto no-scrollbar">
               {clientSecret && stripePromise ? (
                 <Elements stripe={stripePromise} options={options}>
                   <CheckoutForm 
@@ -195,3 +195,4 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
     </Dialog>
   );
 }
+
