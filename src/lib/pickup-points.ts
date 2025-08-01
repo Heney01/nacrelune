@@ -27,7 +27,7 @@ export async function findPickupPoints(postcode: string): Promise<FindPickupPoin
   // We primarily target France, but this could be extended.
   const country = "FR";
   // We can add more carriers as needed, e.g., 'mondial_relay', 'chronopost', 'colis_prive'
-  const carriers = 'colissimo'; 
+  const carriers = 'colissimo,mondial_relay,chronopost'; 
 
   const url = `https://api.sendcloud.dev/v2/service-points?country=${country}&postcode=${postcode}&carrier=${carriers}`;
 
@@ -41,13 +41,13 @@ export async function findPickupPoints(postcode: string): Promise<FindPickupPoin
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json() as any;
       console.error("Sendcloud API error:", errorData);
       const errorMessage = errorData.error?.message || `Erreur API: ${response.statusText}`;
       return { success: false, error: errorMessage };
     }
 
-    const data = await response.json();
+    const data = await response.json() as any[];
 
     if (!Array.isArray(data) || data.length === 0) {
       return { success: true, points: [] };
