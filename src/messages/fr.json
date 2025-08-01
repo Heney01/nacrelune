@@ -55,7 +55,8 @@
     "photorealistic_preview_modal_loading": "Votre image est en cours de création par notre IA. Cela peut prendre un moment...",
     "photorealistic_preview_modal_done": "Voici votre aperçu photoréaliste !",
     "close_button": "Fermer",
-    "stock_issue_tooltip": "Stock insuffisant pour cette breloque."
+    "stock_issue_tooltip": "Stock insuffisant pour cette breloque.",
+    "editor_disclaimer": "Cet éditeur est une représentation fidèle, mais les couleurs et dimensions finales peuvent légèrement varier."
   },
   "Cart": {
     "title": "Votre Panier",
@@ -183,7 +184,11 @@
     "delivery_method_home": "Domicile",
     "delivery_method_pickup": "Point Relais",
     "pickup_info_title": "Bientôt disponible",
-    "pickup_info_description": "La sélection du point relais n'est pas encore automatisée. Nous vous contacterons par e-mail après la commande pour choisir le point relais qui vous convient."
+    "pickup_info_description": "La sélection du point relais n'est pas encore automatisée. Nous vous contacterons par e-mail après la commande pour choisir le point relais qui vous convient.",
+    "pickup_postcode_error": "Veuillez saisir un code postal.",
+    "pickup_generic_error": "Impossible de récupérer les points relais.",
+    "pickup_select_point": "Sélectionnez un point relais",
+    "pickup_selection_error": "Veuillez sélectionner un point relais."
   },
    "OrderStatus": {
     "commandée": "Commandée",

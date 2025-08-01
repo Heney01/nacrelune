@@ -9,7 +9,7 @@ import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle } from 'lucide-react';
+import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, InfoIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BrandLogo } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -27,6 +27,7 @@ import { getCharmSuggestionsAction, getRefreshedCharms } from '@/app/actions';
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Alert, AlertDescription } from './ui/alert';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -602,18 +603,18 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   };
 
   const calculatePixelsPerMm = useCallback(() => {
-      if (modelImageRef.current && (model.width || model.height)) {
-          const imageWidthPx = modelImageRef.current.offsetWidth;
-          const imageHeightPx = modelImageRef.current.offsetHeight;
-          const modelWidthMm = model.width || model.height || 1; // Use height as fallback
-          const modelHeightMm = model.height || model.width || 1; // Use width as fallback
+    if (modelImageRef.current && (model.width || model.height)) {
+        const imageWidthPx = modelImageRef.current.offsetWidth;
+        const imageHeightPx = modelImageRef.current.offsetHeight;
+        const modelWidthMm = model.width || model.height || 1; // Use height as fallback
+        const modelHeightMm = model.height || model.width || 1; // Use width as fallback
 
-          const pxPerMmWidth = imageWidthPx / modelWidthMm;
-          const pxPerMmHeight = imageHeightPx / modelHeightMm;
-          
-          // Use an average to account for non-uniform scaling
-          setPixelsPerMm((pxPerMmWidth + pxPerMmHeight) / 2);
-      }
+        const pxPerMmWidth = imageWidthPx / modelWidthMm;
+        const pxPerMmHeight = imageHeightPx / modelHeightMm;
+        
+        // Use an average to account for non-uniform scaling
+        setPixelsPerMm((pxPerMmWidth + pxPerMmHeight) / 2);
+    }
   }, [model.width, model.height]);
 
   useEffect(() => {
@@ -756,6 +757,14 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                         </div>
                       )}
                   </div>
+                  
+                  <Alert className={cn("text-muted-foreground", isMobile && "rounded-none border-x-0")}>
+                      <InfoIcon className="h-4 w-4" />
+                      <AlertDescription>
+                          {t('editor_disclaimer')}
+                      </AlertDescription>
+                  </Alert>
+
                   <Card className={cn("flex-shrink-0", isMobile && "rounded-none border-x-0")}>
                       <CardHeader>
                           <CardTitle className="font-headline text-lg">{t('added_charms_title', {count: placedCharms.length})}</CardTitle>
@@ -905,10 +914,3 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
-
-
-
-
-
-
-

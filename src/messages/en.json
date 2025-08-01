@@ -55,7 +55,8 @@
     "photorealistic_preview_modal_loading": "Your image is being created by our AI. This may take a moment...",
     "photorealistic_preview_modal_done": "Here is your photorealistic preview!",
     "close_button": "Close",
-    "stock_issue_tooltip": "Not enough stock for this charm."
+    "stock_issue_tooltip": "Not enough stock for this charm.",
+    "editor_disclaimer": "This editor is a faithful representation, but final colors and dimensions may vary slightly."
   },
   "Cart": {
     "title": "Your Cart",
@@ -181,7 +182,10 @@
     "delivery_method_home": "Home",
     "delivery_method_pickup": "Pickup Point",
     "pickup_info_title": "Coming Soon",
-    "pickup_info_description": "Pickup point selection is not yet automated. We will contact you by email after your order to choose the most convenient pickup point with you."
+    "pickup_info_description": "Pickup point selection is not yet automated. We will contact you by email after your order to choose the most convenient pickup point with you.",
+    "pickup_postcode_error": "Please enter a postcode.",
+    "pickup_generic_error": "Could not fetch pickup points.",
+    "pickup_select_point": "Select a pickup point"
   },
   "OrderStatus": {
     "commandée": "Ordered",
