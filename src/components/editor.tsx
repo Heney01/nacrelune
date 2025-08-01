@@ -749,6 +749,14 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                             )
                           })}
                       </div>
+
+                      <div className={cn(
+                          "absolute bottom-0 left-0 right-0 p-2 text-xs text-white bg-black/40 text-center",
+                          isMobile && "text-[10px] p-1"
+                        )}>
+                        <p>{t('editor_disclaimer')}</p>
+                      </div>
+
                       {!isMobile && (
                         <div className="absolute bottom-2 right-2 flex gap-2">
                             <Button variant="secondary" size="icon" onClick={() => handleManualZoom('in')}><ZoomIn /></Button>
@@ -757,13 +765,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                         </div>
                       )}
                   </div>
-                  
-                  <Alert className={cn("text-muted-foreground", isMobile && "rounded-none border-x-0")}>
-                      <InfoIcon className="h-4 w-4" />
-                      <AlertDescription>
-                          {t('editor_disclaimer')}
-                      </AlertDescription>
-                  </Alert>
 
                   <Card className={cn("flex-shrink-0", isMobile && "rounded-none border-x-0")}>
                       <CardHeader>
