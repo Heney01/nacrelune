@@ -15,6 +15,7 @@ import { getCharmSuggestions as getCharmSuggestionsFlow, CharmSuggestionInput, C
 import { z } from 'zod';
 import { getCharms as fetchCharms } from '@/lib/data';
 import Stripe from 'stripe';
+require('dotenv').config();
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 

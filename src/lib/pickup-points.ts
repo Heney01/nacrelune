@@ -2,6 +2,8 @@
 'use server';
 
 import type { PickupPoint } from './types';
+require('dotenv').config();
+
 
 export type FindPickupPointsResult = {
   success: boolean;
