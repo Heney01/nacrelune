@@ -29,33 +29,39 @@ interface CharmsPanelProps {
 const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Charm) => void }) => {
     const isOutOfStock = (charm.quantity ?? 0) <= 0;
     const t = useTranslations('CharmsPanel');
-    const [isPrewiewOpen, setIsPreviewOpen] = useState(false);
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const isMobile = useIsMobile();
 
     const handleCardClick = (e: React.MouseEvent) => {
-        const target = e.target as HTMLElement;
-        // Do not trigger onAddCharm if the detail view button is clicked
-        if (target.closest('[data-trigger-preview]')) return;
-
-        if (isOutOfStock) {
+        if (isMobile) {
+            // On mobile, always open the preview dialog.
             setIsPreviewOpen(true);
         } else {
-            onAddCharm(charm);
+            // On desktop, add charm directly, unless the loupe is clicked.
+            const target = e.target as HTMLElement;
+            if (target.closest('[data-trigger-preview]')) return;
+
+            if (isOutOfStock) {
+                setIsPreviewOpen(true);
+            } else {
+                onAddCharm(charm);
+            }
         }
     };
 
     const handlePreviewClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         setIsPreviewOpen(true);
-    }
-    
+    };
+
     return (
-        <Dialog open={isPrewiewOpen} onOpenChange={setIsPreviewOpen}>
+        <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
             <Card
                 onClick={handleCardClick}
                 className={cn(
                     "p-2 aspect-square flex flex-col items-center justify-center relative group",
-                    isOutOfStock ? "cursor-pointer bg-muted/60" : "hover:bg-muted cursor-pointer"
+                    "cursor-pointer",
+                    isOutOfStock ? "bg-muted/60" : "hover:bg-muted"
                 )}
                 title={charm.name}
             >
@@ -75,19 +81,21 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
                     />
                 </div>
                 
-                <Button 
-                    data-trigger-preview
-                    onClick={handlePreviewClick}
-                    variant="ghost" 
-                    size="icon" 
-                    className={cn(
-                        "absolute top-1 right-1 transition-opacity h-6 w-6",
-                        isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                    )}
-                    title={t('view_details_button')}
-                >
-                    <ZoomIn className="h-4 w-4" />
-                </Button>
+                {!isMobile && (
+                    <Button 
+                        data-trigger-preview
+                        onClick={handlePreviewClick}
+                        variant="ghost" 
+                        size="icon" 
+                        className={cn(
+                            "absolute top-1 right-1 transition-opacity h-6 w-6",
+                            "opacity-0 group-hover:opacity-100"
+                        )}
+                        title={t('view_details_button')}
+                    >
+                        <ZoomIn className="h-4 w-4" />
+                    </Button>
+                )}
             </Card>
 
             <DialogContent className="max-w-md">
