@@ -570,29 +570,40 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     />
   ), [availableCharms, charmCategories, addCharmFromCharmList, charmsSearchTerm]);
 
-  const handleGenerateSuggestions = async (userPreferences: string): Promise<string | null> => {
+  const handleAnalyzeForSuggestions = async (): Promise<string | null> => {
     setIsGenerating(true);
     setSuggestions([]);
     setCritique(null);
+
     try {
-        const result = await getCharmSuggestionsAction({
+      const photoDataUri = await getCanvasDataUri();
+
+      const analysisResult = await getCharmAnalysisSuggestionsAction({
+        photoDataUri: photoDataUri,
+        allCharms: allCharms.map(c => c.name),
+      });
+
+      if (analysisResult.success && analysisResult.suggestions) {
+         const placementResult = await getCharmSuggestionsAction({
             jewelryType: jewelryType.name,
             existingCharms: placedCharms.map(pc => pc.charm.name),
-            allCharms: allCharms.map(c => c.name),
-            userPreferences,
+            allCharms: analysisResult.suggestions,
         });
 
-        if (result.success && result.suggestions) {
-            setSuggestions(result.suggestions);
-            return null;
+        if (placementResult.success && placementResult.suggestions) {
+            setSuggestions(placementResult.suggestions);
         } else {
-            throw new Error(result.error || "Une erreur inconnue est survenue.");
+             throw new Error(placementResult.error || "Une erreur inconnue est survenue lors de la génération des emplacements.");
         }
+      } else {
+        throw new Error(analysisResult.error || "Une erreur inconnue est survenue lors de l'analyse.");
+      }
+      return null;
     } catch (error: any) {
-        console.error("Error in handleGenerateSuggestions:", error.message);
-        return error.message;
+      console.error("Error in handleAnalyzeCurrentDesign:", error.message);
+      return error.message;
     } finally {
-        setIsGenerating(false);
+      setIsGenerating(false);
     }
   };
   
@@ -612,35 +623,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     }
   };
 
-  const handleAnalyzeForSuggestions = async (): Promise<string | null> => {
-    setIsGenerating(true);
-    setSuggestions([]);
-    setCritique(null);
-
-    try {
-      const photoDataUri = await getCanvasDataUri();
-
-      const analysisResult = await getCharmAnalysisSuggestionsAction({
-        photoDataUri: photoDataUri,
-        allCharms: allCharms.map(c => c.name),
-      });
-
-      if (analysisResult.success && analysisResult.suggestions) {
-        const textPreferences = analysisResult.suggestions.join(', ');
-        const placementError = await handleGenerateSuggestions(textPreferences);
-        if (placementError) return placementError;
-      } else {
-        throw new Error(analysisResult.error || "Une erreur inconnue est survenue lors de l'analyse.");
-      }
-      return null;
-    } catch (error: any) {
-      console.error("Error in handleAnalyzeCurrentDesign:", error.message);
-      return error.message;
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-  
   const handleCritiqueDesign = async (): Promise<string | null> => {
     setIsGenerating(true);
     setSuggestions([]);
@@ -914,7 +896,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                 <div className="lg:col-span-3 flex flex-col gap-6 min-h-0">
                   <SuggestionSidebar
                       charms={allCharms}
-                      onGenerate={handleGenerateSuggestions}
                       onAnalyze={handleAnalyzeForSuggestions}
                       onCritique={handleCritiqueDesign}
                       isLoading={isGenerating}
@@ -980,7 +961,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                             <SuggestionSidebar 
                                 charms={allCharms} 
                                 isMobile={true}
-                                onGenerate={handleGenerateSuggestions}
                                 onAnalyze={handleAnalyzeForSuggestions}
                                 onCritique={handleCritiqueDesign}
                                 isLoading={isGenerating}

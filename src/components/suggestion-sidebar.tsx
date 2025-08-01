@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
 import { Lightbulb, Sparkles, WandSparkles, Loader2, PlusCircle, Scan, Pilcrow } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
@@ -21,7 +20,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 interface SuggestionSidebarProps {
   charms: Charm[];
   isMobile?: boolean;
-  onGenerate: (preferences: string) => Promise<string | null>;
   onAnalyze: () => Promise<string | null>;
   onCritique: () => Promise<string | null>;
   isLoading: boolean;
@@ -33,7 +31,6 @@ interface SuggestionSidebarProps {
 export function SuggestionSidebar({
   charms,
   isMobile = false,
-  onGenerate,
   onAnalyze,
   onCritique,
   isLoading,
@@ -41,22 +38,8 @@ export function SuggestionSidebar({
   critique,
   onApplySuggestion,
 }: SuggestionSidebarProps) {
-  const [preferences, setPreferences] = useState('');
   const [error, setError] = useState<string | null>(null);
   const t = useTranslations('Editor');
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    const errorMessage = await onGenerate(preferences);
-    if (errorMessage) {
-      if (errorMessage.includes("503") || errorMessage.includes("overloaded")) {
-        setError("Le service d'IA est actuellement très demandé. Veuillez réessayer dans quelques instants.");
-      } else {
-        setError(errorMessage);
-      }
-    }
-  };
 
   const handleAnalysis = async () => {
     setError(null);
@@ -102,42 +85,13 @@ export function SuggestionSidebar({
             </TabsList>
 
             <TabsContent value="suggestions" className="flex-grow flex flex-col gap-4 min-h-0 mt-4">
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="preferences" className="font-bold">{t('preferences_label')}</Label>
-                    <Textarea
-                      id="preferences"
-                      placeholder={t('preferences_placeholder')}
-                      value={preferences}
-                      onChange={(e) => setPreferences(e.target.value)}
-                      className="mt-2"
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={isLoading || charms.length === 0}>
-                     {isLoading ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('generating_button')}</>
-                    ) : (
-                      <> <Sparkles className="mr-2 h-4 w-4" /> {t('generate_ideas_button')}</>
-                    )}
-                  </Button>
-                </form>
-                
-                <div className="relative my-2">
-                    <div aria-hidden="true" className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-card px-2 text-muted-foreground">OU</span>
-                    </div>
-                </div>
-
                 <div className="space-y-2">
-                    <Label className="font-bold">Propositions basées sur votre design</Label>
-                    <Button variant="outline" className="w-full" onClick={handleAnalysis} disabled={isLoading}>
+                    <Label className="font-bold">Suggestions basées sur votre design</Label>
+                     <Button variant="outline" className="w-full" onClick={handleAnalysis} disabled={isLoading}>
                          {isLoading ? (
-                            <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analyse en cours...</>
+                            <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('generating_button')}</>
                         ): (
-                            <> <Scan className="mr-2 h-4 w-4" /> Proposer des breloques</>
+                            <> <Scan className="mr-2 h-4 w-4" /> {t('generate_ideas_button')}</>
                         )}
                     </Button>
                 </div>
