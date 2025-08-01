@@ -142,6 +142,8 @@
     "payment_info": "Informations de paiement",
     "full_name": "Nom complet",
     "address": "Adresse",
+    "address_line1_placeholder": "Numéro et nom de rue",
+    "address_line2_placeholder": "Appartement, étage, etc. (facultatif)",
     "city": "Ville",
     "postal_code": "Code postal",
     "country": "Pays",
@@ -164,7 +166,11 @@
     "stock_error_description": "Veuillez revoir les articles surlignés en rouge dans votre panier avant de continuer.",
     "payment_error_title": "Erreur de paiement",
     "payment_error_default": "Une erreur est survenue lors du paiement. Veuillez réessayer.",
-    "payment_intent_error": "Impossible d'initialiser le paiement. Veuillez réessayer."
+    "payment_intent_error": "Impossible d'initialiser le paiement. Veuillez réessayer.",
+    "step_indicator": "Étape {step} sur 3",
+    "next_step_button": "Étape suivante",
+    "back_button": "Retour",
+    "customer_info": "Informations client"
   },
    "OrderStatus": {
     "commandée": "Commandée",

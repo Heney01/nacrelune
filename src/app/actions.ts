@@ -10,7 +10,7 @@ import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
-import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm } from '@/lib/types';
+import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm, ShippingAddress } from '@/lib/types';
 import { getCharmSuggestions as getCharmSuggestionsFlow, CharmSuggestionInput, CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { z } from 'zod';
 import { getCharms as fetchCharms } from '@/lib/data';
@@ -597,7 +597,7 @@ export async function markAsRestocked(formData: FormData): Promise<{ success: bo
 }
 
 
-export async function createOrder(cartItems: SerializableCartItem[], email: string, locale: string, paymentIntentId: string): Promise<CreateOrderResult> {
+export async function createOrder(cartItems: SerializableCartItem[], email: string, locale: string, paymentIntentId: string, shippingAddress: ShippingAddress): Promise<CreateOrderResult> {
     if (!cartItems || cartItems.length === 0) {
         return { success: false, message: 'Le panier est vide.' };
     }
@@ -714,6 +714,7 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
                 items: orderItems,
                 status: initialStatus,
                 paymentIntentId: paymentIntentId,
+                shippingAddress,
             };
 
             const orderRef = doc(collection(db, 'orders'));

@@ -100,6 +100,15 @@ export interface MailLog {
     delivery: MailDelivery | null;
 }
 
+export interface ShippingAddress {
+    name: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    postalCode: string;
+    country: string;
+}
+
 export interface Order {
     id: string;
     orderNumber: string;
@@ -108,6 +117,7 @@ export interface Order {
     totalPrice: number;
     items: OrderItem[];
     status: OrderStatus;
+    shippingAddress?: ShippingAddress;
     shippingCarrier?: string;
     trackingNumber?: string;
     cancellationReason?: string;
