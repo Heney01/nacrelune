@@ -12,6 +12,7 @@ import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
 import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm, ShippingAddress, DeliveryMethod } from '@/lib/types';
 import { getCharmSuggestions as getCharmSuggestionsFlow, CharmSuggestionInput, CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
+import { getCharmAnalysisSuggestions as getCharmAnalysisSuggestionsFlow, CharmAnalysisSuggestionInput, CharmAnalysisSuggestionOutput } from '@/ai/flows/charm-analysis-suggestions';
 import { z } from 'zod';
 import { getCharms as fetchCharms } from '@/lib/data';
 import Stripe from 'stripe';
@@ -1214,6 +1215,21 @@ export async function getCharmSuggestionsAction(input: CharmSuggestionInput): Pr
     } catch (error: any) {
         console.error('[SERVER ACTION] Error calling AI flow:', error);
         return { success: false, error: error.message || "Une erreur est survenue lors de la génération des suggestions." };
+    }
+}
+
+export async function getCharmAnalysisSuggestionsAction(input: CharmAnalysisSuggestionInput): Promise<{
+    success: boolean;
+    suggestions?: CharmAnalysisSuggestionOutput['suggestions'];
+    error?: string;
+}> {
+    try {
+        console.log('[SERVER ACTION] Calling getCharmAnalysisSuggestionsFlow');
+        const result = await getCharmAnalysisSuggestionsFlow(input);
+        return { success: true, suggestions: result.suggestions };
+    } catch (error: any) {
+        console.error('[SERVER ACTION] Error calling AI analysis flow:', error);
+        return { success: false, error: error.message || "Une erreur est survenue lors de l'analyse de l'image." };
     }
 }
 

@@ -6,4 +6,5 @@ import {googleAI} from '@genkit-ai/googleai';
 genkit({ plugins: [googleAI()] });
 
 import './flows/charm-placement-suggestions.ts';
+import './flows/charm-analysis-suggestions.ts';
 
