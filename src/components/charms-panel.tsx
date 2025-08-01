@@ -68,8 +68,8 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
                         src={charm.imageUrl}
                         alt={charm.name}
                         fill
-                        sizes="(max-width: 768px) 10vw, 5vw"
-                        className={cn("object-contain p-1 pointer-events-none", isOutOfStock && "grayscale opacity-50")}
+                        sizes="5vw"
+                        className={cn("object-contain pointer-events-none", isOutOfStock && "grayscale opacity-50")}
                         data-ai-hint="jewelry charm"
                     />
                 </div>
