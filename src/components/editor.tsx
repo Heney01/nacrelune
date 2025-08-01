@@ -742,11 +742,13 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                             )
                           })}
                       </div>
-                      <div className="absolute bottom-2 right-2 flex gap-2">
-                          <Button variant="secondary" size="icon" onClick={() => handleManualZoom('in')}><ZoomIn /></Button>
-                          <Button variant="secondary" size="icon" onClick={() => handleManualZoom('out')}><ZoomOut /></Button>
-                          <Button variant="secondary" size="icon" onClick={resetZoomAndPan}><Maximize /></Button>
-                      </div>
+                      {!isMobile && (
+                        <div className="absolute bottom-2 right-2 flex gap-2">
+                            <Button variant="secondary" size="icon" onClick={() => handleManualZoom('in')}><ZoomIn /></Button>
+                            <Button variant="secondary" size="icon" onClick={() => handleManualZoom('out')}><ZoomOut /></Button>
+                            <Button variant="secondary" size="icon" onClick={resetZoomAndPan}><Maximize /></Button>
+                        </div>
+                      )}
                   </div>
                   <Card className={cn("flex-shrink-0", isMobile && "rounded-none border-x-0")}>
                       <CardHeader>
@@ -897,6 +899,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
 
 
 
