@@ -109,6 +109,8 @@ export interface ShippingAddress {
     country: string;
 }
 
+export type DeliveryMethod = 'home' | 'pickup';
+
 export interface Order {
     id: string;
     orderNumber: string;
@@ -117,6 +119,7 @@ export interface Order {
     totalPrice: number;
     items: OrderItem[];
     status: OrderStatus;
+    deliveryMethod: DeliveryMethod;
     shippingAddress?: ShippingAddress;
     shippingCarrier?: string;
     trackingNumber?: string;

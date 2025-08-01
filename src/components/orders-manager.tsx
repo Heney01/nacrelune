@@ -3,10 +3,10 @@
 'use client';
 
 import React, { useState, useReducer, useTransition, Fragment, useMemo } from 'react';
-import type { Order, OrderStatus, OrderItem, Charm, MailLog } from '@/lib/types';
+import type { Order, OrderStatus, OrderItem, Charm, MailLog, DeliveryMethod } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from './ui/card';
-import { Package, Search, ChevronDown, ChevronUp, Truck, FileX, Edit, Copy, Mail, CheckCircle, XCircle, Clock, Undo2 } from 'lucide-react';
+import { Package, Search, ChevronDown, ChevronUp, Truck, FileX, Edit, Copy, Mail, CheckCircle, XCircle, Clock, Undo2, Home, Store } from 'lucide-react';
 import { useTranslations } from '@/hooks/use-translations';
 import { Badge } from './ui/badge';
 import { updateOrderStatus, updateOrderItemStatus } from '@/app/actions';
@@ -283,6 +283,26 @@ const OrderDetails = ({ order, onItemStatusChange, onStatusChange, t, onEditShip
                 </TabsList>
                 <TabsContent value="workshop">
                      <div className="p-4 md:p-6">
+                        <div className="mb-6">
+                             <h5 className="font-semibold mb-2 text-md flex items-center gap-2">
+                                {order.deliveryMethod === 'home' ? <Home className="h-5 w-5 text-primary" /> : <Store className="h-5 w-5 text-primary" />} 
+                                {t(`delivery_method_${order.deliveryMethod}`)}
+                            </h5>
+                             <div className="bg-background p-4 rounded-lg border">
+                                {order.deliveryMethod === 'home' && order.shippingAddress ? (
+                                    <address className="not-italic text-sm">
+                                        <strong>{order.shippingAddress.name}</strong><br />
+                                        {order.shippingAddress.addressLine1}<br />
+                                        {order.shippingAddress.addressLine2 && <>{order.shippingAddress.addressLine2}<br /></>}
+                                        {order.shippingAddress.postalCode} {order.shippingAddress.city}<br />
+                                        {order.shippingAddress.country}
+                                    </address>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">{t('pickup_contact_customer')}</p>
+                                )}
+                            </div>
+                        </div>
+
                         {order.paymentIntentId && (
                              <div className="mb-6">
                                 <h5 className="font-semibold mb-2 text-md flex items-center gap-2">
@@ -435,6 +455,8 @@ const OrderRow = ({ order, isOpen, onToggle, onStatusChange, onItemStatusChange,
         });
     }
 
+    const DeliveryIcon = order.deliveryMethod === 'home' ? Home : Store;
+
     return (
         <Fragment>
             <TableRow 
@@ -450,6 +472,18 @@ const OrderRow = ({ order, isOpen, onToggle, onStatusChange, onItemStatusChange,
                             <Copy className="h-4 w-4" />
                         </Button>
                     </div>
+                </TableCell>
+                <TableCell>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger>
+                                <DeliveryIcon className="h-5 w-5" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                               <p>{t(`delivery_method_${order.deliveryMethod}`)}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                 </TableCell>
                 <TableCell>{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(order.totalPrice)}</TableCell>
                 <TableCell>
@@ -499,7 +533,7 @@ const OrderRow = ({ order, isOpen, onToggle, onStatusChange, onItemStatusChange,
             </TableRow>
             {isOpen && (
                 <TableRow>
-                    <TableCell colSpan={6} className="p-0">
+                    <TableCell colSpan={7} className="p-0">
                        <OrderDetails order={order} onItemStatusChange={onItemStatusChange} onStatusChange={onStatusChange} t={t} onEditShipping={onEditShipping} />
                     </TableCell>
                 </TableRow>
@@ -703,6 +737,7 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
                                 <TableHead>{t('order_number')}</TableHead>
                                 <TableHead>{t('date')}</TableHead>
                                 <TableHead>{t('customer')}</TableHead>
+                                <TableHead>{t('delivery_method')}</TableHead>
                                 <TableHead>{t('total')}</TableHead>
                                 <TableHead>{t('status')}</TableHead>
                                 <TableHead className="text-right">{t('actions')}</TableHead>
@@ -726,7 +761,7 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
                             ))
                             ) : (
                                  <TableRow>
-                                    <TableCell colSpan={6} className="text-center h-24">
+                                    <TableCell colSpan={7} className="text-center h-24">
                                        {t('no_orders')}
                                     </TableCell>
                                 </TableRow>
