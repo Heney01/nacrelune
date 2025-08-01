@@ -1,13 +1,12 @@
 
-
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useCart } from '@/hooks/use-cart';
 import { useTranslations } from '@/hooks/use-translations';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, AlertCircle, Ban } from 'lucide-react';
+import { Loader2, AlertCircle, Ban, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { cn } from '@/lib/utils';
@@ -16,12 +15,15 @@ import { loadStripe, Stripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { createPaymentIntent, CreateOrderResult } from '@/app/actions';
 import { CheckoutForm } from './checkout-form';
+import type { ShippingAddress } from '@/lib/types';
 
 export type StockErrorState = {
   message: string;
   unavailableModelIds: Set<string>;
   unavailableCharmIds: Set<string>;
 } | null;
+
+type Step = 'customer' | 'shipping' | 'payment';
 
 interface CheckoutDialogProps {
   isOpen: boolean;
@@ -36,8 +38,15 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
   const t = useTranslations('Checkout');
   const tCart = useTranslations('Cart');
   const { cart } = useCart();
+  const [currentStep, setCurrentStep] = useState<Step>('customer');
+
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
+
+  const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
+      name: '', addressLine1: '', city: '', postalCode: '', country: 'France'
+  });
+  const [email, setEmail] = useState('');
 
   const subtotal = cart.reduce((sum, item) => {
     const modelPrice = item.model.price || 0;
@@ -45,51 +54,44 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
     return sum + modelPrice + charmsPrice;
   }, 0);
 
-  const shippingCost = 0; // Simulate free shipping
+  const shippingCost = 0;
   const total = subtotal + shippingCost;
   
-  const formatPrice = (price: number) => {
-    return tCart('price', { price });
-  };
-  
-  useEffect(() => {
-    if (isOpen) {
-      if (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
-        setStripePromise(loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY));
+  const formatPrice = (price: number) => tCart('price', { price });
+
+  const handleGoToPayment = useCallback(async (email: string, address: ShippingAddress) => {
+    setEmail(email);
+    setShippingAddress(address);
+    setClientSecret(null);
+
+    if (total > 0) {
+      const res = await createPaymentIntent(total);
+      if (res.clientSecret) {
+        setClientSecret(res.clientSecret);
+        if (!stripePromise) {
+            if (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+                setStripePromise(loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY));
+            } else {
+                console.error("Stripe publishable key is not set.");
+            }
+        }
+        setCurrentStep('payment');
       } else {
-        console.error("Stripe publishable key is not set.");
+        console.error(res.error);
+        onOpenChange(false);
       }
-
-      if (total > 0) {
-        setClientSecret(null); // Reset on open
-        createPaymentIntent(total).then(res => {
-          if (res.clientSecret) {
-            setClientSecret(res.clientSecret);
-          } else {
-              console.error(res.error);
-               onOpenChange(false);
-          }
-        });
-      }
+    } else {
+        setCurrentStep('payment');
     }
-  }, [isOpen, total, onOpenChange]);
+  }, [total, onOpenChange, stripePromise]);
 
-  const options = clientSecret ? {
-    clientSecret,
-    appearance: {
-      theme: 'stripe' as const,
-       variables: {
-        colorPrimary: '#ef4444',
-        colorBackground: '#ffffff',
-        colorText: '#333333',
-        colorDanger: '#df1b41',
-        fontFamily: 'Alegreya, Ideal Sans, system-ui, sans-serif',
-        spacingUnit: '4px',
-        borderRadius: '4px',
-      }
-    },
-  } : {};
-
+  const handleBack = () => {
+    if(currentStep === 'payment') setCurrentStep('shipping');
+    if(currentStep === 'shipping') setCurrentStep('customer');
+  }
+  
+  const stepNumber = currentStep === 'customer' ? 1 : currentStep === 'shipping' ? 2 : 3;
+  
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent 
@@ -97,9 +99,16 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <div className="flex flex-col h-full max-h-[90vh] md:max-h-none">
-            <DialogHeader className="p-6 pb-4 flex-shrink-0">
-                <DialogTitle className="text-2xl font-headline">{t('title')}</DialogTitle>
-                <DialogDescription>{t('description')}</DialogDescription>
+            <DialogHeader className="p-6 pb-4 flex-shrink-0 flex-row items-center gap-4">
+                {currentStep !== 'customer' && (
+                     <Button type="button" variant="ghost" size="icon" onClick={handleBack} id="checkout-back-button-main">
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                )}
+                <div>
+                    <DialogTitle className="text-2xl font-headline">{t('title')}</DialogTitle>
+                    <DialogDescription>{t('description')}</DialogDescription>
+                </div>
             </DialogHeader>
              {stockError && (
                 <div className="px-6">
@@ -111,19 +120,17 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
                 </div>
             )}
             <div className="flex-grow overflow-y-auto no-scrollbar">
-              {clientSecret && stripePromise ? (
-                <Elements stripe={stripePromise} options={options}>
-                  <CheckoutForm 
-                    onOrderCreated={onOrderCreated} 
-                    setStockError={setStockError}
-                    clientSecret={clientSecret}
-                  />
-                </Elements>
-              ) : (
-                <div className="flex justify-center items-center h-full py-16">
-                    <Loader2 className="h-8 w-8 animate-spin" />
-                </div>
-              )}
+              <CheckoutForm 
+                currentStep={currentStep}
+                setCurrentStep={setCurrentStep}
+                onGoToPayment={handleGoToPayment}
+                onOrderCreated={onOrderCreated} 
+                setStockError={setStockError}
+                stripePromise={stripePromise}
+                clientSecret={clientSecret}
+                shippingAddress={shippingAddress}
+                email={email}
+              />
             </div>
         </div>
         
@@ -195,4 +202,3 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
     </Dialog>
   );
 }
-
