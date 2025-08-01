@@ -9,7 +9,7 @@ import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, InfoIcon } from 'lucide-react';
+import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BrandLogo } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -202,6 +202,11 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   scaleRef.current = scale;
   const placedCharmsRef = useRef(placedCharms);
   placedCharmsRef.current = placedCharms;
+
+  const resetZoomAndPan = useCallback(() => {
+    setScale(1);
+    setPan({ x: 0, y: 0 });
+  }, []);
 
   const getCanvasDataUri = useCallback(async (): Promise<string> => {
     if (!canvasRef.current) {
@@ -470,11 +475,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     
     zoomToPoint(newScale, pointX, pointY);
   };
-  
-  const resetZoomAndPan = useCallback(() => {
-    setScale(1);
-    setPan({ x: 0, y: 0 });
-  }, []);
   
   const handleCharmListClick = (charmId: string) => {
     setSelectedPlacedCharmId(charmId);
@@ -954,3 +954,4 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
