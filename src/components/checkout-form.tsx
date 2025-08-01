@@ -18,6 +18,7 @@ import type { ShippingAddress, DeliveryMethod } from '@/lib/types';
 import { Progress } from './ui/progress';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { cn } from '@/lib/utils';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 
 type Step = 'customer' | 'shipping' | 'payment';
 
@@ -227,56 +228,46 @@ export const CheckoutForm = ({
 
                   <div style={{ display: currentStep === 'shipping' ? 'block' : 'none' }} className="space-y-4">
                     <h3 className="text-lg font-medium">{t('shipping_title')}</h3>
-                    <RadioGroup value={deliveryMethod} onValueChange={(v) => setDeliveryMethod(v as DeliveryMethod)} className="gap-4">
-                      
-                      <Label htmlFor='delivery-home' className={cn("flex flex-col items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors", deliveryMethod === 'home' && "bg-primary/5 border-primary ring-2 ring-primary")}>
-                         <div className="flex items-center space-x-3">
-                           <RadioGroupItem value="home" id="delivery-home" />
-                            <div className="font-semibold flex items-center gap-2"><Home /> {t('delivery_method_home')}</div>
-                         </div>
-                         <div className={cn("w-full pl-8 space-y-4 transition-all duration-300", deliveryMethod !== 'home' ? 'max-h-0 overflow-hidden opacity-0' : 'max-h-[500px] overflow-visible opacity-100')}>
-                             <div className="space-y-2">
-                                <Label htmlFor="shipping-name">{t('full_name')}</Label>
-                                <Input id="shipping-name" name="name" value={shippingAddress.name} onChange={(e) => setShippingAddress(prev => ({...prev, name: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
+                    <Tabs value={deliveryMethod} onValueChange={(v) => setDeliveryMethod(v as DeliveryMethod)} className="w-full">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="home"><Home className="mr-2"/>{t('delivery_method_home')}</TabsTrigger>
+                        <TabsTrigger value="pickup"><Store className="mr-2"/>{t('delivery_method_pickup')}</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="home" className="pt-4 space-y-4">
+                         <div className="space-y-2">
+                            <Label htmlFor="shipping-name">{t('full_name')}</Label>
+                            <Input id="shipping-name" name="name" value={shippingAddress.name} onChange={(e) => setShippingAddress(prev => ({...prev, name: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="addressLine1">{t('address')}</Label>
+                            <Input id="addressLine1" name="addressLine1" placeholder={t('address_line1_placeholder')} value={shippingAddress.addressLine1} onChange={(e) => setShippingAddress(prev => ({...prev, addressLine1: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
+                        </div>
+                        <div className="space-y-2">
+                            <Input id="addressLine2" name="addressLine2" placeholder={t('address_line2_placeholder')} value={shippingAddress.addressLine2 || ''} onChange={(e) => setShippingAddress(prev => ({...prev, addressLine2: e.target.value}))} />
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="space-y-2 sm:col-span-1">
+                                <Label htmlFor="postalCode">{t('postal_code')}</Label>
+                                <Input id="postalCode" name="postalCode" value={shippingAddress.postalCode} onChange={(e) => setShippingAddress(prev => ({...prev, postalCode: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="addressLine1">{t('address')}</Label>
-                                <Input id="addressLine1" name="addressLine1" placeholder={t('address_line1_placeholder')} value={shippingAddress.addressLine1} onChange={(e) => setShippingAddress(prev => ({...prev, addressLine1: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
+                            <div className="space-y-2 sm:col-span-2">
+                                <Label htmlFor="city">{t('city')}</Label>
+                                <Input id="city" name="city" value={shippingAddress.city} onChange={(e) => setShippingAddress(prev => ({...prev, city: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
                             </div>
-                            <div className="space-y-2">
-                                <Input id="addressLine2" name="addressLine2" placeholder={t('address_line2_placeholder')} value={shippingAddress.addressLine2 || ''} onChange={(e) => setShippingAddress(prev => ({...prev, addressLine2: e.target.value}))} />
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <div className="space-y-2 sm:col-span-1">
-                                    <Label htmlFor="postalCode">{t('postal_code')}</Label>
-                                    <Input id="postalCode" name="postalCode" value={shippingAddress.postalCode} onChange={(e) => setShippingAddress(prev => ({...prev, postalCode: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
-                                </div>
-                                <div className="space-y-2 sm:col-span-2">
-                                    <Label htmlFor="city">{t('city')}</Label>
-                                    <Input id="city" name="city" value={shippingAddress.city} onChange={(e) => setShippingAddress(prev => ({...prev, city: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="country">{t('country')}</Label>
-                                <Input id="country" name="country" value={shippingAddress.country} onChange={(e) => setShippingAddress(prev => ({...prev, country: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
-                            </div>
-                         </div>
-                      </Label>
-
-                      <Label htmlFor='delivery-pickup' className={cn("flex flex-col items-start gap-4 rounded-lg border p-4 cursor-pointer transition-colors", deliveryMethod === 'pickup' && "bg-primary/5 border-primary ring-2 ring-primary")}>
-                         <div className="flex items-center space-x-3">
-                           <RadioGroupItem value="pickup" id="delivery-pickup" />
-                            <div className="font-semibold flex items-center gap-2"><Store /> {t('delivery_method_pickup')}</div>
-                         </div>
-                         <div className={cn("w-full pl-8 space-y-4 transition-all duration-300", deliveryMethod !== 'pickup' ? 'max-h-0 overflow-hidden opacity-0' : 'max-h-[500px] overflow-visible opacity-100')}>
-                             <Alert>
-                                <AlertCircle className="h-4 w-4" />
-                                <AlertTitle>{t('pickup_info_title')}</AlertTitle>
-                                <AlertDescription>{t('pickup_info_description')}</AlertDescription>
-                            </Alert>
-                         </div>
-                      </Label>
-                    </RadioGroup>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="country">{t('country')}</Label>
+                            <Input id="country" name="country" value={shippingAddress.country} onChange={(e) => setShippingAddress(prev => ({...prev, country: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
+                        </div>
+                      </TabsContent>
+                      <TabsContent value="pickup" className="pt-4">
+                        <Alert>
+                           <AlertCircle className="h-4 w-4" />
+                           <AlertTitle>{t('pickup_info_title')}</AlertTitle>
+                           <AlertDescription>{t('pickup_info_description')}</AlertDescription>
+                       </Alert>
+                      </TabsContent>
+                    </Tabs>
                   </div>
 
                   <div style={{ display: currentStep === 'payment' ? 'block' : 'none' }} className="space-y-4">
