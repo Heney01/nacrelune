@@ -15,28 +15,24 @@ export type FindPickupPointsResult = {
  * @returns A promise that resolves to a FindPickupPointsResult object.
  */
 export async function findPickupPoints(postcode: string): Promise<FindPickupPointsResult> {
-  // Use NEXT_PUBLIC_ prefixes to make env vars available in server components/actions
   const publicKey = process.env.NEXT_PUBLIC_SENDCLOUD_PUBLIC_KEY;
-  const secretKey = process.env.NEXT_PUBLIC_SENDCLOUD_SECRET_KEY;
+  const secretKey = process.env.SENDCLOUD_SECRET_KEY;
 
   if (!publicKey || !secretKey) {
-    console.error("Sendcloud API keys are not configured in .env file with NEXT_PUBLIC_ prefix.");
+    console.error("Sendcloud API keys are not configured correctly in .env file.");
     return { success: false, error: "Le service de points relais est temporairement indisponible." };
   }
 
-  // We primarily target France, but this could be extended.
   const country = "FR";
-  // We can add more carriers as needed, e.g., 'mondial_relay', 'chronopost', 'colis_prive'
   const carriers = 'colissimo,mondial_relay,chronopost'; 
 
   const url = `https://api.sendcloud.dev/v2/service-points?country=${country}&postcode=${postcode}&carrier=${carriers}`;
 
   try {
-    // Use the native fetch provided by Next.js environment
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': 'Basic ' + Buffer.from(`${publicKey}:${secretKey}`).toString('base64'),
+        'Authorization': 'Basic ' + btoa(`${publicKey}:${secretKey}`),
         'Content-Type': 'application/json'
       }
     });
@@ -45,12 +41,20 @@ export async function findPickupPoints(postcode: string): Promise<FindPickupPoin
       const errorData = await response.json() as any;
       console.error("Sendcloud API error:", errorData);
       const errorMessage = errorData.error?.message || `Erreur API: ${response.statusText}`;
+      if (response.status === 401) {
+        return { success: false, error: "L'authentification avec le service de points relais a échoué. Veuillez vérifier vos clés API." };
+      }
       return { success: false, error: errorMessage };
     }
 
     const data = await response.json() as any[];
+    
+    if (!Array.isArray(data)) {
+        console.warn("Sendcloud API returned non-array data:", data);
+        return { success: true, points: [] };
+    }
 
-    if (!Array.isArray(data) || data.length === 0) {
+    if (data.length === 0) {
       return { success: true, points: [] };
     }
     
