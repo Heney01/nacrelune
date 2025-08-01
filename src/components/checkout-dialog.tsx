@@ -16,6 +16,7 @@ import { Elements } from '@stripe/react-stripe-js';
 import { createPaymentIntent, CreateOrderResult } from '@/app/actions';
 import { CheckoutForm } from './checkout-form';
 import type { ShippingAddress } from '@/lib/types';
+import { Button } from './ui/button';
 
 export type StockErrorState = {
   message: string;
