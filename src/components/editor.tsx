@@ -28,7 +28,7 @@ import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -192,23 +192,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     setPan({ x: 0, y: 0 });
   }, []);
 
-  const interactionState = useRef({
-    isDragging: false,
-    isPanning: false,
-    dragStart: { x: 0, y: 0 },
-    activeCharmId: null as string | null,
-    panStart: { x: 0, y: 0 },
-    isPinching: false,
-    pinchInitialDist: 0,
-  }).current;
-
-  const panRef = useRef(pan);
-  panRef.current = pan;
-  const scaleRef = useRef(scale);
-  scaleRef.current = scale;
-  const placedCharmsRef = useRef(placedCharms);
-  placedCharmsRef.current = placedCharms;
-
   const getCanvasDataUri = useCallback(async (): Promise<string> => {
     if (!canvasRef.current) {
       throw new Error("Canvas ref is not available");
@@ -237,6 +220,23 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     });
   }, [resetZoomAndPan]);
 
+
+  const interactionState = useRef({
+    isDragging: false,
+    isPanning: false,
+    dragStart: { x: 0, y: 0 },
+    activeCharmId: null as string | null,
+    panStart: { x: 0, y: 0 },
+    isPinching: false,
+    pinchInitialDist: 0,
+  }).current;
+
+  const panRef = useRef(pan);
+  panRef.current = pan;
+  const scaleRef = useRef(scale);
+  scaleRef.current = scale;
+  const placedCharmsRef = useRef(placedCharms);
+  placedCharmsRef.current = placedCharms;
 
   const addCharmToCanvas = useCallback((
     charm: Charm, 
@@ -817,11 +817,11 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                           })}
                       </div>
 
-                      <div className={cn("absolute bottom-2 left-0 right-0 px-4 flex justify-center items-center gap-2", isMobile ? "pr-4" : "pr-32")}>
+                      <div className="absolute bottom-4 left-4">
                            <Dialog>
                                 <DialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground rounded-full hover:bg-muted/50 hover:text-foreground">
-                                        <Info />
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground rounded-full hover:bg-muted/50 hover:text-foreground">
+                                        <Info className="h-5 w-5" />
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent className="sm:max-w-md">
