@@ -727,7 +727,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
           <div className={cn("container mx-auto flex-1 flex flex-col min-h-0", isMobile && "px-0")}>
               <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0", isMobile && "grid-cols-1 gap-0")}>
               {!isMobile && (
-                  <div className="lg:col-span-3">
+                  <div className="lg:col-span-3 flex flex-col min-h-0">
                       {charmsPanelDesktop}
                   </div>
               )}
@@ -884,8 +884,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                     </CarouselItem>
                                     ))}
                                 </CarouselContent>
-                                <CarouselPrevious />
-                                <CarouselNext />
+                                <CarouselPrevious className={cn(!isMobile && 'hidden')}/>
+                                <CarouselNext className={cn(!isMobile && 'hidden')}/>
                                 </Carousel>
                           )}
                       </CardContent>
