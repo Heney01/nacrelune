@@ -32,7 +32,6 @@
     "charms_title": "Breloques",
     "search_placeholder": "Rechercher des breloques...",
     "add_to_design_button": "Ajouter à la création",
-    "customize_title": "Personnalisation",
     "add_to_cart_button": "Ajouter au Panier",
     "update_item_button": "Mettre à jour l'article",
     "added_charms_title": "Breloques ajoutées ({count})",
@@ -181,8 +180,8 @@
     "customer_info": "Informations client",
     "customer_info_error": "Veuillez renseigner votre nom et votre e-mail.",
     "shipping_info_error": "Veuillez remplir tous les champs d'adresse.",
-    "delivery_method_home": "Livraison à Domicile",
-    "delivery_method_pickup": "Livraison en Point Relais",
+    "delivery_method_home": "Domicile",
+    "delivery_method_pickup": "Point Relais",
     "pickup_info_title": "Bientôt disponible",
     "pickup_info_description": "La sélection du point relais n'est pas encore automatisée. Nous vous contacterons par e-mail après la commande pour choisir le point relais qui vous convient."
   },

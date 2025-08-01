@@ -32,7 +32,6 @@
     "charms_title": "Charms",
     "search_placeholder": "Search charms...",
     "add_to_design_button": "Add to Design",
-    "customize_title": "Customization",
     "add_to_cart_button": "Add to Cart",
     "update_item_button": "Update Item",
     "added_charms_title": "Added Charms ({count})",
@@ -179,8 +178,8 @@
     "customer_info": "Customer Information",
     "customer_info_error": "Please enter your name and email.",
     "shipping_info_error": "Please fill all address fields.",
-    "delivery_method_home": "Home Delivery",
-    "delivery_method_pickup": "Pickup Point Delivery",
+    "delivery_method_home": "Home",
+    "delivery_method_pickup": "Pickup Point",
     "pickup_info_title": "Coming Soon",
     "pickup_info_description": "Pickup point selection is not yet automated. We will contact you by email after your order to choose the most convenient pickup point with you."
   },
