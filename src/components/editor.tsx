@@ -723,7 +723,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
           t={t}
         />
       )}
-      <div className={cn("flex flex-col h-screen", isMobile && "h-[calc(100dvh)] overflow-hidden")}>
+      <div className={cn("flex flex-col h-screen overflow-hidden", isMobile && "h-[calc(100dvh)]")}>
         <header className="p-4 border-b flex-shrink-0">
             <div className="container mx-auto flex justify-between items-center">
               <Link href={`/${locale}`} className="flex items-center gap-2">
@@ -820,7 +820,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                           })}
                       </div>
 
-                      <div className="absolute bottom-4 left-4">
+                      <div className="absolute bottom-4 left-4 z-10">
                            <Dialog>
                                 <DialogTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground rounded-full hover:bg-muted/50 hover:text-foreground">
@@ -952,8 +952,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       </Button>
                   </SheetTrigger>
                   <SheetContent side="bottom" className="h-[80%] p-0 flex flex-col" onOpenAutoFocus={(e) => e.preventDefault()}>
-                        <Tabs defaultValue="add" className="flex flex-col flex-grow h-full">
-                            <SheetHeader className="p-4 border-b">
+                        <Tabs defaultValue="add" className="flex flex-col flex-grow h-full min-h-0">
+                            <SheetHeader className="p-4 border-b flex-shrink-0">
                                 <TabsList className="grid w-full grid-cols-2">
                                     <TabsTrigger value="add">Ajouter</TabsTrigger>
                                     <TabsTrigger value="placed">Installées ({placedCharms.length})</TabsTrigger>
@@ -1067,5 +1067,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
 
 
