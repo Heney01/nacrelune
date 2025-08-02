@@ -101,7 +101,9 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
                     <DialogDescription>{charm.description}</DialogDescription>
                 </DialogHeader>
                 <div className="mt-4 flex justify-center">
-                    <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
+                    <div className="w-[200px] h-[200px] relative">
+                         <Image src={charm.imageUrl} alt={charm.name} fill className="rounded-lg border p-2 object-contain" />
+                    </div>
                 </div>
                     {isOutOfStock && (
                     <Alert variant="destructive" className="mt-4">
