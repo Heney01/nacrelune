@@ -23,7 +23,7 @@ interface ShareDialogProps {
 
 const Polaroid = React.forwardRef<HTMLDivElement, { creationImage: string, title: string, description: string }>(
   ({ creationImage, title, description }, ref) => (
-    <div ref={ref} className="bg-white p-4 pb-2 shadow-lg rounded-sm" data-polaroid-container>
+    <div ref={ref} className="bg-white p-4 shadow-lg rounded-sm" data-polaroid-container>
       <div className="bg-gray-200">
         <Image src={creationImage} alt="User creation" width={400} height={400} className="w-full h-auto object-contain" />
       </div>
