@@ -23,7 +23,7 @@ import { CartSheet } from './cart-sheet';
 import html2canvas from 'html2canvas';
 import { CartWidget } from './cart-widget';
 import { useTranslations } from '@/hooks/use-translations';
-import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction, getCharmDesignCritiqueAction } from '@/app/actions';
+import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction, getCharmDesignCritiqueAction, generateShareContentAction } from '@/app/actions';
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -723,7 +723,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
           t={t}
         />
       )}
-      <div className={cn("flex flex-col h-screen", isMobile && "h-[calc(100dvh)]")}>
+      <div className={cn("flex flex-col h-screen", isMobile && "h-[calc(100dvh)] overflow-hidden")}>
         <header className="p-4 border-b flex-shrink-0">
             <div className="container mx-auto flex justify-between items-center">
               <Link href={`/${locale}`} className="flex items-center gap-2">
@@ -734,7 +734,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
             </div>
           </header>
-        <main className={cn("flex-grow flex flex-col p-4 md:p-8 min-h-0", isMobile && "p-0 overflow-hidden pb-[80px]")}>
+        <main className={cn("flex-grow flex flex-col p-4 md:p-8 min-h-0", isMobile && "p-0 pb-[80px]")}>
           <div className={cn("container mx-auto flex-1 flex flex-col min-h-0", isMobile && "px-0")}>
               <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0", isMobile && "grid-cols-1 gap-0")}>
               {!isMobile && (
@@ -772,7 +772,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   </div>
                   <div
                       ref={canvasWrapperRef}
-                      className={cn("relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none grid place-items-center flex-shrink-0", isMobile && "rounded-none border-x-0")}
+                      className={cn("relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none grid place-items-center flex-shrink-0", isMobile && "rounded-none border-0")}
                   >
                       <div
                           ref={canvasRef}
@@ -1052,3 +1052,4 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
