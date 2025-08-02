@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -31,6 +30,7 @@ const Polaroid = React.forwardRef<HTMLDivElement, { creationImage: string, title
       <div className="mt-3 text-center">
         <h3 className="font-caveat text-xl">{title || "Ma création"}</h3>
         {description && <p className="font-caveat text-base text-muted-foreground mt-1">{description}</p>}
+        <p className="text-xs text-muted-foreground/50 mt-2 font-sans">www.atelierabijoux.com</p>
       </div>
     </div>
   )
