@@ -960,8 +960,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                     <TabsTrigger value="placed">Installées ({placedCharms.length})</TabsTrigger>
                                 </TabsList>
                             </SheetHeader>
-                            <TabsContent value="add" className="m-0 flex-grow min-h-0">
-                                <div className="p-4 border-b">
+                            <TabsContent value="add" className="m-0 flex-grow min-h-0 flex flex-col">
+                                <div className="p-4 border-b flex-shrink-0">
                                     <div className="relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                         <Input
@@ -972,7 +972,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                         />
                                     </div>
                                 </div>
-                                <ScrollArea className="h-[calc(100%-80px)]">
+                                <div className="flex-grow overflow-y-auto">
                                     <CharmsPanel 
                                         allCharms={availableCharms}
                                         charmCategories={charmCategories}
@@ -981,7 +981,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                         searchTerm={charmsSearchTerm}
                                         onSearchTermChange={setCharmsSearchTerm}
                                     />
-                                </ScrollArea>
+                                </div>
                             </TabsContent>
                             <TabsContent value="placed" className="m-0 flex-grow overflow-y-auto no-scrollbar">
                                 <div className="p-4">
@@ -1074,3 +1074,4 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
