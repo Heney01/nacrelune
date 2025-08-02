@@ -152,7 +152,7 @@ export function CartSheet({ children, open, onOpenChange }: {
                             </div>
                           </DialogContent>
                         </Dialog>
-                        <div className="flex-grow">
+                        <div className="flex-grow min-w-0">
                           <p className="font-bold">{item.model.name}</p>
                           <p className="text-sm text-muted-foreground">
                             {item.jewelryType.name}
@@ -160,8 +160,9 @@ export function CartSheet({ children, open, onOpenChange }: {
                           <p className="text-sm font-bold mt-1">
                             {formatPrice(itemPrice)}
                           </p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <SheetClose asChild>
+                        </div>
+                        <div className="flex flex-col items-stretch gap-2">
+                           <SheetClose asChild>
                               <Button variant="outline" size="sm" asChild>
                                  <Link href={editUrl}>
                                     <Edit className="mr-2 h-4 w-4" />
@@ -173,18 +174,17 @@ export function CartSheet({ children, open, onOpenChange }: {
                                 <Share2 className="mr-2 h-4 w-4" />
                                 {tEditor('share_button')}
                             </Button>
+                             <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => removeFromCart(item.id)}
+                              disabled={isProcessing}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              {t('remove_item')}
+                            </Button>
                           </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 flex-shrink-0"
-                          onClick={() => removeFromCart(item.id)}
-                          disabled={isProcessing}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">{t('remove_item')}</span>
-                        </Button>
                       </div>
                       {item.placedCharms.length > 0 && (
                         <AccordionItem value={item.id} className="border-t">
