@@ -31,6 +31,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ShareDialog } from './share-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { ScrollArea } from './ui/scroll-area';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -959,7 +960,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                     <TabsTrigger value="placed">Installées ({placedCharms.length})</TabsTrigger>
                                 </TabsList>
                             </SheetHeader>
-                            <TabsContent value="add" className="flex-grow overflow-y-auto no-scrollbar m-0">
+                            <TabsContent value="add" className="m-0 flex-grow min-h-0">
                                 <div className="p-4 border-b">
                                     <div className="relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -971,16 +972,18 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                         />
                                     </div>
                                 </div>
-                                <CharmsPanel 
-                                    allCharms={availableCharms}
-                                    charmCategories={charmCategories}
-                                    onAddCharm={addCharmFromCharmList} 
-                                    isMobileSheet={true}
-                                    searchTerm={charmsSearchTerm}
-                                    onSearchTermChange={setCharmsSearchTerm}
-                                />
+                                <ScrollArea className="h-[calc(100%-80px)]">
+                                    <CharmsPanel 
+                                        allCharms={availableCharms}
+                                        charmCategories={charmCategories}
+                                        onAddCharm={addCharmFromCharmList} 
+                                        isMobileSheet={true}
+                                        searchTerm={charmsSearchTerm}
+                                        onSearchTermChange={setCharmsSearchTerm}
+                                    />
+                                </ScrollArea>
                             </TabsContent>
-                            <TabsContent value="placed" className="flex-grow overflow-y-auto no-scrollbar m-0">
+                            <TabsContent value="placed" className="m-0 flex-grow overflow-y-auto no-scrollbar">
                                 <div className="p-4">
                                 {placedCharms.length === 0 ? (
                                     <p className="text-muted-foreground text-sm text-center py-8">{t('added_charms_placeholder')}</p>
@@ -1070,3 +1073,4 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
 
+    
