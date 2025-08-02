@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -96,7 +97,7 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t }: Share
             backgroundColor: null, 
             useCORS: true,
             allowTaint: true,
-            scale: 2 // Higher scale for better quality
+            scale: 3
         });
         
         if (!navigator.share) {

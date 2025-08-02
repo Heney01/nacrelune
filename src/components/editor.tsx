@@ -27,7 +27,7 @@ import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggesti
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ShareDialog } from './share-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -211,7 +211,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                     logging: false,
                     useCORS: true,
                     allowTaint: true,
-                    scale: 1,
+                    scale: 2,
                     width: canvasRef.current!.offsetWidth,
                     height: canvasRef.current!.offsetHeight,
                 });
@@ -656,7 +656,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         console.error("Error in handleCritiqueDesign:", error.message);
         return error.message;
     } finally {
-        setIsGenerating(false);
+      setIsGenerating(false);
     }
   }
 
@@ -828,7 +828,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       </div>
 
                       <div className="absolute bottom-4 left-4 z-10">
-                           <Dialog>
+                           <Dialog open={isMobile ? undefined : false}>
                                 <DialogTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground rounded-full hover:bg-muted/50 hover:text-foreground">
                                         <Info className="h-5 w-5" />
@@ -959,13 +959,13 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       </Button>
                   </SheetTrigger>
                   <SheetContent side="bottom" className="h-[80%] p-0 flex flex-col" onOpenAutoFocus={(e) => e.preventDefault()}>
+                        <SheetHeader className="p-4 border-b flex-shrink-0">
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="add">Ajouter</TabsTrigger>
+                                <TabsTrigger value="placed">Installées ({placedCharms.length})</TabsTrigger>
+                            </TabsList>
+                        </SheetHeader>
                         <Tabs defaultValue="add" className="flex flex-col flex-grow h-full min-h-0">
-                            <SheetHeader className="p-4 border-b flex-shrink-0">
-                                <TabsList className="grid w-full grid-cols-2">
-                                    <TabsTrigger value="add">Ajouter</TabsTrigger>
-                                    <TabsTrigger value="placed">Installées ({placedCharms.length})</TabsTrigger>
-                                </TabsList>
-                            </SheetHeader>
                             <TabsContent value="add" className="m-0 flex-grow min-h-0 flex flex-col">
                                 <div className="p-4 border-b flex-shrink-0">
                                     <div className="relative">
@@ -1080,5 +1080,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
