@@ -734,7 +734,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
             </div>
           </header>
-        <main className={cn("flex-grow flex flex-col p-4 md:p-8 min-h-0", isMobile && "p-0 overflow-y-auto pb-[80px]")}>
+        <main className={cn("flex-grow flex flex-col p-4 md:p-8 min-h-0", isMobile && "p-0 overflow-hidden pb-[80px]")}>
           <div className={cn("container mx-auto flex-1 flex flex-col min-h-0", isMobile && "px-0")}>
               <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0", isMobile && "grid-cols-1 gap-0")}>
               {!isMobile && (
