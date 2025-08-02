@@ -7,7 +7,7 @@ import { useCart } from '@/hooks/use-cart';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, ShoppingCart, PlusCircle, Loader2, Edit } from 'lucide-react';
+import { Trash2, ShoppingCart, PlusCircle, Loader2, Edit, Share2 } from 'lucide-react';
 import React, { ReactNode, useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Card } from './ui/card';
@@ -26,6 +26,7 @@ import { createOrder, SerializableCartItem, CreateOrderResult } from '@/app/acti
 import { CheckoutDialog, StockErrorState } from './checkout-dialog';
 import { SuccessDialog } from './success-dialog';
 import type { CartItem } from '@/lib/types';
+import { ShareDialog } from './share-dialog';
 
 
 export function CartSheet({ children, open, onOpenChange }: {
@@ -35,6 +36,7 @@ export function CartSheet({ children, open, onOpenChange }: {
 }) {
   const { cart, removeFromCart, clearCart } = useCart();
   const t = useTranslations('Cart');
+  const tEditor = useTranslations('Editor');
   const params = useParams();
   const locale = params.locale as string;
   const { toast } = useToast();
@@ -42,6 +44,7 @@ export function CartSheet({ children, open, onOpenChange }: {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [successData, setSuccessData] = useState<{orderNumber: string, email: string} | null>(null);
   const [stockError, setStockError] = useState<StockErrorState | null>(null);
+  const [sharingItem, setSharingItem] = useState<CartItem | null>(null);
 
 
   const totalItems = cart.length;
@@ -157,14 +160,20 @@ export function CartSheet({ children, open, onOpenChange }: {
                           <p className="text-sm font-bold mt-1">
                             {formatPrice(itemPrice)}
                           </p>
-                          <SheetClose asChild>
-                            <Button variant="outline" size="sm" asChild className="mt-2">
-                               <Link href={editUrl}>
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  {t('edit_item_button')}
-                               </Link>
+                          <div className="flex items-center gap-2 mt-2">
+                            <SheetClose asChild>
+                              <Button variant="outline" size="sm" asChild>
+                                 <Link href={editUrl}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    {t('edit_item_button')}
+                                 </Link>
+                              </Button>
+                            </SheetClose>
+                             <Button variant="outline" size="sm" onClick={() => setSharingItem(item)}>
+                                <Share2 className="mr-2 h-4 w-4" />
+                                {tEditor('share_button')}
                             </Button>
-                          </SheetClose>
+                          </div>
                         </div>
                         <Button
                           variant="ghost"
@@ -234,6 +243,14 @@ export function CartSheet({ children, open, onOpenChange }: {
             onOpenChange={() => setSuccessData(null)}
             orderNumber={successData.orderNumber}
             email={successData.email}
+        />
+    )}
+    {sharingItem && (
+        <ShareDialog
+            isOpen={!!sharingItem}
+            onOpenChange={() => setSharingItem(null)}
+            getCanvasDataUri={() => Promise.resolve(sharingItem.previewImage)}
+            t={tEditor}
         />
     )}
     </>
