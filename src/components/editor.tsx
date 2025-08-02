@@ -27,7 +27,7 @@ import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggesti
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ShareDialog } from './share-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -330,6 +330,11 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     const canvas = canvasWrapperRef.current;
     if (!canvas) return;
 
+    // Do not attach event listeners if a sheet is open on mobile
+    if (isMobile && (isCharmsSheetOpen || isSuggestionsSheetOpen)) {
+        return;
+    }
+
     const getPoint = (e: MouseEvent | TouchEvent) => 'touches' in e ? e.touches[0] : e;
     
     const getTouchCenter = (touches: TouchList) => {
@@ -467,7 +472,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
       window.removeEventListener('touchmove', handleMove);
       window.removeEventListener('touchend', handleInteractionEnd);
     };
-  }, [interactionState, zoomToPoint]);
+  }, [interactionState, zoomToPoint, isMobile, isCharmsSheetOpen, isSuggestionsSheetOpen]);
 
   const handleManualZoom = (direction: 'in' | 'out') => {
     if (!canvasWrapperRef.current) return;
@@ -735,7 +740,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
             </div>
           </header>
-        <main className={cn("flex-grow flex flex-col p-4 md:p-8 min-h-0", isMobile && "p-0 pb-0")}>
+        <main className={cn("flex-grow flex flex-col p-4 md:p-8 min-h-0", isMobile && "p-0 pb-0 overflow-y-hidden")}>
           <div className={cn("container mx-auto flex-1 flex flex-col min-h-0", isMobile && "px-0")}>
               <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0", isMobile && "grid-cols-1 gap-0")}>
               {!isMobile && (
@@ -776,7 +781,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       ref={canvasWrapperRef}
                       className={cn(
                         "relative w-full aspect-square bg-card border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none grid place-items-center flex-shrink-0", 
-                        isMobile && "rounded-none border-0 flex-grow"
+                        isMobile && "rounded-none border-0 flex-grow",
+                        isMobile && (isCharmsSheetOpen || isSuggestionsSheetOpen) && "pointer-events-none"
                       )}
                   >
                       <div
@@ -1074,4 +1080,5 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
