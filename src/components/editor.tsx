@@ -734,7 +734,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
             </div>
           </header>
-        <main className={cn("flex-grow flex flex-col p-4 md:p-8 min-h-0", isMobile && "p-0 pb-[80px]")}>
+        <main className={cn("flex-grow flex flex-col p-4 md:p-8 min-h-0", isMobile && "p-0 pb-0")}>
           <div className={cn("container mx-auto flex-1 flex flex-col min-h-0", isMobile && "px-0")}>
               <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0", isMobile && "grid-cols-1 gap-0")}>
               {!isMobile && (
@@ -745,34 +745,38 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
               <div className={cn("lg:col-span-6 flex flex-col gap-4 min-h-0", isMobile && "order-first")}>
                   <div className={cn("flex justify-between items-center gap-4 flex-shrink-0", isMobile && "px-4 pt-4")}>
-                    <Button variant="ghost" asChild className={cn(isMobile ? "p-0 h-auto" : "")}>
+                      <Button variant="ghost" asChild className={cn(isMobile ? "p-0 h-auto" : "")}>
                           <Link href={`/${locale}/?type=${jewelryType.id}`}>
                               <ArrowLeft className="mr-2 h-4 w-4" />
                               {!isMobile && tHome('back_button')}
                           </Link>
                       </Button>
-                      <div className="flex-grow"></div>
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" onClick={() => setIsShareOpen(true)}>
-                          <Share2 className="mr-2 h-4 w-4" />
-                          {t('share_button')}
+                        <Button variant="outline" size={isMobile ? "icon" : "default"} onClick={() => setIsShareOpen(true)}>
+                          <Share2 className={cn(!isMobile && "mr-2")}/>
+                          {!isMobile && t('share_button')}
                         </Button>
-                        {isEditing ? (
-                            <Button onClick={handleUpdateCart} disabled={captureRequest || hasStockIssues}>
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                {t('update_item_button')}
-                            </Button>
-                        ) : (
-                            <Button onClick={handleAddToCart} disabled={captureRequest || hasStockIssues}>
-                                <ShoppingCart className="mr-2 h-4 w-4" />
-                                {t('add_to_cart_button')}
-                            </Button>
+                        {!isMobile && (
+                          isEditing ? (
+                              <Button onClick={handleUpdateCart} disabled={captureRequest || hasStockIssues}>
+                                  <PlusCircle className="mr-2 h-4 w-4" />
+                                  {t('update_item_button')}
+                              </Button>
+                          ) : (
+                              <Button onClick={handleAddToCart} disabled={captureRequest || hasStockIssues}>
+                                  <ShoppingCart className="mr-2 h-4 w-4" />
+                                  {t('add_to_cart_button')}
+                              </Button>
+                          )
                         )}
                       </div>
                   </div>
                   <div
                       ref={canvasWrapperRef}
-                      className={cn("relative w-full aspect-square bg-card rounded-lg border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none grid place-items-center flex-shrink-0", isMobile && "rounded-none border-0")}
+                      className={cn(
+                        "relative w-full aspect-square bg-card border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none grid place-items-center flex-shrink-0", 
+                        isMobile && "rounded-none border-0 flex-grow"
+                      )}
                   >
                       <div
                           ref={canvasRef}
@@ -929,6 +933,16 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         </main>
 
          {isMobile && (
+          <>
+            {isEditing ? (
+              <Button onClick={handleUpdateCart} disabled={captureRequest || hasStockIssues} className="fixed bottom-24 right-4 z-20 h-14 w-14 rounded-full shadow-lg">
+                <PlusCircle className="h-6 w-6" />
+              </Button>
+            ) : (
+              <Button onClick={handleAddToCart} disabled={captureRequest || hasStockIssues} className="fixed bottom-24 right-4 z-20 h-14 w-14 rounded-full shadow-lg">
+                <ShoppingCart className="h-6 w-6" />
+              </Button>
+            )}
             <div className="sticky bottom-0 left-0 right-0 bg-background border-t p-2 flex justify-around">
               <Sheet open={isCharmsSheetOpen} onOpenChange={setIsCharmsSheetOpen}>
                   <SheetTrigger asChild>
@@ -1047,9 +1061,11 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   </SheetContent>
               </Sheet>
             </div>
+          </>
           )}
       </div>
     </>
   );
 }
+
 
