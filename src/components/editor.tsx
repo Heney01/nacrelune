@@ -746,11 +746,11 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
           <div className={cn("container mx-auto flex-1 flex flex-col min-h-0", isMobile && "px-0")}>
               <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0", isMobile && "grid-cols-1 gap-0")}>
               
-              {!isMobile ? (
+              {!isMobile && (
                   <div className="lg:col-span-3 flex flex-col min-h-0 gap-6">
                       {charmsPanelDesktop}
                   </div>
-              ) : null}
+              )}
 
               <div className={cn("lg:col-span-6 flex flex-col gap-4 min-h-0", isMobile && "order-first")}>
                   <div className={cn("flex justify-between items-center gap-4 flex-shrink-0", isMobile && "px-4 pt-4")}>
@@ -855,7 +855,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                   <p className="text-muted-foreground text-sm text-center py-4">{t('added_charms_placeholder')}</p>
                               ) : (
                                   <ScrollArea className="w-full">
-                                      <div className="flex gap-2 pb-4 flex-wrap">
+                                      <div className="flex gap-2 pb-4 pt-2 pl-2 flex-wrap">
                                           {sortedPlacedCharms.map((pc) => (
                                               <div key={pc.id}
                                                   className={cn("p-2 rounded-md border flex flex-col items-center gap-1 cursor-pointer w-20 relative group",
@@ -1061,4 +1061,5 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
 
