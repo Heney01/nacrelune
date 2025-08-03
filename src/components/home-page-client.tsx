@@ -150,8 +150,8 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
                         </TooltipContent>
                     </Tooltip>
                 </TooltipProvider>
-              <UserNav locale={locale} />
               <CartWidget />
+              <UserNav locale={locale} />
             </div>
           </div>
         </header>
