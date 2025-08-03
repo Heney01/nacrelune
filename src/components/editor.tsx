@@ -913,7 +913,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
             </div>
           </header>
-        <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0 pb-[130px] lg:pb-8">
+        <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0 lg:pb-8">
           <div className="container mx-auto flex-1 flex flex-col min-h-0">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0">
               
@@ -927,7 +927,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                 />
               </div>
 
-              <div className="lg:col-span-6 flex flex-col gap-4 min-h-0 order-first lg:order-none">
+              <div className="lg:col-span-6 flex flex-col gap-4 min-h-0 order-first lg:order-none max-h-full">
                   <div className="flex justify-between items-center gap-4 flex-shrink-0 px-4 pt-4 lg:p-0">
                       <Button variant="ghost" asChild className="p-0 h-auto lg:h-10 lg:p-2">
                           <Link href={`/${locale}/?type=${jewelryType.id}`}>
@@ -955,7 +955,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                           <Share2 />
                           <span className="sr-only">{t('share_button')}</span>
                         </Button>
-                         <div className="hidden lg:flex items-center gap-2">
+                         <div className="hidden lg:inline-flex items-center gap-2">
                             <Button variant="outline" onClick={() => setIsShareOpen(true)}>
                                 <Share2 />
                                 {t('share_button')}
@@ -1017,26 +1017,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       </div>
 
                       {!isMobile && (
-                        <div className="absolute bottom-4 left-4 z-10">
-                           <Dialog>
-                                <DialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground rounded-full hover:bg-muted/50 hover:text-foreground">
-                                        <Info className="h-5 w-5" />
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-md">
-                                    <DialogHeader>
-                                    <DialogTitle className="font-headline text-xl">{t('editor_disclaimer_title')}</DialogTitle>
-                                    </DialogHeader>
-                                    <p className="text-sm text-muted-foreground mt-2">
-                                    {t('editor_disclaimer')}
-                                    </p>
-                                </DialogContent>
-                           </Dialog>
-                        </div>
-                      )}
-
-                      {!isMobile && (
                         <div className="absolute bottom-2 right-2 flex gap-2">
                             <Button variant="secondary" size="icon" onClick={() => handleManualZoom('in')}><ZoomIn /></Button>
                             <Button variant="secondary" size="icon" onClick={() => handleManualZoom('out')}><ZoomOut /></Button>
@@ -1046,7 +1026,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   </div>
                   
                    <div className="hidden lg:block flex-shrink-0">
-                        <Accordion type="single" collapsible defaultValue="item-1" className="w-full">
+                        <Accordion type="single" collapsible className="w-full">
                             <AccordionItem value="item-1">
                                 <Card>
                                     <AccordionTrigger className="p-6 hover:no-underline">
@@ -1261,6 +1241,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
 
