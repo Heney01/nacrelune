@@ -78,7 +78,7 @@ export function ProfileClient({ locale }: { locale: string }) {
                     <p className="text-muted-foreground mb-8">Retrouvez ici toutes les créations que vous avez publiées.</p>
 
                    {(creations && creations.length > 0) ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                             {creations.map(creation => (
                                 <Card key={creation.id}>
                                     <CardHeader className="p-0">
