@@ -45,7 +45,10 @@
     "no_account_prompt": "Pas encore de compte ?",
     "has_account_prompt": "Vous avez déjà un compte ?",
     "my_account": "Mon Compte",
-    "my_creations": "Mes créations"
+    "my_creations": "Mes créations",
+    "google_login_button": "Continuer avec Google",
+    "google_signup_button": "S'inscrire avec Google",
+    "or_continue_with": "OU"
   },
   "Editor": {
     "charms_title": "Breloques",

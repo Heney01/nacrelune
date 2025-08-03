@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { BrandLogo } from '@/components/icons';
+import { BrandLogo, GoogleIcon } from '@/components/icons';
 import { login, userLogin } from '@/app/actions';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -22,6 +22,8 @@ import { useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from '@/hooks/use-translations';
+import { Separator } from './ui/separator';
+import { useGoogleAuth } from '@/hooks/use-google-auth';
 
 
 const initialState = {
@@ -45,6 +47,7 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
   const params = useParams();
   const locale = params.locale as string;
   const t = useTranslations('Auth');
+  const { signInWithGoogle, error, isGoogleLoading } = useGoogleAuth();
 
   return (
     <Card>
@@ -57,14 +60,30 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
            {isUserAuth ? t('user_login_description') : t('admin_login_description')}
         </CardDescription>
       </CardHeader>
-      <form action={formAction}>
-        <CardContent className="space-y-4">
-          {state?.error && state.error !== '' && (
+      <CardContent className="space-y-4">
+        {(state?.error || error) && (
             <Alert variant="destructive">
               <AlertTitle>{t('login_error_title')}</AlertTitle>
-              <AlertDescription>{state.error}</AlertDescription>
+              <AlertDescription>{state?.error || error}</AlertDescription>
             </Alert>
           )}
+
+        {isUserAuth && (
+            <div className="space-y-4">
+                 <Button variant="outline" className="w-full" onClick={signInWithGoogle} disabled={isGoogleLoading}>
+                    {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
+                    {t('google_login_button')}
+                </Button>
+                <div className="relative">
+                    <Separator />
+                    <span className="absolute left-1/2 -translate-x-1/2 top-[-10px] bg-card px-2 text-xs text-muted-foreground">
+                        {t('or_continue_with')}
+                    </span>
+                </div>
+            </div>
+        )}
+
+        <form action={formAction}>
           <input type="hidden" name="locale" value={locale} />
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -76,23 +95,23 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
               required
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 mt-4">
             <Label htmlFor="password">{t('password_label')}</Label>
             <Input id="password" name="password" type="password" required />
           </div>
-        </CardContent>
-        <CardFooter className="flex-col gap-4 items-stretch">
-          <LoginButton />
-            {isUserAuth && (
-              <div className="mt-4 text-center text-sm">
-                {t('no_account_prompt')}{' '}
-                <Link href={`/${locale}/inscription`} className="underline">
-                  {t('signup_button')}
-                </Link>
-              </div>
-            )}
-        </CardFooter>
-      </form>
+          <CardFooter className="flex-col gap-4 items-stretch p-0 pt-6">
+            <LoginButton />
+              {isUserAuth && (
+                <div className="mt-4 text-center text-sm">
+                  {t('no_account_prompt')}{' '}
+                  <Link href={`/${locale}/inscription`} className="underline">
+                    {t('signup_button')}
+                  </Link>
+                </div>
+              )}
+          </CardFooter>
+        </form>
+      </CardContent>
     </Card>
   );
 }

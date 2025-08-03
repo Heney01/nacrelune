@@ -14,14 +14,15 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { BrandLogo } from '@/components/icons';
+import { BrandLogo, GoogleIcon } from '@/components/icons';
 import { signup } from '@/app/actions';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from '@/hooks/use-translations';
-
+import { useGoogleAuth } from '@/hooks/use-google-auth';
+import { Separator } from './ui/separator';
 
 const initialState = {
   error: '',
@@ -44,6 +45,7 @@ export function SignUpForm() {
   const params = useParams();
   const locale = params.locale as string;
   const t = useTranslations('Auth');
+  const { signInWithGoogle, error: googleError, isGoogleLoading } = useGoogleAuth();
 
   return (
     <Card>
@@ -56,50 +58,69 @@ export function SignUpForm() {
            {t('user_signup_description')}
         </CardDescription>
       </CardHeader>
-      <form action={formAction}>
-        <CardContent className="space-y-4">
-          {state?.error && (
+      
+      <CardContent className="space-y-4">
+          {(state?.error || googleError) && (
             <Alert variant="destructive">
               <AlertTitle>{t('signup_error_title')}</AlertTitle>
-              <AlertDescription>{state.error}</AlertDescription>
+              <AlertDescription>{state.error || googleError}</AlertDescription>
             </Alert>
           )}
-          <input type="hidden" name="locale" value={locale} />
-          <div className="space-y-2">
-            <Label htmlFor="displayName">{t('displayName_label')}</Label>
-            <Input
-              id="displayName"
-              name="displayName"
-              type="text"
-              placeholder="Jean Dupont"
-              required
-            />
+
+          <div className="space-y-4">
+              <Button variant="outline" className="w-full" onClick={signInWithGoogle} disabled={isGoogleLoading}>
+                {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
+                {t('google_signup_button')}
+            </Button>
+            <div className="relative">
+                <Separator />
+                <span className="absolute left-1/2 -translate-x-1/2 top-[-10px] bg-card px-2 text-xs text-muted-foreground">
+                    {t('or_continue_with')}
+                </span>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="votre.email@exemple.com"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">{t('password_label')}</Label>
-            <Input id="password" name="password" type="password" required />
-          </div>
-        </CardContent>
-        <CardFooter className="flex-col items-stretch gap-4">
-          <SignUpButton />
-           <div className="mt-4 text-center text-sm">
-             {t('has_account_prompt')}{' '}
+          <form action={formAction}>
+              <div className="space-y-4">
+                <input type="hidden" name="locale" value={locale} />
+                <div className="space-y-2">
+                  <Label htmlFor="displayName">{t('displayName_label')}</Label>
+                  <Input
+                    id="displayName"
+                    name="displayName"
+                    type="text"
+                    placeholder="Jean Dupont"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="votre.email@exemple.com"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">{t('password_label')}</Label>
+                  <Input id="password" name="password" type="password" required />
+                </div>
+                 <div className="pt-2">
+                    <SignUpButton />
+                 </div>
+              </div>
+          </form>
+      </CardContent>
+
+      <CardFooter className="flex-col items-stretch gap-4">
+          <div className="mt-4 text-center text-sm">
+            {t('has_account_prompt')}{' '}
             <Link href={`/${locale}/connexion`} className="underline">
               {t('login_button')}
             </Link>
           </div>
-        </CardFooter>
-      </form>
+      </CardFooter>
     </Card>
   );
 }

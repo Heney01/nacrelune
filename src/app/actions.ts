@@ -7,10 +7,10 @@ import { db, storage } from '@/lib/firebase';
 import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction, Timestamp, collectionGroup, documentId, orderBy, DocumentReference, DocumentSnapshot } from 'firebase/firestore';
 import { ref, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { cookies } from 'next/headers';
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
-import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm, ShippingAddress, DeliveryMethod, MailLog } from '@/lib/types';
+import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm, ShippingAddress, DeliveryMethod, MailLog, User } from '@/lib/types';
 import { getCharmSuggestions as getCharmSuggestionsFlow, CharmSuggestionInput, CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { getCharmAnalysisSuggestions as getCharmAnalysisSuggestionsFlow, CharmAnalysisSuggestionInput, CharmAnalysisSuggestionOutput } from '@/ai/flows/charm-analysis-suggestions';
 import { getCharmDesignCritique as getCharmDesignCritiqueFlow, CharmDesignCritiqueInput, CharmDesignCritiqueOutput } from '@/ai/flows/charm-design-critique';
@@ -229,6 +229,147 @@ export async function login(prevState: any, formData: FormData) {
   }
   
   redirect(`/${locale}/admin/dashboard`);
+}
+
+export async function userLogin(prevState: any, formData: FormData) {
+  const email = formData.get('email') as string;
+  const password = formData.get('password') as string;
+  const locale = formData.get('locale') as string || 'fr';
+
+  if (!email || !password) {
+    return { error: 'Veuillez fournir un email et un mot de passe.' };
+  }
+
+  const auth = getAuth(app);
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    const idToken = await user.getIdToken();
+    
+    cookies().set('session', idToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 7, // 7 days for users
+      path: '/',
+    });
+
+  } catch (error: any) {
+    let errorMessage = "Une erreur inconnue est survenue.";
+    switch (error.code) {
+        case 'auth/invalid-email':
+            errorMessage = "L'adresse e-mail n'est pas valide.";
+            break;
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+            errorMessage = "Email ou mot de passe incorrect.";
+            break;
+        default:
+            errorMessage = "Une erreur est survenue lors de la connexion.";
+            break;
+    }
+    return { error: errorMessage };
+  }
+  
+  redirect(`/${locale}`);
+}
+
+export async function signup(prevState: any, formData: FormData) {
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    const displayName = formData.get('displayName') as string;
+    const locale = formData.get('locale') as string || 'fr';
+
+    if (!email || !password || !displayName) {
+        return { error: 'Veuillez remplir tous les champs.' };
+    }
+
+    const auth = getAuth(app);
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        await updateProfile(user, { displayName });
+
+        const userData: Omit<User, 'uid'> = {
+            email: user.email,
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+            role: 'client', // Default role
+        };
+        await setDoc(doc(db, 'users', user.uid), userData);
+
+        const idToken = await user.getIdToken();
+        cookies().set('session', idToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 60 * 60 * 24 * 7, // 7 days
+            path: '/',
+        });
+
+    } catch (error: any) {
+        let errorMessage = "Une erreur inconnue est survenue.";
+        switch (error.code) {
+            case 'auth/invalid-email':
+                errorMessage = "L'adresse e-mail n'est pas valide.";
+                break;
+            case 'auth/email-already-in-use':
+                errorMessage = "Cette adresse e-mail est déjà utilisée.";
+                break;
+            case 'auth/weak-password':
+                errorMessage = "Le mot de passe doit contenir au moins 6 caractères.";
+                break;
+            default:
+                errorMessage = "Une erreur est survenue lors de l'inscription.";
+                break;
+        }
+        return { error: errorMessage };
+    }
+    redirect(`/${locale}`);
+}
+
+
+export async function userLoginWithGoogle(formData: FormData) {
+  const idToken = formData.get('idToken') as string;
+  const locale = formData.get('locale') as string || 'fr';
+  const displayName = formData.get('displayName') as string;
+  const email = formData.get('email') as string;
+  const photoURL = formData.get('photoURL') as string;
+  const uid = formData.get('uid') as string;
+
+  if (!idToken) {
+    return { error: 'Token de connexion manquant.' };
+  }
+
+  try {
+    // Check if user already exists in Firestore
+    const userDocRef = doc(db, 'users', uid);
+    const userDoc = await getDoc(userDocRef);
+
+    if (!userDoc.exists()) {
+      // If user does not exist, create a new document
+      const newUser: Omit<User, 'uid'> = {
+        email,
+        displayName,
+        photoURL,
+        role: 'client',
+      };
+      await setDoc(userDocRef, newUser);
+    }
+    
+    cookies().set('session', idToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    });
+
+  } catch (error: any) {
+    console.error("Error during Google Sign-in server action:", error);
+    return { error: "Une erreur est survenue lors de la connexion avec Google." };
+  }
+  
+  redirect(`/${locale}`);
 }
 
 
