@@ -9,7 +9,7 @@ import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Share2, Layers } from 'lucide-react';
+import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Share2, Layers, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BrandLogo } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -748,11 +748,9 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
           <div className={cn("container mx-auto flex-1 flex flex-col min-h-0", isMobile && "px-0")}>
               <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0", isMobile && "grid-cols-1 gap-0")}>
               
-              {!isMobile && (
-                  <div className="lg:col-span-3 flex flex-col min-h-0 gap-6">
-                      {charmsPanelDesktop}
-                  </div>
-              )}
+              <div className="lg:col-span-3 flex flex-col min-h-0 gap-6">
+                {!isMobile && charmsPanelDesktop}
+              </div>
 
               <div className={cn("lg:col-span-6 flex flex-col gap-4 min-h-0", isMobile && "order-first")}>
                   <div className={cn("flex justify-between items-center gap-4 flex-shrink-0", isMobile && "px-4 pt-4")}>
@@ -932,11 +930,11 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
           <>
             {isEditing ? (
               <Button onClick={handleUpdateCart} disabled={captureRequest || hasStockIssues} className="fixed bottom-24 right-4 z-20 h-14 w-14 rounded-full shadow-lg">
-                <PlusCircle className="h-6 w-6" />
+                <Check className="h-6 w-6" />
               </Button>
             ) : (
               <Button onClick={handleAddToCart} disabled={captureRequest || hasStockIssues} className="fixed bottom-24 right-4 z-20 h-14 w-14 rounded-full shadow-lg">
-                <ShoppingCart className="h-6 w-6" />
+                <PlusCircle className="h-6 w-6" />
               </Button>
             )}
             <div className="sticky bottom-0 left-0 right-0 bg-background border-t p-2 flex justify-around">
@@ -1063,6 +1061,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
 
 
 
