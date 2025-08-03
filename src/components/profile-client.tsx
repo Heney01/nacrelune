@@ -10,12 +10,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Loader2, ArrowLeft, PlusCircle, Heart } from 'lucide-react';
+import { Loader2, ArrowLeft, PlusCircle, Heart, MoreHorizontal } from 'lucide-react';
 import { BrandLogo } from './icons';
 import { Button } from './ui/button';
 import { useTranslations } from '@/hooks/use-translations';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 
 export function ProfileClient({ locale }: { locale: string }) {
@@ -67,12 +73,17 @@ export function ProfileClient({ locale }: { locale: string }) {
             return;
         }
         
-        // No optimistic update for now, to rely on server truth
+        const currentCreation = creations?.find(c => c.id === creationId);
+        if (!currentCreation) return;
+        
+        const newLikesCount = (currentCreation.likesCount || 0) + 1;
+        
+        setOptimisticCreations({creationId, newLikesCount});
+
         try {
             const idToken = await firebaseUser.getIdToken();
             const result = await toggleLikeCreation(creationId, idToken);
             if (result.success && result.newLikesCount !== undefined) {
-                 // Update the state with the value from the server
                  setCreations(prev => 
                     prev!.map(c => 
                         c.id === creationId ? { ...c, likesCount: result.newLikesCount! } : c
@@ -85,6 +96,11 @@ export function ProfileClient({ locale }: { locale: string }) {
                     title: "Erreur",
                     description: result.message,
                 });
+                 setCreations(prev => 
+                    prev!.map(c => 
+                        c.id === creationId ? { ...c, likesCount: currentCreation.likesCount || 0 } : c
+                    )
+                );
             }
         } catch (error) {
              toast({
@@ -92,6 +108,11 @@ export function ProfileClient({ locale }: { locale: string }) {
                 title: "Erreur",
                 description: "Une erreur inattendue est survenue.",
             });
+             setCreations(prev => 
+                prev!.map(c => 
+                    c.id === creationId ? { ...c, likesCount: currentCreation.likesCount || 0 } : c
+                )
+            );
         }
     };
 
@@ -131,10 +152,10 @@ export function ProfileClient({ locale }: { locale: string }) {
                     <p className="text-muted-foreground mb-8">Retrouvez ici toutes les créations que vous avez publiées.</p>
 
                    {(optimisticCreations && optimisticCreations.length > 0) ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                             {optimisticCreations.map(creation => (
-                                <Card key={creation.id} className="flex flex-col">
-                                    <CardHeader className="p-0">
+                                <Card key={creation.id} className="flex flex-col group">
+                                    <CardHeader className="p-0 relative">
                                         <div className="aspect-square relative w-full bg-muted/50">
                                             <Image 
                                                 src={creation.previewImageUrl} 
@@ -144,6 +165,21 @@ export function ProfileClient({ locale }: { locale: string }) {
                                                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                                             />
                                         </div>
+                                         {firebaseUser?.uid === creation.creatorId && (
+                                            <div className="absolute top-2 right-2">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="secondary" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent>
+                                                        <DropdownMenuItem>Modifier</DropdownMenuItem>
+                                                        <DropdownMenuItem className="text-destructive">Supprimer</DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
+                                         )}
                                     </CardHeader>
                                     <CardContent className="p-4 flex-grow">
                                         <CardTitle className="text-base font-headline">{creation.name}</CardTitle>

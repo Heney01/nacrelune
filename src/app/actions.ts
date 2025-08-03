@@ -1579,7 +1579,6 @@ export async function saveCreation(
 }
 
 export async function getUserCreations(userId: string): Promise<Creation[]> {
-    console.log('[SERVER] getUserCreations called with userId:', userId);
     if (!userId) {
         return [];
     }
@@ -1589,7 +1588,6 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
     
     try {
         const querySnapshot = await getDocs(q);
-        console.log(`[SERVER] Found ${querySnapshot.docs.length} creations for user ${userId}.`);
         
         if (querySnapshot.empty) {
             return [];
@@ -1621,7 +1619,6 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
             } as Creation;
         }));
         
-        console.log('[SERVER] Returning creations:', creations);
         return creations;
     } catch (error: any) {
         console.error("[SERVER] Error fetching user creations:", error);
@@ -1632,6 +1629,10 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
 export async function toggleLikeCreation(creationId: string, idToken: string): Promise<{ success: boolean; message?: string; newLikesCount?: number }> {
     if (!idToken) {
         return { success: false, message: "Utilisateur non authentifié." };
+    }
+    
+    if (!adminApp) {
+        return { success: false, message: "Le module d'administration Firebase n'est pas configuré." };
     }
     
     let user;
@@ -1678,8 +1679,13 @@ export async function toggleLikeCreation(creationId: string, idToken: string): P
     }
 }
     
+export async function updateCreation() {
+    // TODO: Implement creation update logic
+}
 
-
+export async function deleteCreation() {
+    // TODO: Implement creation deletion logic
+}
 
 
 
@@ -1688,6 +1694,7 @@ export async function toggleLikeCreation(creationId: string, idToken: string): P
 
 
     
+
 
 
 
