@@ -91,6 +91,10 @@ export interface CartItem {
     jewelryType: Omit<JewelryType, 'models' | 'icon'>;
     placedCharms: PlacedCharm[];
     previewImage: string; // URL to a generated preview of the final design
+    // For creations bought from other users
+    creationId?: string;
+    creatorId?: string;
+    creatorName?: string;
 }
 
 export interface GeneralPreferences {
@@ -112,6 +116,10 @@ export interface OrderItem {
     // Enriched data on the client:
     modelImageUrl?: string;
     charms?: Charm[];
+    // For creations bought from other users
+    creationId?: string;
+    creatorId?: string;
+    creatorName?: string;
 }
 
 export interface MailDelivery {

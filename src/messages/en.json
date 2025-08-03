@@ -134,7 +134,8 @@
     "checkout_button": "Checkout",
     "price": "{price, number, ::currency/USD}",
     "checkout_error_title": "Order Error",
-    "sold_out": "Sold Out"
+    "sold_out": "Sold Out",
+    "creator_badge": "Creation by {name}"
   },
   "CharmsPanel": {
     "title": "Charms",

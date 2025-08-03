@@ -661,6 +661,9 @@ export type SerializableCartItem = {
     };
     placedCharms: PlacedCharm[];
     previewImage: string;
+    creatorId?: string;
+    creatorName?: string;
+    creationId?: string;
 };
 
 export type StockError = {
@@ -889,6 +892,12 @@ export async function createOrder(
 
             const orderItems: Omit<OrderItem, 'modelImageUrl' | 'charms'>[] = cartItems.map((item, index) => {
                 const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+                
+                if (item.creationId) {
+                    const creationRef = doc(db, 'creations', item.creationId);
+                    transaction.update(creationRef, { salesCount: increment(1) });
+                }
+
                 return {
                     modelId: item.model.id,
                     modelName: item.model.name,
@@ -898,6 +907,9 @@ export async function createOrder(
                     price: itemPrice,
                     previewImageUrl: previewImageUrls[index],
                     isCompleted: false,
+                    creationId: item.creationId,
+                    creatorId: item.creatorId,
+                    creatorName: item.creatorName,
                 };
             });
             

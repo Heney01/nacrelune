@@ -134,7 +134,8 @@
     "checkout_success_title": "Commande passée !",
     "checkout_success_description": "Votre commande a été passée avec succès.",
     "checkout_error_title": "Erreur de commande",
-    "sold_out": "Épuisé"
+    "sold_out": "Épuisé",
+    "creator_badge": "Création de {name}"
   },
   "CharmsPanel": {
     "title": "Breloques",

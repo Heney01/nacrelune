@@ -5,12 +5,12 @@
 import React, { useEffect, useState, useTransition } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { getUserCreations, toggleLikeCreation, deleteCreation } from '@/app/actions';
-import { Creation } from '@/lib/types';
+import { Creation, JewelryModel, JewelryType, PlacedCharm, Charm } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Loader2, ArrowLeft, PlusCircle, Heart, MoreHorizontal, Trash2 } from 'lucide-react';
+import { Loader2, ArrowLeft, PlusCircle, Heart, MoreHorizontal, Trash2, ShoppingCart } from 'lucide-react';
 import { BrandLogo } from './icons';
 import { Button } from './ui/button';
 import { useTranslations } from '@/hooks/use-translations';
@@ -36,10 +36,14 @@ import {
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { useCart } from '@/hooks/use-cart';
+import { getJewelryTypesAndModels, getCharms } from '@/lib/data';
 
 
 export function ProfileClient({ locale }: { locale: string }) {
@@ -48,8 +52,15 @@ export function ProfileClient({ locale }: { locale: string }) {
     const [loadingCreations, setLoadingCreations] = useState(true);
     const router = useRouter();
     const t = useTranslations('Auth');
+    const tEditor = useTranslations('Editor');
     const { toast } = useToast();
     const [isPending, startTransition] = useTransition();
+    const { addToCart } = useCart();
+    
+    // State to hold all base models and charms for cart logic
+    const [jewelryTypes, setJewelryTypes] = useState<Omit<JewelryType, 'icon'>[]>([]);
+    const [allCharms, setAllCharms] = useState<Charm[]>([]);
+
 
     useEffect(() => {
         if (authLoading) {
@@ -66,8 +77,23 @@ export function ProfileClient({ locale }: { locale: string }) {
             setCreations(userCreations);
             setLoadingCreations(false);
         };
+
+        const fetchBaseData = async () => {
+             const JEWELRY_TYPES_INFO: Omit<JewelryType, 'models' | 'icon'>[] = [
+                { id: 'necklace', name: "Colliers", description: "" },
+                { id: 'bracelet', name: "Bracelets", description: "" },
+                { id: 'earring', name: "Boucles d'oreilles", description: "" },
+            ];
+            const [types, charms] = await Promise.all([
+                getJewelryTypesAndModels(JEWELRY_TYPES_INFO),
+                getCharms()
+            ]);
+            setJewelryTypes(types);
+            setAllCharms(charms);
+        };
         
         fetchCreations();
+        fetchBaseData();
 
     }, [authLoading, firebaseUser, router, locale]);
     
@@ -135,6 +161,49 @@ export function ProfileClient({ locale }: { locale: string }) {
             }
         });
     };
+    
+    const handleAddToCart = (creation: Creation) => {
+        const jewelryType = jewelryTypes.find(jt => jt.id === creation.jewelryTypeId);
+        if (!jewelryType) {
+            toast({ variant: 'destructive', title: 'Erreur', description: "Type de bijou non trouvé."});
+            return;
+        }
+
+        const model = jewelryType.models.find(m => m.id === creation.modelId);
+         if (!model) {
+            toast({ variant: 'destructive', title: 'Erreur', description: "Modèle de base non trouvé."});
+            return;
+        }
+
+        const placedCharms: PlacedCharm[] = creation.placedCharms.map(pc => {
+            const fullCharm = allCharms.find(c => c.id === pc.charm.id);
+            if (!fullCharm) {
+                // This should not happen if data is consistent
+                throw new Error(`Charm with ID ${pc.charm.id} not found in allCharms list.`);
+            }
+            return {
+                id: pc.id,
+                charm: fullCharm,
+                position: pc.position,
+                rotation: pc.rotation,
+            };
+        }).filter(Boolean);
+        
+        addToCart({
+            model,
+            jewelryType: { id: jewelryType.id, name: jewelryType.name, description: jewelryType.description },
+            placedCharms,
+            previewImage: creation.previewImageUrl,
+            creationId: creation.id,
+            creatorId: creation.creatorId,
+            creatorName: creation.creatorName,
+        });
+
+        toast({
+            title: "Ajouté au panier !",
+            description: `La création "${creation.name}" est dans votre panier.`,
+        });
+    }
 
 
     if (authLoading || loadingCreations) {
@@ -254,6 +323,9 @@ export function ProfileClient({ locale }: { locale: string }) {
                                      <DialogContent className="max-w-2xl">
                                         <DialogHeader>
                                             <DialogTitle>{creation.name}</DialogTitle>
+                                            <DialogDescription>
+                                                {creation.description || `Une création de ${creation.creatorName}`}
+                                            </DialogDescription>
                                         </DialogHeader>
                                         <div className="mt-4 grid place-items-center">
                                             <Image 
@@ -265,6 +337,12 @@ export function ProfileClient({ locale }: { locale: string }) {
                                                 sizes="100vw"
                                             />
                                         </div>
+                                        <DialogFooter>
+                                            <Button className="w-full" onClick={() => handleAddToCart(creation)}>
+                                                <ShoppingCart className="mr-2 h-4 w-4" />
+                                                {tEditor('add_to_cart_button')}
+                                            </Button>
+                                        </DialogFooter>
                                     </DialogContent>
                                 </Dialog>
                             ))}
@@ -286,4 +364,3 @@ export function ProfileClient({ locale }: { locale: string }) {
         </div>
     );
 }
-

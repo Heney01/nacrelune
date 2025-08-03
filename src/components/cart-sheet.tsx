@@ -7,7 +7,7 @@ import { useCart } from '@/hooks/use-cart';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, ShoppingCart, PlusCircle, Loader2, Edit, Share2 } from 'lucide-react';
+import { Trash2, ShoppingCart, PlusCircle, Loader2, Edit, Share2, User } from 'lucide-react';
 import React, { ReactNode, useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
@@ -27,6 +27,7 @@ import { CheckoutDialog, StockErrorState } from './checkout-dialog';
 import { SuccessDialog } from './success-dialog';
 import type { CartItem } from '@/lib/types';
 import { ShareDialog } from './share-dialog';
+import { Badge } from './ui/badge';
 
 
 export function CartSheet({ children, open, onOpenChange }: {
@@ -158,6 +159,12 @@ export function CartSheet({ children, open, onOpenChange }: {
                               <p className="text-sm text-muted-foreground">
                                 {item.jewelryType.name}
                               </p>
+                              {item.creatorName && (
+                                <Badge variant="secondary" className="mt-1.5">
+                                  <User className="h-3 w-3 mr-1.5"/>
+                                  {t('creator_badge', { name: item.creatorName })}
+                                </Badge>
+                              )}
                               <p className="text-lg font-bold mt-2">
                                 {formatPrice(itemPrice)}
                               </p>
@@ -269,6 +276,3 @@ export function CartSheet({ children, open, onOpenChange }: {
     </>
   );
 }
-
-
-
