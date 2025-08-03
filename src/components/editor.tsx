@@ -46,10 +46,10 @@ interface PlacedCharmComponentProps {
     onDelete: (charmId: string) => void;
     onRotate: (charmId: string, newRotation: number) => void;
     pixelSize: { width: number; height: number; };
-    scale: number;
+    modelImageRect: DOMRect | null;
 }
   
-const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDelete, onRotate, pixelSize, scale }: PlacedCharmComponentProps) => {
+const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDelete, onRotate, pixelSize, modelImageRect }: PlacedCharmComponentProps) => {
     const charmRef = useRef<HTMLDivElement>(null);
 
     const handleDelete = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -83,6 +83,27 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
         onRotate(placed.id, placed.rotation + rotationAmount);
     };
 
+    // Convert normalized position to absolute pixel position on the canvas
+    const positionStyle = useMemo(() => {
+        if (!modelImageRect) {
+            return { left: '50%', top: '50%', visibility: 'hidden' };
+        }
+        
+        const left = modelImageRect.left + (placed.position.x * modelImageRect.width);
+        const top = modelImageRect.top + (placed.position.y * modelImageRect.height);
+
+        return {
+            left: `${left}px`,
+            top: `${top}px`,
+            width: pixelSize.width,
+            height: 'auto',
+            transform: `translate(-50%, -50%) rotate(${placed.rotation}deg)`,
+            animation: placed.animation,
+            touchAction: 'none',
+        };
+
+    }, [placed.position, placed.rotation, placed.animation, pixelSize, modelImageRect]);
+
 
     return (
         <div
@@ -96,15 +117,7 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
                     'hover:outline-2 hover:outline-primary/50 hover:outline-dashed': !isSelected,
                 }
             )}
-            style={{
-                left: `${placed.position.x}%`,
-                top: `${placed.position.y}%`,
-                width: pixelSize.width,
-                height: 'auto',
-                transform: `translate(-50%, -50%) rotate(${placed.rotation}deg)`,
-                animation: placed.animation,
-                touchAction: 'none',
-            }}
+            style={positionStyle as React.CSSProperties}
         >
             <Image
                 src={placed.charm.imageUrl}
@@ -159,7 +172,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const modelImageRef = useRef<HTMLImageElement>(null);
-  
+  const [modelImageRect, setModelImageRect] = useState<DOMRect | null>(null);
+
   const [isCharmsSheetOpen, setIsCharmsSheetOpen] = useState(false);
   const [isSuggestionsSheetOpen, setIsSuggestionsSheetOpen] = useState(false);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
@@ -265,16 +279,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     let position = options.position;
 
     if (!position) {
-        if (!canvasRef.current) return;
-        const canvasRect = canvasRef.current.getBoundingClientRect();
-        const currentPan = panRef.current;
-        const currentScale = scaleRef.current;
-        const x_px = (canvasRect.width / 2) - currentPan.x;
-        const y_px = (canvasRect.height / 2) - currentPan.y;
-        position = {
-            x: (x_px / canvasRect.width / currentScale) * 100,
-            y: (y_px / canvasRect.height / currentScale) * 100,
-        };
+      // Default to center of the model image if no position is provided
+      position = { x: 0.5, y: 0.5 };
     }
 
     const newCharm: PlacedCharm = {
@@ -397,28 +403,35 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
       }
 
       if (interactionState.isDragging && interactionState.activeCharmId) {
-        const canvasEl = canvasRef.current;
-        if (!canvasEl) return;
-        const point = getPoint(e);
-        const dx = point.clientX - interactionState.dragStart.x;
-        const dy = point.clientY - interactionState.dragStart.y;
-        
-        const currentPlacedCharms = placedCharmsRef.current;
-        const charmToMove = currentPlacedCharms.find(pc => pc.id === interactionState.activeCharmId);
-        
-        if (charmToMove) {
-          const dxPercent = (dx / canvasEl.clientWidth) * 100 / scaleRef.current;
-          const dyPercent = (dy / canvasEl.clientHeight) * 100 / scaleRef.current;
+          const imgRect = modelImageRef.current?.getBoundingClientRect();
+          if (!imgRect) return;
+
+          const point = getPoint(e);
+          const dx = point.clientX - interactionState.dragStart.x;
+          const dy = point.clientY - interactionState.dragStart.y;
           
-          const newPlacedCharms = currentPlacedCharms.map(pc =>
-            pc.id === interactionState.activeCharmId
-            ? { ...pc, position: { x: pc.position.x + dxPercent, y: pc.position.y + dyPercent } }
-            : pc
-          );
-          setPlacedCharms(newPlacedCharms);
-        }
-        
-        interactionState.dragStart = { x: point.clientX, y: point.clientY };
+          const currentPlacedCharms = placedCharmsRef.current;
+          const charmToMove = currentPlacedCharms.find(pc => pc.id === interactionState.activeCharmId);
+          
+          if (charmToMove) {
+              const currentPixelX = charmToMove.position.x * imgRect.width;
+              const currentPixelY = charmToMove.position.y * imgRect.height;
+              
+              const newPixelX = currentPixelX + dx;
+              const newPixelY = currentPixelY + dy;
+
+              const newNormalizedX = newPixelX / imgRect.width;
+              const newNormalizedY = newPixelY / imgRect.height;
+
+              const newPlacedCharms = currentPlacedCharms.map(pc =>
+                  pc.id === interactionState.activeCharmId
+                  ? { ...pc, position: { x: newNormalizedX, y: newNormalizedY } }
+                  : pc
+              );
+              setPlacedCharms(newPlacedCharms);
+          }
+          
+          interactionState.dragStart = { x: point.clientX, y: point.clientY };
 
       } else if (interactionState.isPanning) {
         const point = getPoint(e);
@@ -700,8 +713,10 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     }
   }
 
-
-  const calculatePixelsPerMm = useCallback(() => {
+  const updateRects = useCallback(() => {
+    if (modelImageRef.current) {
+        setModelImageRect(modelImageRef.current.getBoundingClientRect());
+    }
     if (modelImageRef.current && (model.width || model.height)) {
         const imageWidthPx = modelImageRef.current.offsetWidth;
         const imageHeightPx = modelImageRef.current.offsetHeight;
@@ -715,26 +730,29 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     }
   }, [model.width, model.height]);
 
+
   useEffect(() => {
     const imageEl = modelImageRef.current;
     if (!imageEl) return;
 
-    // Initial calculation
-    const handleLoad = () => calculatePixelsPerMm();
+    const handleLoad = () => updateRects();
     imageEl.addEventListener('load', handleLoad);
     if (imageEl.complete) {
-        calculatePixelsPerMm();
+      updateRects();
     }
 
-    // Recalculate on window resize
-    window.addEventListener('resize', calculatePixelsPerMm);
+    window.addEventListener('resize', updateRects);
     return () => {
-        window.removeEventListener('resize', calculatePixelsPerMm)
-        if (imageEl) {
-          imageEl.removeEventListener('load', handleLoad);
-        }
+      window.removeEventListener('resize', updateRects)
+      if (imageEl) {
+        imageEl.removeEventListener('load', handleLoad);
+      }
     };
-  }, [calculatePixelsPerMm]);
+  }, [updateRects]);
+
+  useEffect(() => {
+    updateRects();
+  }, [pan, scale, updateRects]);
 
   const { sortedPlacedCharms, hasStockIssues } = useMemo(() => {
     const counts = new Map<string, number>();
@@ -750,8 +768,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     });
 
     const hasIssues = charmsWithStockInfo.some(c => !c.isAvailable);
-
-    // Sort from lower Y to higher Y so that higher charms are rendered last (and appear on top)
     const sorted = [...charmsWithStockInfo].sort((a, b) => b.position.y - a.position.y);
     
     return { sortedPlacedCharms: sorted, hasStockIssues: hasIssues };
@@ -915,26 +931,31 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   >
                       <div
                           ref={canvasRef}
-                          className={cn(
-                            "relative w-full h-full grid", 
-                            jewelryType.id === 'necklace' ? 'items-start justify-center' : 'place-items-center'
-                          )}
+                          className="relative"
                           style={{
                               transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
                               transformOrigin: '0 0',
+                              width: '100%',
+                              height: '100%',
                           }}
                       >
-                          <Image
-                              ref={modelImageRef}
-                              src={model.editorImageUrl}
-                              alt={model.name}
-                              width={1000}
-                              height={1000}
-                              className="pointer-events-none max-w-full max-h-full object-contain"
-                              data-ai-hint="jewelry model"
-                              priority
-                              crossOrigin="anonymous"
-                          />
+                          <div className={cn(
+                            "relative w-full h-full grid", 
+                            jewelryType.id === 'necklace' ? 'items-start justify-center' : 'place-items-center'
+                          )}>
+                              <Image
+                                  ref={modelImageRef}
+                                  src={model.editorImageUrl}
+                                  alt={model.name}
+                                  width={1000}
+                                  height={1000}
+                                  className="pointer-events-none max-w-full max-h-full object-contain"
+                                  data-ai-hint="jewelry model"
+                                  priority
+                                  crossOrigin="anonymous"
+                                  onLoad={updateRects}
+                              />
+                          </div>
                           
                           {pixelsPerMm && sortedPlacedCharms.map((placed) => {
                             const pixelSize = {
@@ -950,7 +971,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                   onDelete={removeCharm}
                                   onRotate={handleRotateCharm}
                                   pixelSize={pixelSize}
-                                  scale={scale}
+                                  modelImageRect={modelImageRect}
                               />
                             )
                           })}
@@ -1199,3 +1220,4 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+

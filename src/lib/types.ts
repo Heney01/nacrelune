@@ -71,7 +71,9 @@ export interface JewelryType {
 export interface PlacedCharm {
   id: string;
   charm: Charm;
-  position: { x: number; y: number }; // As a percentage
+  // Position is normalized relative to the model image's dimensions.
+  // (0,0) is top-left, (1,1) is bottom-right.
+  position: { x: number; y: number }; 
   rotation: number;
   animation?: string;
 }
@@ -80,6 +82,8 @@ export interface PlacedCharm {
 export interface PlacedCreationCharm {
   id: string;
   charm: CreationCharm;
+   // Position is normalized relative to the model image's dimensions.
+  // (0,0) is top-left, (1,1) is bottom-right.
   position: { x: number; y: number };
   rotation: number;
 }
