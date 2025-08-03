@@ -1583,7 +1583,9 @@ export async function saveCreation(
 }
 
 export async function getUserCreations(userId: string): Promise<Creation[]> {
+    console.log(`[SERVER] getUserCreations called for userId: ${userId}`);
     if (!userId) {
+        console.log('[SERVER] No userId provided, returning empty array.');
         return [];
     }
     const creationsRef = collection(db, 'creations');
@@ -1591,10 +1593,25 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
     
     try {
         const querySnapshot = await getDocs(q);
+        console.log(`[SERVER] Found ${querySnapshot.docs.length} creations for user.`);
         
         const creations = await Promise.all(querySnapshot.docs.map(async (doc) => {
             const data = doc.data();
             const previewImageUrl = await getUrl(data.previewImageUrl, 'https://placehold.co/400x400.png');
+
+            // Ensure all nested charm images are resolved
+            const resolvedPlacedCharms = await Promise.all(
+                (data.placedCharms || []).map(async (pc: PlacedCreationCharm) => {
+                    const charmImageUrl = await getUrl(pc.charm.imageUrl, 'https://placehold.co/100x100.png');
+                    return {
+                        ...pc,
+                        charm: {
+                            ...pc.charm,
+                            imageUrl: charmImageUrl,
+                        }
+                    };
+                })
+            );
 
             return {
                 id: doc.id,
@@ -1604,15 +1621,17 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
                 description: data.description,
                 jewelryTypeId: data.jewelryTypeId,
                 modelId: data.modelId,
-                placedCharms: data.placedCharms || [], // Already simplified
+                placedCharms: resolvedPlacedCharms,
                 previewImageUrl,
                 createdAt: toDate(data.createdAt as Timestamp)!,
                 salesCount: data.salesCount
             } as Creation;
         }));
+        
+        console.log(`[SERVER] Returning ${creations.length} processed creations.`);
         return creations;
     } catch (error) {
-        console.error("Error fetching user creations:", error);
+        console.error("[SERVER] Error fetching user creations:", error);
         return [];
     }
 }
@@ -1627,5 +1646,6 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
 
 
     
+
 
 

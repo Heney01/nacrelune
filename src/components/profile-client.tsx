@@ -28,6 +28,7 @@ export function ProfileClient({ locale }: { locale: string }) {
             if (firebaseUser) {
                 setLoadingCreations(true);
                 const userCreations = await getUserCreations(firebaseUser.uid);
+                console.log('[CLIENT] Received creations:', userCreations);
                 setCreations(userCreations);
                 setLoadingCreations(false);
             }
