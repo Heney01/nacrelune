@@ -33,6 +33,13 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 
 
 export function ProfileClient({ locale }: { locale: string }) {
@@ -167,19 +174,23 @@ export function ProfileClient({ locale }: { locale: string }) {
                    {(creations && creations.length > 0) ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                             {creations.map(creation => (
-                                <Card key={creation.id} className="flex flex-col group">
-                                    <CardHeader className="p-0 relative">
-                                        <div className="aspect-square relative w-full bg-muted/50">
-                                            <Image 
-                                                src={creation.previewImageUrl} 
-                                                alt={creation.name} 
-                                                fill 
-                                                className="object-contain"
-                                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                                            />
-                                        </div>
-                                         {firebaseUser?.uid === creation.creatorId && (
-                                            <div className="absolute top-2 right-2">
+                                <Dialog key={creation.id}>
+                                    <Card className="flex flex-col group">
+                                        <DialogTrigger asChild>
+                                            <CardHeader className="p-0 relative cursor-pointer">
+                                                <div className="aspect-square relative w-full bg-muted/50">
+                                                    <Image 
+                                                        src={creation.previewImageUrl} 
+                                                        alt={creation.name} 
+                                                        fill 
+                                                        className="object-contain"
+                                                        sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+                                                    />
+                                                </div>
+                                            </CardHeader>
+                                        </DialogTrigger>
+                                        <div className="absolute top-2 right-2 z-10">
+                                            {firebaseUser?.uid === creation.creatorId && (
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
                                                         <Button variant="secondary" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -218,29 +229,44 @@ export function ProfileClient({ locale }: { locale: string }) {
                                                         </AlertDialog>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
-                                            </div>
-                                         )}
-                                    </CardHeader>
-                                    <CardContent className="p-4 flex-grow">
-                                        <CardTitle className="text-base font-headline">{creation.name}</CardTitle>
-                                        {creation.description && <CardDescription className="text-xs mt-1">{creation.description}</CardDescription>}
-                                    </CardContent>
-                                    <CardFooter className="p-4 pt-0 flex justify-between items-center">
-                                         <p className="text-xs text-muted-foreground">
-                                            Publiée le {new Date(creation.createdAt).toLocaleDateString()}
-                                        </p>
-                                        <Button 
-                                            variant="ghost" 
-                                            size="sm" 
-                                            className="flex items-center gap-1.5 text-muted-foreground hover:text-primary"
-                                            onClick={() => handleLikeClick(creation.id)}
-                                            disabled={isPending}
-                                        >
-                                            <Heart className={cn("h-4 w-4", (creation.likesCount || 0) > 0 && "text-primary fill-current")} />
-                                            <span className="font-mono text-sm">{creation.likesCount || 0}</span>
-                                        </Button>
-                                    </CardFooter>
-                                </Card>
+                                            )}
+                                        </div>
+                                        <CardContent className="p-4 flex-grow">
+                                            <CardTitle className="text-base font-headline">{creation.name}</CardTitle>
+                                            {creation.description && <CardDescription className="text-xs mt-1">{creation.description}</CardDescription>}
+                                        </CardContent>
+                                        <CardFooter className="p-4 pt-0 flex justify-between items-center">
+                                            <p className="text-xs text-muted-foreground">
+                                                Publiée le {new Date(creation.createdAt).toLocaleDateString()}
+                                            </p>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="flex items-center gap-1.5 text-muted-foreground hover:text-primary"
+                                                onClick={() => handleLikeClick(creation.id)}
+                                                disabled={isPending}
+                                            >
+                                                <Heart className={cn("h-4 w-4", (creation.likesCount || 0) > 0 && "text-primary fill-current")} />
+                                                <span className="font-mono text-sm">{creation.likesCount || 0}</span>
+                                            </Button>
+                                        </CardFooter>
+                                    </Card>
+                                     <DialogContent className="max-w-2xl">
+                                        <DialogHeader>
+                                            <DialogTitle>{creation.name}</DialogTitle>
+                                        </DialogHeader>
+                                        <div className="mt-4 grid place-items-center">
+                                            <Image 
+                                                src={creation.previewImageUrl} 
+                                                alt={creation.name} 
+                                                width={800}
+                                                height={800}
+                                                className="w-full h-auto object-contain rounded-lg max-w-full max-h-[80vh]"
+                                                sizes="100vw"
+                                            />
+                                        </div>
+                                    </DialogContent>
+                                </Dialog>
                             ))}
                         </div>
                    ) : (
@@ -260,3 +286,4 @@ export function ProfileClient({ locale }: { locale: string }) {
         </div>
     );
 }
+
