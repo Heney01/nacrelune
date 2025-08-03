@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -7,7 +6,7 @@ import { db, storage } from '@/lib/firebase';
 import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction, Timestamp, collectionGroup, documentId, orderBy, DocumentReference, DocumentSnapshot } from 'firebase/firestore';
 import { ref, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { cookies } from 'next/headers';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
 import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm, ShippingAddress, DeliveryMethod, MailLog, Coupon } from '@/lib/types';
@@ -188,7 +187,7 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
 }
 
 
-export async function adminLogin(prevState: any, formData: FormData) {
+export async function signIn(prevState: any, formData: FormData) {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
   const locale = formData.get('locale') as string || 'fr';
@@ -926,10 +925,8 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
     }
     
     try {
-        console.log(`[SERVER] Searching for orders with email: ${email}`);
         const q = query(collection(db, 'orders'), where('customerEmail', '==', email.trim()));
         const querySnapshot = await getDocs(q);
-        console.log(`[SERVER] Found ${querySnapshot.docs.length} orders for ${email}`);
 
         const orders = querySnapshot.docs.map(doc => {
             const data = doc.data();
@@ -951,7 +948,6 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
         let returnMessage: string;
         
         if (orders.length > 0) {
-            console.log('[SERVER] Orders found, preparing email.');
             returnMessage = `Email sent. ${orders.length} order(s) found.`;
             const ordersListText = orders.map(o => 
                 `- Commande ${o.orderNumber} (du ${o.createdAt}) - Statut : ${o.status}`
@@ -963,7 +959,6 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
             mailText = `Bonjour,\n\nVoici la liste de vos commandes récentes passées avec cette adresse e-mail :\n\n${ordersListText}\n\nVous pouvez cliquer sur le lien de chaque commande pour voir son statut.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
             mailHtml = `<h1>Vos commandes Atelier à bijoux</h1><p>Bonjour,</p><p>Voici la liste de vos commandes récentes passées avec cette adresse e-mail :</p><ul>${ordersListHtml}</ul><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
         } else {
-            console.log('[SERVER] No orders found, preparing notification email.');
             returnMessage = "Email sent. No orders found.";
             mailText = `Bonjour,\n\nVous avez récemment demandé à retrouver vos commandes. Aucune commande n'est associée à cette adresse e-mail (${email}).\n\nSi vous pensez qu'il s'agit d'une erreur, veuillez vérifier l'adresse e-mail ou contacter notre support.${emailFooterText}`;
             mailHtml = `<h1>Vos commandes Atelier à bijoux</h1><p>Bonjour,</p><p>Vous avez récemment demandé à retrouver vos commandes. Aucune commande n'est associée à cette adresse e-mail (${email}).</p><p>Si vous pensez qu'il s'agit d'une erreur, veuillez vérifier l'adresse e-mail ou contacter notre support.</p>${emailFooterHtml}`;
@@ -978,15 +973,12 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
             },
         };
         
-        console.log('[SERVER] Creating mail document in Firestore.');
         const mailRef = doc(collection(db, 'mail'));
         await setDoc(mailRef, mailDocData);
-        console.log('[SERVER] Mail document created successfully.');
         
         return { success: true, message: returnMessage };
 
     } catch (error: any) {
-        console.error(`[SERVER] Error in getOrdersByEmail for ${email}:`, error);
         return { success: false, message: error.message };
     }
 }
@@ -1260,7 +1252,6 @@ export async function getCharmSuggestionsAction(input: CharmSuggestionInput): Pr
     error?: string;
 }> {
     try {
-        console.log('[SERVER ACTION] Calling getCharmSuggestionsFlow with input:', input);
         const result = await getCharmSuggestionsFlow(input);
         return { success: true, suggestions: result.suggestions };
     } catch (error: any) {
@@ -1275,7 +1266,6 @@ export async function getCharmAnalysisSuggestionsAction(input: CharmAnalysisSugg
     error?: string;
 }> {
     try {
-        console.log('[SERVER ACTION] Calling getCharmAnalysisSuggestionsFlow');
         const result = await getCharmAnalysisSuggestionsFlow(input);
         return { success: true, suggestions: result.suggestions };
     } catch (error: any) {
@@ -1290,7 +1280,6 @@ export async function getCharmDesignCritiqueAction(input: CharmDesignCritiqueInp
     error?: string;
 }> {
     try {
-        console.log('[SERVER ACTION] Calling getCharmDesignCritiqueFlow');
         const result = await getCharmDesignCritiqueFlow(input);
         return { success: true, critique: result.critique };
     } catch (error: any) {
@@ -1305,7 +1294,6 @@ export async function generateShareContentAction(input: GenerateShareContentInpu
     error?: string;
 }> {
     try {
-        console.log('[SERVER ACTION] Calling generateShareContentFlow');
         const result = await generateShareContentFlow(input);
         return { success: true, content: result };
     } catch (error: any) {
@@ -1323,127 +1311,4 @@ export async function getRefreshedCharms(): Promise<{ success: boolean; charms?:
         console.error('[SERVER ACTION] Error refreshing charms:', error);
         return { success: false, error: error.message || "Une erreur est survenue lors du rafraîchissement des breloques." };
     }
-}
-
-// User Authentication Actions
-
-async function setSessionCookie(idToken: string) {
-    cookies().set('session', idToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24, // 1 day
-      path: '/',
-    });
-}
-
-export async function signUpWithEmailPassword(prevState: any, formData: FormData) {
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    const locale = formData.get('locale') as string || 'fr';
-
-    if (!email || !password) {
-        return { error: 'Veuillez fournir un email et un mot de passe.' };
-    }
-
-    const auth = getAuth(app);
-    try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        const idToken = await user.getIdToken();
-        await setSessionCookie(idToken);
-    } catch (error: any) {
-        let errorMessage = "Une erreur inconnue est survenue.";
-        switch (error.code) {
-            case 'auth/email-already-in-use':
-                errorMessage = "Cette adresse e-mail est déjà utilisée par un autre compte.";
-                break;
-            case 'auth/invalid-email':
-                errorMessage = "L'adresse e-mail n'est pas valide.";
-                break;
-            case 'auth/weak-password':
-                errorMessage = "Le mot de passe est trop faible.";
-                break;
-            default:
-                errorMessage = "Une erreur est survenue lors de l'inscription.";
-                break;
-        }
-        return { error: errorMessage };
-    }
-    redirect(`/${locale}/finaliser-profil`);
-}
-
-export async function signInWithEmailPassword(prevState: any, formData: FormData) {
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    const locale = formData.get('locale') as string || 'fr';
-
-    if (!email || !password) {
-        return { error: 'Veuillez fournir un email et un mot de passe.' };
-    }
-    
-    const auth = getAuth(app);
-    try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (!userDoc.exists()) {
-            const idToken = await user.getIdToken();
-            await setSessionCookie(idToken);
-            redirect(`/${locale}/finaliser-profil`);
-        } else {
-             const idToken = await user.getIdToken();
-            await setSessionCookie(idToken);
-        }
-
-    } catch (error: any) {
-        let errorMessage = "Une erreur inconnue est survenue.";
-        switch (error.code) {
-            case 'auth/invalid-email':
-                errorMessage = "L'adresse e-mail n'est pas valide.";
-                break;
-            case 'auth/user-not-found':
-            case 'auth/wrong-password':
-            case 'auth/invalid-credential':
-                errorMessage = "Email ou mot de passe incorrect.";
-                break;
-            default:
-                errorMessage = "Une erreur est survenue lors de la connexion.";
-                break;
-        }
-        return { error: errorMessage };
-    }
-    redirect(`/${locale}`);
-}
-
-
-export async function initializeUserProfile(prevState: any, formData: FormData) {
-    const pseudo = formData.get('pseudo') as string;
-    const locale = formData.get('locale') as string || 'fr';
-    const userId = formData.get('userId') as string;
-    const email = formData.get('email') as string;
-
-    if (!pseudo || !userId || !email) {
-        return { error: "Les informations de l'utilisateur sont manquantes." };
-    }
-    
-    // Check if pseudo already exists
-    const pseudoQuery = query(collection(db, "users"), where("pseudo", "==", pseudo));
-    const querySnapshot = await getDocs(pseudoQuery);
-    if (!querySnapshot.empty) {
-        return { error: "Ce pseudo est déjà utilisé. Veuillez en choisir un autre." };
-    }
-
-    try {
-        await setDoc(doc(db, 'users', userId), {
-            pseudo: pseudo,
-            email: email,
-            createdAt: serverTimestamp(),
-        });
-    } catch (error) {
-        console.error("Error creating user profile:", error);
-        return { error: "Une erreur est survenue lors de la création de votre profil." };
-    }
-    
-    redirect(`/${locale}`);
 }

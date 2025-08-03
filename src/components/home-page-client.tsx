@@ -6,7 +6,7 @@ import React from 'react';
 import Editor from '@/components/editor';
 import { BrandLogo } from '@/components/icons';
 import { useTranslations } from '@/hooks/use-translations';
-import { Gem, HandMetal, Ear, Truck, UserCircle, LogOut } from 'lucide-react';
+import { Gem, HandMetal, Ear, Truck, UserCircle } from 'lucide-react';
 import { TypeSelection } from '@/components/type-selection';
 import { ModelSelection } from '@/components/model-selection';
 import type { JewelryType, Charm, CharmCategory } from '@/lib/types';
@@ -15,17 +15,6 @@ import { CartWidget } from './cart-widget';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { SupportDialog } from './support-dialog';
-import { useAuth } from '@/hooks/use-auth';
-import { logout } from '@/app/actions';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, charmCategories, locale }: {
     searchParams: { [key:string]: string | string[] | undefined };
@@ -35,7 +24,6 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
     locale: string;
 }) {
     const t = useTranslations('HomePage');
-    const { user, loading } = useAuth();
     
     const jewelryTypes = initialJewelryTypes.map(jt => {
         if (jt.id === 'necklace') return { ...jt, name: t('jewelry_types.necklace'), description: t('jewelry_types.necklace_description'), icon: Gem };
@@ -78,47 +66,6 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
                     </Tooltip>
                 </TooltipProvider>
               <CartWidget />
-               {loading ? (
-                  <div className="h-10 w-10 bg-muted rounded-full animate-pulse" />
-                ) : user ? (
-                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                        <Avatar>
-                          <AvatarImage src={user.photoURL || undefined} alt="User avatar" />
-                          <AvatarFallback>{user.email?.[0].toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="end" forceMount>
-                      <DropdownMenuLabel className="font-normal">
-                        <div className="flex flex-col space-y-1">
-                          <p className="text-sm font-medium leading-none">{user.pseudo}</p>
-                          <p className="text-xs leading-none text-muted-foreground">
-                            {user.email}
-                          </p>
-                        </div>
-                      </DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <form action={logout}>
-                         <input type="hidden" name="locale" value={locale} />
-                         <DropdownMenuItem asChild>
-                           <button type="submit" className="w-full">
-                               <LogOut className="mr-2 h-4 w-4" />
-                               <span>Se déconnecter</span>
-                           </button>
-                         </DropdownMenuItem>
-                      </form>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : (
-                    <Button asChild variant="outline">
-                        <Link href={`/${locale}/connexion`}>
-                            <UserCircle className="mr-2 h-4 w-4"/>
-                            Espace Créateur
-                        </Link>
-                    </Button>
-                )}
             </div>
           </div>
         </header>
