@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Loader2, ArrowLeft, PlusCircle, Heart, MoreHorizontal, Trash2, ShoppingCart, LogOut, UserCircle, Award } from 'lucide-react';
+import { Loader2, ArrowLeft, PlusCircle, Heart, MoreHorizontal, Trash2, ShoppingCart, LogOut, UserCircle, Award, Share2 } from 'lucide-react';
 import { BrandLogo } from './icons';
 import { Button } from './ui/button';
 import { useTranslations } from '@/hooks/use-translations';
@@ -49,6 +49,7 @@ import { useCart } from '@/hooks/use-cart';
 import { getJewelryTypesAndModels, getCharms } from '@/lib/data';
 import { CartWidget } from './cart-widget';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { ShareDialog } from './share-dialog';
 
 
 function UserNav({ locale }: { locale: string }) {
@@ -122,6 +123,7 @@ export function ProfileClient({ locale }: { locale: string }) {
     // State to hold all base models and charms for cart logic
     const [jewelryTypes, setJewelryTypes] = useState<Omit<JewelryType, 'icon'>[]>([]);
     const [allCharms, setAllCharms] = useState<Charm[]>([]);
+    const [creationToShare, setCreationToShare] = useState<Creation | null>(null);
 
 
     useEffect(() => {
@@ -400,18 +402,32 @@ export function ProfileClient({ locale }: { locale: string }) {
                                             {creation.description && <CardDescription className="text-xs mt-1">{creation.description}</CardDescription>}
                                         </CardContent>
                                         <CardFooter className="p-4 pt-0 flex justify-between items-center">
-                                            <Button
-                                                variant="outline"
-                                                size="icon"
-                                                className="h-8 w-8"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleAddToCart(creation);
-                                                }}
-                                            >
-                                                <ShoppingCart className="h-4 w-4" />
-                                                <span className="sr-only">Ajouter au panier</span>
-                                            </Button>
+                                            <div className="flex items-center gap-1">
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    className="h-8 w-8"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleAddToCart(creation);
+                                                    }}
+                                                >
+                                                    <ShoppingCart className="h-4 w-4" />
+                                                    <span className="sr-only">Ajouter au panier</span>
+                                                </Button>
+                                                 <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    className="h-8 w-8"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setCreationToShare(creation);
+                                                    }}
+                                                >
+                                                    <Share2 className="h-4 w-4" />
+                                                    <span className="sr-only">Partager</span>
+                                                </Button>
+                                            </div>
                                             <Button 
                                                 variant="ghost" 
                                                 size="sm" 
@@ -465,6 +481,14 @@ export function ProfileClient({ locale }: { locale: string }) {
                    )}
                 </div>
             </main>
+            {creationToShare && (
+                <ShareDialog
+                    isOpen={!!creationToShare}
+                    onOpenChange={() => setCreationToShare(null)}
+                    getCanvasDataUri={() => Promise.resolve(creationToShare.previewImageUrl)}
+                    t={tEditor}
+                />
+            )}
         </div>
     );
 }
