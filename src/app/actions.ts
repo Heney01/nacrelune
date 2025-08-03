@@ -925,7 +925,7 @@ export async function createOrder(
                 : [];
             const creatorsMap = new Map(creatorDocs.map(d => [d.id, d.data() as User]));
 
-            for (const [creatorId, award] of creatorPointAwards.entries()) {
+            creatorPointAwards.forEach((award, creatorId) => {
                 const creatorRef = doc(db, 'users', creatorId);
                 transaction.update(creatorRef, { rewardPoints: increment(award.points) });
 
@@ -943,7 +943,7 @@ export async function createOrder(
                     };
                     transaction.set(doc(collection(db, 'mail')), mailDocData);
                 }
-            }
+            });
 
             const orderItems: Omit<OrderItem, 'modelImageUrl' | 'charms'>[] = cartItems.map((item, index) => {
                 const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
