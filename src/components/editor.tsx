@@ -112,6 +112,7 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
                 draggable="false"
                 width={pixelSize.width}
                 height={pixelSize.height}
+                crossOrigin="anonymous"
             />
             <button
                 onMouseDown={handleDelete}
@@ -164,7 +165,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [previewForDialog, setPreviewForDialog] = useState<string | null>(null);
   const [creationName, setCreationName] = useState('');
-  const [creationDescription, setCreationDescription] = useState('');
+  const [creationDescription, setDescription] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
   const { firebaseUser } = useAuth();
 
@@ -825,7 +826,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="creationDescription">{t('creation_description_label')}</Label>
-                                        <Textarea id="creationDescription" value={creationDescription} onChange={(e) => setCreationDescription(e.target.value)} placeholder={t('creation_description_placeholder')} />
+                                        <Textarea id="creationDescription" value={creationDescription} onChange={(e) => setDescription(e.target.value)} placeholder={t('creation_description_placeholder')} />
                                     </div>
                                 </CardContent>
                                 <CardFooter>
@@ -857,7 +858,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
           <div className={cn("container mx-auto flex-1 flex flex-col min-h-0", isMobile && "px-0")}>
               <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0", isMobile && "grid-cols-1 gap-0")}>
               
-              <div className="lg:col-span-3 flex-col min-h-0 gap-6 hidden lg:flex">
+              <div className="lg:col-span-3 flex-col min-h-0 hidden lg:flex">
                 <CharmsPanel 
                   allCharms={availableCharms}
                   charmCategories={charmCategories}
@@ -925,6 +926,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                               className="pointer-events-none max-w-full max-h-full object-contain"
                               data-ai-hint="jewelry model"
                               priority
+                              crossOrigin="anonymous"
                           />
                           
                           {pixelsPerMm && sortedPlacedCharms.map((placed) => {
@@ -1182,5 +1184,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
