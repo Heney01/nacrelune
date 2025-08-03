@@ -208,27 +208,17 @@ export function CartSheet({ children, open, onOpenChange }: {
                         </AccordionItem>
                       </Accordion>
                       
-                       <CardFooter className="p-2 bg-muted/30 border-t grid grid-cols-3 gap-2">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <SheetClose asChild>
-                                  <Button variant="outline" size="sm" asChild className="text-xs" disabled={isCreatorItem}>
-                                    <Link href={isCreatorItem ? '#' : editUrl} className={cn(isCreatorItem && "cursor-not-allowed")}>
-                                      <Edit />
-                                      {t('edit_item_button')}
-                                    </Link>
-                                  </Button>
-                                </SheetClose>
-                              </TooltipTrigger>
-                              {isCreatorItem && (
-                                <TooltipContent>
-                                  <p>{t('edit_disabled_tooltip')}</p>
-                                </TooltipContent>
-                              )}
-                            </Tooltip>
-                          </TooltipProvider>
-
+                       <CardFooter className={cn("p-2 bg-muted/30 border-t grid gap-2", isCreatorItem ? 'grid-cols-2' : 'grid-cols-3')}>
+                          {!isCreatorItem && (
+                            <SheetClose asChild>
+                              <Button variant="outline" size="sm" asChild className="text-xs">
+                                <Link href={editUrl}>
+                                  <Edit />
+                                  {t('edit_item_button')}
+                                </Link>
+                              </Button>
+                            </SheetClose>
+                          )}
                            <Button variant="outline" size="sm" onClick={() => setSharingItem(item)} className="text-xs">
                               <Share2 />
                               {tEditor('share_button')}
