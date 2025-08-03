@@ -7,7 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
 import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, ShoppingCart, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Share2, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -826,7 +826,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       ref={canvasWrapperRef}
                       className={cn(
                         "relative w-full aspect-square bg-card overflow-hidden touch-none grid place-items-center flex-shrink-0", 
-                        isMobile ? "border-0" : "border-dashed border-muted-foreground/30",
+                        !isMobile && "border-dashed border-muted-foreground/30",
                         isMobile && (isCharmsSheetOpen || isSuggestionsSheetOpen) && "pointer-events-none"
                       )}
                   >
@@ -957,14 +957,16 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                   </div>
                               </div>
                               <div className="flex-grow overflow-y-auto">
-                                  <CharmsPanel 
-                                      allCharms={availableCharms}
-                                      charmCategories={charmCategories}
-                                      onAddCharm={addCharmFromCharmList} 
-                                      isMobileSheet={true}
-                                      searchTerm={charmsSearchTerm}
-                                      onSearchTermChange={setCharmsSearchTerm}
-                                  />
+                                  <ScrollArea className="absolute inset-0">
+                                     <CharmsPanel 
+                                        allCharms={availableCharms}
+                                        charmCategories={charmCategories}
+                                        onAddCharm={addCharmFromCharmList} 
+                                        isMobileSheet={true}
+                                        searchTerm={charmsSearchTerm}
+                                        onSearchTermChange={setCharmsSearchTerm}
+                                    />
+                                  </ScrollArea>
                               </div>
                           </TabsContent>
                           <TabsContent value="placed" className="m-0 flex-grow overflow-y-auto no-scrollbar">
@@ -1058,6 +1060,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
 
