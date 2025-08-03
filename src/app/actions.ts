@@ -1466,20 +1466,6 @@ export async function getRefreshedCharms(): Promise<{ success: boolean; charms?:
 
 // --- Creation Actions ---
 
-type SimpleCreationData = {
-    name: string;
-    description: string;
-    jewelryTypeId: string;
-    modelId: string;
-    placedCharms: {
-        charmId: string;
-        position: { x: number; y: number };
-        rotation: number;
-    }[];
-    previewImageUrl: string; // data URL
-};
-
-
 export async function saveCreation(
     idToken: string,
     name: string,
@@ -1512,7 +1498,16 @@ export async function saveCreation(
         modelId,
         placedCharms: simplePlacedCharms,
         previewImageUrl,
-    } = JSON.parse(creationPayload) as SimpleCreationData;
+    } = JSON.parse(creationPayload) as {
+        jewelryTypeId: string;
+        modelId: string;
+        placedCharms: {
+            charmId: string;
+            position: { x: number; y: number };
+            rotation: number;
+        }[];
+        previewImageUrl: string;
+    };
     
     if (!name.trim()) {
         return { success: false, message: "Le nom de la création est obligatoire." };
@@ -1522,7 +1517,7 @@ export async function saveCreation(
         const charmIds = simplePlacedCharms.map(pc => pc.charmId);
         const charmDocs = charmIds.length > 0 ? await getDocs(query(collection(db, 'charms'), where(documentId(), 'in', charmIds))) : { docs: [] };
         
-        const charmsMap = new Map(charmDocs.docs.map(doc => [doc.id, doc.data() as Omit<Charm, 'id'>]));
+        const charmsMap = new Map(charmDocs.docs.map(doc => [doc.id, doc.data()]));
 
         const placedCharms: PlacedCreationCharm[] = simplePlacedCharms.map(spc => {
             const charmData = charmsMap.get(spc.charmId);
@@ -1582,24 +1577,28 @@ export async function saveCreation(
     }
 }
 
-export async function getUserCreations(userId: string): Promise<Creation[]> {
+export async function getUserCreations(userId: string): Promise<string> {
     console.log(`[SERVER] getUserCreations called for userId: ${userId}`);
     if (!userId) {
-        console.log('[SERVER] No userId provided, returning empty array.');
-        return [];
+        return "[SERVER DEBUG] No userId provided, returning.";
     }
+
     const creationsRef = collection(db, 'creations');
     const q = query(creationsRef, where('creatorId', '==', userId), orderBy('createdAt', 'desc'));
     
     try {
         const querySnapshot = await getDocs(q);
-        console.log(`[SERVER] Found ${querySnapshot.docs.length} creations for user.`);
-        
+        console.log(`[SERVER] Found ${querySnapshot.docs.length} creation documents for user.`);
+
+        if (querySnapshot.empty) {
+            return `[SERVER DEBUG] No creations found in database for user ${userId}.`;
+        }
+
         const creations = await Promise.all(querySnapshot.docs.map(async (doc) => {
             const data = doc.data();
             const previewImageUrl = await getUrl(data.previewImageUrl, 'https://placehold.co/400x400.png');
-
-            // Ensure all nested charm images are resolved
+            
+            // Explicitly resolve charm images
             const resolvedPlacedCharms = await Promise.all(
                 (data.placedCharms || []).map(async (pc: PlacedCreationCharm) => {
                     const charmImageUrl = await getUrl(pc.charm.imageUrl, 'https://placehold.co/100x100.png');
@@ -1607,7 +1606,7 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
                         ...pc,
                         charm: {
                             ...pc.charm,
-                            imageUrl: charmImageUrl,
+                            imageUrl: charmImageUrl
                         }
                     };
                 })
@@ -1615,24 +1614,18 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
 
             return {
                 id: doc.id,
-                creatorId: data.creatorId,
-                creatorName: data.creatorName,
-                name: data.name,
-                description: data.description,
-                jewelryTypeId: data.jewelryTypeId,
-                modelId: data.modelId,
-                placedCharms: resolvedPlacedCharms,
+                ...data,
                 previewImageUrl,
+                placedCharms: resolvedPlacedCharms,
                 createdAt: toDate(data.createdAt as Timestamp)!,
-                salesCount: data.salesCount
-            } as Creation;
+            };
         }));
         
         console.log(`[SERVER] Returning ${creations.length} processed creations.`);
-        return creations;
-    } catch (error) {
+        return `[SERVER DEBUG] Success! Found and processed ${creations.length} creations. First creation name: ${creations.length > 0 ? creations[0].name : 'N/A'}`;
+    } catch (error: any) {
         console.error("[SERVER] Error fetching user creations:", error);
-        return [];
+        return `[SERVER DEBUG] Error fetching creations: ${error.message}`;
     }
 }
     
@@ -1646,6 +1639,7 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
 
 
     
+
 
 
 

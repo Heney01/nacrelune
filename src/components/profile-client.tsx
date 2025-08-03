@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -16,25 +17,30 @@ import { ArrowLeft } from 'lucide-react';
 
 export function ProfileClient({ locale }: { locale: string }) {
     const { user, firebaseUser, loading: authLoading } = useAuth();
-    const [creations, setCreations] = useState<Creation[]>([]);
+    const [creations, setCreations] = useState<string | null>(null);
     const [loadingCreations, setLoadingCreations] = useState(true);
     const router = useRouter();
 
     useEffect(() => {
-        if (!authLoading) {
-            if (firebaseUser) {
-                const fetchCreations = async () => {
-                    setLoadingCreations(true);
-                    const userCreations = await getUserCreations(firebaseUser.uid);
-                    console.log('[CLIENT] Received creations:', userCreations);
-                    setCreations(userCreations);
-                    setLoadingCreations(false);
-                };
-                fetchCreations();
-            } else {
-                router.push(`/${locale}/connexion`);
-            }
+        if (authLoading) {
+            return;
         }
+        if (!firebaseUser) {
+            router.push(`/${locale}/connexion`);
+            return;
+        }
+
+        const fetchCreations = async () => {
+            setLoadingCreations(true);
+            console.log(`[CLIENT] Calling getUserCreations for user ${firebaseUser.uid}`);
+            const userCreationsResult = await getUserCreations(firebaseUser.uid);
+            console.log('[CLIENT] Received from server:', userCreationsResult);
+            setCreations(userCreationsResult);
+            setLoadingCreations(false);
+        };
+        
+        fetchCreations();
+
     }, [authLoading, firebaseUser, router, locale]);
     
     if (authLoading || loadingCreations) {
@@ -73,34 +79,12 @@ export function ProfileClient({ locale }: { locale: string }) {
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Mes Créations Publiées</CardTitle>
+                            <CardTitle>Debug Output</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            {creations.length > 0 ? (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                    {creations.map(creation => (
-                                        <Link href={`/${locale}/creations/${creation.id}`} key={creation.id}>
-                                            <Card className="overflow-hidden group">
-                                                <div className="aspect-square relative">
-                                                    <Image 
-                                                      src={creation.previewImageUrl} 
-                                                      alt={creation.name} 
-                                                      fill
-                                                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                                                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                                                    />
-                                                </div>
-                                                <div className="p-4">
-                                                    <h3 className="font-semibold truncate">{creation.name}</h3>
-                                                    <p className="text-sm text-muted-foreground">{creation.salesCount} ventes</p>
-                                                </div>
-                                            </Card>
-                                        </Link>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="text-muted-foreground text-center py-8">Vous n'avez pas encore publié de création.</p>
-                            )}
+                            <pre className="whitespace-pre-wrap bg-muted p-4 rounded-md font-mono text-xs">
+                                {creations ? creations : "Loading debug info..."}
+                            </pre>
                         </CardContent>
                     </Card>
                 </div>
