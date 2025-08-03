@@ -926,7 +926,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                 />
               </div>
 
-              <div className="lg:col-span-6 flex flex-col gap-4 min-h-0 order-first lg:order-none max-h-full overflow-y-auto">
+              <div className="lg:col-span-6 flex flex-col gap-4 min-h-0 order-first lg:order-none">
                   <div className="flex justify-between items-center gap-4 flex-shrink-0 px-4 pt-4 lg:p-0">
                       <Button variant="ghost" asChild className="p-0 h-auto lg:h-10 lg:p-2">
                           <Link href={`/${locale}/?type=${jewelryType.id}`}>
@@ -1034,7 +1034,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       )}
                   </div>
                   
-                  <div className="hidden lg:block">
+                  <div className="hidden lg:block flex-shrink-0">
                       <Card>
                           <CardHeader>
                               <CardTitle className="font-headline text-lg flex items-center gap-2">
@@ -1248,6 +1248,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
 
