@@ -557,31 +557,21 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
       setIsPublishing(true);
       
-      const serializableCartItem: SerializableCartItem = {
-          id: '',
-          model: {
-              ...model,
-              lastOrderedAt: model.lastOrderedAt ? model.lastOrderedAt.toISOString() : null,
-              restockedAt: model.restockedAt ? model.restockedAt.toISOString() : null,
-          } as any,
-          jewelryType: jewelryType,
+      const creationPayload = {
+          jewelryTypeId: jewelryType.id,
+          modelId: model.id,
           placedCharms: placedCharms.map(pc => ({
-              ...pc,
-              charm: {
-                  ...pc.charm,
-                  lastOrderedAt: pc.charm.lastOrderedAt ? pc.charm.lastOrderedAt.toISOString() : null,
-                  restockedAt: pc.charm.restockedAt ? pc.charm.restockedAt.toISOString() : null,
-              } as any,
+              charmId: pc.charm.id,
+              position: pc.position,
+              rotation: pc.rotation
           })),
-          previewImage: previewForDialog,
+          previewImageUrl: previewForDialog,
       };
 
       const result = await saveCreation(
-          firebaseUser.uid,
-          firebaseUser.displayName || "Créateur anonyme",
           creationName,
           creationDescription,
-          serializableCartItem
+          JSON.stringify(creationPayload)
       );
 
       if (result.success) {
@@ -1185,3 +1175,4 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+

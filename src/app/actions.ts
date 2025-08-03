@@ -18,6 +18,9 @@ import { generateShareContent as generateShareContentFlow, GenerateShareContentI
 import { z } from 'zod';
 import { getCharms as fetchCharms, toDate } from '@/lib/data';
 import Stripe from 'stripe';
+import { Auth, getAuth as getAdminAuth } from 'firebase-admin/auth';
+import { adminApp } from '@/lib/firebase-admin';
+
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -210,7 +213,8 @@ export async function login(prevState: any, formData: FormData): Promise<{ succe
       path: '/',
     });
     
-    redirect(`/${locale}/admin/dashboard`);
+    // Don't redirect from here, let the client handle it after showing toast.
+    return { success: true, message: "Connexion réussie !" };
 
   } catch (error: any) {
     let errorMessage = "Une erreur inconnue est survenue.";
@@ -253,6 +257,7 @@ export async function userLogin(prevState: any, formData: FormData): Promise<{ s
       path: '/',
     });
     
+    // Don't redirect from here, let the client handle it after showing toast.
     return { success: true, message: `Bienvenue, ${user.displayName || user.email} !` };
 
   } catch (error: any) {
@@ -306,6 +311,7 @@ export async function signup(prevState: any, formData: FormData): Promise<{ succ
             path: '/',
         });
         
+        // Don't redirect from here, let the client handle it after showing toast.
         return { success: true, message: `Bienvenue, ${displayName} !` };
 
     } catch (error: any) {
@@ -1460,56 +1466,87 @@ export async function getRefreshedCharms(): Promise<{ success: boolean; charms?:
 
 // --- Creation Actions ---
 
+type SimpleCreationData = {
+    name: string;
+    description: string;
+    jewelryTypeId: string;
+    modelId: string;
+    placedCharms: {
+        charmId: string;
+        position: { x: number; y: number };
+        rotation: number;
+    }[];
+    previewImageUrl: string; // data URL
+};
+
+
+async function getAuthenticatedUser(): Promise<Auth['app']['auth'] extends () => infer T ? T : never> {
+    const sessionCookie = cookies().get('session')?.value;
+    if (!sessionCookie) {
+        throw new Error("Non authentifié");
+    }
+    const adminAuth = getAdminAuth(adminApp);
+    const decodedIdToken = await adminAuth.verifySessionCookie(sessionCookie, true);
+    const user = await adminAuth.getUser(decodedIdToken.uid);
+    return user as any;
+}
+
+
 export async function saveCreation(
-    creatorId: string,
-    creatorName: string,
     name: string,
     description: string,
-    cartItem: SerializableCartItem
+    creationPayload: string
 ): Promise<{ success: boolean; message: string; creationId?: string }> {
-    
-    // Server-side authentication check should be done here in a real app
-    // e.g., by verifying a session cookie or auth token.
-    // For this prototype, we trust the creatorId from the client.
-    if (!creatorId) {
-        return { success: false, message: "Vous devez être connecté pour publier une création." };
+
+    const user = await getAuthenticatedUser();
+    if (!user) {
+         return { success: false, message: "Vous devez être connecté pour publier une création." };
     }
 
+    const {
+        jewelryTypeId,
+        modelId,
+        placedCharms: simplePlacedCharms,
+        previewImageUrl,
+    } = JSON.parse(creationPayload) as SimpleCreationData;
+    
     if (!name.trim()) {
         return { success: false, message: "Le nom de la création est obligatoire." };
     }
-    if (!cartItem) {
-        return { success: false, message: "Les données de la création sont manquantes." };
-    }
 
     try {
-        // Convert dates back to Timestamps if they are strings
-        const cleanPlacedCharms = cartItem.placedCharms.map(pc => ({
-            ...pc,
-            charm: {
-                ...pc.charm,
-                lastOrderedAt: pc.charm.lastOrderedAt ? Timestamp.fromDate(new Date(pc.charm.lastOrderedAt)) : null,
-                restockedAt: pc.charm.restockedAt ? Timestamp.fromDate(new Date(pc.charm.restockedAt)) : null,
-            }
-        }));
+        // Fetch full charm data from server side to ensure data integrity
+        const charmIds = simplePlacedCharms.map(pc => pc.charmId);
+        const charmDocs = charmIds.length > 0 ? await db.collection('charms').where(documentId(), 'in', charmIds).get() : { docs: [] };
+        const charmsMap = new Map(charmDocs.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() } as Charm]));
 
-
+        const fullPlacedCharms = simplePlacedCharms.map(spc => {
+            const charmData = charmsMap.get(spc.charmId);
+            if (!charmData) throw new Error(`Charm with id ${spc.charmId} not found`);
+            return {
+                id: `${spc.charmId}-${Date.now()}-${Math.random()}`,
+                charm: charmData,
+                position: spc.position,
+                rotation: spc.rotation,
+            };
+        });
+        
         const creationData: Omit<Creation, 'id'> = {
-            creatorId: creatorId,
-            creatorName: creatorName,
+            creatorId: user.uid,
+            creatorName: user.displayName || "Créateur anonyme",
             name,
             description,
-            jewelryTypeId: cartItem.jewelryType.id,
-            modelId: cartItem.model.id,
-            placedCharms: cleanPlacedCharms,
-            previewImageUrl: cartItem.previewImage, // This might be a data URL
+            jewelryTypeId,
+            modelId,
+            placedCharms: fullPlacedCharms,
+            previewImageUrl: previewImageUrl,
             createdAt: new Date(),
             salesCount: 0
         };
 
         let finalPreviewUrl = creationData.previewImageUrl;
         if (finalPreviewUrl.startsWith('data:image')) {
-            const storageRef = ref(storage, `creation_previews/${creatorId}-${Date.now()}.png`);
+            const storageRef = ref(storage, `creation_previews/${user.uid}-${Date.now()}.png`);
             const uploadResult = await uploadString(storageRef, finalPreviewUrl, 'data_url');
             finalPreviewUrl = await getDownloadURL(uploadResult.ref);
         }
@@ -1557,6 +1594,7 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
     }
 }
     
+
 
 
 
