@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -439,7 +440,7 @@ export const CheckoutForm = ({
       return (
           <div className="flex flex-col h-full">
             <DialogHeader className="p-6 pb-4 flex-shrink-0 relative flex-row items-center justify-center">
-                <Button type="button" variant="ghost" size="icon" onClick={handleBackStep} id="checkout-back-button-payment" className="absolute left-4">
+                <Button type="button" variant="ghost" size="icon" onClick={handleBackStep} id="checkout-back-button-payment" className="absolute left-4 top-4">
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <DialogTitle className="text-2xl font-headline">{t('payment_info')}</DialogTitle>
@@ -464,7 +465,7 @@ export const CheckoutForm = ({
     <form id="checkout-form" onSubmit={handleFormSubmit} className="flex flex-col h-full">
       <DialogHeader className="p-6 pb-4 flex-shrink-0 relative flex-row items-center justify-center">
         {currentStep !== 'customer' && (
-          <Button type="button" variant="ghost" size="icon" onClick={handleBackStep} id="checkout-back-button-main" className="absolute left-4">
+          <Button type="button" variant="ghost" size="icon" onClick={handleBackStep} id="checkout-back-button-main" className="absolute left-4 top-4">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
