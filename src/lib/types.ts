@@ -125,7 +125,7 @@ export interface Coupon {
     code: string;
     discountType: 'percentage' | 'fixed';
     value: number;
-    expiresAt?: Date;
+    expiresAt?: Date | null;
 }
 
 
