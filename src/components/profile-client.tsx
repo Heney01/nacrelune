@@ -2,15 +2,15 @@
 
 'use client';
 
-import { useEffect, useState, useOptimistic } from 'react';
+import React, { useEffect, useState, useTransition } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { getUserCreations, toggleLikeCreation } from '@/app/actions';
+import { getUserCreations, toggleLikeCreation, deleteCreation } from '@/app/actions';
 import { Creation } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Loader2, ArrowLeft, PlusCircle, Heart, MoreHorizontal } from 'lucide-react';
+import { Loader2, ArrowLeft, PlusCircle, Heart, MoreHorizontal, Trash2 } from 'lucide-react';
 import { BrandLogo } from './icons';
 import { Button } from './ui/button';
 import { useTranslations } from '@/hooks/use-translations';
@@ -22,6 +22,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 
 export function ProfileClient({ locale }: { locale: string }) {
@@ -31,17 +42,7 @@ export function ProfileClient({ locale }: { locale: string }) {
     const router = useRouter();
     const t = useTranslations('Auth');
     const { toast } = useToast();
-
-    // Optimistic UI for likes
-    const [optimisticCreations, setOptimisticCreations] = useOptimistic(
-        creations,
-        (state, { creationId, newLikesCount }: { creationId: string; newLikesCount: number }) => {
-            if (!state) return state;
-            return state.map(c => 
-                c.id === creationId ? { ...c, likesCount: newLikesCount } : c
-            );
-        }
-    );
+    const [isPending, startTransition] = useTransition();
 
     useEffect(() => {
         if (authLoading) {
@@ -75,45 +76,57 @@ export function ProfileClient({ locale }: { locale: string }) {
         
         const currentCreation = creations?.find(c => c.id === creationId);
         if (!currentCreation) return;
-        
-        const newLikesCount = (currentCreation.likesCount || 0) + 1;
-        
-        setOptimisticCreations({creationId, newLikesCount});
 
-        try {
-            const idToken = await firebaseUser.getIdToken();
-            const result = await toggleLikeCreation(creationId, idToken);
-            if (result.success && result.newLikesCount !== undefined) {
-                 setCreations(prev => 
-                    prev!.map(c => 
-                        c.id === creationId ? { ...c, likesCount: result.newLikesCount! } : c
-                    )
-                );
-            }
-            else {
-                toast({
+        startTransition(async () => {
+            try {
+                const idToken = await firebaseUser.getIdToken();
+                const result = await toggleLikeCreation(creationId, idToken);
+                if (result.success && result.newLikesCount !== undefined) {
+                     setCreations(prev => 
+                        prev!.map(c => 
+                            c.id === creationId ? { ...c, likesCount: result.newLikesCount! } : c
+                        )
+                    );
+                }
+                else {
+                    toast({
+                        variant: 'destructive',
+                        title: "Erreur",
+                        description: result.message,
+                    });
+                }
+            } catch (error) {
+                 toast({
                     variant: 'destructive',
                     title: "Erreur",
-                    description: result.message,
+                    description: "Une erreur inattendue est survenue.",
                 });
-                 setCreations(prev => 
-                    prev!.map(c => 
-                        c.id === creationId ? { ...c, likesCount: currentCreation.likesCount || 0 } : c
-                    )
-                );
             }
-        } catch (error) {
-             toast({
-                variant: 'destructive',
-                title: "Erreur",
-                description: "Une erreur inattendue est survenue.",
-            });
-             setCreations(prev => 
-                prev!.map(c => 
-                    c.id === creationId ? { ...c, likesCount: currentCreation.likesCount || 0 } : c
-                )
-            );
+        });
+    };
+
+    const handleDeleteClick = (creationId: string) => {
+        if (!firebaseUser) {
+            toast({ variant: 'destructive', title: "Non autorisé", description: "Vous devez être connecté." });
+            return;
         }
+        
+        startTransition(async () => {
+            try {
+                const idToken = await firebaseUser.getIdToken();
+                const result = await deleteCreation(idToken, creationId);
+                
+                if (result.success) {
+                    toast({ title: "Succès", description: result.message });
+                    // Optimistic update: remove from local state
+                    setCreations(prev => prev ? prev.filter(c => c.id !== creationId) : null);
+                } else {
+                    toast({ variant: 'destructive', title: "Erreur", description: result.message });
+                }
+            } catch (error) {
+                 toast({ variant: 'destructive', title: "Erreur", description: "Une erreur inattendue est survenue." });
+            }
+        });
     };
 
 
@@ -151,9 +164,9 @@ export function ProfileClient({ locale }: { locale: string }) {
                     <h1 className="text-3xl font-headline mb-2">{t('my_creations')}</h1>
                     <p className="text-muted-foreground mb-8">Retrouvez ici toutes les créations que vous avez publiées.</p>
 
-                   {(optimisticCreations && optimisticCreations.length > 0) ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                            {optimisticCreations.map(creation => (
+                   {(creations && creations.length > 0) ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                            {creations.map(creation => (
                                 <Card key={creation.id} className="flex flex-col group">
                                     <CardHeader className="p-0 relative">
                                         <div className="aspect-square relative w-full bg-muted/50">
@@ -174,8 +187,35 @@ export function ProfileClient({ locale }: { locale: string }) {
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent>
-                                                        <DropdownMenuItem>Modifier</DropdownMenuItem>
-                                                        <DropdownMenuItem className="text-destructive">Supprimer</DropdownMenuItem>
+                                                        <DropdownMenuItem disabled>Modifier</DropdownMenuItem>
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <DropdownMenuItem
+                                                                    className="text-destructive focus:text-destructive"
+                                                                    onSelect={(e) => e.preventDefault()}
+                                                                >
+                                                                    <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                                                                </DropdownMenuItem>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>Êtes-vous sûr de vouloir supprimer "{creation.name}" ?</AlertDialogTitle>
+                                                                    <AlertDialogDescription>
+                                                                        Cette action est irréversible. Votre création sera définitivement supprimée.
+                                                                    </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                                                    <AlertDialogAction
+                                                                        onClick={() => handleDeleteClick(creation.id)}
+                                                                        className="bg-destructive hover:bg-destructive/90"
+                                                                        disabled={isPending}
+                                                                    >
+                                                                        {isPending ? <Loader2 className="animate-spin" /> : "Supprimer"}
+                                                                    </AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </div>
@@ -194,6 +234,7 @@ export function ProfileClient({ locale }: { locale: string }) {
                                             size="sm" 
                                             className="flex items-center gap-1.5 text-muted-foreground hover:text-primary"
                                             onClick={() => handleLikeClick(creation.id)}
+                                            disabled={isPending}
                                         >
                                             <Heart className={cn("h-4 w-4", (creation.likesCount || 0) > 0 && "text-primary fill-current")} />
                                             <span className="font-mono text-sm">{creation.likesCount || 0}</span>

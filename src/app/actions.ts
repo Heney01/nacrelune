@@ -1587,11 +1587,14 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
     const q = query(creationsRef, where('creatorId', '==', userId), orderBy('createdAt', 'desc'));
     
     try {
+        console.log(`[SERVER] Fetching creations for userId: ${userId}`);
         const querySnapshot = await getDocs(q);
         
         if (querySnapshot.empty) {
+            console.log("[SERVER] No creations found.");
             return [];
         }
+        console.log(`[SERVER] Found ${querySnapshot.docs.length} creations.`);
 
         const creations = await Promise.all(querySnapshot.docs.map(async (doc) => {
             const data = doc.data();
@@ -1619,6 +1622,7 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
             } as Creation;
         }));
         
+        console.log(`[SERVER] Returning ${creations.length} processed creations.`);
         return creations;
     } catch (error: any) {
         console.error("[SERVER] Error fetching user creations:", error);
@@ -1683,22 +1687,51 @@ export async function updateCreation() {
     // TODO: Implement creation update logic
 }
 
-export async function deleteCreation() {
-    // TODO: Implement creation deletion logic
-}
-
-
-
-
-
-
-
+export async function deleteCreation(idToken: string, creationId: string): Promise<{ success: boolean; message: string; }> {
+    if (!idToken) {
+        return { success: false, message: "Utilisateur non authentifié." };
+    }
+    if (!adminApp) {
+        return { success: false, message: "Le module d'administration Firebase n'est pas configuré." };
+    }
     
+    let user;
+    try {
+        const adminAuth = getAdminAuth(adminApp);
+        user = await adminAuth.verifyIdToken(idToken, true);
+    } catch (error: any) {
+        return { success: false, message: "Jeton d'authentification invalide." };
+    }
+    
+    const creationRef = doc(db, 'creations', creationId);
 
+    try {
+        const creationDoc = await getDoc(creationRef);
+        if (!creationDoc.exists()) {
+            return { success: false, message: "La création n'existe pas." };
+        }
 
+        const creationData = creationDoc.data() as Creation;
+        if (creationData.creatorId !== user.uid) {
+            return { success: false, message: "Vous n'êtes pas autorisé à supprimer cette création." };
+        }
+        
+        // Delete preview image from storage
+        await deleteFileFromStorage(creationData.previewImageUrl);
+        
+        // TODO: In a real app, we should also delete all likes in the subcollection.
+        // This is a more complex operation (batched writes or a cloud function).
+        // For now, we'll just delete the main document.
 
+        // Delete the creation document
+        await deleteDoc(creationRef);
+        
+        revalidatePath('/fr/profil');
+        
+        return { success: true, message: "La création a été supprimée avec succès." };
 
-
-
-
-
+    } catch (error: any) {
+        console.error("Error deleting creation:", error);
+        return { success: false, message: "Une erreur est survenue lors de la suppression." };
+    }
+}
