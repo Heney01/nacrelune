@@ -351,6 +351,10 @@ export async function getOrders(): Promise<Order[]> {
                 trackingNumber: data.trackingNumber,
                 cancellationReason: data.cancellationReason,
                 mailHistory: mailHistory,
+                paymentIntentId: data.paymentIntentId,
+                couponCode: data.couponCode,
+                pointsUsed: data.pointsUsed,
+                pointsValue: data.pointsValue
             };
         }));
 
