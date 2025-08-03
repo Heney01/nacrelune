@@ -30,7 +30,7 @@ import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/comp
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ShareDialog } from './share-dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from './ui/scroll-area';
 
 interface PlacedCharmComponentProps {
@@ -212,8 +212,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                     useCORS: true,
                     allowTaint: true,
                     scale: 2,
-                    width: canvasRef.current!.offsetWidth,
-                    height: canvasRef.current!.offsetHeight,
+                    width: canvasRef.current!.scrollWidth,
+                    height: canvasRef.current!.scrollHeight,
                 });
                 resolve(canvas.toDataURL('image/png', 0.9));
             } catch (error) {
@@ -330,7 +330,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     const canvas = canvasWrapperRef.current;
     if (!canvas) return;
 
-    // Do not attach event listeners if a sheet is open on mobile
     if (isMobile && (isCharmsSheetOpen || isSuggestionsSheetOpen)) {
         return;
     }
@@ -492,9 +491,11 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
       pc.id === charmId ? { ...pc, animation: 'breathe 0.5s ease-out' } : pc
     ));
     setTimeout(() => {
-      setPlacedCharms(prev => prev.map(pc =>
-        pc.id === charmId ? { ...pc, animation: undefined } : pc
-      ));
+      setPlacedCharms(prev =>
+        prev.map(pc =>
+          pc.id === charmId ? { ...pc, animation: undefined } : pc
+        )
+      );
     }, 500);
   };
   
@@ -740,7 +741,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
             </div>
           </header>
-        <main className={cn("flex-grow flex flex-col p-4 md:p-8 min-h-0", isMobile && "p-0 pb-0 overflow-y-hidden")}>
+        <main className={cn("flex-grow flex flex-col p-4 md:p-8 min-h-0", isMobile && "p-0 pb-0")}>
           <div className={cn("container mx-auto flex-1 flex flex-col min-h-0", isMobile && "px-0")}>
               <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0", isMobile && "grid-cols-1 gap-0")}>
               {!isMobile && (
@@ -762,26 +763,13 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                           <Share2 className={cn(!isMobile && "mr-2")}/>
                           {!isMobile && t('share_button')}
                         </Button>
-                        {!isMobile && (
-                          isEditing ? (
-                              <Button onClick={handleUpdateCart} disabled={captureRequest || hasStockIssues}>
-                                  <PlusCircle className="mr-2 h-4 w-4" />
-                                  {t('update_item_button')}
-                              </Button>
-                          ) : (
-                              <Button onClick={handleAddToCart} disabled={captureRequest || hasStockIssues}>
-                                  <ShoppingCart className="mr-2 h-4 w-4" />
-                                  {t('add_to_cart_button')}
-                              </Button>
-                          )
-                        )}
                       </div>
                   </div>
                   <div
                       ref={canvasWrapperRef}
                       className={cn(
-                        "relative w-full aspect-square bg-card border-2 border-dashed border-muted-foreground/30 overflow-hidden touch-none grid place-items-center flex-shrink-0", 
-                        isMobile && "rounded-none border-0 flex-grow",
+                        "relative w-full aspect-square bg-card border-dashed border-muted-foreground/30 overflow-hidden touch-none grid place-items-center flex-shrink-0", 
+                        isMobile && "flex-grow border-0",
                         isMobile && (isCharmsSheetOpen || isSuggestionsSheetOpen) && "pointer-events-none"
                       )}
                   >
@@ -1013,6 +1001,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
 
