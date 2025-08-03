@@ -26,10 +26,16 @@ import { Separator } from './ui/separator';
 import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
-const initialState = {
+type State = {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
+const initialState: State = {
   success: false,
-  error: '',
-  message: '',
+  error: undefined,
+  message: undefined,
 };
 
 function SignUpButton() {
