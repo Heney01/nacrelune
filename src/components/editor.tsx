@@ -766,6 +766,21 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                           </Link>
                       </Button>
                       <div className="flex items-center gap-2">
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className={cn(isMobile ? "h-8 w-8 text-muted-foreground" : "")}>
+                                    <Info className={cn("h-5 w-5", !isMobile && "mr-2")} />
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md">
+                                <DialogHeader>
+                                <DialogTitle className="font-headline text-xl">{t('editor_disclaimer_title')}</DialogTitle>
+                                </DialogHeader>
+                                <p className="text-sm text-muted-foreground mt-2">
+                                {t('editor_disclaimer')}
+                                </p>
+                            </DialogContent>
+                        </Dialog>
                         <Button variant="outline" size={isMobile ? "icon" : "default"} onClick={() => setIsShareOpen(true)}>
                           <Share2 className={cn(!isMobile && "mr-2")}/>
                           {!isMobile && t('share_button')}
@@ -822,7 +837,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                           })}
                       </div>
 
-                      <div className="absolute bottom-4 left-4 z-10">
+                      {!isMobile && (
+                        <div className="absolute bottom-4 left-4 z-10">
                            <Dialog>
                                 <DialogTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground rounded-full hover:bg-muted/50 hover:text-foreground">
@@ -838,7 +854,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                     </p>
                                 </DialogContent>
                            </Dialog>
-                      </div>
+                        </div>
+                      )}
 
                       {!isMobile && (
                         <div className="absolute bottom-2 right-2 flex gap-2">
@@ -1069,3 +1086,5 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
+    
