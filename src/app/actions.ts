@@ -1577,10 +1577,9 @@ export async function saveCreation(
     }
 }
 
-export async function getUserCreations(userId: string): Promise<string> {
-    console.log(`[SERVER] getUserCreations called for userId: ${userId}`);
+export async function getUserCreations(userId: string): Promise<Creation[]> {
     if (!userId) {
-        return "[SERVER DEBUG] No userId provided, returning.";
+        return [];
     }
 
     const creationsRef = collection(db, 'creations');
@@ -1588,17 +1587,15 @@ export async function getUserCreations(userId: string): Promise<string> {
     
     try {
         const querySnapshot = await getDocs(q);
-        console.log(`[SERVER] Found ${querySnapshot.docs.length} creation documents for user.`);
-
+        
         if (querySnapshot.empty) {
-            return `[SERVER DEBUG] No creations found in database for user ${userId}.`;
+            return [];
         }
 
         const creations = await Promise.all(querySnapshot.docs.map(async (doc) => {
             const data = doc.data();
             const previewImageUrl = await getUrl(data.previewImageUrl, 'https://placehold.co/400x400.png');
             
-            // Explicitly resolve charm images
             const resolvedPlacedCharms = await Promise.all(
                 (data.placedCharms || []).map(async (pc: PlacedCreationCharm) => {
                     const charmImageUrl = await getUrl(pc.charm.imageUrl, 'https://placehold.co/100x100.png');
@@ -1618,14 +1615,13 @@ export async function getUserCreations(userId: string): Promise<string> {
                 previewImageUrl,
                 placedCharms: resolvedPlacedCharms,
                 createdAt: toDate(data.createdAt as Timestamp)!,
-            };
+            } as Creation;
         }));
         
-        console.log(`[SERVER] Returning ${creations.length} processed creations.`);
-        return `[SERVER DEBUG] Success! Found and processed ${creations.length} creations. First creation name: ${creations.length > 0 ? creations[0].name : 'N/A'}`;
+        return creations;
     } catch (error: any) {
         console.error("[SERVER] Error fetching user creations:", error);
-        return `[SERVER DEBUG] Error fetching creations: ${error.message}`;
+        return [];
     }
 }
     
@@ -1639,6 +1635,7 @@ export async function getUserCreations(userId: string): Promise<string> {
 
 
     
+
 
 
 
