@@ -28,6 +28,8 @@ import { SuccessDialog } from './success-dialog';
 import type { CartItem } from '@/lib/types';
 import { ShareDialog } from './share-dialog';
 import { Badge } from './ui/badge';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
+import { cn } from '@/lib/utils';
 
 
 export function CartSheet({ children, open, onOpenChange }: {
@@ -120,6 +122,8 @@ export function CartSheet({ children, open, onOpenChange }: {
                 {cart.map((item) => {
                   const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
                   const editUrl = `/${locale}/?type=${item.jewelryType.id}&model=${item.model.id}&cartItemId=${item.id}`;
+                  const isCreatorItem = !!item.creatorId;
+
                   return (
                     <Card key={item.id} className="overflow-hidden">
                        <CardHeader className="p-4">
@@ -205,14 +209,26 @@ export function CartSheet({ children, open, onOpenChange }: {
                       </Accordion>
                       
                        <CardFooter className="p-2 bg-muted/30 border-t grid grid-cols-3 gap-2">
-                          <SheetClose asChild>
-                            <Button variant="outline" size="sm" asChild className="text-xs">
-                               <Link href={editUrl}>
-                                  <Edit />
-                                  {t('edit_item_button')}
-                               </Link>
-                            </Button>
-                          </SheetClose>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <SheetClose asChild>
+                                  <Button variant="outline" size="sm" asChild className="text-xs" disabled={isCreatorItem}>
+                                    <Link href={isCreatorItem ? '#' : editUrl} className={cn(isCreatorItem && "cursor-not-allowed")}>
+                                      <Edit />
+                                      {t('edit_item_button')}
+                                    </Link>
+                                  </Button>
+                                </SheetClose>
+                              </TooltipTrigger>
+                              {isCreatorItem && (
+                                <TooltipContent>
+                                  <p>{t('edit_disabled_tooltip')}</p>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
+
                            <Button variant="outline" size="sm" onClick={() => setSharingItem(item)} className="text-xs">
                               <Share2 />
                               {tEditor('share_button')}

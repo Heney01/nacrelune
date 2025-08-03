@@ -148,7 +148,8 @@
     "price": "{price, number, ::currency/USD}",
     "checkout_error_title": "Order Error",
     "sold_out": "Sold Out",
-    "creator_badge": "Creation by {name}"
+    "creator_badge": "Creation by {name}",
+    "edit_disabled_tooltip": "Creations by others cannot be edited."
   },
   "CharmsPanel": {
     "title": "Charms",
