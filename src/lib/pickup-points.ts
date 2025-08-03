@@ -2,7 +2,6 @@
 'use server';
 
 import type { PickupPoint } from './types';
-require('dotenv').config();
 
 
 export type FindPickupPointsResult = {
@@ -87,3 +86,5 @@ export async function findPickupPoints(postcode: string): Promise<FindPickupPoin
     return { success: false, error: "Une erreur de communication est survenue avec le service de points relais." };
   }
 }
+
+    

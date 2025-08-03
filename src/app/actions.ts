@@ -18,7 +18,6 @@ import { generateShareContent as generateShareContentFlow, GenerateShareContentI
 import { z } from 'zod';
 import { getCharms as fetchCharms, toDate } from '@/lib/data';
 import Stripe from 'stripe';
-require('dotenv').config();
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -1275,3 +1274,5 @@ export async function getRefreshedCharms(): Promise<{ success: boolean; charms?:
         return { success: false, error: error.message || "Une erreur est survenue lors du rafraîchissement des breloques." };
     }
 }
+
+    
