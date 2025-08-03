@@ -1,5 +1,4 @@
 
-
 import { TranslationsProvider } from '@/hooks/use-translations';
 import { Toaster } from "@/components/ui/toaster";
 import '../globals.css';
@@ -24,11 +23,13 @@ export default async function LocaleLayout({
   const messages = await getMessages(locale);
 
   return (
-        <TranslationsProvider messages={messages}>
-            <CartProvider>
-                {children}
-            </CartProvider>
-        </TranslationsProvider>
-        <Toaster />
+        <>
+            <TranslationsProvider messages={messages}>
+                <CartProvider>
+                    {children}
+                </CartProvider>
+            </TranslationsProvider>
+            <Toaster />
+        </>
   );
 }

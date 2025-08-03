@@ -1,4 +1,5 @@
 
+
 import { DocumentReference } from 'firebase/firestore';
 
 export interface CharmCategory {
@@ -119,15 +120,6 @@ export interface PickupPoint {
     country: string;
 }
 
-export interface Coupon {
-    id: string;
-    code: string;
-    discountType: 'percentage' | 'fixed';
-    value: number;
-    expiresAt?: Date | null;
-}
-
-
 export interface Order {
     id: string;
     orderNumber: string;
@@ -143,6 +135,4 @@ export interface Order {
     cancellationReason?: string;
     mailHistory?: MailLog[];
     paymentIntentId?: string;
-    couponCode?: string;
-    discountAmount?: number;
 }

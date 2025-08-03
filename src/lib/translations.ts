@@ -1,4 +1,5 @@
 
+
 const availableLocales = ['en', 'fr'] as const;
 type Locale = typeof availableLocales[number];
 
