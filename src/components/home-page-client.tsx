@@ -53,14 +53,14 @@ function UserNav({ locale }: { locale: string }) {
         )
     }
     
-    const fallbackDisplayName = user?.displayName?.charAt(0) || user?.email?.charAt(0) || '?';
+    const fallbackDisplayName = user?.displayName?.charAt(0) || firebaseUser?.email?.charAt(0) || '?';
 
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full">
                     <Avatar className="h-8 w-8">
-                        <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'Avatar'} />
+                        <AvatarImage src={user?.photoURL || firebaseUser.photoURL || undefined} alt={user?.displayName || 'Avatar'} />
                         <AvatarFallback>{fallbackDisplayName.toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <span className="sr-only">{t('profile_menu_button')}</span>
@@ -69,9 +69,9 @@ function UserNav({ locale }: { locale: string }) {
             <DropdownMenuContent align="end">
                 <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user?.displayName || tAuth('my_account')}</p>
+                        <p className="text-sm font-medium leading-none">{user?.displayName || firebaseUser.email}</p>
                         <p className="text-xs leading-none text-muted-foreground">
-                            {user?.email}
+                            {user?.email || firebaseUser.email}
                         </p>
                     </div>
                 </DropdownMenuLabel>
@@ -188,3 +188,4 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
       </div>
     );
 }
+

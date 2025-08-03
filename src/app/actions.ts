@@ -10,7 +10,7 @@ import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
-import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm, ShippingAddress, DeliveryMethod, MailLog, User, Coupon } from '@/lib/types';
+import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm, ShippingAddress, DeliveryMethod, MailLog, User, Coupon, Creation } from '@/lib/types';
 import { getCharmSuggestions as getCharmSuggestionsFlow, CharmSuggestionInput, CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { getCharmAnalysisSuggestions as getCharmAnalysisSuggestionsFlow, CharmAnalysisSuggestionInput, CharmAnalysisSuggestionOutput } from '@/ai/flows/charm-analysis-suggestions';
 import { getCharmDesignCritique as getCharmDesignCritiqueFlow, CharmDesignCritiqueInput, CharmDesignCritiqueOutput } from '@/ai/flows/charm-design-critique';
@@ -188,7 +188,7 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
 }
 
 
-export async function login(prevState: any, formData: FormData) {
+export async function login(prevState: any, formData: FormData): Promise<{ success: boolean; message?: string; error?: string; }> {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
   const locale = formData.get('locale') as string || 'fr';
@@ -210,7 +210,7 @@ export async function login(prevState: any, formData: FormData) {
       path: '/',
     });
     
-    return { success: true, message: 'Connexion réussie ! Redirection...' };
+    return { success: true, message: 'Connexion réussie !' };
 
   } catch (error: any) {
     let errorMessage = "Une erreur inconnue est survenue.";
@@ -231,7 +231,7 @@ export async function login(prevState: any, formData: FormData) {
   }
 }
 
-export async function userLogin(prevState: any, formData: FormData) {
+export async function userLogin(prevState: any, formData: FormData): Promise<{ success: boolean; message?: string; error?: string; }> {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
 
@@ -273,7 +273,7 @@ export async function userLogin(prevState: any, formData: FormData) {
   }
 }
 
-export async function signup(prevState: any, formData: FormData) {
+export async function signup(prevState: any, formData: FormData): Promise<{ success: boolean; message?: string; error?: string; }> {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
     const displayName = formData.get('displayName') as string;
@@ -294,7 +294,6 @@ export async function signup(prevState: any, formData: FormData) {
             email: user.email,
             displayName: user.displayName,
             photoURL: user.photoURL,
-            role: 'client', // Default role
         };
         await setDoc(doc(db, 'users', user.uid), userData);
 
@@ -329,7 +328,7 @@ export async function signup(prevState: any, formData: FormData) {
 }
 
 
-export async function userLoginWithGoogle(formData: FormData) {
+export async function userLoginWithGoogle(formData: FormData): Promise<{ success: boolean; message?: string; error?: string; }> {
   const idToken = formData.get('idToken') as string;
   const locale = formData.get('locale') as string || 'fr';
   const displayName = formData.get('displayName') as string;
@@ -352,7 +351,6 @@ export async function userLoginWithGoogle(formData: FormData) {
         email,
         displayName,
         photoURL,
-        role: 'client', // Assign a default role
       };
       await setDoc(userDocRef, newUser);
     }
@@ -1458,4 +1456,69 @@ export async function getRefreshedCharms(): Promise<{ success: boolean; charms?:
     }
 }
 
+
+// --- Creation Actions ---
+
+export async function saveCreation(
+    name: string,
+    description: string,
+    cartItem: SerializableCartItem
+): Promise<{ success: boolean; message: string; creationId?: string }> {
     
+    // 1. Authentication Check
+    const auth = getAuth(app);
+    const currentUser = auth.currentUser;
+
+    if (!currentUser) {
+        return { success: false, message: "Vous devez être connecté pour publier une création." };
+    }
+
+    // 2. Data Validation (Basic)
+    if (!name.trim()) {
+        return { success: false, message: "Le nom de la création est obligatoire." };
+    }
+    if (!cartItem) {
+        return { success: false, message: "Les données de la création sont manquantes." };
+    }
+
+    try {
+        // 3. Prepare data for Firestore
+        const creationData: Omit<Creation, 'id'> = {
+            creatorId: currentUser.uid,
+            creatorName: currentUser.displayName || "Anonyme",
+            name,
+            description,
+            jewelryTypeId: cartItem.jewelryType.id,
+            modelId: cartItem.model.id,
+            placedCharms: cartItem.placedCharms,
+            previewImageUrl: cartItem.previewImage,
+            createdAt: new Date(),
+            salesCount: 0
+        };
+
+        // 4. Upload preview image if it's a data URL
+        let finalPreviewUrl = creationData.previewImageUrl;
+        if (finalPreviewUrl.startsWith('data:image')) {
+            const storageRef = ref(storage, `creation_previews/${currentUser.uid}-${Date.now()}.png`);
+            const uploadResult = await uploadString(storageRef, finalPreviewUrl, 'data_url');
+            finalPreviewUrl = await getDownloadURL(uploadResult.ref);
+        }
+
+        // 5. Save to Firestore
+        const docRef = await addDoc(collection(db, 'creations'), {
+            ...creationData,
+            previewImageUrl: finalPreviewUrl,
+            createdAt: serverTimestamp() // Use server timestamp for consistency
+        });
+        
+        revalidatePath(`/${'fr'}/profil`);
+
+        return { success: true, message: "Votre création a été publiée avec succès !", creationId: docRef.id };
+
+    } catch (error: any) {
+        console.error("Error saving creation:", error);
+        return { success: false, message: "Une erreur est survenue lors de la publication de la création." };
+    }
+}
+    
+

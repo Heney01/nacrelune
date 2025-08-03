@@ -7,11 +7,8 @@ export interface User {
   email: string | null;
   displayName: string | null;
   photoURL?: string | null;
-  role: 'client' | 'creator';
-  creatorProfile?: {
-    commissionRate: number; // e.g., 0.10 for 10%
-    stripeAccountId?: string;
-  };
+  // The 'role' property is no longer needed as any user can be a creator.
+  // We can add points or other creator-specific fields directly here.
 }
 
 export interface CharmCategory {
@@ -158,3 +155,20 @@ export interface Coupon {
     validUntil?: Date;
     minPurchase?: number;
 }
+
+
+// NEW: Represents a user-published creation
+export interface Creation {
+    id: string;
+    creatorId: string;
+    creatorName: string;
+    name: string;
+    description: string;
+    jewelryTypeId: string;
+    modelId: string;
+    placedCharms: PlacedCharm[];
+    previewImageUrl: string;
+    createdAt: Date;
+    salesCount: number;
+}
+
