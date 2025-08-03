@@ -6,7 +6,7 @@ export function middleware(request: NextRequest) {
   const locale = request.nextUrl.pathname.split('/')[1] || 'fr';
 
   // We only want to protect routes under /admin
-  if (request.nextUrl.pathname.includes('/admin')) {
+  if (request.nextUrl.pathname.startsWith('/admin')) {
       if (!sessionCookie) {
         const loginUrl = new URL(`/${locale}/admin/login`, request.url);
         // Pass the original destination as a search parameter for redirection after login.
@@ -27,5 +27,5 @@ export const config = {
    * - favicon.ico (favicon file)
    */
    // Apply this middleware only to the admin routes.
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\.png$).*)'],
+  matcher: ['/admin/:path*'],
 };
