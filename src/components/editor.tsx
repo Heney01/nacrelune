@@ -388,8 +388,11 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     };
     
     const handleMove = (e: MouseEvent | TouchEvent) => {
-      
-      if ('preventDefault' in e && e.cancelable) e.preventDefault();
+      const isInteracting = interactionState.isDragging || interactionState.isPanning || interactionState.isPinching;
+
+      if (isInteracting && 'preventDefault' in e && e.cancelable) {
+        e.preventDefault();
+      }
 
       if (interactionState.isDragging && interactionState.activeCharmId) {
         const canvasEl = canvasRef.current;
@@ -843,7 +846,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
             </DialogContent>
         </Dialog>
 
-      <div className={cn("flex flex-col h-screen overflow-hidden", isMobile && "h-screen")}>
+      <div className="flex flex-col h-screen overflow-hidden">
         <header className="p-4 border-b flex-shrink-0">
             <div className="container mx-auto flex justify-between items-center">
               <Link href={`/${locale}`} className="flex items-center gap-2">
@@ -1184,6 +1187,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
 
