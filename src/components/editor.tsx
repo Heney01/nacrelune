@@ -951,10 +951,20 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                 </p>
                             </DialogContent>
                         </Dialog>
-                        <Button variant="outline" size={isMobile ? "icon" : "default"} onClick={() => setIsShareOpen(true)}>
-                          <Share2 className={cn(!isMobile && "mr-2")}/>
-                          <span className="hidden lg:inline">{t('share_button')}</span>
+                        <Button variant="outline" size="icon" className="lg:hidden" onClick={() => setIsShareOpen(true)}>
+                          <Share2 />
+                          <span className="sr-only">{t('share_button')}</span>
                         </Button>
+                         <div className="hidden lg:flex items-center gap-2">
+                            <Button variant="outline" onClick={() => setIsShareOpen(true)}>
+                                <Share2 />
+                                {t('share_button')}
+                            </Button>
+                            <Button onClick={handleOpenConfirmDialog} disabled={hasStockIssues || placedCharms.length === 0}>
+                                <Check />
+                                {isEditing ? t('update_item_button') : t('finalize_button')}
+                            </Button>
+                        </div>
                       </div>
                   </div>
                   <div
@@ -1090,12 +1100,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                                 </ScrollArea>
                                             )}
                                         </CardContent>
-                                        <CardFooter>
-                                            <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
-                                                <Check />
-                                                {isEditing ? t('update_item_button') : t('finalize_button')}
-                                            </Button>
-                                        </CardFooter>
                                     </AccordionContent>
                                 </Card>
                             </AccordionItem>
@@ -1257,6 +1261,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
 
