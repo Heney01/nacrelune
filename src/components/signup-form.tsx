@@ -15,10 +15,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { BrandLogo } from '@/components/icons';
-import { login, userLogin } from '@/app/actions';
+import { signup } from '@/app/actions';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from '@/hooks/use-translations';
@@ -28,20 +27,20 @@ const initialState = {
   error: '',
 };
 
-function LoginButton() {
+function SignUpButton() {
   const { pending } = useFormStatus();
   const t = useTranslations('Auth');
 
   return (
     <Button type="submit" className="w-full" disabled={pending}>
       {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-      {t('login_button')}
+      {t('signup_button')}
     </Button>
   );
 }
 
-export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
-  const [state, formAction] = useFormState(isUserAuth ? userLogin : login, initialState);
+export function SignUpForm() {
+  const [state, formAction] = useFormState(signup, initialState);
   const params = useParams();
   const locale = params.locale as string;
   const t = useTranslations('Auth');
@@ -52,20 +51,30 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
         <div className="mx-auto mb-4">
             <BrandLogo className="h-10 w-auto" />
         </div>
-        <CardTitle className="text-2xl">{isUserAuth ? t('user_login_title') : t('admin_login_title')}</CardTitle>
+        <CardTitle className="text-2xl">{t('user_signup_title')}</CardTitle>
         <CardDescription>
-           {isUserAuth ? t('user_login_description') : t('admin_login_description')}
+           {t('user_signup_description')}
         </CardDescription>
       </CardHeader>
       <form action={formAction}>
         <CardContent className="space-y-4">
-          {state?.error && state.error !== '' && (
+          {state?.error && (
             <Alert variant="destructive">
-              <AlertTitle>{t('login_error_title')}</AlertTitle>
+              <AlertTitle>{t('signup_error_title')}</AlertTitle>
               <AlertDescription>{state.error}</AlertDescription>
             </Alert>
           )}
           <input type="hidden" name="locale" value={locale} />
+          <div className="space-y-2">
+            <Label htmlFor="displayName">{t('displayName_label')}</Label>
+            <Input
+              id="displayName"
+              name="displayName"
+              type="text"
+              placeholder="Jean Dupont"
+              required
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -81,16 +90,14 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
             <Input id="password" name="password" type="password" required />
           </div>
         </CardContent>
-        <CardFooter className="flex-col gap-4 items-stretch">
-          <LoginButton />
-            {isUserAuth && (
-              <div className="mt-4 text-center text-sm">
-                {t('no_account_prompt')}{' '}
-                <Link href={`/${locale}/inscription`} className="underline">
-                  {t('signup_button')}
-                </Link>
-              </div>
-            )}
+        <CardFooter className="flex-col items-stretch gap-4">
+          <SignUpButton />
+           <div className="mt-4 text-center text-sm">
+             {t('has_account_prompt')}{' '}
+            <Link href={`/${locale}/connexion`} className="underline">
+              {t('login_button')}
+            </Link>
+          </div>
         </CardFooter>
       </form>
     </Card>

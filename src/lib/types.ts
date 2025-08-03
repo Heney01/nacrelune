@@ -2,6 +2,18 @@
 
 import { DocumentReference } from 'firebase/firestore';
 
+export interface User {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL?: string | null;
+  role: 'client' | 'creator';
+  creatorProfile?: {
+    commissionRate: number; // e.g., 0.10 for 10%
+    stripeAccountId?: string;
+  };
+}
+
 export interface CharmCategory {
   id: string;
   name: string;
@@ -135,4 +147,14 @@ export interface Order {
     cancellationReason?: string;
     mailHistory?: MailLog[];
     paymentIntentId?: string;
+}
+
+export interface Coupon {
+    id: string;
+    code: string;
+    discountType: 'percentage' | 'fixed';
+    value: number;
+    isActive: boolean;
+    validUntil?: Date;
+    minPurchase?: number;
 }

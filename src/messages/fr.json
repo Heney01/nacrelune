@@ -1,4 +1,5 @@
 
+
 {
   "HomePage": {
     "title": "Commencez Votre Création",
@@ -14,7 +15,7 @@
     "model_selection_title": "Sélectionnez un Modèle",
     "model_selection_subtitle": "Sélectionnez un magnifique modèle de {jewelryTypeName} comme base pour votre création personnalisée.",
     "back_button": "Retour",
-    "select_button": "Sélectioncher",
+    "select_button": "Sélectionner",
     "footer_text": "© {year} Atelier à bijoux. Tous droits réservés.",
     "admin_area_link": "Espace Administrateur",
     "track_order_link": "Suivre ma commande",
@@ -24,7 +25,27 @@
     "support_dialog_instructions": "Vous pouvez nous joindre par e-mail. Copiez l'adresse ci-dessous ou utilisez le bouton pour ouvrir directement votre client de messagerie.",
     "support_email_copied": "Adresse e-mail du support copiée !",
     "support_open_mail_button": "Ouvrir l'application de messagerie",
-    "coming_soon": "Bientôt disponible"
+    "coming_soon": "Bientôt disponible",
+    "profile_menu_button": "Menu du profil"
+  },
+  "Auth": {
+    "login_button": "Connexion",
+    "signup_button": "Inscription",
+    "logout_button": "Déconnexion",
+    "admin_login_title": "Espace Administrateur",
+    "admin_login_description": "Connectez-vous pour accéder à votre tableau de bord.",
+    "user_login_title": "Connexion",
+    "user_login_description": "Accédez à votre compte pour voir vos créations.",
+    "user_signup_title": "Créer un compte",
+    "user_signup_description": "Rejoignez-nous pour sauvegarder et partager vos créations.",
+    "login_error_title": "Erreur de connexion",
+    "signup_error_title": "Erreur d'inscription",
+    "password_label": "Mot de passe",
+    "displayName_label": "Nom complet",
+    "no_account_prompt": "Pas encore de compte ?",
+    "has_account_prompt": "Vous avez déjà un compte ?",
+    "my_account": "Mon Compte",
+    "my_creations": "Mes créations"
   },
   "Editor": {
     "charms_title": "Breloques",
