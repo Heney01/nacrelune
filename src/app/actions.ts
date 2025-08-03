@@ -1481,6 +1481,9 @@ type SimpleCreationData = {
 
 
 async function getAuthenticatedUser(): Promise<Auth['app']['auth'] extends () => infer T ? T : never> {
+    if (!adminApp) {
+        throw new Error("Le module d'administration Firebase n'est pas configuré. Veuillez définir la variable d'environnement FIREBASE_SERVICE_ACCOUNT.");
+    }
     const sessionCookie = cookies().get('session')?.value;
     if (!sessionCookie) {
         throw new Error("Non authentifié");
@@ -1498,7 +1501,13 @@ export async function saveCreation(
     creationPayload: string
 ): Promise<{ success: boolean; message: string; creationId?: string }> {
 
-    const user = await getAuthenticatedUser();
+    let user;
+    try {
+        user = await getAuthenticatedUser();
+    } catch (error: any) {
+        return { success: false, message: error.message || "Erreur d'authentification." };
+    }
+    
     if (!user) {
          return { success: false, message: "Vous devez être connecté pour publier une création." };
     }
@@ -1603,6 +1612,7 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
     }
 }
     
+
 
 
 
