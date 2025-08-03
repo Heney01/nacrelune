@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { SuggestionSidebar } from './suggestion-sidebar';
 import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Share2, Layers, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { BrandLogo } from './icons';
+import { BrandLogo, ShoppingBasketIcon } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { CharmsPanel } from './charms-panel';
@@ -32,7 +32,6 @@ import { ShareDialog } from './share-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from './ui/scroll-area';
 import { Loader2 } from 'lucide-react';
-import { ShoppingBasketIcon } from './icons';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -850,20 +849,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       )}
                   </div>
                   
-                   <div className="p-4 lg:hidden">
-                    {isEditing ? (
-                        <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues}>
-                            <Check />
-                            {t('update_item_button')}
-                        </Button>
-                    ) : (
-                        <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
-                            <PlusCircle />
-                            {t('add_to_cart_button')}
-                        </Button>
-                    )}
-                </div>
-
                   {!isMobile && (
                       <Card>
                           <CardHeader>
@@ -946,8 +931,21 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         </main>
 
          {isMobile && (
-            <>
-                <div className="fixed bottom-0 left-0 right-0 bg-background border-t flex justify-around items-center">
+            <div className="fixed bottom-0 left-0 right-0 z-20">
+                <div className="bg-background p-2.5">
+                    {isEditing ? (
+                        <Button onClick={handleOpenConfirmDialog} className="w-full" variant="outline" disabled={hasStockIssues}>
+                            <Check />
+                            {t('update_item_button')}
+                        </Button>
+                    ) : (
+                        <Button onClick={handleOpenConfirmDialog} className="w-full" variant="outline" disabled={hasStockIssues || placedCharms.length === 0}>
+                            <PlusCircle />
+                            {t('add_to_cart_button')}
+                        </Button>
+                    )}
+                </div>
+                <div className="bg-background border-t flex justify-around items-center">
                     <Sheet open={isCharmsSheetOpen} onOpenChange={setIsCharmsSheetOpen}>
                         <SheetTrigger asChild>
                             <Button variant="ghost" className="flex flex-col h-auto p-2 flex-grow gap-1">
@@ -1061,7 +1059,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                         </SheetContent>
                     </Sheet>
                 </div>
-            </>
+            </div>
           )}
       </div>
     </>
