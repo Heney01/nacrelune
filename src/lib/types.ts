@@ -7,8 +7,6 @@ export interface User {
   email: string | null;
   displayName: string | null;
   photoURL?: string | null;
-  // The 'role' property is no longer needed as any user can be a creator.
-  // We can add points or other creator-specific fields directly here.
 }
 
 export interface CharmCategory {
@@ -171,4 +169,3 @@ export interface Creation {
     createdAt: Date;
     salesCount: number;
 }
-

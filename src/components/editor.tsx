@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useMemo, useRef, WheelEvent as ReactWheelEvent, useCallback, useEffect, TouchEvent as ReactTouchEvent } from 'react';
@@ -17,12 +18,12 @@ import { CharmsPanel } from './charms-panel';
 import { Input } from './ui/input';
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
-import { useSearchParams, useParams } from 'next/navigation';
+import { useSearchParams, useParams, useRouter } from 'next/navigation';
 import { CartSheet } from './cart-sheet';
 import html2canvas from 'html2canvas';
 import { CartWidget } from './cart-widget';
 import { useTranslations } from '@/hooks/use-translations';
-import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction, getCharmDesignCritiqueAction, generateShareContentAction } from '@/app/actions';
+import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction, getCharmDesignCritiqueAction, saveCreation, SerializableCartItem } from '@/app/actions';
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -32,6 +33,9 @@ import { ShareDialog } from './share-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { Loader2 } from 'lucide-react';
+import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
+import { useAuth } from '@/hooks/use-auth';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -140,6 +144,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   
   const searchParams = useSearchParams();
   const params = useParams();
+  const router = useRouter();
   const locale = params.locale as string;
 
   const cartItemId = searchParams.get('cartItemId');
@@ -158,6 +163,10 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [previewForDialog, setPreviewForDialog] = useState<string | null>(null);
+  const [creationName, setCreationName] = useState('');
+  const [creationDescription, setCreationDescription] = useState('');
+  const [isPublishing, setIsPublishing] = useState(false);
+  const { firebaseUser } = useAuth();
 
 
   const [scale, setScale] = useState(1);
@@ -536,6 +545,48 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
       setIsCartSheetOpen(true);
   };
 
+  const handlePublish = async () => {
+      if (!previewForDialog || !firebaseUser) {
+          toast({ variant: 'destructive', title: "Non connecté", description: "Vous devez être connecté pour publier." });
+          return;
+      }
+      if (!creationName.trim()) {
+          toast({ variant: 'destructive', title: "Nom manquant", description: "Veuillez donner un nom à votre création." });
+          return;
+      }
+
+      setIsPublishing(true);
+      
+      const serializableCartItem: SerializableCartItem = {
+          id: '', // Not needed for saving creation
+          model: model,
+          jewelryType: jewelryType,
+          placedCharms: placedCharms,
+          previewImage: previewForDialog,
+      };
+      
+      const result = await saveCreation(
+          firebaseUser.uid,
+          firebaseUser.displayName || "Créateur anonyme",
+          creationName,
+          creationDescription,
+          serializableCartItem
+      );
+
+      if (result.success) {
+          toast({ title: "Publication réussie !", description: result.message });
+          setIsConfirmOpen(false);
+          setPreviewForDialog(null);
+          // Redirect to profile page to see the new creation
+          router.push(`/${locale}/profil`);
+      } else {
+          toast({ variant: 'destructive', title: "Erreur de publication", description: result.message });
+      }
+
+      setIsPublishing(false);
+  };
+
+
   const placedCharmCounts = useMemo(() => {
     const counts = new Map<string, number>();
     placedCharms.forEach(pc => {
@@ -709,26 +760,77 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         }}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>{isEditing ? t('confirm_update_title') : t('confirm_add_title')}</DialogTitle>
-                    <DialogDescription>
-                        {t('confirm_add_description')}
-                    </DialogDescription>
+                    <DialogTitle>{t('finalize_creation_title')}</DialogTitle>
                 </DialogHeader>
-                <div className="my-4">
+                <div className="my-4 grid place-items-center">
                     {previewForDialog ? (
-                        <Image src={previewForDialog} alt={t('preview_alt')} width={400} height={400} className="rounded-lg border bg-muted/50" />
+                        <Image src={previewForDialog} alt={t('preview_alt')} width={300} height={300} className="rounded-lg border bg-muted/50 max-w-full h-auto" />
                     ) : (
                         <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center">
                             <Loader2 className="animate-spin" />
                         </div>
                     )}
                 </div>
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button variant="outline">{t('cancel_button')}</Button>
-                    </DialogClose>
-                    <Button onClick={handleConfirmAddToCart} disabled={!previewForDialog}>{t('confirm_button')}</Button>
-                </DialogFooter>
+                <Tabs defaultValue="buy" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="buy">{t('buy_tab')}</TabsTrigger>
+                        <TabsTrigger value="publish">{t('publish_tab')}</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="buy">
+                        <Card className="border-0 shadow-none">
+                            <CardHeader>
+                                <CardTitle>{t('buy_title')}</CardTitle>
+                                <CardDescription>{t('buy_description')}</CardDescription>
+                            </CardHeader>
+                            <CardFooter>
+                                <Button onClick={handleConfirmAddToCart} className="w-full" disabled={!previewForDialog}>
+                                    {isEditing ? t('update_item_button') : t('add_to_cart_button')}
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    </TabsContent>
+                    <TabsContent value="publish">
+                        <Card className="border-0 shadow-none">
+                            <CardHeader>
+                                <CardTitle>{t('publish_title')}</CardTitle>
+                                <CardDescription>{t('publish_description')}</CardDescription>
+                            </CardHeader>
+                            {!firebaseUser ? (
+                                <CardContent>
+                                    <Alert>
+                                        <AlertTitle>{t('publish_login_required_title')}</AlertTitle>
+                                        <AlertDescription>
+                                            {t('publish_login_required_desc')}{' '}
+                                            <Link href={`/${locale}/connexion`} className="font-bold underline">
+                                                {t('publish_login_link')}
+                                            </Link>
+                                            .
+                                        </AlertDescription>
+                                    </Alert>
+                                </CardContent>
+                            ) : (
+                                <>
+                                <CardContent className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="creationName">{t('creation_name_label')}</Label>
+                                        <Input id="creationName" value={creationName} onChange={(e) => setCreationName(e.target.value)} placeholder={t('creation_name_placeholder')} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="creationDescription">{t('creation_description_label')}</Label>
+                                        <Textarea id="creationDescription" value={creationDescription} onChange={(e) => setCreationDescription(e.target.value)} placeholder={t('creation_description_placeholder')} />
+                                    </div>
+                                </CardContent>
+                                <CardFooter>
+                                    <Button onClick={handlePublish} className="w-full" disabled={isPublishing || !creationName.trim()}>
+                                        {isPublishing && <Loader2 className="animate-spin mr-2" />}
+                                        {t('publish_button')}
+                                    </Button>
+                                </CardFooter>
+                                </>
+                            )}
+                        </Card>
+                    </TabsContent>
+                </Tabs>
             </DialogContent>
         </Dialog>
 
@@ -917,17 +1019,10 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                               )}
                           </CardContent>
                           <CardFooter>
-                              {isEditing ? (
                               <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
                                   <Check />
-                                  {t('update_item_button')}
+                                  {isEditing ? t('update_item_button') : t('finalize_button')}
                               </Button>
-                              ) : (
-                              <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
-                                  <PlusCircle />
-                                  {t('add_to_cart_button')}
-                              </Button>
-                              )}
                           </CardFooter>
                       </Card>
                   )}
@@ -950,17 +1045,10 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
          {isMobile && (
             <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-2.5 z-20 space-y-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))]">
-                {isEditing ? (
-                    <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
-                        <Check />
-                        {t('update_item_button')}
-                    </Button>
-                ) : (
-                    <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
-                        <PlusCircle />
-                        {t('add_to_cart_button')}
-                    </Button>
-                )}
+                <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
+                    <Check />
+                    {isEditing ? t('update_item_button') : t('finalize_button')}
+                </Button>
 
                  <div className="grid grid-cols-2 gap-2.5">
                       <Sheet open={isCharmsSheetOpen} onOpenChange={setIsCharmsSheetOpen}>
@@ -1086,4 +1174,3 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
-

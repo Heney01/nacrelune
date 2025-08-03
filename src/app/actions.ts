@@ -191,7 +191,6 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
 export async function login(prevState: any, formData: FormData): Promise<{ success: boolean; message?: string; error?: string; }> {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
-  const locale = formData.get('locale') as string || 'fr';
 
   if (!email || !password) {
     return { success: false, error: 'Veuillez fournir un email et un mot de passe.' };
@@ -1460,20 +1459,20 @@ export async function getRefreshedCharms(): Promise<{ success: boolean; charms?:
 // --- Creation Actions ---
 
 export async function saveCreation(
+    creatorId: string,
+    creatorName: string,
     name: string,
     description: string,
     cartItem: SerializableCartItem
 ): Promise<{ success: boolean; message: string; creationId?: string }> {
     
-    // 1. Authentication Check
-    const auth = getAuth(app);
-    const currentUser = auth.currentUser;
-
-    if (!currentUser) {
+    // Server-side authentication check should be done here in a real app
+    // e.g., by verifying a session cookie or auth token.
+    // For this prototype, we trust the creatorId from the client.
+    if (!creatorId) {
         return { success: false, message: "Vous devez être connecté pour publier une création." };
     }
 
-    // 2. Data Validation (Basic)
     if (!name.trim()) {
         return { success: false, message: "Le nom de la création est obligatoire." };
     }
@@ -1482,33 +1481,30 @@ export async function saveCreation(
     }
 
     try {
-        // 3. Prepare data for Firestore
         const creationData: Omit<Creation, 'id'> = {
-            creatorId: currentUser.uid,
-            creatorName: currentUser.displayName || "Anonyme",
+            creatorId: creatorId,
+            creatorName: creatorName,
             name,
             description,
             jewelryTypeId: cartItem.jewelryType.id,
             modelId: cartItem.model.id,
             placedCharms: cartItem.placedCharms,
-            previewImageUrl: cartItem.previewImage,
+            previewImageUrl: cartItem.previewImage, // This might be a data URL
             createdAt: new Date(),
             salesCount: 0
         };
 
-        // 4. Upload preview image if it's a data URL
         let finalPreviewUrl = creationData.previewImageUrl;
         if (finalPreviewUrl.startsWith('data:image')) {
-            const storageRef = ref(storage, `creation_previews/${currentUser.uid}-${Date.now()}.png`);
+            const storageRef = ref(storage, `creation_previews/${creatorId}-${Date.now()}.png`);
             const uploadResult = await uploadString(storageRef, finalPreviewUrl, 'data_url');
             finalPreviewUrl = await getDownloadURL(uploadResult.ref);
         }
 
-        // 5. Save to Firestore
         const docRef = await addDoc(collection(db, 'creations'), {
             ...creationData,
             previewImageUrl: finalPreviewUrl,
-            createdAt: serverTimestamp() // Use server timestamp for consistency
+            createdAt: serverTimestamp()
         });
         
         revalidatePath(`/${'fr'}/profil`);
@@ -1520,5 +1516,33 @@ export async function saveCreation(
         return { success: false, message: "Une erreur est survenue lors de la publication de la création." };
     }
 }
+
+export async function getUserCreations(userId: string): Promise<Creation[]> {
+    if (!userId) {
+        return [];
+    }
+    const creationsRef = collection(db, 'creations');
+    const q = query(creationsRef, where('creatorId', '==', userId), orderBy('createdAt', 'desc'));
     
+    try {
+        const querySnapshot = await getDocs(q);
+        
+        const creations = await Promise.all(querySnapshot.docs.map(async (doc) => {
+            const data = doc.data();
+            const previewImageUrl = await getUrl(data.previewImageUrl, 'https://placehold.co/400x400.png');
+            return {
+                id: doc.id,
+                ...data,
+                previewImageUrl,
+                createdAt: (data.createdAt as Timestamp).toDate()
+            } as Creation;
+        }));
+        return creations;
+    } catch (error) {
+        console.error("Error fetching user creations:", error);
+        return [];
+    }
+}
+    
+
 
