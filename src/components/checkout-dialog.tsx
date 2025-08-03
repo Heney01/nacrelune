@@ -78,10 +78,12 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <div className="flex flex-col h-full max-h-[90vh] md:max-h-none">
-          <Elements stripe={stripePromise} options={{
+          <Elements 
+              stripe={stripePromise} 
+              options={{
                 appearance: { theme: 'stripe' as const, variables: { colorPrimary: '#ef4444', fontFamily: 'Alegreya, Ideal Sans, system-ui, sans-serif' } },
                 mode: 'payment',
-                amount: Math.round(total * 100),
+                amount: Math.max(50, Math.round(total * 100)), // Stripe requires a minimum amount (e.g., 50 cents)
                 currency: 'eur'
           }}>
               <CheckoutForm 

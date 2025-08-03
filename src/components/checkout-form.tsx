@@ -80,8 +80,50 @@ const PaymentStep = ({
     setIsApplyingCoupon(false);
   }
 
+  const handleFreeOrder = async () => {
+    setIsProcessing(true);
+    setErrorMessage(null);
+
+    const serializableCart: SerializableCartItem[] = cart.map(item => ({
+      id: item.id,
+      model: item.model,
+      jewelryType: { id: item.jewelryType.id, name: item.jewelryType.name, description: item.jewelryType.description },
+      placedCharms: item.placedCharms,
+      previewImage: item.previewImage,
+    }));
+
+    const finalShippingAddress = deliveryMethod === 'pickup' && selectedPickupPoint
+      ? {
+          name: shippingAddress?.name || '',
+          addressLine1: selectedPickupPoint.name,
+          addressLine2: `${selectedPickupPoint.address}, ${selectedPickupPoint.city}`,
+          city: selectedPickupPoint.city,
+          postalCode: selectedPickupPoint.postcode,
+          country: selectedPickupPoint.country,
+        }
+      : shippingAddress;
+
+    const orderResult = await createOrder(
+        serializableCart,
+        email,
+        locale,
+        'free_order', // No payment intent for free orders
+        deliveryMethod,
+        finalShippingAddress,
+        appliedCoupon || undefined,
+    );
+    
+    onOrderCreated(orderResult);
+    setIsProcessing(false);
+  }
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (total <= 0) {
+        handleFreeOrder();
+        return;
+    }
 
     if (!stripe || !elements) {
       setErrorMessage(t('payment_error_default'));
@@ -182,14 +224,27 @@ const PaymentStep = ({
             </div>
             {couponError && <p className="text-sm text-destructive">{couponError}</p>}
         </div>
-
-      <PaymentElement />
+      
+      {total > 0 ? (
+          <PaymentElement />
+      ) : (
+          <Alert>
+              <CheckCircle className="h-4 w-4" />
+              <AlertTitle>Votre commande est gratuite !</AlertTitle>
+              <AlertDescription>
+                  Grâce à votre code de réduction, le montant total de votre commande est de 0€. Cliquez sur "Confirmer la commande" pour la finaliser sans paiement.
+              </AlertDescription>
+          </Alert>
+      )}
+      
        <DialogFooter className="pt-4 pb-6 mt-auto px-0">
          <Button type="submit" form="payment-form" className="w-full" disabled={isProcessing || !stripe || !elements}>
             {isProcessing ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('processing_button')}</>
             ) : (
-                t('confirm_order_button', { total: total.toFixed(2) })
+                total > 0
+                ? t('confirm_order_button', { total: total.toFixed(2) })
+                : t('confirm_order_button_no_payment')
             )}
          </Button>
       </DialogFooter>

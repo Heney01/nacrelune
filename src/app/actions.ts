@@ -481,6 +481,9 @@ export async function createPaymentIntent(
 }
 
 async function refundStripePayment(paymentIntentId: string): Promise<{ success: boolean; message: string }> {
+    if (paymentIntentId === 'free_order') {
+        return { success: true, message: 'La commande était gratuite, aucun remboursement Stripe n\'est nécessaire.'};
+    }
     try {
         const refund = await stripe.refunds.create({
             payment_intent: paymentIntentId,
@@ -1322,4 +1325,3 @@ export async function getRefreshedCharms(): Promise<{ success: boolean; charms?:
         return { success: false, error: error.message || "Une erreur est survenue lors du rafraîchissement des breloques." };
     }
 }
-
