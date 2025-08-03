@@ -8,7 +8,7 @@ import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/co
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, AlertCircle, ArrowLeft, Home, Store, Search, CheckCircle, TicketPercent, Award } from 'lucide-react';
-import { Alert, AlertTitle, AlertDescription } from './ui/alert';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
 import { createOrder, createPaymentIntent, CreateOrderResult, SerializableCartItem, validateCoupon } from '@/app/actions';
 import { useParams } from 'next/navigation';
@@ -444,7 +444,7 @@ export const CheckoutForm = ({
                 </Button>
                 <DialogTitle className="text-2xl font-headline">{t('payment_info')}</DialogTitle>
             </DialogHeader>
-             <div className="px-6 pb-6 flex-grow overflow-y-auto">
+             <div className="px-6 pb-6 flex-grow overflow-y-auto no-scrollbar">
                   <PaymentStep
                       onOrderCreated={onOrderCreated}
                       totalBeforeCoupon={total}
@@ -474,7 +474,7 @@ export const CheckoutForm = ({
         </div>
       </DialogHeader>
 
-      <div className="px-6 flex-grow overflow-y-auto min-h-0">
+      <div className="px-6 flex-grow overflow-y-auto no-scrollbar min-h-0">
           <div className="space-y-6">
               <div>
                   <Progress value={progressValue} className="w-full" />

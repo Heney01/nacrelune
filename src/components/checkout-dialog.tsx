@@ -75,7 +75,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
         onOpenChange(open);
     }}>
       <DialogContent 
-        className="max-w-4xl w-full grid p-0 max-h-[90vh] overflow-y-auto md:grid-cols-2"
+        className="max-w-4xl w-full grid p-0 max-h-[90vh] overflow-y-auto no-scrollbar md:grid-cols-2"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <div className="flex flex-col h-full max-h-[90vh] md:max-h-none">
