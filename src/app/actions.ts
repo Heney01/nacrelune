@@ -234,10 +234,9 @@ export async function login(prevState: any, formData: FormData) {
 export async function userLogin(prevState: any, formData: FormData) {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
-  const locale = formData.get('locale') as string || 'fr';
 
   if (!email || !password) {
-    return { error: 'Veuillez fournir un email et un mot de passe.' };
+    return { success: false, error: 'Veuillez fournir un email et un mot de passe.' };
   }
 
   const auth = getAuth(app);
@@ -252,6 +251,8 @@ export async function userLogin(prevState: any, formData: FormData) {
       maxAge: 60 * 60 * 24 * 7, // 7 days for users
       path: '/',
     });
+    
+    return { success: true, message: `Bienvenue, ${user.displayName || user.email} !` };
 
   } catch (error: any) {
     let errorMessage = "Une erreur inconnue est survenue.";
@@ -268,10 +269,8 @@ export async function userLogin(prevState: any, formData: FormData) {
             errorMessage = "Une erreur est survenue lors de la connexion.";
             break;
     }
-    return { error: errorMessage };
+    return { success: false, error: errorMessage };
   }
-  
-  redirect(`/${locale}`);
 }
 
 export async function signup(prevState: any, formData: FormData) {
@@ -363,13 +362,13 @@ export async function userLoginWithGoogle(formData: FormData) {
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
     });
+    
+    return { success: true, message: `Bienvenue, ${displayName || email} !` };
 
   } catch (error: any) {
     console.error("Error during Google Sign-in server action:", error);
     return { error: "Une erreur est survenue lors de la connexion avec Google." };
   }
-  
-  redirect(`/${locale}`);
 }
 
 

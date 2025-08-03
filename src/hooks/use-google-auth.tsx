@@ -6,7 +6,8 @@ import { useState } from 'react';
 import { getAuth, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { userLoginWithGoogle } from '@/app/actions';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import { useToast } from './use-toast';
 
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
@@ -15,7 +16,9 @@ export const useGoogleAuth = () => {
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const params = useParams();
+    const router = useRouter();
     const locale = params.locale as string;
+    const { toast } = useToast();
 
     const signInWithGoogle = async () => {
         setIsGoogleLoading(true);
@@ -40,8 +43,13 @@ export const useGoogleAuth = () => {
 
             if (actionResult?.error) {
                 setError(actionResult.error);
+            } else if (actionResult?.success) {
+                 toast({
+                    title: 'Connexion réussie',
+                    description: actionResult.message,
+                });
+                router.push(`/${locale}`);
             }
-            // The action handles redirection on success
 
         } catch (error: any) {
             let errorMessage = "Une erreur est survenue lors de la connexion avec Google.";

@@ -19,15 +19,18 @@ import { login, userLogin } from '@/app/actions';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from '@/hooks/use-translations';
 import { Separator } from './ui/separator';
 import { useGoogleAuth } from '@/hooks/use-google-auth';
+import { useToast } from '@/hooks/use-toast';
 
 
 const initialState = {
   error: '',
+  success: false,
+  message: '',
 };
 
 function LoginButton() {
@@ -46,8 +49,20 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
   const [state, formAction] = useFormState(isUserAuth ? userLogin : login, initialState);
   const params = useParams();
   const locale = params.locale as string;
+  const router = useRouter();
   const t = useTranslations('Auth');
   const { signInWithGoogle, error, isGoogleLoading } = useGoogleAuth();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (state.success) {
+      toast({
+        title: 'Connexion réussie',
+        description: state.message,
+      });
+      router.push(`/${locale}`);
+    }
+  }, [state.success, state.message, router, locale, toast]);
 
   return (
     <Card>
