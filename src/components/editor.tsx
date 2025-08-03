@@ -9,7 +9,7 @@ import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Share2, Layers, Check } from 'lucide-react';
+import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Share2, Layers, Check, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BrandLogo, ShoppingBasketIcon } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -23,7 +23,7 @@ import { CartSheet } from './cart-sheet';
 import html2canvas from 'html2canvas';
 import { CartWidget } from './cart-widget';
 import { useTranslations } from '@/hooks/use-translations';
-import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction, getCharmDesignCritiqueAction, saveCreation } from '@/app/actions';
+import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction, getCharmDesignCritiqueAction, saveCreation, deleteCreation, updateCreation, toggleLikeCreation } from '@/app/actions';
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -36,6 +36,8 @@ import { Loader2 } from 'lucide-react';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { useAuth } from '@/hooks/use-auth';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -442,7 +444,10 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
       const target = e.target as HTMLElement;
       if (target.closest('.charm-on-canvas')) return;
       
-      if ('preventDefault' in e && e.cancelable) e.preventDefault();
+      const isInteracting = interactionState.isDragging || interactionState.isPanning || interactionState.isPinching;
+      if (!isInteracting && 'preventDefault' in e && e.cancelable) {
+        e.preventDefault();
+      }
       
       setSelectedPlacedCharmId(null);
       
@@ -776,7 +781,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                 </DialogHeader>
                 <div className="my-4 grid place-items-center">
                     {previewForDialog ? (
-                        <Image src={previewForDialog} alt={t('preview_alt')} width={300} height={300} className="rounded-lg border bg-muted/50 max-w-full h-auto" />
+                        <Image src={previewForDialog} alt={t('preview_alt')} width={300} height={300} className="rounded-lg border bg-muted/50 max-w-[75%] sm:max-w-full h-auto" />
                     ) : (
                         <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center">
                             <Loader2 className="animate-spin" />
@@ -857,9 +862,9 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
             </div>
           </header>
-        <main className={cn("flex-grow flex flex-col p-4 md:p-8 min-h-0", isMobile && "p-0 pb-[calc(4.5rem+env(safe-area-inset-bottom))]")}>
-          <div className={cn("container mx-auto flex-1 flex flex-col min-h-0", isMobile && "px-0")}>
-              <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0", isMobile && "grid-cols-1 gap-0")}>
+        <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0">
+          <div className="container mx-auto flex-1 flex flex-col min-h-0">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0">
               
               <div className="lg:col-span-3 flex-col min-h-0 hidden lg:flex">
                 <CharmsPanel 
@@ -871,12 +876,12 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                 />
               </div>
 
-              <div className={cn("lg:col-span-6 flex flex-col gap-4 min-h-0", isMobile && "order-first")}>
-                  <div className={cn("flex justify-between items-center gap-4 flex-shrink-0", isMobile && "px-4 pt-4")}>
-                      <Button variant="ghost" asChild className={cn(isMobile ? "p-0 h-auto" : "")}>
+              <div className="lg:col-span-6 flex flex-col gap-4 min-h-0 order-first lg:order-none">
+                  <div className="flex justify-between items-center gap-4 flex-shrink-0 px-4 pt-4 lg:p-0">
+                      <Button variant="ghost" asChild className="p-0 h-auto lg:h-10 lg:p-2">
                           <Link href={`/${locale}/?type=${jewelryType.id}`}>
                               <ArrowLeft className="mr-2 h-4 w-4" />
-                              {!isMobile && tHome('back_button')}
+                              <span className="hidden lg:inline">{tHome('back_button')}</span>
                           </Link>
                       </Button>
                       <div className="flex items-center gap-2">
@@ -897,17 +902,13 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                         </Dialog>
                         <Button variant="outline" size={isMobile ? "icon" : "default"} onClick={() => setIsShareOpen(true)}>
                           <Share2 className={cn(!isMobile && "mr-2")}/>
-                          {!isMobile && t('share_button')}
+                          <span className="hidden lg:inline">{t('share_button')}</span>
                         </Button>
                       </div>
                   </div>
                   <div
                       ref={canvasWrapperRef}
-                      className={cn(
-                        "relative w-full aspect-square bg-card overflow-hidden touch-none grid place-items-center flex-grow", 
-                        !isMobile && "border-dashed border-2 border-muted-foreground/30",
-                        isMobile && (isCharmsSheetOpen || isSuggestionsSheetOpen) && "pointer-events-none"
-                      )}
+                      className="relative w-full aspect-square bg-card overflow-hidden touch-none grid place-items-center flex-grow border-dashed border-2 border-muted-foreground/30"
                   >
                       <div
                           ref={canvasRef}
@@ -981,7 +982,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       )}
                   </div>
                   
-                  {!isMobile && (
+                  <div className="hidden lg:block">
                       <Card>
                           <CardHeader>
                               <CardTitle className="font-headline text-lg flex items-center gap-2">
@@ -1038,7 +1039,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                               </Button>
                           </CardFooter>
                       </Card>
-                  )}
+                  </div>
               </div>
 
               <div className="lg:col-span-3 flex-col gap-6 min-h-0 hidden lg:flex">
@@ -1192,3 +1193,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
 
+
+
+    
