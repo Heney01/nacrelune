@@ -89,8 +89,8 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
             return { left: '50%', top: '50%', visibility: 'hidden' };
         }
         
-        const left = modelImageRect.left + (placed.position.x * modelImageRect.width);
-        const top = modelImageRect.top + (placed.position.y * modelImageRect.height);
+        const left = (placed.position.x * modelImageRect.width);
+        const top = (placed.position.y * modelImageRect.height);
 
         return {
             left: `${left}px`,
@@ -172,6 +172,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const modelImageRef = useRef<HTMLImageElement>(null);
+  const modelImageContainerRef = useRef<HTMLDivElement>(null);
   const [modelImageRect, setModelImageRect] = useState<DOMRect | null>(null);
 
   const [isCharmsSheetOpen, setIsCharmsSheetOpen] = useState(false);
@@ -407,8 +408,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
           if (!imgRect) return;
 
           const point = getPoint(e);
-          const dx = point.clientX - interactionState.dragStart.x;
-          const dy = point.clientY - interactionState.dragStart.y;
+          const dx = (point.clientX - interactionState.dragStart.x) / scaleRef.current;
+          const dy = (point.clientY - interactionState.dragStart.y) / scaleRef.current;
           
           const currentPlacedCharms = placedCharmsRef.current;
           const charmToMove = currentPlacedCharms.find(pc => pc.id === interactionState.activeCharmId);
@@ -714,18 +715,45 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   }
 
   const updateRects = useCallback(() => {
-    if (modelImageRef.current) {
-        setModelImageRect(modelImageRef.current.getBoundingClientRect());
-    }
-    if (modelImageRef.current && (model.width || model.height)) {
-        const imageWidthPx = modelImageRef.current.offsetWidth;
-        const imageHeightPx = modelImageRef.current.offsetHeight;
-        const modelWidthMm = model.width || (imageWidthPx / imageHeightPx) * (model.height || 1);
-        const modelHeightMm = model.height || (imageHeightPx / imageWidthPx) * (model.width || 1);
+    const imageEl = modelImageRef.current;
+    const containerEl = modelImageContainerRef.current;
 
-        const pxPerMmWidth = imageWidthPx / modelWidthMm;
-        const pxPerMmHeight = imageHeightPx / modelHeightMm;
+    if (imageEl && containerEl) {
+        const containerWidth = containerEl.offsetWidth;
+        const containerHeight = containerEl.offsetHeight;
+        const imageNaturalWidth = imageEl.naturalWidth;
+        const imageNaturalHeight = imageEl.naturalHeight;
+
+        if (imageNaturalWidth === 0 || imageNaturalHeight === 0) return;
+
+        const imageAspectRatio = imageNaturalWidth / imageNaturalHeight;
+        const containerAspectRatio = containerWidth / containerHeight;
+
+        let renderedWidth, renderedHeight, offsetX = 0, offsetY = 0;
+
+        if (imageAspectRatio > containerAspectRatio) {
+            // Image is limited by width
+            renderedWidth = containerWidth;
+            renderedHeight = containerWidth / imageAspectRatio;
+            offsetY = (containerHeight - renderedHeight) / 2;
+        } else {
+            // Image is limited by height
+            renderedHeight = containerHeight;
+            renderedWidth = containerHeight * imageAspectRatio;
+            offsetX = (containerWidth - renderedWidth) / 2;
+        }
+
+        const containerRect = containerEl.getBoundingClientRect();
+
+        setModelImageRect(new DOMRect(
+            containerRect.left + offsetX,
+            containerRect.top + offsetY,
+            renderedWidth,
+            renderedHeight
+        ));
         
+        const pxPerMmWidth = renderedWidth / (model.width || 1);
+        const pxPerMmHeight = renderedHeight / (model.height || 1);
         setPixelsPerMm((pxPerMmWidth + pxPerMmHeight) / 2);
     }
   }, [model.width, model.height]);
@@ -736,9 +764,12 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     if (!imageEl) return;
 
     const handleLoad = () => updateRects();
-    imageEl.addEventListener('load', handleLoad);
+    
+    // If the image is already loaded, update immediately.
     if (imageEl.complete) {
-      updateRects();
+      handleLoad();
+    } else {
+      imageEl.addEventListener('load', handleLoad);
     }
 
     window.addEventListener('resize', updateRects);
@@ -939,10 +970,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                               height: '100%',
                           }}
                       >
-                          <div className={cn(
-                            "relative w-full h-full grid", 
-                            jewelryType.id === 'necklace' ? 'items-start justify-center' : 'place-items-center'
-                          )}>
+                          <div ref={modelImageContainerRef} className="absolute inset-0 grid place-items-center">
                               <Image
                                   ref={modelImageRef}
                                   src={model.editorImageUrl}
@@ -957,7 +985,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                               />
                           </div>
                           
-                          {pixelsPerMm && sortedPlacedCharms.map((placed) => {
+                          {pixelsPerMm && modelImageRect && sortedPlacedCharms.map((placed) => {
                             const pixelSize = {
                               width: (placed.charm.width ?? 20) * pixelsPerMm,
                               height: (placed.charm.height ?? 20) * pixelsPerMm,
@@ -1220,4 +1248,5 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
