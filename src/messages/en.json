@@ -261,7 +261,17 @@
     "pickup_info_description": "Pickup point selection is not yet automated. We will contact you by email after your order to choose the most convenient pickup point with you.",
     "pickup_postcode_error": "Please enter a postcode.",
     "pickup_generic_error": "Could not fetch pickup points.",
-    "pickup_select_point": "Select a pickup point"
+    "pickup_select_point": "Select a pickup point",
+    "coupon_code": "Coupon Code",
+    "apply_button": "Apply",
+    "coupon_applied_title": "Coupon Applied!",
+    "coupon_applied_description": "The discount for code {code} has been applied.",
+    "remove_coupon_button": "Remove",
+    "discount": "Discount",
+    "use_reward_points": "Use My Reward Points",
+    "you_have_points": "You have {count} points (value: {value} €)",
+    "free_order_title": "Your Order is Free!",
+    "free_order_description": "Thanks to your discount, the total amount of your order is €0. Click 'Confirm Order' to finalize it without payment."
   },
   "OrderStatus": {
     "commandée": "Ordered",

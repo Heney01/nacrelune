@@ -788,10 +788,12 @@ export async function createOrder(
     cartItems: SerializableCartItem[], 
     email: string, 
     locale: string, 
-    paymentIntentId: string, // Can be a placeholder for now
+    paymentIntentId: string,
     deliveryMethod: DeliveryMethod,
     shippingAddress?: ShippingAddress,
-    coupon?: Coupon
+    coupon?: Coupon,
+    userId?: string,
+    pointsToUse?: number,
 ): Promise<CreateOrderResult> {
     if (!cartItems || cartItems.length === 0) {
         return { success: false, message: 'Le panier est vide.' };
@@ -879,17 +881,31 @@ export async function createOrder(
                 transaction.update(ref, { quantity: update.newQuantity });
             }
 
-            let totalOrderPrice = cartItems.reduce((sum, item) => {
+            let subtotal = cartItems.reduce((sum, item) => {
                 const modelPrice = item.model.price || 0;
                 const charmsPrice = item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
                 return sum + modelPrice + charmsPrice;
             }, 0);
             
-            if (coupon) {
-                const discountAmount = coupon.discountType === 'percentage'
-                    ? totalOrderPrice * (coupon.value / 100)
-                    : coupon.value;
-                totalOrderPrice = Math.max(0, totalOrderPrice - discountAmount);
+            const couponDiscount = coupon
+                ? coupon.discountType === 'percentage'
+                    ? subtotal * (coupon.value / 100)
+                    : coupon.value
+                : 0;
+
+            let totalAfterCoupon = Math.max(0, subtotal - couponDiscount);
+            
+            const pointsValue = Math.floor((pointsToUse || 0) / 10);
+            const finalPrice = Math.max(0, totalAfterCoupon - pointsValue);
+
+            if (userId && pointsToUse && pointsToUse > 0) {
+                const userRef = doc(db, 'users', userId);
+                const userDoc = await transaction.get(userRef);
+                if (userDoc.exists() && (userDoc.data().rewardPoints || 0) >= pointsToUse) {
+                    transaction.update(userRef, { rewardPoints: increment(-pointsToUse) });
+                } else {
+                    throw new Error("Points de récompense insuffisants.");
+                }
             }
 
             const orderItems: Omit<OrderItem, 'modelImageUrl' | 'charms'>[] = cartItems.map((item, index) => {
@@ -930,13 +946,14 @@ export async function createOrder(
             const newOrderData: Omit<Order, 'id' | 'createdAt'> = {
                 orderNumber,
                 customerEmail: email,
-                totalPrice: totalOrderPrice,
+                totalPrice: finalPrice,
                 items: orderItems,
                 status: initialStatus,
                 paymentIntentId: paymentIntentId,
                 deliveryMethod: deliveryMethod,
                 shippingAddress: deliveryMethod === 'home' ? shippingAddress : undefined,
-                ...(coupon && { couponCode: coupon.code, couponId: coupon.id })
+                ...(coupon && { couponCode: coupon.code, couponId: coupon.id }),
+                ...(pointsToUse && { pointsUsed: pointsToUse, pointsValue: pointsValue }),
             };
 
             const orderRef = doc(collection(db, 'orders'));
@@ -947,8 +964,8 @@ export async function createOrder(
             const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${supportEmail}">${supportEmail}</a> en précisant votre numéro de commande (${orderNumber}).</p>`;
             const trackingUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com'}/${locale}/orders/track?orderNumber=${orderNumber}`;
 
-            const mailText = `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalOrderPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.model.name} avec ${item.placedCharms.length} breloque(s)`).join('\\n')}\n\nVous pouvez suivre votre commande ici : ${trackingUrl}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
-            const mailHtml = `<h1>Merci pour votre commande !</h1><p>Bonjour,</p><p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${totalOrderPrice.toFixed(2)}€.</p><h2>Récapitulatif :</h2><ul>${cartItems.map(item => `<li>${item.model.name} avec ${item.placedCharms.length} breloque(s)</li>`).join('')}</ul><p>Vous pouvez suivre l'avancement de votre commande en cliquant sur ce lien : <a href="${trackingUrl}">${trackingUrl}</a>.</p><p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
+            const mailText = `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${finalPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.model.name} avec ${item.placedCharms.length} breloque(s)`).join('\\n')}\n\nVous pouvez suivre votre commande ici : ${trackingUrl}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
+            const mailHtml = `<h1>Merci pour votre commande !</h1><p>Bonjour,</p><p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${finalPrice.toFixed(2)}€.</p><h2>Récapitulatif :</h2><ul>${cartItems.map(item => `<li>${item.model.name} avec ${item.placedCharms.length} breloque(s)</li>`).join('')}</ul><p>Vous pouvez suivre l'avancement de votre commande en cliquant sur ce lien : <a href="${trackingUrl}">${trackingUrl}</a>.</p><p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
 
             const mailDocData = {
                 to: [email],
@@ -962,7 +979,7 @@ export async function createOrder(
             const mailRef = doc(collection(db, 'mail'));
             transaction.set(mailRef, mailDocData);
             
-            return { success: true, message: 'Votre commande a été passée avec succès !', orderNumber, email, totalPrice: totalOrderPrice };
+            return { success: true, message: 'Votre commande a été passée avec succès !', orderNumber, email, totalPrice: finalPrice };
         });
 
         return orderData;

@@ -177,6 +177,10 @@ export interface Order {
     cancellationReason?: string;
     mailHistory?: MailLog[];
     paymentIntentId?: string;
+    couponCode?: string;
+    couponId?: string;
+    pointsUsed?: number;
+    pointsValue?: number;
 }
 
 export interface Coupon {

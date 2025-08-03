@@ -235,7 +235,7 @@
     "shipping": "Livraison",
     "total": "Total",
     "shipping_cost_free": "Gratuite",
-    "confirm_order_button": "Payer {total} et confirmer la commande",
+    "confirm_order_button": "Payer {total} € et confirmer la commande",
     "confirm_order_button_no_payment": "Confirmer la commande",
     "processing_button": "Traitement en cours...",
     "email_address": "Adresse e-mail",
@@ -268,7 +268,11 @@
     "coupon_applied_title": "Code promo appliqué !",
     "coupon_applied_description": "La réduction pour le code {code} a été appliquée.",
     "remove_coupon_button": "Retirer",
-    "discount": "Réduction"
+    "discount": "Réduction",
+    "use_reward_points": "Utiliser mes points récompense",
+    "you_have_points": "Vous avez {count} points (valeur : {value} €)",
+    "free_order_title": "Votre commande est gratuite !",
+    "free_order_description": "Grâce à votre réduction, le montant total de votre commande est de 0€. Cliquez sur \"Confirmer la commande\" pour la finaliser sans paiement."
   },
    "OrderStatus": {
     "commandée": "Commandée",

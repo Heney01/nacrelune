@@ -17,6 +17,7 @@ import { createPaymentIntent, CreateOrderResult } from '@/app/actions';
 import { CheckoutForm } from './checkout-form';
 import type { ShippingAddress, Coupon } from '@/lib/types';
 import { Button } from './ui/button';
+import { useAuth } from '@/hooks/use-auth';
 
 export type StockErrorState = {
   message: string;
@@ -36,9 +37,11 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
   const t = useTranslations('Checkout');
   const tCart = useTranslations('Cart');
   const { cart } = useCart();
+  const { user } = useAuth();
   
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [usePoints, setUsePoints] = useState(false);
 
   const subtotal = cart.reduce((sum, item) => {
     const modelPrice = item.model.price || 0;
@@ -54,8 +57,14 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
       : appliedCoupon.value
     : 0;
   
-  const total = Math.max(0, subtotal - discountAmount + shippingCost);
+  const totalBeforePoints = Math.max(0, subtotal - discountAmount + shippingCost);
   
+  const availablePoints = user?.rewardPoints || 0;
+  const pointsValue = Math.floor(availablePoints / 10);
+  const pointsToUse = usePoints ? Math.min(pointsValue, totalBeforePoints) : 0;
+  
+  const finalTotal = totalBeforePoints - pointsToUse;
+
   const formatPrice = (price: number) => tCart('price', { price });
 
    useEffect(() => {
@@ -83,16 +92,15 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
               options={{
                 appearance: { theme: 'stripe' as const, variables: { colorPrimary: '#ef4444', fontFamily: 'Alegreya, Ideal Sans, system-ui, sans-serif' } },
                 mode: 'payment',
-                amount: Math.max(50, Math.round(total * 100)), // Stripe requires a minimum amount (e.g., 50 cents)
+                amount: Math.max(50, Math.round(finalTotal * 100)), // Stripe requires a minimum amount (e.g., 50 cents)
                 currency: 'eur'
           }}>
               <CheckoutForm 
-                  total={total}
+                  total={totalBeforePoints}
                   onOrderCreated={onOrderCreated}
                   setStockError={setStockError}
                   appliedCoupon={appliedCoupon}
                   setAppliedCoupon={setAppliedCoupon}
-                  subtotal={subtotal}
               />
           </Elements>
         </div>
@@ -161,10 +169,9 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
                         <span>-{formatPrice(discountAmount)}</span>
                     </div>
                 )}
-                <Separator />
                  <div className="flex justify-between font-bold text-lg">
                     <span>{t('total')}</span>
-                    <span>{formatPrice(total)}</span>
+                    <span>{formatPrice(totalBeforePoints)}</span>
                 </div>
             </div>
         </aside>
