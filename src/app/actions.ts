@@ -1518,9 +1518,18 @@ export async function saveCreation(
         // Fetch full charm data from server side to ensure data integrity
         const charmIds = simplePlacedCharms.map(pc => pc.charmId);
         const charmDocs = charmIds.length > 0 ? await db.collection('charms').where(documentId(), 'in', charmIds).get() : { docs: [] };
-        const charmsMap = new Map(charmDocs.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() } as Charm]));
+        const charmsMap = new Map(charmDocs.docs.map(doc => {
+            const data = doc.data();
+            return [doc.id, { 
+                id: doc.id, 
+                ...data,
+                // Convert Timestamps to Dates
+                lastOrderedAt: toDate(data.lastOrderedAt),
+                restockedAt: toDate(data.restockedAt)
+            } as Charm]
+        }));
 
-        const fullPlacedCharms = simplePlacedCharms.map(spc => {
+        const fullPlacedCharms: PlacedCharm[] = simplePlacedCharms.map(spc => {
             const charmData = charmsMap.get(spc.charmId);
             if (!charmData) throw new Error(`Charm with id ${spc.charmId} not found`);
             return {
@@ -1594,6 +1603,7 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
     }
 }
     
+
 
 
 
