@@ -768,7 +768,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       ref={canvasWrapperRef}
                       className={cn(
                         "relative w-full aspect-square bg-card overflow-hidden touch-none grid place-items-center flex-grow", 
-                        !isMobile && "border-dashed border-2 border-muted-foreground/30",
+                        isMobile ? "border-y" : "border-dashed border-2 border-muted-foreground/30",
                         isMobile && (isCharmsSheetOpen || isSuggestionsSheetOpen) && "pointer-events-none"
                       )}
                   >
@@ -840,6 +840,21 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                         </div>
                       )}
                   </div>
+                    {isMobile && (
+                        <div className="p-4 flex-shrink-0">
+                            {isEditing ? (
+                                <Button onClick={handleUpdateCart} className="w-full" disabled={captureRequest || hasStockIssues}>
+                                    {captureRequest ? <Loader2 className="animate-spin" /> : <Check />}
+                                    {t('update_item_button')}
+                                </Button>
+                            ) : (
+                                <Button onClick={handleAddToCart} className="w-full" disabled={captureRequest || hasStockIssues}>
+                                    {captureRequest ? <Loader2 className="animate-spin" /> : <PlusCircle />}
+                                    {t('add_to_cart_button')}
+                                </Button>
+                            )}
+                        </div>
+                    )}
                   {!isMobile && (
                       <Card>
                           <CardHeader>
@@ -892,7 +907,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                           <CardFooter>
                               {isEditing ? (
                               <Button onClick={handleUpdateCart} className="w-full" disabled={captureRequest || hasStockIssues}>
-                                  {captureRequest ? <Loader2 className="animate-spin" /> : <PlusCircle />}
+                                  {captureRequest ? <Loader2 className="animate-spin" /> : <Check />}
                                   {t('update_item_button')}
                               </Button>
                               ) : (
@@ -1037,25 +1052,13 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                         </div>
                     </SheetContent>
                 </Sheet>
-                 <div className="flex-grow">
-                     {isEditing ? (
-                        <Button onClick={handleUpdateCart} className="w-full" disabled={captureRequest || hasStockIssues}>
-                           {captureRequest ? <Loader2 className="animate-spin" /> : <Check />}
-                           {t('update_item_button')}
-                        </Button>
-                    ) : (
-                        <Button onClick={handleAddToCart} className="w-full" disabled={captureRequest || hasStockIssues}>
-                           {captureRequest ? <Loader2 className="animate-spin" /> : <PlusCircle />}
-                           {t('add_to_cart_button')}
-                        </Button>
-                    )}
-                 </div>
             </div>
           )}
       </div>
     </>
   );
 }
+
 
 
 
