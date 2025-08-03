@@ -5,7 +5,7 @@
 import React, { useState, useMemo, useRef, WheelEvent as ReactWheelEvent, useCallback, useEffect, TouchEvent as ReactTouchEvent } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory } from '@/lib/types';
+import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory, Creation } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
@@ -550,7 +550,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const handleConfirmAddToCart = async () => {
       if (!previewForDialog) return;
 
-      const itemPayload = {
+      const itemPayload: Omit<CartItem, 'id'> = {
         model,
         jewelryType,
         placedCharms,
@@ -826,7 +826,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                 <DialogHeader>
                     <DialogTitle>{t('finalize_creation_title')}</DialogTitle>
                     <DialogDescription>
-                        {t('confirm_add_description')}
+                        {isEditing ? t('confirm_update_title') : t('confirm_add_description')}
                     </DialogDescription>
                 </DialogHeader>
                  <div className="my-4 hidden sm:grid place-items-center">
@@ -958,7 +958,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   </div>
                   <div
                       ref={canvasWrapperRef}
-                      className="relative w-full aspect-square bg-card overflow-hidden touch-none grid place-items-center flex-grow border-dashed border-2 border-muted-foreground/30"
+                      className="relative w-full aspect-square bg-card overflow-hidden touch-none grid justify-center items-start flex-grow border-dashed border-2 border-muted-foreground/30"
                   >
                       <div
                           ref={canvasRef}
@@ -1248,6 +1248,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
 
