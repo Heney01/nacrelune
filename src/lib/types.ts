@@ -32,6 +32,19 @@ export interface Charm {
   restockedAt?: Date | null;
 }
 
+// A simplified version of Charm for storing within a Creation, without date fields.
+export interface CreationCharm {
+  id: string;
+  name: string;
+  imageUrl: string;
+  description: string;
+  categoryIds: string[];
+  price?: number;
+  width?: number; // in mm
+  height?: number; // in mm
+}
+
+
 export interface JewelryModel {
   id: string;
   name:string;
@@ -62,6 +75,15 @@ export interface PlacedCharm {
   rotation: number;
   animation?: string;
 }
+
+// PlacedCharm as stored within a Creation document
+export interface PlacedCreationCharm {
+  id: string;
+  charm: CreationCharm;
+  position: { x: number; y: number };
+  rotation: number;
+}
+
 
 export interface CartItem {
     id: string;
@@ -164,7 +186,7 @@ export interface Creation {
     description: string;
     jewelryTypeId: string;
     modelId: string;
-    placedCharms: PlacedCharm[];
+    placedCharms: PlacedCreationCharm[];
     previewImageUrl: string;
     createdAt: Date;
     salesCount: number;

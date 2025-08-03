@@ -10,7 +10,7 @@ import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
-import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm, ShippingAddress, DeliveryMethod, MailLog, User, Coupon, Creation } from '@/lib/types';
+import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm, ShippingAddress, DeliveryMethod, MailLog, User, Coupon, Creation, CreationCharm, PlacedCreationCharm } from '@/lib/types';
 import { getCharmSuggestions as getCharmSuggestionsFlow, CharmSuggestionInput, CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { getCharmAnalysisSuggestions as getCharmAnalysisSuggestionsFlow, CharmAnalysisSuggestionInput, CharmAnalysisSuggestionOutput } from '@/ai/flows/charm-analysis-suggestions';
 import { getCharmDesignCritique as getCharmDesignCritiqueFlow, CharmDesignCritiqueInput, CharmDesignCritiqueOutput } from '@/ai/flows/charm-design-critique';
@@ -1522,28 +1522,26 @@ export async function saveCreation(
         const charmIds = simplePlacedCharms.map(pc => pc.charmId);
         const charmDocs = charmIds.length > 0 ? await getDocs(query(collection(db, 'charms'), where(documentId(), 'in', charmIds))) : { docs: [] };
         
-        const charmsMap = new Map(charmDocs.docs.map(doc => {
-            const data = doc.data();
-            return [doc.id, { 
-                id: doc.id, 
-                ...data,
-            } as Omit<Charm, 'lastOrderedAt' | 'restockedAt'> & { lastOrderedAt?: Timestamp | null, restockedAt?: Timestamp | null }]
-        }));
+        const charmsMap = new Map(charmDocs.docs.map(doc => [doc.id, doc.data() as Omit<Charm, 'id'>]));
 
-        const cleanPlacedCharms: PlacedCharm[] = simplePlacedCharms.map(spc => {
+        const placedCharms: PlacedCreationCharm[] = simplePlacedCharms.map(spc => {
             const charmData = charmsMap.get(spc.charmId);
             if (!charmData) throw new Error(`Charm with id ${spc.charmId} not found`);
-            
-            // Create a clean version of the charm, excluding any complex objects not suitable for direct storage.
-            const { categories, ...cleanCharm } = charmData;
+
+            const cleanCharm: CreationCharm = {
+                id: spc.charmId,
+                name: charmData.name,
+                imageUrl: charmData.imageUrl,
+                description: charmData.description,
+                categoryIds: charmData.categoryIds,
+                price: charmData.price,
+                width: charmData.width,
+                height: charmData.height,
+            };
 
             return {
                 id: `${spc.charmId}-${Date.now()}-${Math.random()}`,
-                charm: {
-                    ...cleanCharm,
-                    lastOrderedAt: toDate(cleanCharm.lastOrderedAt),
-                    restockedAt: toDate(cleanCharm.restockedAt)
-                },
+                charm: cleanCharm,
                 position: spc.position,
                 rotation: spc.rotation,
             };
@@ -1556,7 +1554,7 @@ export async function saveCreation(
             description,
             jewelryTypeId,
             modelId,
-            placedCharms: cleanPlacedCharms, // Store the cleaned version
+            placedCharms: placedCharms,
             previewImageUrl: previewImageUrl,
             salesCount: 0
         };
@@ -1598,22 +1596,18 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
             const data = doc.data();
             const previewImageUrl = await getUrl(data.previewImageUrl, 'https://placehold.co/400x400.png');
 
-            // Ensure nested timestamps are converted as well
-            const placedCharms = (data.placedCharms || []).map((pc: any) => ({
-                ...pc,
-                charm: {
-                    ...pc.charm,
-                    lastOrderedAt: toDate(pc.charm.lastOrderedAt),
-                    restockedAt: toDate(pc.charm.restockedAt),
-                }
-            }));
-
             return {
                 id: doc.id,
-                ...data,
+                creatorId: data.creatorId,
+                creatorName: data.creatorName,
+                name: data.name,
+                description: data.description,
+                jewelryTypeId: data.jewelryTypeId,
+                modelId: data.modelId,
+                placedCharms: data.placedCharms || [], // Already simplified
                 previewImageUrl,
-                placedCharms,
-                createdAt: toDate(data.createdAt as Timestamp)
+                createdAt: toDate(data.createdAt as Timestamp)!,
+                salesCount: data.salesCount
             } as Creation;
         }));
         return creations;
@@ -1633,4 +1627,5 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
 
 
     
+
 
