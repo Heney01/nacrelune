@@ -383,7 +383,7 @@ export const CheckoutForm = ({
         </div>
       </DialogHeader>
 
-      <div className="px-6 overflow-y-auto">
+      <div className="px-6 flex-grow overflow-y-auto min-h-0">
           <div className="space-y-6">
               <div>
                   <Progress value={progressValue} className="w-full" />
