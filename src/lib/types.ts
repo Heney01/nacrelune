@@ -2,6 +2,11 @@
 
 import { DocumentReference } from 'firebase/firestore';
 
+export interface UserProfile {
+  pseudo: string;
+  email: string;
+}
+
 export interface CharmCategory {
   id: string;
   name: string;

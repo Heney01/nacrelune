@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useFormState, useFormStatus } from 'react-dom';
@@ -14,7 +15,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { BrandLogo } from '@/components/icons';
-import { login } from '@/app/actions';
+import { adminLogin } from '@/app/actions';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useEffect } from 'react';
@@ -37,7 +38,7 @@ function LoginButton() {
 }
 
 export function LoginForm() {
-  const [state, formAction] = useFormState(login, initialState);
+  const [state, formAction] = useFormState(adminLogin, initialState);
   const params = useParams();
   const locale = params.locale as string;
 
