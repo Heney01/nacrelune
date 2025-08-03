@@ -28,7 +28,7 @@ import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogClose, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogClose, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { ShareDialog } from './share-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -778,8 +778,11 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{t('finalize_creation_title')}</DialogTitle>
+                    <DialogDescription>
+                        {t('confirm_add_description')}
+                    </DialogDescription>
                 </DialogHeader>
-                <div className="my-4 grid place-items-center">
+                 <div className="my-4 hidden sm:grid place-items-center">
                     {previewForDialog ? (
                         <Image src={previewForDialog} alt={t('preview_alt')} width={300} height={300} className="rounded-lg border bg-muted/50 max-w-[75%] sm:max-w-full h-auto" />
                     ) : (
