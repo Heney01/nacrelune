@@ -24,9 +24,7 @@
     "support_dialog_instructions": "Vous pouvez nous joindre par e-mail. Copiez l'adresse ci-dessous ou utilisez le bouton pour ouvrir directement votre client de messagerie.",
     "support_email_copied": "Adresse e-mail du support copiée !",
     "support_open_mail_button": "Ouvrir l'application de messagerie",
-    "coming_soon": "Bientôt disponible",
-    "wip_title": "Projet en Construction",
-    "wip_description": "Bienvenue ! Ce projet est actuellement en cours de développement. De nouvelles fonctionnalités et de nouveaux modèles de bijoux seront ajoutés prochainement."
+    "coming_soon": "Bientôt disponible"
   },
   "Editor": {
     "charms_title": "Breloques",
@@ -209,7 +207,13 @@
     "pickup_postcode_error": "Veuillez saisir un code postal.",
     "pickup_generic_error": "Impossible de récupérer les points relais.",
     "pickup_select_point": "Sélectionnez un point relais",
-    "pickup_selection_error": "Veuillez sélectionner un point relais."
+    "pickup_selection_error": "Veuillez sélectionner un point relais.",
+    "coupon_code": "Code promo",
+    "apply_button": "Appliquer",
+    "coupon_applied_title": "Code promo appliqué !",
+    "coupon_applied_description": "La réduction pour le code {code} a été appliquée.",
+    "remove_coupon_button": "Retirer",
+    "discount": "Réduction"
   },
    "OrderStatus": {
     "commandée": "Commandée",

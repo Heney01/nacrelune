@@ -10,7 +10,7 @@ import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
-import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm, ShippingAddress, DeliveryMethod, MailLog } from '@/lib/types';
+import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm, ShippingAddress, DeliveryMethod, MailLog, Coupon } from '@/lib/types';
 import { getCharmSuggestions as getCharmSuggestionsFlow, CharmSuggestionInput, CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { getCharmAnalysisSuggestions as getCharmAnalysisSuggestionsFlow, CharmAnalysisSuggestionInput, CharmAnalysisSuggestionOutput } from '@/ai/flows/charm-analysis-suggestions';
 import { getCharmDesignCritique as getCharmDesignCritiqueFlow, CharmDesignCritiqueInput, CharmDesignCritiqueOutput } from '@/ai/flows/charm-design-critique';
@@ -600,14 +600,48 @@ export async function markAsRestocked(formData: FormData): Promise<{ success: bo
     }
 }
 
+export async function validateCoupon(code: string): Promise<{ success: boolean; message: string; coupon?: Coupon }> {
+    if (!code) {
+        return { success: false, message: "Veuillez entrer un code promo." };
+    }
+
+    try {
+        const couponRef = doc(db, 'coupons', code.toUpperCase());
+        const couponSnap = await getDoc(couponRef);
+
+        if (!couponSnap.exists()) {
+            return { success: false, message: "Ce code promo est invalide." };
+        }
+
+        const couponData = couponSnap.data();
+        const coupon: Coupon = {
+            id: couponSnap.id,
+            code: couponData.code,
+            discountType: couponData.discountType,
+            value: couponData.value,
+            expiresAt: toDate(couponData.expiresAt),
+        };
+
+        if (coupon.expiresAt && coupon.expiresAt < new Date()) {
+            return { success: false, message: "Ce code promo a expiré." };
+        }
+
+        return { success: true, message: "Code promo appliqué.", coupon };
+    } catch (error) {
+        console.error("Error validating coupon:", error);
+        return { success: false, message: "Une erreur est survenue lors de la validation du code." };
+    }
+}
+
 
 export async function createOrder(
     cartItems: SerializableCartItem[], 
     email: string, 
     locale: string, 
-    paymentIntentId: string, // Can be a placeholder for now
+    paymentIntentId: string,
     deliveryMethod: DeliveryMethod,
-    shippingAddress?: ShippingAddress
+    shippingAddress?: ShippingAddress,
+    appliedCoupon?: Coupon,
 ): Promise<CreateOrderResult> {
     if (!cartItems || cartItems.length === 0) {
         return { success: false, message: 'Le panier est vide.' };
@@ -695,11 +729,21 @@ export async function createOrder(
                 transaction.update(ref, { quantity: update.newQuantity });
             }
 
-            const totalOrderPrice = cartItems.reduce((sum, item) => {
+            const subtotal = cartItems.reduce((sum, item) => {
                 const modelPrice = item.model.price || 0;
                 const charmsPrice = item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
                 return sum + modelPrice + charmsPrice;
             }, 0);
+            
+            let finalPrice = subtotal;
+            let discountAmount = 0;
+            if (appliedCoupon) {
+                discountAmount = appliedCoupon.discountType === 'percentage'
+                    ? subtotal * (appliedCoupon.value / 100)
+                    : appliedCoupon.value;
+                finalPrice = Math.max(0, subtotal - discountAmount);
+            }
+
 
             const orderItems: Omit<OrderItem, 'modelImageUrl' | 'charms'>[] = cartItems.map((item, index) => {
                 const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
@@ -721,12 +765,14 @@ export async function createOrder(
             const newOrderData: Omit<Order, 'id' | 'createdAt'> = {
                 orderNumber,
                 customerEmail: email,
-                totalPrice: totalOrderPrice,
+                totalPrice: finalPrice,
                 items: orderItems,
                 status: initialStatus,
                 paymentIntentId: paymentIntentId,
                 deliveryMethod: deliveryMethod,
                 shippingAddress: deliveryMethod === 'home' ? shippingAddress : undefined,
+                couponCode: appliedCoupon?.code,
+                discountAmount: discountAmount
             };
 
             const orderRef = doc(collection(db, 'orders'));
@@ -737,8 +783,8 @@ export async function createOrder(
             const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${supportEmail}">${supportEmail}</a> en précisant votre numéro de commande (${orderNumber}).</p>`;
             const trackingUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com'}/${locale}/orders/track?orderNumber=${orderNumber}`;
 
-            const mailText = `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalOrderPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.model.name} avec ${item.placedCharms.length} breloque(s)`).join('\\n')}\n\nVous pouvez suivre votre commande ici : ${trackingUrl}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
-            const mailHtml = `<h1>Merci pour votre commande !</h1><p>Bonjour,</p><p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${totalOrderPrice.toFixed(2)}€.</p><h2>Récapitulatif :</h2><ul>${cartItems.map(item => `<li>${item.model.name} avec ${item.placedCharms.length} breloque(s)</li>`).join('')}</ul><p>Vous pouvez suivre l'avancement de votre commande en cliquant sur ce lien : <a href="${trackingUrl}">${trackingUrl}</a>.</p><p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
+            const mailText = `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${finalPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.model.name} avec ${item.placedCharms.length} breloque(s)`).join('\\n')}\n\nVous pouvez suivre votre commande ici : ${trackingUrl}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
+            const mailHtml = `<h1>Merci pour votre commande !</h1><p>Bonjour,</p><p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${finalPrice.toFixed(2)}€.</p><h2>Récapitulatif :</h2><ul>${cartItems.map(item => `<li>${item.model.name} avec ${item.placedCharms.length} breloque(s)</li>`).join('')}</ul><p>Vous pouvez suivre l'avancement de votre commande en cliquant sur ce lien : <a href="${trackingUrl}">${trackingUrl}</a>.</p><p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
 
             const mailDocData = {
                 to: [email],
@@ -752,7 +798,7 @@ export async function createOrder(
             const mailRef = doc(collection(db, 'mail'));
             transaction.set(mailRef, mailDocData);
             
-            return { success: true, message: 'Votre commande a été passée avec succès !', orderNumber, email, totalPrice: totalOrderPrice };
+            return { success: true, message: 'Votre commande a été passée avec succès !', orderNumber, email, totalPrice: finalPrice };
         });
 
         return orderData;

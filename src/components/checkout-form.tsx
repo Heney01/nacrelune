@@ -8,19 +8,20 @@ import { Button } from '@/components/ui/button';
 import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, AlertCircle, ArrowLeft, Home, Store, Search, CheckCircle } from 'lucide-react';
+import { Loader2, AlertCircle, ArrowLeft, Home, Store, Search, CheckCircle, TicketPercent, Check } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
-import { createOrder, createPaymentIntent, CreateOrderResult, SerializableCartItem } from '@/app/actions';
+import { createOrder, createPaymentIntent, CreateOrderResult, SerializableCartItem, validateCoupon } from '@/app/actions';
 import { useParams } from 'next/navigation';
 import { StockErrorState } from './checkout-dialog';
-import type { ShippingAddress, DeliveryMethod, PickupPoint } from '@/lib/types';
+import type { ShippingAddress, DeliveryMethod, PickupPoint, Coupon } from '@/lib/types';
 import { Progress } from './ui/progress';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 import { findPickupPoints, FindPickupPointsResult } from '@/lib/pickup-points';
 import { ScrollArea } from './ui/scroll-area';
 import { Card } from './ui/card';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 type Step = 'customer' | 'shipping' | 'payment';
 
@@ -31,6 +32,9 @@ const PaymentStep = ({
   deliveryMethod,
   shippingAddress,
   selectedPickupPoint,
+  appliedCoupon,
+  setAppliedCoupon,
+  subtotal,
 }: {
   onOrderCreated: (result: CreateOrderResult) => void;
   total: number;
@@ -38,6 +42,9 @@ const PaymentStep = ({
   deliveryMethod: DeliveryMethod;
   shippingAddress?: ShippingAddress;
   selectedPickupPoint?: PickupPoint;
+  appliedCoupon: Coupon | null;
+  setAppliedCoupon: (coupon: Coupon | null) => void;
+  subtotal: number;
 }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -47,6 +54,31 @@ const PaymentStep = ({
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
+  const [couponCode, setCouponCode] = useState('');
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode) return;
+    setIsApplyingCoupon(true);
+    setCouponError(null);
+    setAppliedCoupon(null);
+
+    const result = await validateCoupon(couponCode);
+    if (result.success && result.coupon) {
+        setAppliedCoupon(result.coupon);
+        toast({
+            title: t('coupon_applied_title'),
+            description: t('coupon_applied_description', {code: result.coupon.code}),
+        })
+    } else {
+        setCouponError(result.message);
+    }
+    setIsApplyingCoupon(false);
+  }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -112,6 +144,7 @@ const PaymentStep = ({
         clientSecret,
         deliveryMethod,
         finalShippingAddress,
+        appliedCoupon || undefined,
     );
 
     onOrderCreated(orderResult);
@@ -127,6 +160,29 @@ const PaymentStep = ({
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
       )}
+      
+       <div className="space-y-2">
+            <Label>{t('coupon_code')}</Label>
+            <div className="flex gap-2">
+                <Input 
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    placeholder="SUMMER20"
+                    disabled={!!appliedCoupon}
+                />
+                {!appliedCoupon ? (
+                    <Button type="button" variant="outline" onClick={handleApplyCoupon} disabled={isApplyingCoupon || !couponCode}>
+                        {isApplyingCoupon ? <Loader2 className="animate-spin" /> : t('apply_button')}
+                    </Button>
+                ) : (
+                    <Button type="button" variant="ghost" onClick={() => { setAppliedCoupon(null); setCouponCode(''); setCouponError(null); }}>
+                        {t('remove_coupon_button')}
+                    </Button>
+                )}
+            </div>
+            {couponError && <p className="text-sm text-destructive">{couponError}</p>}
+        </div>
+
       <PaymentElement />
        <DialogFooter className="pt-4 pb-6 mt-auto px-0">
          <Button type="submit" form="payment-form" className="w-full" disabled={isProcessing || !stripe || !elements}>
@@ -146,10 +202,16 @@ export const CheckoutForm = ({
   total,
   onOrderCreated,
   setStockError,
+  appliedCoupon,
+  setAppliedCoupon,
+  subtotal
 }: {
   total: number;
   onOrderCreated: (result: CreateOrderResult) => void;
   setStockError: (error: StockErrorState) => void;
+  appliedCoupon: Coupon | null;
+  setAppliedCoupon: (coupon: Coupon | null) => void;
+  subtotal: number;
 }) => {
   const t = useTranslations('Checkout');
   const tStatus = useTranslations('OrderStatus');
@@ -245,6 +307,9 @@ export const CheckoutForm = ({
                       deliveryMethod={deliveryMethod}
                       shippingAddress={shippingAddress}
                       selectedPickupPoint={selectedPickupPoint || undefined}
+                      appliedCoupon={appliedCoupon}
+                      setAppliedCoupon={setAppliedCoupon}
+                      subtotal={subtotal}
                   />
              </div>
           </div>
