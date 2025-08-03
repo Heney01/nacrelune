@@ -1528,32 +1528,37 @@ export async function saveCreation(
             return [doc.id, { 
                 id: doc.id, 
                 ...data,
+                // Convert Timestamps to Dates to match the PlacedCharm type
                 lastOrderedAt: toDate(data.lastOrderedAt as Timestamp),
                 restockedAt: toDate(data.restockedAt as Timestamp)
             } as Charm]
         }));
 
-        const fullPlacedCharms: PlacedCharm[] = simplePlacedCharms.map(spc => {
+        // Clean placedCharms data for storage, removing any Date objects or other non-serializable data.
+        const cleanPlacedCharms: PlacedCharm[] = simplePlacedCharms.map(spc => {
             const charmData = charmsMap.get(spc.charmId);
             if (!charmData) throw new Error(`Charm with id ${spc.charmId} not found`);
+            
+            // Create a clean version of the charm, excluding date objects
+            const { lastOrderedAt, restockedAt, ...cleanCharm } = charmData;
+
             return {
                 id: `${spc.charmId}-${Date.now()}-${Math.random()}`,
-                charm: charmData,
+                charm: cleanCharm, // Use the cleaned charm object
                 position: spc.position,
                 rotation: spc.rotation,
             };
         });
         
-        const creationData: Omit<Creation, 'id'> = {
+        const creationData: Omit<Creation, 'id' | 'createdAt'> = {
             creatorId: user.uid,
             creatorName: user.name || user.email || "Créateur anonyme",
             name,
             description,
             jewelryTypeId,
             modelId,
-            placedCharms: fullPlacedCharms,
-            previewImageUrl: previewImageUrl,
-            createdAt: new Date(),
+            placedCharms: cleanPlacedCharms,
+            previewImageUrl: previewImageUrl, // This might be a data URL
             salesCount: 0
         };
 
@@ -1567,7 +1572,7 @@ export async function saveCreation(
         const docRef = await addDoc(collection(db, 'creations'), {
             ...creationData,
             previewImageUrl: finalPreviewUrl,
-            createdAt: serverTimestamp()
+            createdAt: serverTimestamp() // Use server timestamp for consistency
         });
         
         revalidatePath(`/${'fr'}/profil`);
