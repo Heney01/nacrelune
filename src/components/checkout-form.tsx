@@ -352,7 +352,7 @@ export const CheckoutForm = ({
                 </Button>
                 <DialogTitle className="text-2xl font-headline">{t('payment_info')}</DialogTitle>
             </DialogHeader>
-             <div className="px-6 pb-6 flex-grow">
+             <div className="px-6 pb-6 flex-grow overflow-y-auto">
                   <PaymentStep
                       onOrderCreated={onOrderCreated}
                       total={total}
@@ -383,122 +383,119 @@ export const CheckoutForm = ({
         </div>
       </DialogHeader>
 
-      <div className="flex-grow overflow-y-auto no-scrollbar">
-        <form id="checkout-form" onSubmit={handleFormSubmit} className="space-y-6 flex flex-col flex-grow h-full">
-            <div className="py-4 space-y-6 flex-grow">
-                <div className="px-6">
-                    <Progress value={progressValue} className="w-full" />
-                    <p className="text-xs text-muted-foreground mt-2 text-center">
-                        {t('step_indicator', { step: stepNumber, total: 3 })}
-                    </p>
+      <div className="px-6 flex-grow overflow-y-auto">
+        <form id="checkout-form" onSubmit={handleFormSubmit} className="space-y-6 flex flex-col h-full">
+          <div className="space-y-6">
+              <div>
+                  <Progress value={progressValue} className="w-full" />
+                  <p className="text-xs text-muted-foreground mt-2 text-center">
+                      {t('step_indicator', { step: stepNumber, total: 3 })}
+                  </p>
+              </div>
+
+              {errorMessage && (
+                  <div>
+                      <Alert variant="destructive">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertTitle>{t('form_error_title')}</AlertTitle>
+                          <AlertDescription>{errorMessage}</AlertDescription>
+                      </Alert>
+                  </div>
+              )}
+              
+              <div>
+                <div style={{ display: currentStep === 'customer' ? 'block' : 'none' }} className="space-y-4">
+                    <h3 className="text-lg font-medium">{t('customer_info')}</h3>
+                    <div className="space-y-2">
+                        <Label htmlFor="name">{t('full_name')}</Label>
+                        <Input id="name" value={shippingAddress.name} onChange={(e) => setShippingAddress(prev => ({ ...prev, name: e.target.value }))} placeholder={t('full_name')} required={currentStep === 'customer'} />
+                    </div>
+                    <div className="space-y-2 pb-2">
+                        <Label htmlFor="email-address">{t('email_address')}</Label>
+                        <Input id="email-address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={tStatus('email_placeholder')} required={currentStep === 'customer'} />
+                    </div>
                 </div>
 
-                {errorMessage && (
-                    <div className="px-6">
-                        <Alert variant="destructive">
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>{t('form_error_title')}</AlertTitle>
-                            <AlertDescription>{errorMessage}</AlertDescription>
-                        </Alert>
-                    </div>
-                )}
-                
-                <div className="px-6 pb-12">
-                  <div style={{ display: currentStep === 'customer' ? 'block' : 'none' }} className="space-y-4">
-                      <h3 className="text-lg font-medium">{t('customer_info')}</h3>
+                <div style={{ display: currentStep === 'shipping' ? 'block' : 'none' }} className="space-y-4">
+                  <h3 className="text-lg font-medium">{t('shipping_title')}</h3>
+                  <Tabs value={deliveryMethod} onValueChange={(v) => setDeliveryMethod(v as DeliveryMethod)} className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="home"><Home className="mr-2 h-4 w-4"/>{t('delivery_method_home')}</TabsTrigger>
+                      <TabsTrigger value="pickup"><Store className="mr-2 h-4 w-4"/>{t('delivery_method_pickup')}</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="home" className="pt-4 space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="shipping-name">{t('full_name')}</Label>
+                          <Input id="shipping-name" name="name" value={shippingAddress.name} onChange={(e) => setShippingAddress(prev => ({...prev, name: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
+                      </div>
                       <div className="space-y-2">
-                          <Label htmlFor="name">{t('full_name')}</Label>
-                          <Input id="name" value={shippingAddress.name} onChange={(e) => setShippingAddress(prev => ({ ...prev, name: e.target.value }))} placeholder={t('full_name')} required={currentStep === 'customer'} />
+                          <Label htmlFor="addressLine1">{t('address')}</Label>
+                          <Input id="addressLine1" name="addressLine1" placeholder={t('address_line1_placeholder')} value={shippingAddress.addressLine1} onChange={(e) => setShippingAddress(prev => ({...prev, addressLine1: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
                       </div>
-                      <div className="space-y-2 pb-2">
-                          <Label htmlFor="email-address">{t('email_address')}</Label>
-                          <Input id="email-address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={tStatus('email_placeholder')} required={currentStep === 'customer'} />
+                      <div className="space-y-2">
+                          <Input id="addressLine2" name="addressLine2" placeholder={t('address_line2_placeholder')} value={shippingAddress.addressLine2 || ''} onChange={(e) => setShippingAddress(prev => ({...prev, addressLine2: e.target.value}))} />
                       </div>
-                  </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div className="space-y-2 sm:col-span-1">
+                              <Label htmlFor="postalCode">{t('postal_code')}</Label>
+                              <Input id="postalCode" name="postalCode" value={shippingAddress.postalCode} onChange={(e) => setShippingAddress(prev => ({...prev, postalCode: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
+                          </div>
+                          <div className="space-y-2 sm:col-span-2">
+                              <Label htmlFor="city">{t('city')}</Label>
+                              <Input id="city" name="city" value={shippingAddress.city} onChange={(e) => setShippingAddress(prev => ({...prev, city: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
+                          </div>
+                      </div>
+                      <div className="space-y-2">
+                          <Label htmlFor="country">{t('country')}</Label>
+                          <Input id="country" name="country" value={shippingAddress.country} onChange={(e) => setShippingAddress(prev => ({...prev, country: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="pickup" className="pt-4 space-y-4">
+                        <div className="flex gap-2">
+                          <div className="flex-grow space-y-2">
+                              <Label htmlFor="postcode">{t('postal_code')}</Label>
+                              <Input id="postcode" value={postcode} onChange={e => setPostcode(e.target.value)} placeholder="e.g. 75001" />
+                          </div>
+                          <Button type="button" onClick={handleFindPickupPoints} disabled={isFindingPoints} className="self-end">
+                              {isFindingPoints ? <Loader2 className="animate-spin" /> : <Search />}
+                          </Button>
+                        </div>
+                        {pickupPointError && <Alert variant="destructive"><AlertCircle className="h-4 w-4"/><AlertDescription>{pickupPointError}</AlertDescription></Alert>}
 
-                  <div style={{ display: currentStep === 'shipping' ? 'block' : 'none' }} className="space-y-4">
-                    <h3 className="text-lg font-medium">{t('shipping_title')}</h3>
-                     <div className="no-scrollbar">
-                        <Tabs value={deliveryMethod} onValueChange={(v) => setDeliveryMethod(v as DeliveryMethod)} className="w-full">
-                          <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="home"><Home className="mr-2 h-4 w-4"/>{t('delivery_method_home')}</TabsTrigger>
-                            <TabsTrigger value="pickup"><Store className="mr-2 h-4 w-4"/>{t('delivery_method_pickup')}</TabsTrigger>
-                          </TabsList>
-                          <TabsContent value="home" className="pt-4 space-y-4">
-                             <div className="space-y-2">
-                                <Label htmlFor="shipping-name">{t('full_name')}</Label>
-                                <Input id="shipping-name" name="name" value={shippingAddress.name} onChange={(e) => setShippingAddress(prev => ({...prev, name: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="addressLine1">{t('address')}</Label>
-                                <Input id="addressLine1" name="addressLine1" placeholder={t('address_line1_placeholder')} value={shippingAddress.addressLine1} onChange={(e) => setShippingAddress(prev => ({...prev, addressLine1: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
-                            </div>
-                            <div className="space-y-2">
-                                <Input id="addressLine2" name="addressLine2" placeholder={t('address_line2_placeholder')} value={shippingAddress.addressLine2 || ''} onChange={(e) => setShippingAddress(prev => ({...prev, addressLine2: e.target.value}))} />
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <div className="space-y-2 sm:col-span-1">
-                                    <Label htmlFor="postalCode">{t('postal_code')}</Label>
-                                    <Input id="postalCode" name="postalCode" value={shippingAddress.postalCode} onChange={(e) => setShippingAddress(prev => ({...prev, postalCode: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
-                                </div>
-                                <div className="space-y-2 sm:col-span-2">
-                                    <Label htmlFor="city">{t('city')}</Label>
-                                    <Input id="city" name="city" value={shippingAddress.city} onChange={(e) => setShippingAddress(prev => ({...prev, city: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="country">{t('country')}</Label>
-                                <Input id="country" name="country" value={shippingAddress.country} onChange={(e) => setShippingAddress(prev => ({...prev, country: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
-                            </div>
-                          </TabsContent>
-                          <TabsContent value="pickup" className="pt-4 space-y-4">
-                             <div className="flex gap-2">
-                                <div className="flex-grow space-y-2">
-                                    <Label htmlFor="postcode">{t('postal_code')}</Label>
-                                    <Input id="postcode" value={postcode} onChange={e => setPostcode(e.target.value)} placeholder="e.g. 75001" />
-                                </div>
-                                <Button type="button" onClick={handleFindPickupPoints} disabled={isFindingPoints} className="self-end">
-                                    {isFindingPoints ? <Loader2 className="animate-spin" /> : <Search />}
-                                </Button>
-                             </div>
-                             {pickupPointError && <Alert variant="destructive"><AlertCircle className="h-4 w-4"/><AlertDescription>{pickupPointError}</AlertDescription></Alert>}
-
-                             {pickupPoints.length > 0 && (
-                                <div className="space-y-2">
-                                    <Label>{t('pickup_select_point')}</Label>
-                                    <ScrollArea className="h-48 rounded-md border">
-                                        <div className="p-2 space-y-2">
-                                            {pickupPoints.map(point => (
-                                                <Card 
-                                                    key={point.id} 
-                                                    className={cn("p-3 cursor-pointer hover:bg-muted/50", selectedPickupPoint?.id === point.id && "bg-muted ring-2 ring-primary")}
-                                                    onClick={() => setSelectedPickupPoint(point)}
-                                                >
-                                                    <div className="flex justify-between items-start">
-                                                        <div>
-                                                            <p className="font-semibold text-sm">{point.name}</p>
-                                                            <p className="text-xs text-muted-foreground">{point.address}, {point.city}</p>
-                                                        </div>
-                                                        {selectedPickupPoint?.id === point.id && <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />}
-                                                    </div>
-                                                </Card>
-                                            ))}
-                                        </div>
-                                    </ScrollArea>
-                                </div>
-                             )}
-                          </TabsContent>
-                        </Tabs>
-                    </div>
-                  </div>
+                        {pickupPoints.length > 0 && (
+                          <div className="space-y-2">
+                              <Label>{t('pickup_select_point')}</Label>
+                              <div className="h-48 rounded-md border overflow-y-auto">
+                                  <div className="p-2 space-y-2">
+                                      {pickupPoints.map(point => (
+                                          <Card 
+                                              key={point.id} 
+                                              className={cn("p-3 cursor-pointer hover:bg-muted/50", selectedPickupPoint?.id === point.id && "bg-muted ring-2 ring-primary")}
+                                              onClick={() => setSelectedPickupPoint(point)}
+                                          >
+                                              <div className="flex justify-between items-start">
+                                                  <div>
+                                                      <p className="font-semibold text-sm">{point.name}</p>
+                                                      <p className="text-xs text-muted-foreground">{point.address}, {point.city}</p>
+                                                  </div>
+                                                  {selectedPickupPoint?.id === point.id && <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />}
+                                              </div>
+                                          </Card>
+                                      ))}
+                                  </div>
+                              </div>
+                          </div>
+                        )}
+                    </TabsContent>
+                  </Tabs>
                 </div>
-            </div>
-            
-            <DialogFooter className="pt-4 pb-6 mt-auto border-t px-6">
-                <Button type="submit" form="checkout-form" className="w-full">
-                    {t('next_step_button')}
-                </Button>
-            </DialogFooter>
+              </div>
+          </div>
+          <DialogFooter className="pt-4 pb-6 mt-auto border-t">
+              <Button type="submit" form="checkout-form" className="w-full">
+                  {t('next_step_button')}
+              </Button>
+          </DialogFooter>
         </form>
       </div>
     </>
