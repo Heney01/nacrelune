@@ -958,7 +958,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   </div>
                   <div
                       ref={canvasWrapperRef}
-                      className="relative w-full aspect-square bg-card overflow-hidden touch-none grid place-items-start justify-center flex-grow border-dashed border-2 border-muted-foreground/30"
+                      className="relative w-full aspect-square bg-card overflow-hidden touch-none flex-grow border-dashed border-2 border-muted-foreground/30"
                   >
                       <div
                           ref={canvasRef}
@@ -970,7 +970,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                               height: '100%',
                           }}
                       >
-                          <div ref={modelImageContainerRef} className="absolute inset-0 grid place-items-start justify-center">
+                          <div ref={modelImageContainerRef} className="absolute inset-0 grid place-items-center">
                               <Image
                                   ref={modelImageRef}
                                   src={model.editorImageUrl}
@@ -1248,6 +1248,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
 
