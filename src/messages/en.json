@@ -57,7 +57,13 @@
     "reward_points_explanation_2": "Redeem your points for discounts or vouchers.",
     "reward_points_explanation_3": "Conversion rate: 10 points = €1.",
     "reward_points_explanation_4": "Earning limit: €300 per year.",
-    "reward_points_close_button": "Got it"
+    "reward_points_close_button": "Got it",
+    "edit_creation_button": "Edit",
+    "edit_creation_title": "Edit Creation",
+    "edit_creation_description": "Update the name and description of your creation.",
+    "save_changes_button": "Save Changes",
+    "edit_creation_success_title": "Success",
+    "edit_creation_error_title": "Error"
   },
   "Editor": {
     "charms_title": "Charms",

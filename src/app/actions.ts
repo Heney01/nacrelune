@@ -1706,8 +1706,51 @@ export async function toggleLikeCreation(creationId: string, idToken: string): P
     }
 }
     
-export async function updateCreation() {
-    // TODO: Implement creation update logic
+export async function updateCreation(
+    idToken: string,
+    creationId: string,
+    name: string,
+    description: string
+): Promise<{ success: boolean; message: string; }> {
+    if (!idToken) {
+        return { success: false, message: "Utilisateur non authentifié." };
+    }
+    if (!adminApp) {
+        return { success: false, message: "Le module d'administration Firebase n'est pas configuré." };
+    }
+    
+    let user;
+    try {
+        const adminAuth = getAdminAuth(adminApp);
+        user = await adminAuth.verifyIdToken(idToken, true);
+    } catch (error: any) {
+        return { success: false, message: "Jeton d'authentification invalide." };
+    }
+
+    if (!name.trim()) {
+        return { success: false, message: "Le nom de la création est obligatoire." };
+    }
+
+    const creationRef = doc(db, 'creations', creationId);
+
+    try {
+        const creationDoc = await getDoc(creationRef);
+        if (!creationDoc.exists() || creationDoc.data().creatorId !== user.uid) {
+            return { success: false, message: "Vous n'êtes pas autorisé à modifier cette création." };
+        }
+
+        await updateDoc(creationRef, {
+            name,
+            description,
+        });
+        
+        revalidatePath('/fr/profil');
+        return { success: true, message: "Votre création a été mise à jour avec succès." };
+
+    } catch (error: any) {
+        console.error("Error updating creation:", error);
+        return { success: false, message: "Une erreur est survenue lors de la mise à jour." };
+    }
 }
 
 export async function deleteCreation(idToken: string, creationId: string): Promise<{ success: boolean; message: string; }> {

@@ -55,7 +55,13 @@
     "reward_points_explanation_2": "Échangez vos points contre des réductions ou des bons d'achat.",
     "reward_points_explanation_3": "Taux de conversion : 10 points = 1€.",
     "reward_points_explanation_4": "Limite de gain : 300€ par an.",
-    "reward_points_close_button": "J'ai compris"
+    "reward_points_close_button": "J'ai compris",
+    "edit_creation_button": "Modifier",
+    "edit_creation_title": "Modifier la création",
+    "edit_creation_description": "Mettez à jour le nom et la description de votre création.",
+    "save_changes_button": "Enregistrer",
+    "edit_creation_success_title": "Succès",
+    "edit_creation_error_title": "Erreur"
   },
   "Editor": {
     "charms_title": "Breloques",

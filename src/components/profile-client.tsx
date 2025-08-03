@@ -4,13 +4,13 @@
 
 import React, { useEffect, useState, useTransition } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { getUserCreations, toggleLikeCreation, deleteCreation, logout } from '@/app/actions';
+import { getUserCreations, toggleLikeCreation, deleteCreation, logout, updateCreation } from '@/app/actions';
 import { Creation, JewelryModel, JewelryType, PlacedCharm, Charm } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Loader2, ArrowLeft, PlusCircle, Heart, MoreHorizontal, Trash2, ShoppingCart, LogOut, UserCircle, Award, Share2 } from 'lucide-react';
+import { Loader2, ArrowLeft, PlusCircle, Heart, MoreHorizontal, Trash2, ShoppingCart, LogOut, UserCircle, Award, Share2, Edit } from 'lucide-react';
 import { BrandLogo } from './icons';
 import { Button } from './ui/button';
 import { useTranslations } from '@/hooks/use-translations';
@@ -50,6 +50,9 @@ import { getJewelryTypesAndModels, getCharms } from '@/lib/data';
 import { CartWidget } from './cart-widget';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ShareDialog } from './share-dialog';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
 
 
 function UserNav({ locale }: { locale: string }) {
@@ -109,6 +112,69 @@ function UserNav({ locale }: { locale: string }) {
     )
 }
 
+function EditCreationDialog({ creation, onOpenChange, isOpen }: { creation: Creation, isOpen: boolean, onOpenChange: (open: boolean) => void }) {
+    const t = useTranslations('Auth');
+    const tEditor = useTranslations('Editor');
+    const [name, setName] = useState(creation.name);
+    const [description, setDescription] = useState(creation.description);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const { firebaseUser } = useAuth();
+    const { toast } = useToast();
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!firebaseUser) return;
+        
+        setIsUpdating(true);
+        try {
+            const idToken = await firebaseUser.getIdToken();
+            const result = await updateCreation(idToken, creation.id, name, description);
+            if (result.success) {
+                toast({ title: t('edit_creation_success_title'), description: result.message });
+                onOpenChange(false);
+                 // Note: The parent component will optimistically update the state.
+                 // To trigger a full re-render, we could use a callback passed from the parent.
+            } else {
+                toast({ variant: 'destructive', title: t('edit_creation_error_title'), description: result.message });
+            }
+        } catch (error) {
+            toast({ variant: 'destructive', title: t('edit_creation_error_title'), description: "Une erreur inattendue est survenue." });
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent>
+                 <form onSubmit={handleSubmit}>
+                    <DialogHeader>
+                        <DialogTitle>{t('edit_creation_title')}</DialogTitle>
+                        <DialogDescription>{t('edit_creation_description')}</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-name">{tEditor('creation_name_label')}</Label>
+                            <Input id="edit-name" value={name} onChange={(e) => setName(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-description">{tEditor('creation_description_label')}</Label>
+                            <Textarea id="edit-description" value={description} onChange={(e) => setDescription(e.target.value)} />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isUpdating}>{tEditor('cancel_button')}</Button>
+                        <Button type="submit" disabled={isUpdating}>
+                            {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {t('save_changes_button')}
+                        </Button>
+                    </DialogFooter>
+                 </form>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 export function ProfileClient({ locale }: { locale: string }) {
     const { user, firebaseUser, loading: authLoading } = useAuth();
     const [creations, setCreations] = useState<Creation[] | null>(null);
@@ -124,6 +190,7 @@ export function ProfileClient({ locale }: { locale: string }) {
     const [jewelryTypes, setJewelryTypes] = useState<Omit<JewelryType, 'icon'>[]>([]);
     const [allCharms, setAllCharms] = useState<Charm[]>([]);
     const [creationToShare, setCreationToShare] = useState<Creation | null>(null);
+    const [creationToEdit, setCreationToEdit] = useState<Creation | null>(null);
 
 
     useEffect(() => {
@@ -269,6 +336,21 @@ export function ProfileClient({ locale }: { locale: string }) {
         });
     }
 
+    const handleEditDialogOpen = (creation: Creation) => {
+        setCreationToEdit(creation);
+    };
+
+    const handleEditDialogClose = () => {
+        const fetchCreations = async () => {
+            if (firebaseUser) {
+                const userCreations = await getUserCreations(firebaseUser.uid);
+                setCreations(userCreations);
+            }
+        };
+        fetchCreations();
+        setCreationToEdit(null);
+    }
+
 
     if (authLoading || loadingCreations) {
         return (
@@ -350,7 +432,10 @@ export function ProfileClient({ locale }: { locale: string }) {
                                                             </Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent>
-                                                            <DropdownMenuItem disabled>Modifier</DropdownMenuItem>
+                                                            <DropdownMenuItem onSelect={() => handleEditDialogOpen(creation)}>
+                                                                <Edit className="mr-2 h-4 w-4" />
+                                                                {t('edit_creation_button')}
+                                                            </DropdownMenuItem>
                                                             <AlertDialog>
                                                                 <AlertDialogTrigger asChild>
                                                                     <DropdownMenuItem
@@ -487,6 +572,13 @@ export function ProfileClient({ locale }: { locale: string }) {
                     onOpenChange={() => setCreationToShare(null)}
                     getCanvasDataUri={() => Promise.resolve(creationToShare.previewImageUrl)}
                     t={tEditor}
+                />
+            )}
+            {creationToEdit && (
+                <EditCreationDialog
+                    creation={creationToEdit}
+                    isOpen={!!creationToEdit}
+                    onOpenChange={handleEditDialogClose}
                 />
             )}
         </div>
