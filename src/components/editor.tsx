@@ -849,6 +849,22 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       )}
                   </div>
                   
+                  {isMobile && (
+                    <div className="bg-background p-2.5 flex-shrink-0">
+                        {isEditing ? (
+                            <Button onClick={handleOpenConfirmDialog} variant="outline" className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
+                                <Check />
+                                {t('update_item_button')}
+                            </Button>
+                        ) : (
+                            <Button onClick={handleOpenConfirmDialog} variant="outline" className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
+                                <PlusCircle />
+                                {t('add_to_cart_button')}
+                            </Button>
+                        )}
+                    </div>
+                  )}
+
                   {!isMobile && (
                       <Card>
                           <CardHeader>
@@ -932,23 +948,10 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
          {isMobile && (
             <div className="fixed bottom-0 left-0 right-0 z-20">
-                <div className="bg-background p-2.5">
-                    {isEditing ? (
-                        <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
-                            <Check />
-                            {t('update_item_button')}
-                        </Button>
-                    ) : (
-                        <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
-                            <PlusCircle />
-                            {t('add_to_cart_button')}
-                        </Button>
-                    )}
-                </div>
-                <div className="bg-background border-t flex justify-around items-center">
+                 <div className="bg-background border-t flex justify-around items-center">
                     <Sheet open={isCharmsSheetOpen} onOpenChange={setIsCharmsSheetOpen}>
                         <SheetTrigger asChild>
-                            <Button variant="ghost" className="flex flex-col h-auto p-2 flex-grow gap-1">
+                            <Button variant="ghost" className="flex flex-col h-auto py-3 flex-grow gap-1">
                                 <Gem className="h-6 w-6 text-primary" />
                                 <span className="text-xs">{tCharm('title')}</span>
                             </Button>
@@ -1033,7 +1036,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                     </Sheet>
                     <Sheet open={isSuggestionsSheetOpen} onOpenChange={setIsSuggestionsSheetOpen}>
                         <SheetTrigger asChild>
-                            <Button variant="ghost" className="flex flex-col h-auto p-2 flex-grow gap-1">
+                            <Button variant="ghost" className="flex flex-col h-auto py-3 flex-grow gap-1">
                                 <Sparkles className="h-6 w-6 text-primary" />
                                 <span className="text-xs">{t('ai_suggestions_title')}</span>
                             </Button>
