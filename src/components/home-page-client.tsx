@@ -25,6 +25,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { logout } from '@/app/actions';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
 
 function UserNav({ locale }: { locale: string }) {
     const { user, firebaseUser } = useAuth();
@@ -51,11 +53,16 @@ function UserNav({ locale }: { locale: string }) {
         )
     }
     
+    const fallbackDisplayName = user?.displayName?.charAt(0) || user?.email?.charAt(0) || '?';
+
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                    <User className="h-6 w-6" />
+                <Button variant="ghost" size="icon" className="rounded-full">
+                    <Avatar className="h-8 w-8">
+                        <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'Avatar'} />
+                        <AvatarFallback>{fallbackDisplayName.toUpperCase()}</AvatarFallback>
+                    </Avatar>
                     <span className="sr-only">{t('profile_menu_button')}</span>
                 </Button>
             </DropdownMenuTrigger>
