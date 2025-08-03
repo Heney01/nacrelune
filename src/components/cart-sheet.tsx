@@ -122,47 +122,47 @@ export function CartSheet({ children, open, onOpenChange }: {
                   return (
                     <Card key={item.id} className="overflow-hidden">
                        <CardContent className="p-4">
-                        <div className="flex items-start gap-4">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <div className="relative w-24 h-24 flex-shrink-0 rounded-md overflow-hidden border cursor-pointer group">
-                                <Image
-                                  src={item.previewImage || item.model.displayImageUrl}
-                                  alt={item.model.name}
-                                  fill
-                                  className="object-cover group-hover:scale-105 transition-transform"
-                                  sizes="96px"
-                                />
-                              </div>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-xl">
-                              <DialogHeader>
-                                <DialogTitle>{t('preview_title', { modelName: item.model.name })}</DialogTitle>
-                                <DialogDescription>
-                                  {t('preview_description')}
-                                </DialogDescription>
-                              </DialogHeader>
-                              <div className="mt-4 grid place-items-center">
-                                <Image
-                                  src={item.previewImage || item.model.displayImageUrl}
-                                  alt={t('preview_title', { modelName: item.model.name })}
-                                  width={800}
-                                  height={800}
-                                  className="w-full h-auto object-contain rounded-lg max-w-full max-h-[70vh]"
-                                />
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                          <div className="flex-grow min-w-0">
-                            <p className="font-bold">{item.model.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {item.jewelryType.name}
-                            </p>
-                            <p className="text-lg font-bold mt-2">
-                              {formatPrice(itemPrice)}
-                            </p>
+                          <div className="flex items-start gap-4">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <div className="relative w-24 h-24 flex-shrink-0 rounded-md overflow-hidden border cursor-pointer group">
+                                  <Image
+                                    src={item.previewImage || item.model.displayImageUrl}
+                                    alt={item.model.name}
+                                    fill
+                                    className="object-cover group-hover:scale-105 transition-transform"
+                                    sizes="96px"
+                                  />
+                                </div>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-xl">
+                                <DialogHeader>
+                                  <DialogTitle>{t('preview_title', { modelName: item.model.name })}</DialogTitle>
+                                  <DialogDescription>
+                                    {t('preview_description')}
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="mt-4">
+                                  <Image
+                                    src={item.previewImage || item.model.displayImageUrl}
+                                    alt={t('preview_title', { modelName: item.model.name })}
+                                    width={800}
+                                    height={800}
+                                    className="w-full h-auto object-contain rounded-lg max-w-full max-h-[70vh]"
+                                  />
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                            <div className="flex-grow min-w-0">
+                              <p className="font-bold">{item.model.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {item.jewelryType.name}
+                              </p>
+                              <p className="text-lg font-bold mt-2">
+                                {formatPrice(itemPrice)}
+                              </p>
+                            </div>
                           </div>
-                        </div>
                       </CardContent>
 
                       <Accordion type="single" collapsible className="w-full bg-muted/30">
@@ -269,4 +269,5 @@ export function CartSheet({ children, open, onOpenChange }: {
     </>
   );
 }
+
 
