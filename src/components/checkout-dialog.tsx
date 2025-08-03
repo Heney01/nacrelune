@@ -15,7 +15,7 @@ import { loadStripe, Stripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { createPaymentIntent, CreateOrderResult } from '@/app/actions';
 import { CheckoutForm } from './checkout-form';
-import type { ShippingAddress } from '@/lib/types';
+import type { ShippingAddress, Coupon } from '@/lib/types';
 import { Button } from './ui/button';
 
 export type StockErrorState = {
@@ -38,6 +38,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
   const { cart } = useCart();
   
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
 
   const subtotal = cart.reduce((sum, item) => {
     const modelPrice = item.model.price || 0;
@@ -46,7 +47,14 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
   }, 0);
 
   const shippingCost = 0;
-  const total = subtotal + shippingCost;
+
+  const discountAmount = appliedCoupon
+    ? appliedCoupon.discountType === 'percentage'
+      ? subtotal * (appliedCoupon.value / 100)
+      : appliedCoupon.value
+    : 0;
+  
+  const total = Math.max(0, subtotal - discountAmount + shippingCost);
   
   const formatPrice = (price: number) => tCart('price', { price });
 
@@ -59,22 +67,32 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
   }, []);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+        if (!open) {
+          setAppliedCoupon(null);
+        }
+        onOpenChange(open);
+    }}>
       <DialogContent 
-        className="max-w-4xl w-full grid p-0 max-h-[90vh] md:grid-cols-2"
+        className="max-w-4xl w-full grid p-0 max-h-[90vh] overflow-y-auto md:grid-cols-2"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <div className="flex flex-col h-full max-h-[90vh] md:max-h-none">
-          <Elements stripe={stripePromise} options={{
+          <Elements 
+              stripe={stripePromise} 
+              options={{
                 appearance: { theme: 'stripe' as const, variables: { colorPrimary: '#ef4444', fontFamily: 'Alegreya, Ideal Sans, system-ui, sans-serif' } },
                 mode: 'payment',
-                amount: Math.round(total * 100),
+                amount: Math.max(50, Math.round(total * 100)), // Stripe requires a minimum amount (e.g., 50 cents)
                 currency: 'eur'
           }}>
               <CheckoutForm 
                   total={total}
                   onOrderCreated={onOrderCreated}
                   setStockError={setStockError}
+                  appliedCoupon={appliedCoupon}
+                  setAppliedCoupon={setAppliedCoupon}
+                  subtotal={subtotal}
               />
           </Elements>
         </div>
@@ -95,6 +113,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
                                     alt={item.model.name}
                                     fill
                                     className="object-cover"
+                                    sizes="64px"
                                 />
                                  {isModelOutOfStock && (
                                     <div className="absolute inset-0 bg-red-800/50 flex items-center justify-center">
@@ -136,6 +155,12 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
                     <span className="text-muted-foreground">{t('shipping')}</span>
                     <span>{shippingCost > 0 ? formatPrice(shippingCost) : t('shipping_cost_free')}</span>
                 </div>
+                 {appliedCoupon && (
+                    <div className="flex justify-between text-green-600">
+                        <span className="text-muted-foreground">{t('discount')} ({appliedCoupon.code})</span>
+                        <span>-{formatPrice(discountAmount)}</span>
+                    </div>
+                )}
                 <Separator />
                  <div className="flex justify-between font-bold text-lg">
                     <span>{t('total')}</span>

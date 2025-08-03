@@ -2,6 +2,13 @@
 
 import { DocumentReference } from 'firebase/firestore';
 
+export interface User {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL?: string | null;
+}
+
 export interface CharmCategory {
   id: string;
   name: string;
@@ -24,6 +31,19 @@ export interface Charm {
   lastOrderedAt?: Date | null;
   restockedAt?: Date | null;
 }
+
+// A simplified version of Charm for storing within a Creation, without date fields.
+export interface CreationCharm {
+  id: string;
+  name: string;
+  imageUrl: string;
+  description: string;
+  categoryIds: string[];
+  price?: number;
+  width?: number; // in mm
+  height?: number; // in mm
+}
+
 
 export interface JewelryModel {
   id: string;
@@ -55,6 +75,15 @@ export interface PlacedCharm {
   rotation: number;
   animation?: string;
 }
+
+// PlacedCharm as stored within a Creation document
+export interface PlacedCreationCharm {
+  id: string;
+  charm: CreationCharm;
+  position: { x: number; y: number };
+  rotation: number;
+}
+
 
 export interface CartItem {
     id: string;
@@ -135,4 +164,31 @@ export interface Order {
     cancellationReason?: string;
     mailHistory?: MailLog[];
     paymentIntentId?: string;
+}
+
+export interface Coupon {
+    id: string;
+    code: string;
+    discountType: 'percentage' | 'fixed';
+    value: number;
+    isActive: boolean;
+    validUntil?: Date;
+    minPurchase?: number;
+}
+
+
+// NEW: Represents a user-published creation
+export interface Creation {
+    id: string;
+    creatorId: string;
+    creatorName: string;
+    name: string;
+    description: string;
+    jewelryTypeId: string;
+    modelId: string;
+    placedCharms: PlacedCreationCharm[];
+    previewImageUrl: string;
+    createdAt: Date;
+    salesCount: number;
+    likesCount: number;
 }

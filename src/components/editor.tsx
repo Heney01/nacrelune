@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useMemo, useRef, WheelEvent as ReactWheelEvent, useCallback, useEffect, TouchEvent as ReactTouchEvent } from 'react';
@@ -6,9 +7,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Share2, Layers, Check } from 'lucide-react';
+import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Share2, Layers, Check, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BrandLogo, ShoppingBasketIcon } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -17,21 +18,26 @@ import { CharmsPanel } from './charms-panel';
 import { Input } from './ui/input';
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
-import { useSearchParams, useParams } from 'next/navigation';
+import { useSearchParams, useParams, useRouter } from 'next/navigation';
 import { CartSheet } from './cart-sheet';
 import html2canvas from 'html2canvas';
 import { CartWidget } from './cart-widget';
 import { useTranslations } from '@/hooks/use-translations';
-import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction, getCharmDesignCritiqueAction, generateShareContentAction } from '@/app/actions';
+import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction, getCharmDesignCritiqueAction, saveCreation, deleteCreation, updateCreation, toggleLikeCreation } from '@/app/actions';
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogClose, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { ShareDialog } from './share-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from './ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Loader2 } from 'lucide-react';
+import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
+import { useAuth } from '@/hooks/use-auth';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -74,7 +80,7 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
         e.preventDefault();
         e.stopPropagation();
         const rotationAmount = e.deltaY > 0 ? 10 : -10; // Rotate by 10 degrees
-        onRotate(placed.rotation, placed.rotation + rotationAmount);
+        onRotate(placed.id, placed.rotation + rotationAmount);
     };
 
 
@@ -108,6 +114,7 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
                 draggable="false"
                 width={pixelSize.width}
                 height={pixelSize.height}
+                crossOrigin="anonymous"
             />
             <button
                 onMouseDown={handleDelete}
@@ -140,6 +147,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   
   const searchParams = useSearchParams();
   const params = useParams();
+  const router = useRouter();
   const locale = params.locale as string;
 
   const cartItemId = searchParams.get('cartItemId');
@@ -158,6 +166,10 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [previewForDialog, setPreviewForDialog] = useState<string | null>(null);
+  const [creationName, setCreationName] = useState('');
+  const [creationDescription, setDescription] = useState('');
+  const [isPublishing, setIsPublishing] = useState(false);
+  const { firebaseUser } = useAuth();
 
 
   const [scale, setScale] = useState(1);
@@ -378,8 +390,11 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     };
     
     const handleMove = (e: MouseEvent | TouchEvent) => {
-      
-      if ('preventDefault' in e && e.cancelable) e.preventDefault();
+      const isInteracting = interactionState.isDragging || interactionState.isPanning || interactionState.isPinching;
+
+      if (isInteracting && 'preventDefault' in e && e.cancelable) {
+        e.preventDefault();
+      }
 
       if (interactionState.isDragging && interactionState.activeCharmId) {
         const canvasEl = canvasRef.current;
@@ -429,7 +444,10 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
       const target = e.target as HTMLElement;
       if (target.closest('.charm-on-canvas')) return;
       
-      if ('preventDefault' in e && e.cancelable) e.preventDefault();
+      const isInteracting = interactionState.isDragging || interactionState.isPanning || interactionState.isPinching;
+      if (!isInteracting && 'preventDefault' in e && e.cancelable) {
+        e.preventDefault();
+      }
       
       setSelectedPlacedCharmId(null);
       
@@ -535,6 +553,56 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
       setPreviewForDialog(null);
       setIsCartSheetOpen(true);
   };
+
+  const handlePublish = async () => {
+      if (!previewForDialog || !firebaseUser) {
+          toast({ variant: 'destructive', title: "Non connecté", description: "Vous devez être connecté pour publier." });
+          return;
+      }
+      if (!creationName.trim()) {
+          toast({ variant: 'destructive', title: "Nom manquant", description: "Veuillez donner un nom à votre création." });
+          return;
+      }
+
+      setIsPublishing(true);
+      
+      const creationPayload = {
+          jewelryTypeId: jewelryType.id,
+          modelId: model.id,
+          placedCharms: placedCharms.map(pc => ({
+              charmId: pc.charm.id,
+              position: pc.position,
+              rotation: pc.rotation
+          })),
+          previewImageUrl: previewForDialog,
+      };
+
+      try {
+        const idToken = await firebaseUser.getIdToken();
+        const result = await saveCreation(
+            idToken,
+            creationName,
+            creationDescription,
+            JSON.stringify(creationPayload)
+        );
+
+        if (result.success) {
+            toast({ title: "Publication réussie !", description: result.message });
+            setIsConfirmOpen(false);
+            setPreviewForDialog(null);
+            // Redirect to profile page to see the new creation
+            router.push(`/${locale}/profil`);
+        } else {
+            toast({ variant: 'destructive', title: "Erreur de publication", description: result.message });
+        }
+      } catch (error: any) {
+        toast({ variant: 'destructive', title: "Erreur d'authentification", description: "Impossible de vérifier votre session. Veuillez vous reconnecter." });
+      }
+
+
+      setIsPublishing(false);
+  };
+
 
   const placedCharmCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -709,30 +777,84 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         }}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>{isEditing ? t('confirm_update_title') : t('confirm_add_title')}</DialogTitle>
+                    <DialogTitle>{t('finalize_creation_title')}</DialogTitle>
                     <DialogDescription>
                         {t('confirm_add_description')}
                     </DialogDescription>
                 </DialogHeader>
-                <div className="my-4">
+                 <div className="my-4 hidden sm:grid place-items-center">
                     {previewForDialog ? (
-                        <Image src={previewForDialog} alt={t('preview_alt')} width={400} height={400} className="rounded-lg border bg-muted/50" />
+                        <Image src={previewForDialog} alt={t('preview_alt')} width={300} height={300} className="rounded-lg border bg-muted/50 max-w-[75%] sm:max-w-full h-auto" />
                     ) : (
                         <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center">
                             <Loader2 className="animate-spin" />
                         </div>
                     )}
                 </div>
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button variant="outline">{t('cancel_button')}</Button>
-                    </DialogClose>
-                    <Button onClick={handleConfirmAddToCart} disabled={!previewForDialog}>{t('confirm_button')}</Button>
-                </DialogFooter>
+                <Tabs defaultValue="buy" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="buy">{t('buy_tab')}</TabsTrigger>
+                        <TabsTrigger value="publish">{t('publish_tab')}</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="buy">
+                        <Card className="border-0 shadow-none">
+                            <CardHeader>
+                                <CardTitle>{t('buy_title')}</CardTitle>
+                                <CardDescription>{t('buy_description')}</CardDescription>
+                            </CardHeader>
+                            <CardFooter>
+                                <Button onClick={handleConfirmAddToCart} className="w-full" disabled={!previewForDialog}>
+                                    {isEditing ? t('update_item_button') : t('add_to_cart_button')}
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    </TabsContent>
+                    <TabsContent value="publish">
+                        <Card className="border-0 shadow-none">
+                            <CardHeader>
+                                <CardTitle>{t('publish_title')}</CardTitle>
+                                <CardDescription>{t('publish_description')}</CardDescription>
+                            </CardHeader>
+                            {!firebaseUser ? (
+                                <CardContent>
+                                    <Alert>
+                                        <AlertTitle>{t('publish_login_required_title')}</AlertTitle>
+                                        <AlertDescription>
+                                            {t('publish_login_required_desc')}{' '}
+                                            <Link href={`/${locale}/connexion`} className="font-bold underline">
+                                                {t('publish_login_link')}
+                                            </Link>
+                                            .
+                                        </AlertDescription>
+                                    </Alert>
+                                </CardContent>
+                            ) : (
+                                <>
+                                <CardContent className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="creationName">{t('creation_name_label')}</Label>
+                                        <Input id="creationName" value={creationName} onChange={(e) => setCreationName(e.target.value)} placeholder={t('creation_name_placeholder')} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="creationDescription">{t('creation_description_label')}</Label>
+                                        <Textarea id="creationDescription" value={creationDescription} onChange={(e) => setDescription(e.target.value)} placeholder={t('creation_description_placeholder')} />
+                                    </div>
+                                </CardContent>
+                                <CardFooter>
+                                    <Button onClick={handlePublish} className="w-full" disabled={isPublishing || !creationName.trim()}>
+                                        {isPublishing && <Loader2 className="animate-spin mr-2" />}
+                                        {t('publish_button')}
+                                    </Button>
+                                </CardFooter>
+                                </>
+                            )}
+                        </Card>
+                    </TabsContent>
+                </Tabs>
             </DialogContent>
         </Dialog>
 
-      <div className={cn("flex flex-col h-screen overflow-hidden", isMobile && "h-[calc(100dvh)]")}>
+      <div className="flex flex-col h-screen overflow-hidden">
         <header className="p-4 border-b flex-shrink-0">
             <div className="container mx-auto flex justify-between items-center">
               <Link href={`/${locale}`} className="flex items-center gap-2">
@@ -743,11 +865,11 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
             </div>
           </header>
-        <main className={cn("flex-grow flex flex-col p-4 md:p-8 min-h-0", isMobile && "p-0")}>
-          <div className={cn("container mx-auto flex-1 flex flex-col min-h-0", isMobile && "px-0")}>
-              <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0", isMobile && "grid-cols-1 gap-0")}>
+        <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0">
+          <div className="container mx-auto flex-1 flex flex-col min-h-0">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0">
               
-              <div className="lg:col-span-3 flex-col min-h-0 gap-6 hidden lg:flex">
+              <div className="lg:col-span-3 flex-col min-h-0 hidden lg:flex">
                 <CharmsPanel 
                   allCharms={availableCharms}
                   charmCategories={charmCategories}
@@ -757,28 +879,39 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                 />
               </div>
 
-              <div className={cn("lg:col-span-6 flex flex-col gap-4 min-h-0", isMobile && "order-first")}>
-                  <div className={cn("flex justify-between items-center gap-4 flex-shrink-0", isMobile && "px-4 pt-4")}>
-                      <Button variant="ghost" asChild className={cn(isMobile ? "p-0 h-auto" : "")}>
+              <div className="lg:col-span-6 flex flex-col gap-4 min-h-0 order-first lg:order-none">
+                  <div className="flex justify-between items-center gap-4 flex-shrink-0 px-4 pt-4 lg:p-0">
+                      <Button variant="ghost" asChild className="p-0 h-auto lg:h-10 lg:p-2">
                           <Link href={`/${locale}/?type=${jewelryType.id}`}>
                               <ArrowLeft className="mr-2 h-4 w-4" />
-                              {!isMobile && tHome('back_button')}
+                              <span className="hidden lg:inline">{tHome('back_button')}</span>
                           </Link>
                       </Button>
                       <div className="flex items-center gap-2">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                                    <Info className="h-5 w-5" />
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md">
+                                <DialogHeader>
+                                <DialogTitle className="font-headline text-xl">{t('editor_disclaimer_title')}</DialogTitle>
+                                </DialogHeader>
+                                <p className="text-sm text-muted-foreground mt-2">
+                                {t('editor_disclaimer')}
+                                </p>
+                            </DialogContent>
+                        </Dialog>
                         <Button variant="outline" size={isMobile ? "icon" : "default"} onClick={() => setIsShareOpen(true)}>
                           <Share2 className={cn(!isMobile && "mr-2")}/>
-                          {!isMobile && t('share_button')}
+                          <span className="hidden lg:inline">{t('share_button')}</span>
                         </Button>
                       </div>
                   </div>
                   <div
                       ref={canvasWrapperRef}
-                      className={cn(
-                        "relative w-full aspect-square bg-card overflow-hidden touch-none grid place-items-center flex-grow", 
-                        !isMobile && "border-dashed border-2 border-muted-foreground/30",
-                        isMobile && (isCharmsSheetOpen || isSuggestionsSheetOpen) && "pointer-events-none"
-                      )}
+                      className="relative w-full aspect-square bg-card overflow-hidden touch-none grid place-items-center flex-grow border-dashed border-2 border-muted-foreground/30"
                   >
                       <div
                           ref={canvasRef}
@@ -800,6 +933,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                               className="pointer-events-none max-w-full max-h-full object-contain"
                               data-ai-hint="jewelry model"
                               priority
+                              crossOrigin="anonymous"
                           />
                           
                           {pixelsPerMm && sortedPlacedCharms.map((placed) => {
@@ -822,7 +956,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                           })}
                       </div>
 
-                      <div className="absolute bottom-4 left-4 z-10">
+                      {!isMobile && (
+                        <div className="absolute bottom-4 left-4 z-10">
                            <Dialog>
                                 <DialogTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground rounded-full hover:bg-muted/50 hover:text-foreground">
@@ -838,7 +973,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                     </p>
                                 </DialogContent>
                            </Dialog>
-                      </div>
+                        </div>
+                      )}
 
                       {!isMobile && (
                         <div className="absolute bottom-2 right-2 flex gap-2">
@@ -849,7 +985,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       )}
                   </div>
                   
-                  {!isMobile && (
+                  <div className="hidden lg:block">
                       <Card>
                           <CardHeader>
                               <CardTitle className="font-headline text-lg flex items-center gap-2">
@@ -860,8 +996,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                               {placedCharms.length === 0 ? (
                                   <p className="text-muted-foreground text-sm text-center py-4">{t('added_charms_placeholder')}</p>
                               ) : (
-                                  <ScrollArea className="w-full">
-                                      <div className="flex gap-2 pb-4 pt-2 pl-2 flex-wrap">
+                                  <ScrollArea className="w-full whitespace-nowrap" orientation="horizontal">
+                                      <div className="flex w-max space-x-2 p-4 flex-nowrap">
                                           {sortedPlacedCharms.map((pc) => (
                                               <div key={pc.id}
                                                   className={cn("p-2 rounded-md border flex flex-col items-center gap-1 cursor-pointer w-20 relative group",
@@ -895,24 +1031,18 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                               </div>
                                           ))}
                                       </div>
+                                      <ScrollBar orientation="horizontal" />
                                   </ScrollArea>
                               )}
                           </CardContent>
                           <CardFooter>
-                              {isEditing ? (
-                              <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues}>
-                                  <Check />
-                                  {t('update_item_button')}
-                              </Button>
-                              ) : (
                               <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
-                                  <PlusCircle />
-                                  {t('add_to_cart_button')}
+                                  <Check />
+                                  {isEditing ? t('update_item_button') : t('finalize_button')}
                               </Button>
-                              )}
                           </CardFooter>
                       </Card>
-                  )}
+                  </div>
               </div>
 
               <div className="lg:col-span-3 flex-col gap-6 min-h-0 hidden lg:flex">
@@ -931,133 +1061,125 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         </main>
 
          {isMobile && (
-            <div className="fixed bottom-0 left-0 right-0 z-20">
-                <div className="bg-background p-2.5">
-                    {isEditing ? (
-                        <Button onClick={handleOpenConfirmDialog} className="w-full" variant="outline" disabled={hasStockIssues}>
-                            <Check />
-                            {t('update_item_button')}
-                        </Button>
-                    ) : (
-                        <Button onClick={handleOpenConfirmDialog} className="w-full" variant="outline" disabled={hasStockIssues || placedCharms.length === 0}>
-                            <PlusCircle />
-                            {t('add_to_cart_button')}
-                        </Button>
-                    )}
-                </div>
-                <div className="bg-background border-t flex justify-around items-center">
-                    <Sheet open={isCharmsSheetOpen} onOpenChange={setIsCharmsSheetOpen}>
-                        <SheetTrigger asChild>
-                            <Button variant="ghost" className="flex flex-col h-auto p-2 flex-grow gap-1">
-                                <Gem className="h-6 w-6 text-primary" />
-                                <span className="text-xs">{tCharm('title')}</span>
-                            </Button>
-                        </SheetTrigger>
-                        <SheetContent side="bottom" className="h-[80%] p-0 flex flex-col" onOpenAutoFocus={(e) => e.preventDefault()}>
-                            <Tabs defaultValue="add" className="w-full flex-grow min-h-0 flex flex-col">
-                                <div className="p-4 border-b flex-shrink-0">
-                                    <SheetHeader>
-                                        <SheetTitle>
-                                            <TabsList className="grid w-full grid-cols-2">
-                                                <TabsTrigger value="add">Ajouter</TabsTrigger>
-                                                <TabsTrigger value="placed">Installées ({placedCharms.length})</TabsTrigger>
-                                            </TabsList>
-                                        </SheetTitle>
-                                    </SheetHeader>
-                                    <div className="relative mt-4">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            placeholder={tCharm('search_placeholder')}
-                                            value={charmsSearchTerm}
-                                            onChange={(e) => setCharmsSearchTerm(e.target.value)}
-                                            className="pl-9"
+            <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-2.5 z-20 space-y-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))]">
+                <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
+                    <Check />
+                    {isEditing ? t('update_item_button') : t('finalize_button')}
+                </Button>
+
+                 <div className="grid grid-cols-2 gap-2.5">
+                      <Sheet open={isCharmsSheetOpen} onOpenChange={setIsCharmsSheetOpen}>
+                          <SheetTrigger asChild>
+                              <Button variant="outline" className="w-full">
+                                  <Gem className="mr-2 h-4 w-4" />
+                                  {tCharm('title')}
+                              </Button>
+                          </SheetTrigger>
+                          <SheetContent side="bottom" className="h-[80%] p-0 flex flex-col" onOpenAutoFocus={(e) => e.preventDefault()}>
+                              <Tabs defaultValue="add" className="w-full flex-grow min-h-0 flex flex-col">
+                                  <div className="p-4 border-b flex-shrink-0">
+                                      <SheetHeader>
+                                          <SheetTitle>
+                                              <TabsList className="grid w-full grid-cols-2">
+                                                  <TabsTrigger value="add">Ajouter</TabsTrigger>
+                                                  <TabsTrigger value="placed">Installées ({placedCharms.length})</TabsTrigger>
+                                              </TabsList>
+                                          </SheetTitle>
+                                      </SheetHeader>
+                                      <div className="relative mt-4">
+                                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                          <Input
+                                              placeholder={tCharm('search_placeholder')}
+                                              value={charmsSearchTerm}
+                                              onChange={(e) => setCharmsSearchTerm(e.target.value)}
+                                              className="pl-9"
+                                          />
+                                      </div>
+                                  </div>
+                                  <TabsContent value="add" className="m-0 flex-grow min-h-0">
+                                      <div className="flex-grow overflow-y-auto h-full">
+                                          <CharmsPanel 
+                                              allCharms={availableCharms}
+                                              charmCategories={charmCategories}
+                                              onAddCharm={addCharmFromCharmList} 
+                                              isMobileSheet={true}
+                                              searchTerm={charmsSearchTerm}
+                                              onSearchTermChange={setCharmsSearchTerm}
+                                          />
+                                      </div>
+                                  </TabsContent>
+                                  <TabsContent value="placed" className="m-0 flex-grow min-h-0">
+                                      <div className="flex-grow overflow-y-auto h-full p-4">
+                                          {placedCharms.length === 0 ? (
+                                              <p className="text-muted-foreground text-sm text-center py-4">{t('added_charms_placeholder')}</p>
+                                          ) : (
+                                              <div className="flex gap-2 pb-4 pt-2 pl-2 flex-wrap">
+                                                  {sortedPlacedCharms.map((pc) => (
+                                                      <div key={pc.id}
+                                                          className={cn("p-2 rounded-md border flex flex-col items-center gap-1 cursor-pointer w-20 relative group",
+                                                          selectedPlacedCharmId === pc.id ? 'ring-2 ring-primary' : 'hover:bg-muted/50',
+                                                          !pc.isAvailable && "bg-destructive/10"
+                                                          )}
+                                                          onClick={() => handleCharmListClick(pc.id)}
+                                                      >
+                                                          <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={32} height={32} className="w-8 h-8 object-contain" />
+                                                          <span className="text-xs text-center font-medium truncate w-full">{pc.charm.name}</span>
+                                                          {!pc.isAvailable && (
+                                                              <TooltipProvider>
+                                                                  <Tooltip>
+                                                                      <TooltipTrigger className="absolute inset-0 z-10">
+                                                                          <span className="sr-only">Stock issue</span>
+                                                                      </TooltipTrigger>
+                                                                      <TooltipContent>
+                                                                          <p>{t('stock_issue_tooltip')}</p>
+                                                                      </TooltipContent>
+                                                                  </Tooltip>
+                                                              </TooltipProvider>
+                                                          )}
+                                                          <Button 
+                                                              variant="destructive" 
+                                                              size="icon" 
+                                                              className="absolute -top-2 -right-2 h-5 w-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                                                              onClick={(e) => { e.stopPropagation(); removeCharm(pc.id); }}
+                                                          >
+                                                              <X className="h-3 w-3" />
+                                                          </Button>
+                                                      </div>
+                                                  ))}
+                                              </div>
+                                          )}
+                                      </div>
+                                  </TabsContent>
+                              </Tabs>
+                          </SheetContent>
+                      </Sheet>
+                        <Sheet open={isSuggestionsSheetOpen} onOpenChange={setIsSuggestionsSheetOpen}>
+                            <SheetTrigger asChild>
+                                <Button variant="outline" className="w-full">
+                                    <Sparkles className="h-5 w-5 text-primary" />
+                                     <span className="ml-2">Suggestions IA</span>
+                                </Button>
+                            </SheetTrigger>
+                            <SheetContent side="bottom" className="h-[80%] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+                                <SheetHeader className="p-4 border-b">
+                                    <SheetTitle>{t('ai_suggestions_title')}</SheetTitle>
+                                </SheetHeader>
+                                <div className="relative flex-1">
+                                    <div className="absolute inset-0">
+                                        <SuggestionSidebar 
+                                            charms={allCharms} 
+                                            isMobile={true}
+                                            onAnalyze={handleAnalyzeForSuggestions}
+                                            onCritique={handleCritiqueDesign}
+                                            isLoading={isGenerating}
+                                            suggestions={suggestions}
+                                            critique={critique}
+                                            onApplySuggestion={applySuggestion}
                                         />
                                     </div>
                                 </div>
-                                <TabsContent value="add" className="m-0 flex-grow min-h-0">
-                                    <div className="flex-grow overflow-y-auto h-full">
-                                        <CharmsPanel 
-                                            allCharms={availableCharms}
-                                            charmCategories={charmCategories}
-                                            onAddCharm={addCharmFromCharmList} 
-                                            isMobileSheet={true}
-                                            searchTerm={charmsSearchTerm}
-                                            onSearchTermChange={setCharmsSearchTerm}
-                                        />
-                                    </div>
-                                </TabsContent>
-                                <TabsContent value="placed" className="m-0 flex-grow min-h-0">
-                                    <div className="flex-grow overflow-y-auto h-full p-4">
-                                        {placedCharms.length === 0 ? (
-                                            <p className="text-muted-foreground text-sm text-center py-4">{t('added_charms_placeholder')}</p>
-                                        ) : (
-                                            <div className="flex gap-2 pb-4 pt-2 pl-2 flex-wrap">
-                                                {sortedPlacedCharms.map((pc) => (
-                                                    <div key={pc.id}
-                                                        className={cn("p-2 rounded-md border flex flex-col items-center gap-1 cursor-pointer w-20 relative group",
-                                                        selectedPlacedCharmId === pc.id ? 'ring-2 ring-primary' : 'hover:bg-muted/50',
-                                                        !pc.isAvailable && "bg-destructive/10"
-                                                        )}
-                                                        onClick={() => handleCharmListClick(pc.id)}
-                                                    >
-                                                        <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={32} height={32} className="w-8 h-8 object-contain" />
-                                                        <span className="text-xs text-center font-medium truncate w-full">{pc.charm.name}</span>
-                                                        {!pc.isAvailable && (
-                                                            <TooltipProvider>
-                                                                <Tooltip>
-                                                                    <TooltipTrigger className="absolute inset-0 z-10">
-                                                                        <span className="sr-only">Stock issue</span>
-                                                                    </TooltipTrigger>
-                                                                    <TooltipContent>
-                                                                        <p>{t('stock_issue_tooltip')}</p>
-                                                                    </TooltipContent>
-                                                                </Tooltip>
-                                                            </TooltipProvider>
-                                                        )}
-                                                        <Button 
-                                                            variant="destructive" 
-                                                            size="icon" 
-                                                            className="absolute -top-2 -right-2 h-5 w-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
-                                                            onClick={(e) => { e.stopPropagation(); removeCharm(pc.id); }}
-                                                        >
-                                                            <X className="h-3 w-3" />
-                                                        </Button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </TabsContent>
-                            </Tabs>
-                        </SheetContent>
-                    </Sheet>
-                    <Sheet open={isSuggestionsSheetOpen} onOpenChange={setIsSuggestionsSheetOpen}>
-                        <SheetTrigger asChild>
-                            <Button variant="ghost" className="flex flex-col h-auto p-2 flex-grow gap-1">
-                                <Sparkles className="h-6 w-6 text-primary" />
-                                <span className="text-xs">{t('ai_suggestions_title')}</span>
-                            </Button>
-                        </SheetTrigger>
-                        <SheetContent side="bottom" className="h-[80%] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
-                            <SheetHeader className="p-4 border-b">
-                                <SheetTitle>{t('ai_suggestions_title')}</SheetTitle>
-                            </SheetHeader>
-                            <div className="relative flex-1">
-                                <div className="absolute inset-0">
-                                    <SuggestionSidebar 
-                                        charms={allCharms} 
-                                        isMobile={true}
-                                        onAnalyze={handleAnalyzeForSuggestions}
-                                        onCritique={handleCritiqueDesign}
-                                        isLoading={isGenerating}
-                                        suggestions={suggestions}
-                                        critique={critique}
-                                        onApplySuggestion={applySuggestion}
-                                    />
-                                </div>
-                            </div>
-                        </SheetContent>
-                    </Sheet>
+                            </SheetContent>
+                        </Sheet>
                 </div>
             </div>
           )}
@@ -1065,3 +1187,15 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
+
+
+    
+
+
+
+
+
+
+
+    

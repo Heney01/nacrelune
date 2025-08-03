@@ -4,13 +4,13 @@
 
 import { revalidatePath } from 'next/cache';
 import { db, storage } from '@/lib/firebase';
-import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction, Timestamp, collectionGroup, documentId, orderBy, DocumentReference, DocumentSnapshot } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction, Timestamp, collectionGroup, documentId, orderBy, DocumentReference, DocumentSnapshot, increment } from 'firebase/firestore';
 import { ref, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { cookies } from 'next/headers';
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
-import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm, ShippingAddress, DeliveryMethod, MailLog } from '@/lib/types';
+import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm, ShippingAddress, DeliveryMethod, MailLog, User, Coupon, Creation, CreationCharm, PlacedCreationCharm } from '@/lib/types';
 import { getCharmSuggestions as getCharmSuggestionsFlow, CharmSuggestionInput, CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { getCharmAnalysisSuggestions as getCharmAnalysisSuggestionsFlow, CharmAnalysisSuggestionInput, CharmAnalysisSuggestionOutput } from '@/ai/flows/charm-analysis-suggestions';
 import { getCharmDesignCritique as getCharmDesignCritiqueFlow, CharmDesignCritiqueInput, CharmDesignCritiqueOutput } from '@/ai/flows/charm-design-critique';
@@ -18,7 +18,9 @@ import { generateShareContent as generateShareContentFlow, GenerateShareContentI
 import { z } from 'zod';
 import { getCharms as fetchCharms, toDate } from '@/lib/data';
 import Stripe from 'stripe';
-require('dotenv').config();
+import { Auth, getAuth as getAdminAuth } from 'firebase-admin/auth';
+import { adminApp } from '@/lib/firebase-admin';
+
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -189,13 +191,13 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
 }
 
 
-export async function login(prevState: any, formData: FormData) {
+export async function login(prevState: any, formData: FormData): Promise<{ success: boolean; message?: string; error?: string; }> {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
   const locale = formData.get('locale') as string || 'fr';
 
   if (!email || !password) {
-    return { error: 'Veuillez fournir un email et un mot de passe.' };
+    return { success: false, error: 'Veuillez fournir un email et un mot de passe.' };
   }
 
   const auth = getAuth(app);
@@ -210,6 +212,9 @@ export async function login(prevState: any, formData: FormData) {
       maxAge: 60 * 60 * 24, // 1 day
       path: '/',
     });
+    
+    // Don't redirect from here, let the client handle it after showing toast.
+    return { success: true, message: "Connexion réussie !" };
 
   } catch (error: any) {
     let errorMessage = "Une erreur inconnue est survenue.";
@@ -226,17 +231,157 @@ export async function login(prevState: any, formData: FormData) {
             errorMessage = "Une erreur est survenue lors de la connexion.";
             break;
     }
-    return { error: errorMessage };
+    return { success: false, error: errorMessage };
   }
-  
-  redirect(`/${locale}/admin/dashboard`);
+}
+
+export async function userLogin(prevState: any, formData: FormData): Promise<{ success: boolean; message?: string; error?: string; }> {
+  const email = formData.get('email') as string;
+  const password = formData.get('password') as string;
+  const locale = formData.get('locale') as string || 'fr';
+
+  if (!email || !password) {
+    return { success: false, error: 'Veuillez fournir un email et un mot de passe.' };
+  }
+
+  const auth = getAuth(app);
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    const idToken = await user.getIdToken();
+    
+    cookies().set('session', idToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 7, // 7 days for users
+      path: '/',
+    });
+    
+    // Don't redirect from here, let the client handle it after showing toast.
+    return { success: true, message: `Bienvenue, ${user.displayName || user.email} !` };
+
+  } catch (error: any) {
+    let errorMessage = "Une erreur inconnue est survenue.";
+    switch (error.code) {
+        case 'auth/invalid-email':
+            errorMessage = "L'adresse e-mail n'est pas valide.";
+            break;
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+            errorMessage = "Email ou mot de passe incorrect.";
+            break;
+        default:
+            errorMessage = "Une erreur est survenue lors de la connexion.";
+            break;
+    }
+    return { success: false, error: errorMessage };
+  }
+}
+
+export async function signup(prevState: any, formData: FormData): Promise<{ success: boolean; message?: string; error?: string; }> {
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    const displayName = formData.get('displayName') as string;
+    const locale = formData.get('locale') as string || 'fr';
+
+    if (!email || !password || !displayName) {
+        return { success: false, error: 'Veuillez remplir tous les champs.' };
+    }
+
+    const auth = getAuth(app);
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        await updateProfile(user, { displayName });
+
+        const userData: Omit<User, 'uid'> = {
+            email: user.email,
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+        };
+        await setDoc(doc(db, 'users', user.uid), userData);
+
+        const idToken = await user.getIdToken();
+        cookies().set('session', idToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 60 * 60 * 24 * 7, // 7 days
+            path: '/',
+        });
+        
+        // Don't redirect from here, let the client handle it after showing toast.
+        return { success: true, message: `Bienvenue, ${displayName} !` };
+
+    } catch (error: any) {
+        let errorMessage = "Une erreur inconnue est survenue.";
+        switch (error.code) {
+            case 'auth/invalid-email':
+                errorMessage = "L'adresse e-mail n'est pas valide.";
+                break;
+            case 'auth/email-already-in-use':
+                errorMessage = "Cette adresse e-mail est déjà utilisée.";
+                break;
+            case 'auth/weak-password':
+                errorMessage = "Le mot de passe doit contenir au moins 6 caractères.";
+                break;
+            default:
+                errorMessage = "Une erreur est survenue lors de l'inscription.";
+                break;
+        }
+        return { success: false, error: errorMessage };
+    }
+}
+
+
+export async function userLoginWithGoogle(formData: FormData): Promise<{ success: boolean; message?: string; error?: string; }> {
+  const idToken = formData.get('idToken') as string;
+  const locale = formData.get('locale') as string || 'fr';
+  const displayName = formData.get('displayName') as string;
+  const email = formData.get('email') as string;
+  const photoURL = formData.get('photoURL') as string;
+  const uid = formData.get('uid') as string;
+
+  if (!idToken) {
+    return { success: false, error: 'Token de connexion manquant.' };
+  }
+
+  try {
+    // Check if user already exists in Firestore
+    const userDocRef = doc(db, 'users', uid);
+    const userDoc = await getDoc(userDocRef);
+
+    if (!userDoc.exists()) {
+      // If user does not exist, create a new document
+      const newUser: Omit<User, 'uid'> = {
+        email,
+        displayName,
+        photoURL,
+      };
+      await setDoc(userDocRef, newUser);
+    }
+    
+    cookies().set('session', idToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    });
+    
+    return { success: true, message: `Bienvenue, ${displayName || email} !` };
+
+  } catch (error: any) {
+    console.error("Error during Google Sign-in server action:", error);
+    return { success: false, error: "Une erreur est survenue lors de la connexion avec Google." };
+  }
 }
 
 
 export async function logout(formData: FormData) {
   const locale = formData.get('locale') as string || 'fr';
   cookies().delete('session');
-  redirect(`/${locale}/login`);
+  redirect(`/${locale}/connexion`);
 }
 
 // --- Charm Category Actions ---
@@ -600,6 +745,39 @@ export async function markAsRestocked(formData: FormData): Promise<{ success: bo
     }
 }
 
+export async function validateCoupon(code: string): Promise<{ success: boolean; message: string; coupon?: Coupon }> {
+    if (!code) {
+        return { success: false, message: 'Veuillez entrer un code.' };
+    }
+    
+    try {
+        const q = query(collection(db, 'coupons'), where('code', '==', code.trim().toUpperCase()));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            return { success: false, message: "Ce code promo n'est pas valide." };
+        }
+        
+        const couponDoc = querySnapshot.docs[0];
+        const couponData = couponDoc.data() as Omit<Coupon, 'id'>;
+        
+        if (!couponData.isActive) {
+            return { success: false, message: "Ce code promo a expiré." };
+        }
+
+        if (couponData.validUntil && toDate(couponData.validUntil as any)! < new Date()) {
+             return { success: false, message: "Ce code promo a expiré." };
+        }
+
+        const coupon = { id: couponDoc.id, ...couponData } as Coupon;
+        return { success: true, message: 'Code promo appliqué !', coupon };
+
+    } catch (error: any) {
+        console.error("Error validating coupon:", error);
+        return { success: false, message: "Une erreur est survenue lors de la validation du code." };
+    }
+}
+
 
 export async function createOrder(
     cartItems: SerializableCartItem[], 
@@ -607,7 +785,8 @@ export async function createOrder(
     locale: string, 
     paymentIntentId: string, // Can be a placeholder for now
     deliveryMethod: DeliveryMethod,
-    shippingAddress?: ShippingAddress
+    shippingAddress?: ShippingAddress,
+    coupon?: Coupon
 ): Promise<CreateOrderResult> {
     if (!cartItems || cartItems.length === 0) {
         return { success: false, message: 'Le panier est vide.' };
@@ -695,11 +874,18 @@ export async function createOrder(
                 transaction.update(ref, { quantity: update.newQuantity });
             }
 
-            const totalOrderPrice = cartItems.reduce((sum, item) => {
+            let totalOrderPrice = cartItems.reduce((sum, item) => {
                 const modelPrice = item.model.price || 0;
                 const charmsPrice = item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
                 return sum + modelPrice + charmsPrice;
             }, 0);
+            
+            if (coupon) {
+                const discountAmount = coupon.discountType === 'percentage'
+                    ? totalOrderPrice * (coupon.value / 100)
+                    : coupon.value;
+                totalOrderPrice = Math.max(0, totalOrderPrice - discountAmount);
+            }
 
             const orderItems: Omit<OrderItem, 'modelImageUrl' | 'charms'>[] = cartItems.map((item, index) => {
                 const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
@@ -727,6 +913,7 @@ export async function createOrder(
                 paymentIntentId: paymentIntentId,
                 deliveryMethod: deliveryMethod,
                 shippingAddress: deliveryMethod === 'home' ? shippingAddress : undefined,
+                ...(coupon && { couponCode: coupon.code, couponId: coupon.id })
             };
 
             const orderRef = doc(collection(db, 'orders'));
@@ -1273,5 +1460,278 @@ export async function getRefreshedCharms(): Promise<{ success: boolean; charms?:
     } catch (error: any) {
         console.error('[SERVER ACTION] Error refreshing charms:', error);
         return { success: false, error: error.message || "Une erreur est survenue lors du rafraîchissement des breloques." };
+    }
+}
+
+
+// --- Creation Actions ---
+
+export async function saveCreation(
+    idToken: string,
+    name: string,
+    description: string,
+    creationPayload: string
+): Promise<{ success: boolean; message: string; creationId?: string }> {
+
+    if (!idToken) {
+        return { success: false, message: "Jeton d'authentification manquant." };
+    }
+    
+    if (!adminApp) {
+      return { success: false, message: "Le module d'administration Firebase n'est pas configuré. Veuillez définir la variable d'environnement FIREBASE_SERVICE_ACCOUNT." };
+    }
+    
+    let user;
+    try {
+        const adminAuth = getAdminAuth(adminApp);
+        user = await adminAuth.verifyIdToken(idToken, true);
+    } catch (error: any) {
+        return { success: false, message: error.message || "Erreur d'authentification." };
+    }
+    
+    if (!user) {
+         return { success: false, message: "Vous devez être connecté pour publier une création." };
+    }
+
+    const {
+        jewelryTypeId,
+        modelId,
+        placedCharms: simplePlacedCharms,
+        previewImageUrl,
+    } = JSON.parse(creationPayload) as {
+        jewelryTypeId: string;
+        modelId: string;
+        placedCharms: {
+            charmId: string;
+            position: { x: number; y: number };
+            rotation: number;
+        }[];
+        previewImageUrl: string;
+    };
+    
+    if (!name.trim()) {
+        return { success: false, message: "Le nom de la création est obligatoire." };
+    }
+
+    try {
+        const charmIds = simplePlacedCharms.map(pc => pc.charmId);
+        const charmDocs = charmIds.length > 0 ? await getDocs(query(collection(db, 'charms'), where(documentId(), 'in', charmIds))) : { docs: [] };
+        
+        const charmsMap = new Map(charmDocs.docs.map(doc => [doc.id, doc.data()]));
+
+        const placedCharms: PlacedCreationCharm[] = simplePlacedCharms.map(spc => {
+            const charmData = charmsMap.get(spc.charmId);
+            if (!charmData) throw new Error(`Charm with id ${spc.charmId} not found`);
+
+            const cleanCharm: CreationCharm = {
+                id: spc.charmId,
+                name: charmData.name,
+                imageUrl: charmData.imageUrl,
+                description: charmData.description,
+                categoryIds: charmData.categoryIds,
+                price: charmData.price,
+                width: charmData.width,
+                height: charmData.height,
+            };
+
+            return {
+                id: `${spc.charmId}-${Date.now()}-${Math.random()}`,
+                charm: cleanCharm,
+                position: spc.position,
+                rotation: spc.rotation,
+            };
+        });
+        
+        const creationData: Omit<Creation, 'id' | 'createdAt'> = {
+            creatorId: user.uid,
+            creatorName: user.name || user.email || "Créateur anonyme",
+            name,
+            description,
+            jewelryTypeId,
+            modelId,
+            placedCharms: placedCharms,
+            previewImageUrl: previewImageUrl,
+            salesCount: 0,
+            likesCount: 0,
+        };
+
+        let finalPreviewUrl = creationData.previewImageUrl;
+        if (finalPreviewUrl.startsWith('data:image')) {
+            const storageRef = ref(storage, `creation_previews/${user.uid}-${Date.now()}.png`);
+            const uploadResult = await uploadString(storageRef, finalPreviewUrl, 'data_url');
+            finalPreviewUrl = await getDownloadURL(uploadResult.ref);
+        }
+
+        const docRef = await addDoc(collection(db, 'creations'), {
+            ...creationData,
+            previewImageUrl: finalPreviewUrl,
+            createdAt: serverTimestamp()
+        });
+        
+        revalidatePath(`/${'fr'}/profil`);
+
+        return { success: true, message: "Votre création a été publiée avec succès !", creationId: docRef.id };
+
+    } catch (error: any) {
+        console.error("Error saving creation:", error);
+        return { success: false, message: "Une erreur est survenue lors de la publication de la création." };
+    }
+}
+
+export async function getUserCreations(userId: string): Promise<Creation[]> {
+    if (!userId) {
+        return [];
+    }
+
+    const creationsRef = collection(db, 'creations');
+    const q = query(creationsRef, where('creatorId', '==', userId), orderBy('createdAt', 'desc'));
+    
+    try {
+        console.log(`[SERVER] Fetching creations for userId: ${userId}`);
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+            console.log("[SERVER] No creations found.");
+            return [];
+        }
+        console.log(`[SERVER] Found ${querySnapshot.docs.length} creations.`);
+
+        const creations = await Promise.all(querySnapshot.docs.map(async (doc) => {
+            const data = doc.data();
+            const previewImageUrl = await getUrl(data.previewImageUrl, 'https://placehold.co/400x400.png');
+            
+            const resolvedPlacedCharms = await Promise.all(
+                (data.placedCharms || []).map(async (pc: PlacedCreationCharm) => {
+                    const charmImageUrl = await getUrl(pc.charm.imageUrl, 'https://placehold.co/100x100.png');
+                    return {
+                        ...pc,
+                        charm: {
+                            ...pc.charm,
+                            imageUrl: charmImageUrl
+                        }
+                    };
+                })
+            );
+
+            return {
+                id: doc.id,
+                ...data,
+                previewImageUrl,
+                placedCharms: resolvedPlacedCharms,
+                createdAt: toDate(data.createdAt as Timestamp)!,
+            } as Creation;
+        }));
+        
+        console.log(`[SERVER] Returning ${creations.length} processed creations.`);
+        return creations;
+    } catch (error: any) {
+        console.error("[SERVER] Error fetching user creations:", error);
+        return [];
+    }
+}
+
+export async function toggleLikeCreation(creationId: string, idToken: string): Promise<{ success: boolean; message?: string; newLikesCount?: number }> {
+    if (!idToken) {
+        return { success: false, message: "Utilisateur non authentifié." };
+    }
+    
+    if (!adminApp) {
+        return { success: false, message: "Le module d'administration Firebase n'est pas configuré." };
+    }
+    
+    let user;
+    try {
+        const adminAuth = getAdminAuth(adminApp);
+        user = await adminAuth.verifyIdToken(idToken, true);
+    } catch (error: any) {
+        return { success: false, message: "Jeton d'authentification invalide." };
+    }
+
+    const creationRef = doc(db, 'creations', creationId);
+    const likeRef = doc(db, 'creations', creationId, 'likes', user.uid);
+
+    try {
+        const newLikesCount = await runTransaction(db, async (transaction) => {
+            const likeDoc = await transaction.get(likeRef);
+            const creationDoc = await transaction.get(creationRef);
+
+            if (!creationDoc.exists()) {
+                throw new Error("La création n'existe pas.");
+            }
+
+            const currentLikes = creationDoc.data().likesCount || 0;
+
+            if (likeDoc.exists()) {
+                // User has liked, so unlike
+                transaction.delete(likeRef);
+                transaction.update(creationRef, { likesCount: increment(-1) });
+                return currentLikes - 1;
+            } else {
+                // User has not liked, so like
+                transaction.set(likeRef, { createdAt: serverTimestamp() });
+                transaction.update(creationRef, { likesCount: increment(1) });
+                return currentLikes + 1;
+            }
+        });
+        
+        revalidatePath('/fr/profil');
+        return { success: true, newLikesCount };
+
+    } catch (error: any) {
+        console.error("Error toggling like:", error);
+        return { success: false, message: "Une erreur est survenue lors de l'opération." };
+    }
+}
+    
+export async function updateCreation() {
+    // TODO: Implement creation update logic
+}
+
+export async function deleteCreation(idToken: string, creationId: string): Promise<{ success: boolean; message: string; }> {
+    if (!idToken) {
+        return { success: false, message: "Utilisateur non authentifié." };
+    }
+    if (!adminApp) {
+        return { success: false, message: "Le module d'administration Firebase n'est pas configuré." };
+    }
+    
+    let user;
+    try {
+        const adminAuth = getAdminAuth(adminApp);
+        user = await adminAuth.verifyIdToken(idToken, true);
+    } catch (error: any) {
+        return { success: false, message: "Jeton d'authentification invalide." };
+    }
+    
+    const creationRef = doc(db, 'creations', creationId);
+
+    try {
+        const creationDoc = await getDoc(creationRef);
+        if (!creationDoc.exists()) {
+            return { success: false, message: "La création n'existe pas." };
+        }
+
+        const creationData = creationDoc.data() as Creation;
+        if (creationData.creatorId !== user.uid) {
+            return { success: false, message: "Vous n'êtes pas autorisé à supprimer cette création." };
+        }
+        
+        // Delete preview image from storage
+        await deleteFileFromStorage(creationData.previewImageUrl);
+        
+        // TODO: In a real app, we should also delete all likes in the subcollection.
+        // This is a more complex operation (batched writes or a cloud function).
+        // For now, we'll just delete the main document.
+
+        // Delete the creation document
+        await deleteDoc(creationRef);
+        
+        revalidatePath('/fr/profil');
+        
+        return { success: true, message: "La création a été supprimée avec succès." };
+
+    } catch (error: any) {
+        console.error("Error deleting creation:", error);
+        return { success: false, message: "Une erreur est survenue lors de la suppression." };
     }
 }

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useFormState, useFormStatus } from 'react-dom';
@@ -13,39 +14,62 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { BrandLogo } from '@/components/icons';
-import { login } from '@/app/actions';
+import { BrandLogo, GoogleIcon } from '@/components/icons';
+import { login, userLogin } from '@/app/actions';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useTranslations } from '@/hooks/use-translations';
+import { Separator } from './ui/separator';
+import { useGoogleAuth } from '@/hooks/use-google-auth';
+import { useToast } from '@/hooks/use-toast';
 
 
-const initialState = {
-  error: '',
+type State = {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
+const initialState: State = {
+  success: false,
+  message: undefined,
+  error: undefined,
 };
 
 function LoginButton() {
   const { pending } = useFormStatus();
+  const t = useTranslations('Auth');
 
   return (
     <Button type="submit" className="w-full" disabled={pending}>
       {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-      Se connecter
+      {t('login_button')}
     </Button>
   );
 }
 
-export function LoginForm() {
-  const [state, formAction] = useFormState(login, initialState);
+export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
+  const [state, formAction] = useFormState(isUserAuth ? userLogin : login, initialState);
   const params = useParams();
   const locale = params.locale as string;
+  const router = useRouter();
+  const t = useTranslations('Auth');
+  const { signInWithGoogle, error, isGoogleLoading } = useGoogleAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
-    if (state?.error === '') {
-      // successful login is handled by redirect in the action
+    if (state.success) {
+      toast({
+        title: 'Connexion réussie',
+        description: state.message,
+      });
+      const redirectPath = isUserAuth ? `/${locale}` : `/${locale}/admin/dashboard`;
+      router.push(redirectPath);
     }
-  }, [state]);
+  }, [state.success, state.message, router, locale, toast, isUserAuth]);
 
   return (
     <Card>
@@ -53,19 +77,35 @@ export function LoginForm() {
         <div className="mx-auto mb-4">
             <BrandLogo className="h-10 w-auto" />
         </div>
-        <CardTitle className="text-2xl">Espace Administrateur</CardTitle>
+        <CardTitle className="text-2xl">{isUserAuth ? t('user_login_title') : t('admin_login_title')}</CardTitle>
         <CardDescription>
-          Connectez-vous pour accéder à votre tableau de bord.
+           {isUserAuth ? t('user_login_description') : t('admin_login_description')}
         </CardDescription>
       </CardHeader>
-      <form action={formAction}>
-        <CardContent className="space-y-4">
-          {state?.error && state.error !== '' && (
+      <CardContent className="space-y-4">
+        {(state?.error || error) && (
             <Alert variant="destructive">
-              <AlertTitle>Erreur de connexion</AlertTitle>
-              <AlertDescription>{state.error}</AlertDescription>
+              <AlertTitle>{t('login_error_title')}</AlertTitle>
+              <AlertDescription>{state?.error || error}</AlertDescription>
             </Alert>
           )}
+
+        {isUserAuth && (
+            <div className="space-y-4">
+                 <Button variant="outline" className="w-full" onClick={signInWithGoogle} disabled={isGoogleLoading}>
+                    {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
+                    {t('google_login_button')}
+                </Button>
+                <div className="relative">
+                    <Separator />
+                    <span className="absolute left-1/2 -translate-x-1/2 top-[-10px] bg-card px-2 text-xs text-muted-foreground">
+                        {t('or_continue_with')}
+                    </span>
+                </div>
+            </div>
+        )}
+
+        <form action={formAction}>
           <input type="hidden" name="locale" value={locale} />
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -73,19 +113,27 @@ export function LoginForm() {
               id="email"
               name="email"
               type="email"
-              placeholder="admin@atelierabijoux.com"
+              placeholder="votre.email@exemple.com"
               required
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Mot de passe</Label>
+          <div className="space-y-2 mt-4">
+            <Label htmlFor="password">{t('password_label')}</Label>
             <Input id="password" name="password" type="password" required />
           </div>
-        </CardContent>
-        <CardFooter>
-          <LoginButton />
-        </CardFooter>
-      </form>
+          <CardFooter className="flex-col gap-4 items-stretch p-0 pt-6">
+            <LoginButton />
+              {isUserAuth && (
+                <div className="mt-4 text-center text-sm">
+                  {t('no_account_prompt')}{' '}
+                  <Link href={`/${locale}/inscription`} className="underline">
+                    {t('signup_button')}
+                  </Link>
+                </div>
+              )}
+          </CardFooter>
+        </form>
+      </CardContent>
     </Card>
   );
 }

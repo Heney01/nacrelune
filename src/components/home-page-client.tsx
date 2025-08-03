@@ -2,11 +2,11 @@
 
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Editor from '@/components/editor';
 import { BrandLogo } from '@/components/icons';
 import { useTranslations } from '@/hooks/use-translations';
-import { Gem, HandMetal, Ear, Truck, Construction } from 'lucide-react';
+import { Gem, HandMetal, Ear, Truck, UserCircle, LogOut, User } from 'lucide-react';
 import { TypeSelection } from '@/components/type-selection';
 import { ModelSelection } from '@/components/model-selection';
 import type { JewelryType, Charm, CharmCategory } from '@/lib/types';
@@ -15,7 +15,84 @@ import { CartWidget } from './cart-widget';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { SupportDialog } from './support-dialog';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { useAuth } from '@/hooks/use-auth';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { logout } from '@/app/actions';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
+
+function UserNav({ locale }: { locale: string }) {
+    const { user, firebaseUser } = useAuth();
+    const t = useTranslations('HomePage');
+    const tAuth = useTranslations('Auth');
+
+    if (!firebaseUser) {
+        return (
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button asChild variant="ghost" size="icon">
+                            <Link href={`/${locale}/connexion`}>
+                                <UserCircle className="h-6 w-6" />
+                                <span className="sr-only">{tAuth('login_button')}</span>
+                            </Link>
+                        </Button>
+                    </TooltipTrigger>
+                     <TooltipContent>
+                        <p>{tAuth('login_button')}</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        )
+    }
+    
+    const fallbackDisplayName = user?.displayName?.charAt(0) || firebaseUser?.email?.charAt(0) || '?';
+
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                    <Avatar className="h-8 w-8">
+                        <AvatarImage src={user?.photoURL || firebaseUser.photoURL || undefined} alt={user?.displayName || 'Avatar'} />
+                        <AvatarFallback>{fallbackDisplayName.toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <span className="sr-only">{t('profile_menu_button')}</span>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuLabel>
+                    <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">{user?.displayName || firebaseUser.email}</p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                            {user?.email || firebaseUser.email}
+                        </p>
+                    </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                     <Link href={`/${locale}/profil`}>{tAuth('my_creations')}</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <form action={logout}>
+                    <input type="hidden" name="locale" value={locale} />
+                    <DropdownMenuItem asChild>
+                        <button type="submit" className="w-full">
+                            <LogOut className="mr-2 h-4 w-4" />
+                            <span>{tAuth('logout_button')}</span>
+                        </button>
+                    </DropdownMenuItem>
+                </form>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    )
+}
 
 
 export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, charmCategories, locale }: {
@@ -26,6 +103,12 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
     locale: string;
 }) {
     const t = useTranslations('HomePage');
+    const { user } = useAuth();
+    const [hasMounted, setHasMounted] = useState(false);
+    
+    useEffect(() => {
+        setHasMounted(true);
+    }, []);
     
     const jewelryTypes = initialJewelryTypes.map(jt => {
         if (jt.id === 'necklace') return { ...jt, name: t('jewelry_types.necklace'), description: t('jewelry_types.necklace_description'), icon: Gem };
@@ -68,19 +151,18 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
                     </Tooltip>
                 </TooltipProvider>
               <CartWidget />
+              <UserNav locale={locale} />
             </div>
           </div>
         </header>
 
         <main className="flex-grow p-4 md:p-8">
           <div className="container mx-auto">
-            <Alert className="mb-8 border-yellow-400 bg-yellow-50 text-yellow-800 [&>svg]:text-yellow-600">
-                <Construction />
-                <AlertTitle>{t('wip_title')}</AlertTitle>
-                <AlertDescription>
-                    {t('wip_description')}
-                </AlertDescription>
-            </Alert>
+            {hasMounted && user && (
+              <div className="text-center mb-8">
+                <p className="text-lg text-muted-foreground">{t('welcome_message', { name: user.displayName })}</p>
+              </div>
+            )}
             {selectedType ? (
                 <ModelSelection 
                     selectedType={selectedType}
@@ -97,7 +179,7 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
             <p>{t('footer_text', { year: new Date().getFullYear() })}</p>
              <div className="flex justify-center items-center gap-4 text-xs text-muted-foreground/80">
                 <SupportDialog />
-                 <Link href={`/${locale}/login`} className="hover:underline">
+                 <Link href={`/${locale}/admin/login`} className="hover:underline">
                     {t('admin_area_link')}
                 </Link>
             </div>
@@ -106,3 +188,4 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
       </div>
     );
 }
+
