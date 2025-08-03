@@ -74,7 +74,7 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
         e.preventDefault();
         e.stopPropagation();
         const rotationAmount = e.deltaY > 0 ? 10 : -10; // Rotate by 10 degrees
-        onRotate(placed.rotation, placed.rotation + rotationAmount);
+        onRotate(placed.id, placed.rotation + rotationAmount);
     };
 
 
@@ -900,7 +900,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                           </CardContent>
                           <CardFooter>
                               {isEditing ? (
-                              <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues}>
+                              <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
                                   <Check />
                                   {t('update_item_button')}
                               </Button>
@@ -934,12 +934,12 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
             <div className="fixed bottom-0 left-0 right-0 z-20">
                 <div className="bg-background p-2.5">
                     {isEditing ? (
-                        <Button onClick={handleOpenConfirmDialog} className="w-full" variant="outline" disabled={hasStockIssues}>
+                        <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
                             <Check />
                             {t('update_item_button')}
                         </Button>
                     ) : (
-                        <Button onClick={handleOpenConfirmDialog} className="w-full" variant="outline" disabled={hasStockIssues || placedCharms.length === 0}>
+                        <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
                             <PlusCircle />
                             {t('add_to_cart_button')}
                         </Button>
