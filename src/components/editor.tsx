@@ -23,7 +23,7 @@ import { CartSheet } from './cart-sheet';
 import html2canvas from 'html2canvas';
 import { CartWidget } from './cart-widget';
 import { useTranslations } from '@/hooks/use-translations';
-import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction, getCharmDesignCritiqueAction, saveCreation, SerializableCartItem } from '@/app/actions';
+import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction, getCharmDesignCritiqueAction, saveCreation } from '@/app/actions';
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -568,21 +568,28 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
           previewImageUrl: previewForDialog,
       };
 
-      const result = await saveCreation(
-          creationName,
-          creationDescription,
-          JSON.stringify(creationPayload)
-      );
+      try {
+        const idToken = await firebaseUser.getIdToken();
+        const result = await saveCreation(
+            idToken,
+            creationName,
+            creationDescription,
+            JSON.stringify(creationPayload)
+        );
 
-      if (result.success) {
-          toast({ title: "Publication réussie !", description: result.message });
-          setIsConfirmOpen(false);
-          setPreviewForDialog(null);
-          // Redirect to profile page to see the new creation
-          router.push(`/${locale}/profil`);
-      } else {
-          toast({ variant: 'destructive', title: "Erreur de publication", description: result.message });
+        if (result.success) {
+            toast({ title: "Publication réussie !", description: result.message });
+            setIsConfirmOpen(false);
+            setPreviewForDialog(null);
+            // Redirect to profile page to see the new creation
+            router.push(`/${locale}/profil`);
+        } else {
+            toast({ variant: 'destructive', title: "Erreur de publication", description: result.message });
+        }
+      } catch (error: any) {
+        toast({ variant: 'destructive', title: "Erreur d'authentification", description: "Impossible de vérifier votre session. Veuillez vous reconnecter." });
       }
+
 
       setIsPublishing(false);
   };
@@ -1175,4 +1182,5 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 

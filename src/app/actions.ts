@@ -1480,30 +1480,25 @@ type SimpleCreationData = {
 };
 
 
-async function getAuthenticatedUser(): Promise<Auth['app']['auth'] extends () => infer T ? T : never> {
-    if (!adminApp) {
-        throw new Error("Le module d'administration Firebase n'est pas configuré. Veuillez définir la variable d'environnement FIREBASE_SERVICE_ACCOUNT.");
-    }
-    const sessionCookie = cookies().get('session')?.value;
-    if (!sessionCookie) {
-        throw new Error("Non authentifié");
-    }
-    const adminAuth = getAdminAuth(adminApp);
-    const decodedIdToken = await adminAuth.verifySessionCookie(sessionCookie, true);
-    const user = await adminAuth.getUser(decodedIdToken.uid);
-    return user as any;
-}
-
-
 export async function saveCreation(
+    idToken: string,
     name: string,
     description: string,
     creationPayload: string
 ): Promise<{ success: boolean; message: string; creationId?: string }> {
 
+    if (!idToken) {
+        return { success: false, message: "Jeton d'authentification manquant." };
+    }
+    
+    if (!adminApp) {
+      return { success: false, message: "Le module d'administration Firebase n'est pas configuré. Veuillez définir la variable d'environnement FIREBASE_SERVICE_ACCOUNT." };
+    }
+    
     let user;
     try {
-        user = await getAuthenticatedUser();
+        const adminAuth = getAdminAuth(adminApp);
+        user = await adminAuth.verifyIdToken(idToken, true);
     } catch (error: any) {
         return { success: false, message: error.message || "Erreur d'authentification." };
     }
@@ -1532,9 +1527,8 @@ export async function saveCreation(
             return [doc.id, { 
                 id: doc.id, 
                 ...data,
-                // Convert Timestamps to Dates
-                lastOrderedAt: toDate(data.lastOrderedAt),
-                restockedAt: toDate(data.restockedAt)
+                lastOrderedAt: toDate(data.lastOrderedAt as Timestamp),
+                restockedAt: toDate(data.restockedAt as Timestamp)
             } as Charm]
         }));
 
@@ -1551,7 +1545,7 @@ export async function saveCreation(
         
         const creationData: Omit<Creation, 'id'> = {
             creatorId: user.uid,
-            creatorName: user.displayName || "Créateur anonyme",
+            creatorName: user.name || user.email || "Créateur anonyme",
             name,
             description,
             jewelryTypeId,
@@ -1612,6 +1606,7 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
     }
 }
     
+
 
 
 
