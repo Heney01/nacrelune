@@ -1519,7 +1519,6 @@ export async function saveCreation(
     }
 
     try {
-        // Fetch full charm data from server side to ensure data integrity
         const charmIds = simplePlacedCharms.map(pc => pc.charmId);
         const charmDocs = charmIds.length > 0 ? await getDocs(query(collection(db, 'charms'), where(documentId(), 'in', charmIds))) : { docs: [] };
         
@@ -1528,23 +1527,23 @@ export async function saveCreation(
             return [doc.id, { 
                 id: doc.id, 
                 ...data,
-                // Convert Timestamps to Dates to match the PlacedCharm type
-                lastOrderedAt: toDate(data.lastOrderedAt as Timestamp),
-                restockedAt: toDate(data.restockedAt as Timestamp)
-            } as Charm]
+            } as Omit<Charm, 'lastOrderedAt' | 'restockedAt'> & { lastOrderedAt?: Timestamp | null, restockedAt?: Timestamp | null }]
         }));
 
-        // Clean placedCharms data for storage, removing any Date objects or other non-serializable data.
         const cleanPlacedCharms: PlacedCharm[] = simplePlacedCharms.map(spc => {
             const charmData = charmsMap.get(spc.charmId);
             if (!charmData) throw new Error(`Charm with id ${spc.charmId} not found`);
             
-            // Create a clean version of the charm, excluding date objects
-            const { lastOrderedAt, restockedAt, ...cleanCharm } = charmData;
+            // Create a clean version of the charm, excluding any complex objects not suitable for direct storage.
+            const { categories, ...cleanCharm } = charmData;
 
             return {
                 id: `${spc.charmId}-${Date.now()}-${Math.random()}`,
-                charm: cleanCharm, // Use the cleaned charm object
+                charm: {
+                    ...cleanCharm,
+                    lastOrderedAt: toDate(cleanCharm.lastOrderedAt),
+                    restockedAt: toDate(cleanCharm.restockedAt)
+                },
                 position: spc.position,
                 rotation: spc.rotation,
             };
@@ -1557,8 +1556,8 @@ export async function saveCreation(
             description,
             jewelryTypeId,
             modelId,
-            placedCharms: cleanPlacedCharms,
-            previewImageUrl: previewImageUrl, // This might be a data URL
+            placedCharms: cleanPlacedCharms, // Store the cleaned version
+            previewImageUrl: previewImageUrl,
             salesCount: 0
         };
 
@@ -1572,7 +1571,7 @@ export async function saveCreation(
         const docRef = await addDoc(collection(db, 'creations'), {
             ...creationData,
             previewImageUrl: finalPreviewUrl,
-            createdAt: serverTimestamp() // Use server timestamp for consistency
+            createdAt: serverTimestamp()
         });
         
         revalidatePath(`/${'fr'}/profil`);
@@ -1598,11 +1597,23 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
         const creations = await Promise.all(querySnapshot.docs.map(async (doc) => {
             const data = doc.data();
             const previewImageUrl = await getUrl(data.previewImageUrl, 'https://placehold.co/400x400.png');
+
+            // Ensure nested timestamps are converted as well
+            const placedCharms = (data.placedCharms || []).map((pc: any) => ({
+                ...pc,
+                charm: {
+                    ...pc.charm,
+                    lastOrderedAt: toDate(pc.charm.lastOrderedAt),
+                    restockedAt: toDate(pc.charm.restockedAt),
+                }
+            }));
+
             return {
                 id: doc.id,
                 ...data,
                 previewImageUrl,
-                createdAt: (data.createdAt as Timestamp).toDate()
+                placedCharms,
+                createdAt: toDate(data.createdAt as Timestamp)
             } as Creation;
         }));
         return creations;
@@ -1622,3 +1633,4 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
 
 
     
+
