@@ -104,7 +104,7 @@ export function CartSheet({ children, open, onOpenChange }: {
           </div>
         ) : (
           <>
-            <div className="p-4 border-b">
+            <div className="p-4 border-b flex-shrink-0">
               <SheetClose asChild>
                 <Button variant="outline" className="w-full" asChild>
                   <Link href={`/${locale}`}>
@@ -121,7 +121,7 @@ export function CartSheet({ children, open, onOpenChange }: {
                   const editUrl = `/${locale}/?type=${item.jewelryType.id}&model=${item.model.id}&cartItemId=${item.id}`;
                   return (
                     <Card key={item.id} className="overflow-hidden">
-                       <CardContent className="p-4">
+                       <CardHeader className="p-4">
                           <div className="flex items-start gap-4">
                             <Dialog>
                               <DialogTrigger asChild>
@@ -163,7 +163,7 @@ export function CartSheet({ children, open, onOpenChange }: {
                               </p>
                             </div>
                           </div>
-                      </CardContent>
+                      </CardHeader>
 
                       <Accordion type="single" collapsible className="w-full bg-muted/30">
                         <AccordionItem value="item-details" className="border-t">
@@ -226,7 +226,7 @@ export function CartSheet({ children, open, onOpenChange }: {
                 })}
               </div>
             </ScrollArea>
-            <SheetFooter className="mt-auto border-t pt-4">
+            <SheetFooter className="mt-auto border-t pt-4 flex-shrink-0">
               <div className="w-full space-y-4">
                 <div className="flex justify-between font-bold text-lg">
                   <span>{t('total')}</span>
@@ -269,5 +269,6 @@ export function CartSheet({ children, open, onOpenChange }: {
     </>
   );
 }
+
 
 
