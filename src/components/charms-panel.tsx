@@ -13,13 +13,13 @@ import { Loader2, Search, ZoomIn, PlusCircle, Ban } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Input } from './ui/input';
-import { getCharmCategories } from '@/lib/data';
 import { useTranslations } from '@/hooks/use-translations';
 import { Badge } from './ui/badge';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 
 interface CharmsPanelProps {
     allCharms: Charm[];
+    charmCategories: CharmCategory[];
     onAddCharm: (charm: Charm) => void;
     searchTerm: string;
     onSearchTermChange: (term: string) => void;
@@ -29,31 +29,31 @@ interface CharmsPanelProps {
 const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Charm) => void }) => {
     const isOutOfStock = (charm.quantity ?? 0) <= 0;
     const t = useTranslations('CharmsPanel');
-    const [isPrewiewOpen, setIsPreviewOpen] = useState(false);
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+    const isMobile = useIsMobile();
 
     const handleCardClick = (e: React.MouseEvent) => {
-        const target = e.target as HTMLElement;
-        if (target.closest('[data-trigger-preview]')) return;
-
-        if (isOutOfStock) {
+        if (isMobile) {
             setIsPreviewOpen(true);
         } else {
-            onAddCharm(charm);
+            const target = e.target as HTMLElement;
+            if (target.closest('[data-trigger-preview]')) return;
+
+            if (isOutOfStock) {
+                setIsPreviewOpen(true);
+            } else {
+                onAddCharm(charm);
+            }
         }
     };
 
-    const handlePreviewClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setIsPreviewOpen(true);
-    }
-    
     return (
-        <Dialog open={isPrewiewOpen} onOpenChange={setIsPreviewOpen}>
+        <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
             <Card
                 onClick={handleCardClick}
                 className={cn(
-                    "p-2 aspect-square flex flex-col items-center justify-center relative group",
-                    isOutOfStock ? "cursor-pointer bg-muted/60" : "hover:bg-muted cursor-pointer"
+                    "p-0 flex flex-col relative group cursor-pointer",
+                    isOutOfStock ? "bg-muted/60" : "hover:bg-muted"
                 )}
                 title={charm.name}
             >
@@ -63,29 +63,36 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
                         {t('sold_out')}
                     </Badge>
                 )}
-                 <div className="flex-grow w-full relative grid place-items-center">
+
+                {!isMobile && (
+                     <DialogTrigger asChild>
+                        <Button 
+                            variant="secondary" 
+                            size="icon" 
+                            className="absolute top-1 right-1 h-6 w-6 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+                            data-trigger-preview
+                            aria-label={t('view_details_button')}
+                        >
+                            <ZoomIn className="h-4 w-4" />
+                        </Button>
+                    </DialogTrigger>
+                )}
+                 
+                 <div className="aspect-square w-full h-full relative grid place-items-center">
                     <Image
                         src={charm.imageUrl}
                         alt={charm.name}
                         fill
-                        sizes="(max-width: 768px) 10vw, 5vw"
-                        className={cn("object-contain p-1 pointer-events-none", isOutOfStock && "grayscale opacity-50")}
+                        className={cn("object-contain pointer-events-none p-2", isOutOfStock && "grayscale opacity-50")}
                         data-ai-hint="jewelry charm"
                     />
                 </div>
-                <div className="h-8 flex items-center justify-center">
-                    <p className="text-xs text-center line-clamp-2">{charm.name}</p>
-                </div>
-                
-                <Button 
-                    data-trigger-preview
-                    onClick={handlePreviewClick}
-                    variant="ghost" 
-                    size="icon" 
-                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6"
-                >
-                    <ZoomIn className="h-4 w-4" />
-                </Button>
+                 
+                 {!isMobile && (
+                    <div className="p-2 pt-0 text-center">
+                        <p className="text-xs font-medium truncate w-full">{charm.name}</p>
+                    </div>
+                )}
             </Card>
 
             <DialogContent className="max-w-md">
@@ -94,7 +101,9 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
                     <DialogDescription>{charm.description}</DialogDescription>
                 </DialogHeader>
                 <div className="mt-4 flex justify-center">
-                    <Image src={charm.imageUrl} alt={charm.name} width={200} height={200} className="rounded-lg border p-2" />
+                    <div className="w-[200px] h-[200px] relative">
+                         <Image src={charm.imageUrl} alt={charm.name} fill className="rounded-lg border p-2 object-contain" />
+                    </div>
                 </div>
                     {isOutOfStock && (
                     <Alert variant="destructive" className="mt-4">
@@ -103,7 +112,7 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
                         <AlertDescription>{t('out_of_stock_description')}</AlertDescription>
                     </Alert>
                 )}
-                <DialogFooter>
+                <DialogFooter className="gap-2">
                     <DialogClose asChild>
                             <Button variant="outline">{t('close_button')}</Button>
                     </DialogClose>
@@ -117,27 +126,10 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
     );
 };
 
-export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermChange, isMobileSheet = false }: CharmsPanelProps) {
+export function CharmsPanel({ allCharms, charmCategories, onAddCharm, searchTerm, onSearchTermChange, isMobileSheet = false }: CharmsPanelProps) {
     const isMobile = useIsMobile();
-    const [charmCategories, setCharmCategories] = useState<CharmCategory[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
     const t = useTranslations('CharmsPanel');
     
-    useEffect(() => {
-        const fetchCategories = async () => {
-            setIsLoading(true);
-            try {
-                const categories = await getCharmCategories();
-                setCharmCategories(categories);
-            } catch (error) {
-                console.error('Error loading charm categories', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchCategories();
-    }, []);
-
     const filteredCharms = useMemo(() => {
         if (!searchTerm) {
             return allCharms;
@@ -167,10 +159,9 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
     
     const renderCharmGrid = () => (
          <div className="p-4">
-             {isLoading ? (
-                <div className="flex justify-center items-center h-full p-8">
-                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                    <span className="sr-only">{t('loading')}</span>
+             {charmCategories.length === 0 ? (
+                <div className="flex justify-center items-center h-full p-8 text-center text-muted-foreground">
+                    <p>Aucune catégorie de breloque n'a été trouvée.</p>
                 </div>
             ) : (
                 <Accordion type="multiple" defaultValue={charmCategories.map(c => c.id)} className="w-full">
@@ -214,7 +205,7 @@ export function CharmsPanel({ allCharms, onAddCharm, searchTerm, onSearchTermCha
                 </div>
             </div>
             <Separator />
-            <CardContent className="p-0 flex-grow overflow-y-auto">
+            <CardContent className="p-0 flex-grow overflow-y-auto no-scrollbar">
                 {renderCharmGrid()}
             </CardContent>
         </Card>

@@ -9,7 +9,7 @@ import { useTranslations } from '@/hooks/use-translations';
 import { Gem, HandMetal, Ear, Truck, Construction } from 'lucide-react';
 import { TypeSelection } from '@/components/type-selection';
 import { ModelSelection } from '@/components/model-selection';
-import type { JewelryType, Charm } from '@/lib/types';
+import type { JewelryType, Charm, CharmCategory } from '@/lib/types';
 import Link from 'next/link';
 import { CartWidget } from './cart-widget';
 import { Button } from './ui/button';
@@ -18,10 +18,11 @@ import { SupportDialog } from './support-dialog';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 
-export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, locale }: {
+export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, charmCategories, locale }: {
     searchParams: { [key:string]: string | string[] | undefined };
     jewelryTypes: Omit<JewelryType, 'icon'>[];
     allCharms: Charm[];
+    charmCategories: CharmCategory[];
     locale: string;
 }) {
     const t = useTranslations('HomePage');
@@ -40,7 +41,7 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
     const selectedModel = selectedType && selectedModelId ? selectedType.models.find(m => m.id === selectedModelId) : null;
     
     if (selectedModel && selectedType) {
-      return <Editor model={selectedModel} jewelryType={selectedType} allCharms={allCharms} />;
+      return <Editor model={selectedModel} jewelryType={selectedType} allCharms={allCharms} charmCategories={charmCategories} />;
     }
   
     return (

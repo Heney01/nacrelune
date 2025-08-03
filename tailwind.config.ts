@@ -13,6 +13,7 @@ export default {
         body: ['Alegreya', 'serif'],
         headline: ['Alegreya', 'serif'],
         code: ['monospace'],
+        caveat: ['Caveat', 'cursive'],
       },
       colors: {
         background: 'hsl(var(--background))',

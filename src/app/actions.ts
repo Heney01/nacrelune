@@ -10,10 +10,17 @@ import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
-import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm } from '@/lib/types';
+import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm, ShippingAddress, DeliveryMethod, MailLog } from '@/lib/types';
 import { getCharmSuggestions as getCharmSuggestionsFlow, CharmSuggestionInput, CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
+import { getCharmAnalysisSuggestions as getCharmAnalysisSuggestionsFlow, CharmAnalysisSuggestionInput, CharmAnalysisSuggestionOutput } from '@/ai/flows/charm-analysis-suggestions';
+import { getCharmDesignCritique as getCharmDesignCritiqueFlow, CharmDesignCritiqueInput, CharmDesignCritiqueOutput } from '@/ai/flows/charm-design-critique';
+import { generateShareContent as generateShareContentFlow, GenerateShareContentInput, GenerateShareContentOutput } from '@/ai/flows/share-content-generation';
 import { z } from 'zod';
-import { getCharms as fetchCharms } from '@/lib/data';
+import { getCharms as fetchCharms, toDate } from '@/lib/data';
+import Stripe from 'stripe';
+require('dotenv').config();
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 const getFileNameFromUrl = (url: string) => {
     if (!url) return null;
@@ -454,6 +461,42 @@ export async function savePreferences(prevState: any, formData: FormData): Promi
 
 // --- Order Actions ---
 
+export async function createPaymentIntent(
+  amount: number
+): Promise<{ clientSecret: string | null; error?: string }> {
+  if (amount <= 0) {
+    return { error: 'Invalid amount.', clientSecret: null };
+  }
+  try {
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount * 100), // Amount in cents
+      currency: 'eur',
+      payment_method_types: ['card'],
+    });
+    return { clientSecret: paymentIntent.client_secret };
+  } catch (error: any) {
+    console.error('Error creating payment intent:', error);
+    return { error: error.message, clientSecret: null };
+  }
+}
+
+async function refundStripePayment(paymentIntentId: string): Promise<{ success: boolean; message: string }> {
+    try {
+        const refund = await stripe.refunds.create({
+            payment_intent: paymentIntentId,
+        });
+        if (refund.status === 'succeeded' || refund.status === 'pending') {
+            return { success: true, message: `Remboursement initié avec succès (Status: ${refund.status}).` };
+        } else {
+             return { success: false, message: `Le remboursement a échoué avec le statut : ${refund.status}.` };
+        }
+    } catch (error: any) {
+        console.error("Error creating Stripe refund:", error);
+        return { success: false, message: error.message || "Une erreur est survenue lors du remboursement Stripe." };
+    }
+}
+
+
 function generateOrderNumber(): string {
   const date = new Date();
   const year = date.getFullYear().toString().slice(-2);
@@ -486,6 +529,7 @@ export type CreateOrderResult = {
     orderNumber?: string;
     email?: string;
     stockError?: StockError;
+    totalPrice?: number;
 };
 
 export async function markAsOrdered(formData: FormData): Promise<{ success: boolean; message: string }> {
@@ -557,7 +601,14 @@ export async function markAsRestocked(formData: FormData): Promise<{ success: bo
 }
 
 
-export async function createOrder(cartItems: SerializableCartItem[], email: string, locale: string): Promise<CreateOrderResult> {
+export async function createOrder(
+    cartItems: SerializableCartItem[], 
+    email: string, 
+    locale: string, 
+    paymentIntentId: string, // Can be a placeholder for now
+    deliveryMethod: DeliveryMethod,
+    shippingAddress?: ShippingAddress
+): Promise<CreateOrderResult> {
     if (!cartItems || cartItems.length === 0) {
         return { success: false, message: 'Le panier est vide.' };
     }
@@ -673,6 +724,9 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
                 totalPrice: totalOrderPrice,
                 items: orderItems,
                 status: initialStatus,
+                paymentIntentId: paymentIntentId,
+                deliveryMethod: deliveryMethod,
+                shippingAddress: deliveryMethod === 'home' ? shippingAddress : undefined,
             };
 
             const orderRef = doc(collection(db, 'orders'));
@@ -698,7 +752,7 @@ export async function createOrder(cartItems: SerializableCartItem[], email: stri
             const mailRef = doc(collection(db, 'mail'));
             transaction.set(mailRef, mailDocData);
             
-            return { success: true, message: 'Votre commande a été passée avec succès !', orderNumber, email };
+            return { success: true, message: 'Votre commande a été passée avec succès !', orderNumber, email, totalPrice: totalOrderPrice };
         });
 
         return orderData;
@@ -801,6 +855,8 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
             totalPrice: orderData.totalPrice,
             items: enrichedItems,
             status: orderData.status,
+            deliveryMethod: orderData.deliveryMethod || 'home',
+            shippingAddress: orderData.shippingAddress,
             shippingCarrier: orderData.shippingCarrier,
             trackingNumber: orderData.trackingNumber,
         };
@@ -891,15 +947,44 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
 
 export async function getOrders(): Promise<Order[]> {
     try {
-        const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
-        const querySnapshot = await getDocs(q);
+        const [ordersSnapshot, mailSnapshot] = await Promise.all([
+            getDocs(query(collection(db, 'orders'), orderBy('createdAt', 'desc'))),
+            getDocs(collection(db, 'mail'))
+        ]);
 
-        if (querySnapshot.empty) {
+        if (ordersSnapshot.empty) {
             return [];
         }
 
+        const mailLogsByOrderNumber = new Map<string, MailLog[]>();
+        mailSnapshot.docs.forEach(doc => {
+            const data = doc.data();
+            const subject = data.message?.subject || '';
+            const orderNumberMatch = subject.match(/n°\s*([A-Z0-9-]+)/);
+            if (orderNumberMatch && orderNumberMatch[1]) {
+                const orderNumber = orderNumberMatch[1];
+                const delivery = data.delivery;
+                const log: MailLog = {
+                    id: doc.id,
+                    to: data.to,
+                    subject: subject,
+                    delivery: delivery ? {
+                        state: delivery.state,
+                        startTime: toDate(delivery.startTime),
+                        endTime: toDate(delivery.endTime),
+                        error: delivery.error,
+                        attempts: delivery.attempts
+                    } : null
+                };
+                if (!mailLogsByOrderNumber.has(orderNumber)) {
+                    mailLogsByOrderNumber.set(orderNumber, []);
+                }
+                mailLogsByOrderNumber.get(orderNumber)!.push(log);
+            }
+        });
+
         // Get all unique charm IDs from all orders first
-        const allCharmIds = querySnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => item.charmIds) || []);
+        const allCharmIds = ordersSnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => item.charmIds) || []);
         const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
         // Fetch all required charms in a single query
@@ -914,7 +999,7 @@ export async function getOrders(): Promise<Order[]> {
             }
         }
         
-        const orders: Order[] = await Promise.all(querySnapshot.docs.map(async(orderDoc) => {
+        const orders: Order[] = await Promise.all(ordersSnapshot.docs.map(async(orderDoc) => {
             const data = orderDoc.data();
             
             const enrichedItems: OrderItem[] = (data.items || []).map((item: OrderItem) => {
@@ -935,18 +1020,24 @@ export async function getOrders(): Promise<Order[]> {
             enrichedItems.forEach((item, index) => {
                 item.previewImageUrl = previewImageUrls[index];
             });
+            
+            const orderNumber = data.orderNumber;
+            const mailHistory = mailLogsByOrderNumber.get(orderNumber) || [];
 
             return {
                 id: orderDoc.id,
-                orderNumber: data.orderNumber,
+                orderNumber,
                 createdAt: (data.createdAt as Timestamp).toDate(),
                 customerEmail: data.customerEmail,
                 totalPrice: data.totalPrice,
                 status: data.status,
                 items: enrichedItems,
+                deliveryMethod: data.deliveryMethod || 'home',
+                shippingAddress: data.shippingAddress,
                 shippingCarrier: data.shippingCarrier,
                 trackingNumber: data.trackingNumber,
                 cancellationReason: data.cancellationReason,
+                mailHistory: mailHistory,
             };
         }));
 
@@ -1026,6 +1117,14 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
                     throw new Error("Le motif de l'annulation est obligatoire.");
                 }
                 dataToUpdate.cancellationReason = cancellationReason;
+
+                // If the order has a paymentIntentId, process a refund.
+                if (orderData.paymentIntentId) {
+                    const refundResult = await refundStripePayment(orderData.paymentIntentId);
+                    if (!refundResult.success) {
+                        throw new Error(`Le remboursement a échoué: ${refundResult.message}. L'annulation a été interrompue.`);
+                    }
+                }
 
                 if (currentStatus !== 'annulée') {
                     for (const itemDoc of itemDocs) {
@@ -1120,6 +1219,52 @@ export async function getCharmSuggestionsAction(input: CharmSuggestionInput): Pr
         return { success: false, error: error.message || "Une erreur est survenue lors de la génération des suggestions." };
     }
 }
+
+export async function getCharmAnalysisSuggestionsAction(input: CharmAnalysisSuggestionInput): Promise<{
+    success: boolean;
+    suggestions?: CharmAnalysisSuggestionOutput['suggestions'];
+    error?: string;
+}> {
+    try {
+        console.log('[SERVER ACTION] Calling getCharmAnalysisSuggestionsFlow');
+        const result = await getCharmAnalysisSuggestionsFlow(input);
+        return { success: true, suggestions: result.suggestions };
+    } catch (error: any) {
+        console.error('[SERVER ACTION] Error calling AI analysis flow:', error);
+        return { success: false, error: error.message || "Une erreur est survenue lors de l'analyse de l'image." };
+    }
+}
+
+export async function getCharmDesignCritiqueAction(input: CharmDesignCritiqueInput): Promise<{
+    success: boolean;
+    critique?: string;
+    error?: string;
+}> {
+    try {
+        console.log('[SERVER ACTION] Calling getCharmDesignCritiqueFlow');
+        const result = await getCharmDesignCritiqueFlow(input);
+        return { success: true, critique: result.critique };
+    } catch (error: any) {
+        console.error('[SERVER ACTION] Error calling AI critique flow:', error);
+        return { success: false, error: error.message || "Une erreur est survenue lors de l'analyse." };
+    }
+}
+
+export async function generateShareContentAction(input: GenerateShareContentInput): Promise<{
+    success: boolean;
+    content?: GenerateShareContentOutput;
+    error?: string;
+}> {
+    try {
+        console.log('[SERVER ACTION] Calling generateShareContentFlow');
+        const result = await generateShareContentFlow(input);
+        return { success: true, content: result };
+    } catch (error: any) {
+        console.error('[SERVER ACTION] Error calling AI share content flow:', error);
+        return { success: false, error: error.message || "Une erreur est survenue lors de la génération du contenu." };
+    }
+}
+
 
 export async function getRefreshedCharms(): Promise<{ success: boolean; charms?: Charm[], error?: string; }> {
     try {

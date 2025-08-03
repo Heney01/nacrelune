@@ -48,9 +48,9 @@ Ton rôle est de suggérer des emplacements créatifs et esthétiques pour des b
 Voici la situation actuelle :
 - Type de bijou : {{{jewelryType}}}
 - Breloques déjà placées : {{#if existingCharms}}{{#each existingCharms}} - {{{this}}} {{/each}}{{else}}Aucune{{/if}}
-- Préférences de l'utilisateur : {{{userPreferences}}}
+- Préférences de l'utilisateur (ou suggestions de l'IA) : {{{userPreferences}}}
 
-Voici la liste complète des breloques disponibles que tu peux suggérer :
+Voici la liste complète des breloques disponibles que tu peux suggérer (CE SONT LES SEULES QUE TU PEUX UTILISER) :
 {{#each allCharms}} - {{{this}}}
 {{/each}}
 
@@ -69,6 +69,11 @@ const suggestCharmPlacementFlow = ai.defineFlow(
     outputSchema: CharmSuggestionOutputSchema,
   },
   async (input) => {
+    // If userPreferences is empty, we use a default prompt.
+    if (!input.userPreferences) {
+        input.userPreferences = "Style équilibré et harmonieux.";
+    }
+
     const llmResponse = await placementPrompt(input);
     const output = llmResponse.output;
 

@@ -7,10 +7,10 @@ import { useCart } from '@/hooks/use-cart';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, ShoppingCart, PlusCircle, Loader2, Edit } from 'lucide-react';
+import { Trash2, ShoppingCart, PlusCircle, Loader2, Edit, Share2 } from 'lucide-react';
 import React, { ReactNode, useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
-import { Card } from './ui/card';
+import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
 import {
   Dialog,
   DialogContent,
@@ -26,6 +26,7 @@ import { createOrder, SerializableCartItem, CreateOrderResult } from '@/app/acti
 import { CheckoutDialog, StockErrorState } from './checkout-dialog';
 import { SuccessDialog } from './success-dialog';
 import type { CartItem } from '@/lib/types';
+import { ShareDialog } from './share-dialog';
 
 
 export function CartSheet({ children, open, onOpenChange }: {
@@ -35,6 +36,7 @@ export function CartSheet({ children, open, onOpenChange }: {
 }) {
   const { cart, removeFromCart, clearCart } = useCart();
   const t = useTranslations('Cart');
+  const tEditor = useTranslations('Editor');
   const params = useParams();
   const locale = params.locale as string;
   const { toast } = useToast();
@@ -42,6 +44,7 @@ export function CartSheet({ children, open, onOpenChange }: {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [successData, setSuccessData] = useState<{orderNumber: string, email: string} | null>(null);
   const [stockError, setStockError] = useState<StockErrorState | null>(null);
+  const [sharingItem, setSharingItem] = useState<CartItem | null>(null);
 
 
   const totalItems = cart.length;
@@ -56,25 +59,8 @@ export function CartSheet({ children, open, onOpenChange }: {
     return t('price', { price });
   };
   
-  const handleCheckout = async (email: string) => {
-    setIsProcessing(true);
-    setStockError(null);
-    try {
-      const serializableCart: SerializableCartItem[] = cart.map(item => ({
-        id: item.id,
-        model: item.model,
-        jewelryType: {
-          id: item.jewelryType.id,
-          name: item.jewelryType.name,
-          description: item.jewelryType.description
-        },
-        placedCharms: item.placedCharms,
-        previewImage: item.previewImage,
-      }));
-
-      const result: CreateOrderResult = await createOrder(serializableCart, email, locale);
-      
-      if (result.success && result.orderNumber && result.email) {
+  const handleOrderCreated = (result: CreateOrderResult) => {
+     if (result.success && result.orderNumber && result.email) {
         clearCart();
         setIsCheckoutOpen(false);
         setSuccessData({orderNumber: result.orderNumber, email: result.email});
@@ -86,18 +72,13 @@ export function CartSheet({ children, open, onOpenChange }: {
         });
       }
       else {
-        throw new Error(result.message);
+        toast({
+          variant: 'destructive',
+          title: t('checkout_error_title'),
+          description: result.message || "Une erreur inattendue est survenue.",
+        });
       }
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: t('checkout_error_title'),
-        description: error.message || "Une erreur inattendue est survenue.",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+  }
 
   return (
     <>
@@ -123,7 +104,7 @@ export function CartSheet({ children, open, onOpenChange }: {
           </div>
         ) : (
           <>
-            <div className="p-4 border-b">
+            <div className="p-4 border-b flex-shrink-0">
               <SheetClose asChild>
                 <Button variant="outline" className="w-full" asChild>
                   <Link href={`/${locale}`}>
@@ -134,105 +115,124 @@ export function CartSheet({ children, open, onOpenChange }: {
               </SheetClose>
             </div>
             <ScrollArea className="flex-grow my-4 pr-4">
-              <Accordion type="multiple" className="space-y-4">
+              <div className="space-y-4">
                 {cart.map((item) => {
                   const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
                   const editUrl = `/${locale}/?type=${item.jewelryType.id}&model=${item.model.id}&cartItemId=${item.id}`;
                   return (
                     <Card key={item.id} className="overflow-hidden">
-                      <div className="p-4 flex items-start gap-4">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <div className="relative w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border cursor-pointer group">
-                              <Image
-                                src={item.previewImage || item.model.displayImageUrl}
-                                alt={item.model.name}
-                                fill
-                                className="object-cover group-hover:scale-105 transition-transform"
-                                sizes="80px"
-                              />
+                       <CardHeader className="p-4">
+                          <div className="flex items-start gap-4">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <div className="relative w-24 h-24 flex-shrink-0 rounded-md overflow-hidden border cursor-pointer group">
+                                  <Image
+                                    src={item.previewImage || item.model.displayImageUrl}
+                                    alt={item.model.name}
+                                    fill
+                                    className="object-cover group-hover:scale-105 transition-transform"
+                                    sizes="96px"
+                                  />
+                                </div>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-xl">
+                                <DialogHeader>
+                                  <DialogTitle>{t('preview_title', { modelName: item.model.name })}</DialogTitle>
+                                  <DialogDescription>
+                                    {t('preview_description')}
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="mt-4">
+                                  <Image
+                                    src={item.previewImage || item.model.displayImageUrl}
+                                    alt={t('preview_title', { modelName: item.model.name })}
+                                    width={800}
+                                    height={800}
+                                    className="w-full h-auto object-contain rounded-lg max-w-full max-h-[70vh]"
+                                  />
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                            <div className="flex-grow min-w-0">
+                              <p className="font-bold">{item.model.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {item.jewelryType.name}
+                              </p>
+                              <p className="text-lg font-bold mt-2">
+                                {formatPrice(itemPrice)}
+                              </p>
                             </div>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-xl">
-                            <DialogHeader>
-                              <DialogTitle>{t('preview_title', { modelName: item.model.name })}</DialogTitle>
-                              <DialogDescription>
-                                {t('preview_description')}
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="mt-4 grid place-items-center">
-                              <Image
-                                src={item.previewImage || item.model.displayImageUrl}
-                                alt={t('preview_title', { modelName: item.model.name })}
-                                width={800}
-                                height={800}
-                                className="w-full h-auto object-contain rounded-lg max-w-full max-h-[70vh]"
-                              />
+                          </div>
+                      </CardHeader>
+
+                      <Accordion type="single" collapsible className="w-full bg-muted/30">
+                        <AccordionItem value="item-details" className="border-t">
+                          <AccordionTrigger className="text-sm px-4 py-2 hover:no-underline">
+                             <div className="flex justify-between w-full items-center">
+                              <span>
+                                {item.placedCharms.length > 0 
+                                  ? t('view_charms_action', { count: item.placedCharms.length })
+                                  : t('item_count_zero')
+                                }
+                              </span>
                             </div>
-                          </DialogContent>
-                        </Dialog>
-                        <div className="flex-grow">
-                          <p className="font-bold">{item.model.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {item.jewelryType.name}
-                          </p>
-                          <p className="text-sm font-bold mt-1">
-                            {formatPrice(itemPrice)}
-                          </p>
+                          </AccordionTrigger>
+                          <AccordionContent className="p-4 pt-0">
+                            {item.placedCharms.length > 0 ? (
+                              <ul className="space-y-2">
+                                {item.placedCharms.map(pc => (
+                                  <li key={pc.id} className="flex items-center justify-between gap-2 text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={24} height={24} className="rounded-sm border" data-ai-hint="jewelry charm" />
+                                      <span>{pc.charm.name}</span>
+                                    </div>
+                                    <span className="text-muted-foreground">{formatPrice(pc.charm.price || 0)}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                               <p className="text-sm text-muted-foreground text-center py-2">{t('no_charms_for_item')}</p>
+                            )}
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                      
+                       <CardFooter className="p-2 bg-muted/30 border-t grid grid-cols-3 gap-2">
                           <SheetClose asChild>
-                            <Button variant="outline" size="sm" asChild className="mt-2">
+                            <Button variant="outline" size="sm" asChild className="text-xs">
                                <Link href={editUrl}>
-                                  <Edit className="mr-2 h-4 w-4" />
+                                  <Edit />
                                   {t('edit_item_button')}
                                </Link>
                             </Button>
                           </SheetClose>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 flex-shrink-0"
-                          onClick={() => removeFromCart(item.id)}
-                          disabled={isProcessing}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">{t('remove_item')}</span>
-                        </Button>
-                      </div>
-                      {item.placedCharms.length > 0 && (
-                        <AccordionItem value={item.id} className="border-t">
-                          <AccordionTrigger className="text-sm px-4 py-2 hover:no-underline hover:bg-muted/50">
-                            <div className="flex justify-between w-full items-center">
-                              <span>{t('view_charms_action', { count: item.placedCharms.length })}</span>
-                            </div>
-                          </AccordionTrigger>
-                          <AccordionContent className="p-4 pt-0">
-                            <ul className="space-y-2">
-                              {item.placedCharms.map(pc => (
-                                <li key={pc.id} className="flex items-center justify-between gap-2 text-sm">
-                                  <div className="flex items-center gap-2">
-                                    <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={24} height={24} className="rounded-sm border" data-ai-hint="jewelry charm" />
-                                    <span>{pc.charm.name}</span>
-                                  </div>
-                                  <span className="text-muted-foreground">{formatPrice(pc.charm.price || 0)}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </AccordionContent>
-                        </AccordionItem>
-                      )}
+                           <Button variant="outline" size="sm" onClick={() => setSharingItem(item)} className="text-xs">
+                              <Share2 />
+                              {tEditor('share_button')}
+                          </Button>
+                           <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive hover:text-destructive text-xs"
+                            onClick={() => removeFromCart(item.id)}
+                            disabled={isProcessing}
+                          >
+                            <Trash2 />
+                            {t('remove_item')}
+                          </Button>
+                        </CardFooter>
                     </Card>
                   )
                 })}
-              </Accordion>
+              </div>
             </ScrollArea>
-            <SheetFooter className="mt-auto border-t pt-4">
+            <SheetFooter className="mt-auto border-t pt-4 flex-shrink-0">
               <div className="w-full space-y-4">
                 <div className="flex justify-between font-bold text-lg">
                   <span>{t('total')}</span>
                   <span>{formatPrice(totalPrice)}</span>
                 </div>
-                  <Button className="w-full" disabled={totalItems === 0 || isProcessing} onClick={() => setIsCheckoutOpen(true)}>
+                  <Button className="w-full" disabled={totalItems === 0 || isCheckoutOpen} onClick={() => setIsCheckoutOpen(true)}>
                      {isProcessing ? <Loader2 className="animate-spin" /> : t('checkout_button')}
                   </Button>
               </div>
@@ -241,13 +241,15 @@ export function CartSheet({ children, open, onOpenChange }: {
         )}
       </SheetContent>
     </Sheet>
-    <CheckoutDialog 
-        isOpen={isCheckoutOpen} 
-        onOpenChange={setIsCheckoutOpen}
-        onConfirm={handleCheckout}
-        isProcessing={isProcessing}
-        stockError={stockError}
-    />
+    {isCheckoutOpen && (
+      <CheckoutDialog 
+          isOpen={isCheckoutOpen} 
+          onOpenChange={setIsCheckoutOpen}
+          onOrderCreated={handleOrderCreated}
+          stockError={stockError}
+          setStockError={setStockError}
+      />
+    )}
     {successData && (
         <SuccessDialog
             isOpen={!!successData}
@@ -256,6 +258,17 @@ export function CartSheet({ children, open, onOpenChange }: {
             email={successData.email}
         />
     )}
+    {sharingItem && (
+        <ShareDialog
+            isOpen={!!sharingItem}
+            onOpenChange={() => setSharingItem(null)}
+            getCanvasDataUri={() => Promise.resolve(sharingItem.previewImage)}
+            t={tEditor}
+        />
+    )}
     </>
   );
 }
+
+
+

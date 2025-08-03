@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React from 'react';
@@ -8,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { CheckCircle, Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 interface SuccessDialogProps {
   isOpen: boolean;
@@ -18,6 +20,7 @@ interface SuccessDialogProps {
 
 export function SuccessDialog({ isOpen, onOpenChange, orderNumber, email }: SuccessDialogProps) {
   const t = useTranslations('Checkout');
+  const tHome = useTranslations('HomePage');
   const { toast } = useToast();
   const router = useRouter();
   const params = useParams();
@@ -58,7 +61,10 @@ export function SuccessDialog({ isOpen, onOpenChange, orderNumber, email }: Succ
             </Button>
           </div>
         </div>
-        <DialogFooter className="sm:justify-center">
+        <DialogFooter className="sm:justify-center flex-col-reverse sm:flex-row gap-2">
+           <Button type="button" variant="outline" asChild>
+                <Link href={`/${locale}/orders/track?orderNumber=${orderNumber}`}>{tHome('track_order_link')}</Link>
+           </Button>
           <Button type="button" onClick={() => handleOpenChange(false)}>
             {t('success_close_button')}
           </Button>
@@ -67,4 +73,3 @@ export function SuccessDialog({ isOpen, onOpenChange, orderNumber, email }: Succ
     </Dialog>
   );
 }
-
