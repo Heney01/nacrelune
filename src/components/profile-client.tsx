@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Loader2, ArrowLeft, PlusCircle, Heart, MoreHorizontal, Trash2, ShoppingCart } from 'lucide-react';
+import { Loader2, ArrowLeft, PlusCircle, Heart, MoreHorizontal, Trash2, ShoppingCart, LogOut, UserCircle } from 'lucide-react';
 import { BrandLogo } from './icons';
 import { Button } from './ui/button';
 import { useTranslations } from '@/hooks/use-translations';
@@ -21,6 +21,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import {
     AlertDialog,
@@ -44,7 +46,66 @@ import {
 } from '@/components/ui/dialog';
 import { useCart } from '@/hooks/use-cart';
 import { getJewelryTypesAndModels, getCharms } from '@/lib/data';
+import { CartWidget } from './cart-widget';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
+
+function UserNav({ locale }: { locale: string }) {
+    const { user, firebaseUser } = useAuth();
+    const t = useTranslations('HomePage');
+    const tAuth = useTranslations('Auth');
+
+    if (!firebaseUser) {
+        return (
+            <Button asChild variant="ghost" size="icon">
+                <Link href={`/${locale}/connexion`}>
+                    <UserCircle className="h-6 w-6" />
+                    <span className="sr-only">{tAuth('login_button')}</span>
+                </Link>
+            </Button>
+        )
+    }
+    
+    const fallbackDisplayName = user?.displayName?.charAt(0) || firebaseUser?.email?.charAt(0) || '?';
+
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                    <Avatar className="h-8 w-8">
+                        <AvatarImage src={user?.photoURL || firebaseUser.photoURL || undefined} alt={user?.displayName || 'Avatar'} />
+                        <AvatarFallback>{fallbackDisplayName.toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <span className="sr-only">{t('profile_menu_button')}</span>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuLabel>
+                    <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">{user?.displayName || firebaseUser.email}</p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                            {user?.email || firebaseUser.email}
+                        </p>
+                    </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                     <Link href={`/${locale}/profil`}>{tAuth('my_creations')}</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <form action={logout}>
+                    <input type="hidden" name="locale" value={locale} />
+                    <DropdownMenuItem asChild>
+                        <button type="submit" className="w-full">
+                            <LogOut className="mr-2 h-4 w-4" />
+                            <span>{tAuth('logout_button')}</span>
+                        </button>
+                    </DropdownMenuItem>
+                </form>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    )
+}
 
 export function ProfileClient({ locale }: { locale: string }) {
     const { user, firebaseUser, loading: authLoading } = useAuth();
@@ -225,6 +286,10 @@ export function ProfileClient({ locale }: { locale: string }) {
                     <Link href={`/${locale}`} className="flex items-center gap-2">
                         <BrandLogo className="h-8 w-auto text-foreground" />
                     </Link>
+                    <div className="flex items-center gap-2">
+                        <CartWidget />
+                        <UserNav locale={locale} />
+                    </div>
                 </div>
             </header>
             <main className="flex-grow p-4 md:p-8">
@@ -244,62 +309,64 @@ export function ProfileClient({ locale }: { locale: string }) {
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                             {creations.map(creation => (
                                 <Dialog key={creation.id}>
-                                    <Card className="flex flex-col group relative">
-                                        {firebaseUser?.uid === creation.creatorId && (
-                                            <div className="absolute top-2 right-2 z-10">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="secondary" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent>
-                                                        <DropdownMenuItem disabled>Modifier</DropdownMenuItem>
-                                                        <AlertDialog>
-                                                            <AlertDialogTrigger asChild>
-                                                                <DropdownMenuItem
-                                                                    className="text-destructive focus:text-destructive"
-                                                                    onSelect={(e) => e.preventDefault()}
-                                                                >
-                                                                    <Trash2 className="mr-2 h-4 w-4" /> Supprimer
-                                                                </DropdownMenuItem>
-                                                            </AlertDialogTrigger>
-                                                            <AlertDialogContent>
-                                                                <AlertDialogHeader>
-                                                                    <AlertDialogTitle>Êtes-vous sûr de vouloir supprimer "{creation.name}" ?</AlertDialogTitle>
-                                                                    <AlertDialogDescription>
-                                                                        Cette action est irréversible. Votre création sera définitivement supprimée.
-                                                                    </AlertDialogDescription>
-                                                                </AlertDialogHeader>
-                                                                <AlertDialogFooter>
-                                                                    <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                                                    <AlertDialogAction
-                                                                        onClick={() => handleDeleteClick(creation.id)}
-                                                                        className="bg-destructive hover:bg-destructive/90"
-                                                                        disabled={isPending}
+                                    <Card className="flex flex-col group">
+                                         <div className="relative">
+                                            {firebaseUser?.uid === creation.creatorId && (
+                                                <div className="absolute top-2 right-2 z-10">
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="secondary" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent>
+                                                            <DropdownMenuItem disabled>Modifier</DropdownMenuItem>
+                                                            <AlertDialog>
+                                                                <AlertDialogTrigger asChild>
+                                                                    <DropdownMenuItem
+                                                                        className="text-destructive focus:text-destructive"
+                                                                        onSelect={(e) => e.preventDefault()}
                                                                     >
-                                                                        {isPending ? <Loader2 className="animate-spin" /> : "Supprimer"}
-                                                                    </AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </div>
-                                        )}
-                                        <DialogTrigger asChild>
-                                            <CardHeader className="p-0 relative cursor-pointer">
-                                                <div className="aspect-square relative w-full bg-muted/50">
-                                                    <Image 
-                                                        src={creation.previewImageUrl} 
-                                                        alt={creation.name} 
-                                                        fill 
-                                                        className="object-contain"
-                                                        sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
-                                                    />
+                                                                        <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                                                                    </DropdownMenuItem>
+                                                                </AlertDialogTrigger>
+                                                                <AlertDialogContent>
+                                                                    <AlertDialogHeader>
+                                                                        <AlertDialogTitle>Êtes-vous sûr de vouloir supprimer "{creation.name}" ?</AlertDialogTitle>
+                                                                        <AlertDialogDescription>
+                                                                            Cette action est irréversible. Votre création sera définitivement supprimée.
+                                                                        </AlertDialogDescription>
+                                                                    </AlertDialogHeader>
+                                                                    <AlertDialogFooter>
+                                                                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                                                        <AlertDialogAction
+                                                                            onClick={() => handleDeleteClick(creation.id)}
+                                                                            className="bg-destructive hover:bg-destructive/90"
+                                                                            disabled={isPending}
+                                                                        >
+                                                                            {isPending ? <Loader2 className="animate-spin" /> : "Supprimer"}
+                                                                        </AlertDialogAction>
+                                                                    </AlertDialogFooter>
+                                                                </AlertDialogContent>
+                                                            </AlertDialog>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </div>
-                                            </CardHeader>
-                                        </DialogTrigger>
+                                            )}
+                                            <DialogTrigger asChild>
+                                                <CardHeader className="p-0 relative cursor-pointer">
+                                                    <div className="aspect-square relative w-full bg-muted/50">
+                                                        <Image 
+                                                            src={creation.previewImageUrl} 
+                                                            alt={creation.name} 
+                                                            fill 
+                                                            className="object-contain"
+                                                            sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+                                                        />
+                                                    </div>
+                                                </CardHeader>
+                                            </DialogTrigger>
+                                        </div>
                                         <CardContent className="p-4 flex-grow">
                                             <CardTitle className="text-base font-headline">{creation.name}</CardTitle>
                                             {creation.description && <CardDescription className="text-xs mt-1">{creation.description}</CardDescription>}
@@ -373,3 +440,4 @@ export function ProfileClient({ locale }: { locale: string }) {
         </div>
     );
 }
+
