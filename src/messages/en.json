@@ -69,7 +69,13 @@
     "share_not_supported": "Sharing is not supported by this browser.",
     "share_error_generic": "An error occurred while sharing.",
     "share_default_title": "My creation from Atelier à bijoux",
-    "share_default_text": "Check out my latest creation on Atelier à bijoux!"
+    "share_default_text": "Check out my latest creation on Atelier à bijoux!",
+    "confirm_add_title": "Add to cart?",
+    "confirm_update_title": "Update item?",
+    "confirm_add_description": "Here's a preview of your creation. Do you want to add it to your cart?",
+    "preview_alt": "Preview of your custom jewelry",
+    "cancel_button": "Cancel",
+    "confirm_button": "Confirm"
   },
   "Cart": {
     "title": "Your Cart",

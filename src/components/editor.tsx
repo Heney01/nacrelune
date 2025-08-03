@@ -27,7 +27,7 @@ import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { ShareDialog } from './share-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from './ui/scroll-area';
@@ -156,13 +156,14 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const [isSuggestionsSheetOpen, setIsSuggestionsSheetOpen] = useState(false);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [previewForDialog, setPreviewForDialog] = useState<string | null>(null);
+
 
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
 
   const [charmsSearchTerm, setCharmsSearchTerm] = useState('');
-
-  const [captureRequest, setCaptureRequest] = useState(false);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -499,62 +500,46 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     }, 500);
   };
   
-  const triggerCapture = () => {
-    resetZoomAndPan();
-    setSelectedPlacedCharmId(null);
-    setCaptureRequest(true);
-  };
-
-  const handleAddToCart = () => {
-    triggerCapture();
-  };
-
-  const handleUpdateCart = () => {
-    if (!cartItemId) return;
-    triggerCapture();
-  }
-
-  useEffect(() => {
-    if (!captureRequest) return;
-  
-    const captureAndSave = async () => {
-      try {
+  const handleOpenConfirmDialog = async () => {
+    try {
         const previewImage = await getCanvasDataUri();
-        
-        const currentPlacedCharms = placedCharmsRef.current;
-  
-        if (isEditing && cartItemId) {
-          const updatedItem = {
-            id: cartItemId,
-            model,
-            jewelryType,
-            placedCharms: currentPlacedCharms,
-            previewImage
-          };
-          updateCartItem(cartItemId, updatedItem);
-        } else {
-          const newItem: Omit<CartItem, 'id'> = {
-            model,
-            jewelryType,
-            placedCharms: currentPlacedCharms,
-            previewImage: previewImage
-          };
-          addToCart(newItem);
-          setPlacedCharms([]);
-        }
-        setIsCartSheetOpen(true);
-      } catch (error) {
-        console.error("Erreur lors de la capture du canvas:", error);
-      } finally {
-        setCaptureRequest(false);
+        setPreviewForDialog(previewImage);
+        setIsConfirmOpen(true);
+    } catch(error) {
+        toast({
+          variant: "destructive",
+          title: "Erreur",
+          description: "Impossible de générer l'aperçu de la création.",
+        });
+    }
+  };
+
+  const handleConfirmAddToCart = async () => {
+      if (!previewForDialog) return;
+
+      if (isEditing && cartItemId) {
+        const updatedItem = {
+          id: cartItemId,
+          model,
+          jewelryType,
+          placedCharms,
+          previewImage: previewForDialog
+        };
+        updateCartItem(cartItemId, updatedItem);
+      } else {
+        const newItem: Omit<CartItem, 'id'> = {
+          model,
+          jewelryType,
+          placedCharms,
+          previewImage: previewForDialog
+        };
+        addToCart(newItem);
+        setPlacedCharms([]);
       }
-    };
-    
-    // Use a small timeout to ensure the UI has reset before capturing
-    const timer = setTimeout(captureAndSave, 50);
-  
-    return () => clearTimeout(timer);
-  }, [captureRequest, getCanvasDataUri, isEditing, cartItemId, model, jewelryType, updateCartItem, addToCart]);
+      setIsConfirmOpen(false);
+      setPreviewForDialog(null);
+      setIsCartSheetOpen(true);
+  };
 
   const placedCharmCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -721,6 +706,32 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
           t={t}
         />
       )}
+       <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{isEditing ? t('confirm_update_title') : t('confirm_add_title')}</DialogTitle>
+                    <DialogDescription>
+                        {t('confirm_add_description')}
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="my-4">
+                    {previewForDialog ? (
+                        <Image src={previewForDialog} alt={t('preview_alt')} width={400} height={400} className="rounded-lg border bg-muted/50" />
+                    ) : (
+                        <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center">
+                            <Loader2 className="animate-spin" />
+                        </div>
+                    )}
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button variant="outline">{t('cancel_button')}</Button>
+                    </DialogClose>
+                    <Button onClick={handleConfirmAddToCart}>{t('confirm_button')}</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
       <div className={cn("flex flex-col h-screen overflow-hidden", isMobile && "h-[calc(100dvh)]")}>
         <header className="p-4 border-b flex-shrink-0">
             <div className="container mx-auto flex justify-between items-center">
@@ -732,7 +743,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
             </div>
           </header>
-        <main className={cn("flex-grow flex flex-col p-4 md:p-8 min-h-0", isMobile && "p-0 pb-[136px]")}>
+        <main className={cn("flex-grow flex flex-col p-4 md:p-8 min-h-0", isMobile && "p-0")}>
           <div className={cn("container mx-auto flex-1 flex flex-col min-h-0", isMobile && "px-0")}>
               <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0", isMobile && "grid-cols-1 gap-0")}>
               
@@ -838,6 +849,20 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       )}
                   </div>
                   
+                   <div className="md:hidden p-4">
+                     {isEditing ? (
+                        <Button onClick={handleOpenConfirmDialog} variant="outline" className="w-full" disabled={hasStockIssues}>
+                           <Check />
+                            {t('update_item_button')}
+                        </Button>
+                    ) : (
+                        <Button onClick={handleOpenConfirmDialog} variant="outline" className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
+                            <PlusCircle />
+                            {t('add_to_cart_button')}
+                        </Button>
+                    )}
+                   </div>
+
                   {!isMobile && (
                       <Card>
                           <CardHeader>
@@ -889,12 +914,12 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                           </CardContent>
                           <CardFooter>
                               {isEditing ? (
-                              <Button onClick={handleUpdateCart} className="w-full" disabled={captureRequest || hasStockIssues}>
-                                  {captureRequest ? <Loader2 className="animate-spin" /> : <Check />}
+                              <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues}>
+                                  <Check />
                                   {t('update_item_button')}
                               </Button>
                               ) : (
-                              <Button onClick={handleAddToCart} className="w-full" disabled={captureRequest || hasStockIssues || placedCharms.length === 0}>
+                              <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
                                   <PlusCircle />
                                   {t('add_to_cart_button')}
                               </Button>
@@ -921,23 +946,24 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
          {isMobile && (
             <>
-                <div className="fixed bottom-[72px] left-0 right-0 bg-background/80 backdrop-blur-sm p-4 border-t">
+                <div className="fixed bottom-16 left-0 right-0 bg-background/80 backdrop-blur-sm p-2 flex justify-around items-center gap-2 border-t">
                     {isEditing ? (
-                        <Button onClick={handleUpdateCart} variant="outline" className="w-full" disabled={captureRequest || hasStockIssues}>
-                            {captureRequest ? <Loader2 className="animate-spin" /> : <Check />}
+                        <Button onClick={handleOpenConfirmDialog} variant="outline" size="sm" className="w-auto flex-grow" disabled={hasStockIssues}>
+                            <Check />
                             {t('update_item_button')}
                         </Button>
                     ) : (
-                        <Button onClick={handleAddToCart} variant="outline" className="w-full" disabled={captureRequest || hasStockIssues || placedCharms.length === 0}>
+                        <Button onClick={handleOpenConfirmDialog} variant="outline" size="sm" className="w-auto flex-grow" disabled={hasStockIssues || placedCharms.length === 0}>
                             <PlusCircle />
                             {t('add_to_cart_button')}
                         </Button>
                     )}
                 </div>
-                <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-2 flex justify-around items-center gap-2">
+
+                <div className="fixed bottom-0 left-0 right-0 bg-background border-t flex justify-around items-center">
                     <Sheet open={isCharmsSheetOpen} onOpenChange={setIsCharmsSheetOpen}>
                         <SheetTrigger asChild>
-                            <Button variant="ghost" className="flex flex-col h-auto p-2 flex-grow">
+                            <Button variant="ghost" className="flex flex-col h-auto p-2 flex-grow gap-1">
                                 <Gem className="h-6 w-6 text-primary" />
                                 <span className="text-xs">{tCharm('title')}</span>
                             </Button>
@@ -1022,7 +1048,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                     </Sheet>
                     <Sheet open={isSuggestionsSheetOpen} onOpenChange={setIsSuggestionsSheetOpen}>
                         <SheetTrigger asChild>
-                            <Button variant="ghost" className="flex flex-col h-auto p-2 flex-grow">
+                            <Button variant="ghost" className="flex flex-col h-auto p-2 flex-grow gap-1">
                                 <Sparkles className="h-6 w-6 text-primary" />
                                 <span className="text-xs">{t('ai_suggestions_title')}</span>
                             </Button>

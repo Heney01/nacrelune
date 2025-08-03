@@ -69,7 +69,13 @@
     "share_not_supported": "Le partage n'est pas supporté par ce navigateur.",
     "share_error_generic": "Une erreur est survenue lors du partage.",
     "share_default_title": "Ma création Atelier à bijoux",
-    "share_default_text": "Découvrez ma dernière création sur Atelier à bijoux !"
+    "share_default_text": "Découvrez ma dernière création sur Atelier à bijoux !",
+    "confirm_add_title": "Ajouter au panier ?",
+    "confirm_update_title": "Mettre à jour l'article ?",
+    "confirm_add_description": "Voici un aperçu de votre création. Voulez-vous l'ajouter à votre panier ?",
+    "preview_alt": "Aperçu de votre bijou personnalisé",
+    "cancel_button": "Annuler",
+    "confirm_button": "Confirmer"
   },
   "Cart": {
     "title": "Votre Panier",
