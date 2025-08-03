@@ -36,26 +36,18 @@ async function verifyToken(sessionCookie: string) {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Step 1: Handle root redirection
-  if (pathname === '/') {
-    const locale = getLocale(request);
-    return NextResponse.redirect(new URL(`/${locale}`, request.url));
-  }
-  
-  // Step 2: Check if the path is missing a locale
   const pathnameIsMissingLocale = availableLocales.every(
     (locale) => !pathname.startsWith(`/${locale}/`) && pathname !== `/${locale}`
   );
 
+  // Redirect if there is no locale
   if (pathnameIsMissingLocale) {
-    // If it's a file or API route, do nothing
-    if (pathname.includes('.') || pathname.startsWith('/api')) {
-        return NextResponse.next();
-    }
-    // Otherwise, redirect to the default locale
     const locale = getLocale(request);
     return NextResponse.redirect(
-      new URL(`/${locale}${pathname.startsWith('/') ? '' : '/'}${pathname}`, request.url)
+      new URL(
+        `/${locale}${pathname.startsWith('/') ? '' : '/'}${pathname}`,
+        request.url
+      )
     );
   }
 
@@ -98,5 +90,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // Matcher ignoring `/_next/` and `/api/`
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };
