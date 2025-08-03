@@ -31,7 +31,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { ShareDialog } from './share-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea, ScrollBar } from './ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Loader2 } from 'lucide-react';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
@@ -558,13 +558,24 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
       setIsPublishing(true);
       
       const serializableCartItem: SerializableCartItem = {
-          id: '', // Not needed for saving creation
-          model: model,
+          id: '',
+          model: {
+              ...model,
+              lastOrderedAt: model.lastOrderedAt ? model.lastOrderedAt.toISOString() : null,
+              restockedAt: model.restockedAt ? model.restockedAt.toISOString() : null,
+          } as any,
           jewelryType: jewelryType,
-          placedCharms: placedCharms,
+          placedCharms: placedCharms.map(pc => ({
+              ...pc,
+              charm: {
+                  ...pc.charm,
+                  lastOrderedAt: pc.charm.lastOrderedAt ? pc.charm.lastOrderedAt.toISOString() : null,
+                  restockedAt: pc.charm.restockedAt ? pc.charm.restockedAt.toISOString() : null,
+              } as any,
+          })),
           previewImage: previewForDialog,
       };
-      
+
       const result = await saveCreation(
           firebaseUser.uid,
           firebaseUser.displayName || "Créateur anonyme",

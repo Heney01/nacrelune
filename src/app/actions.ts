@@ -191,6 +191,7 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
 export async function login(prevState: any, formData: FormData): Promise<{ success: boolean; message?: string; error?: string; }> {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
+  const locale = formData.get('locale') as string || 'fr';
 
   if (!email || !password) {
     return { success: false, error: 'Veuillez fournir un email et un mot de passe.' };
@@ -209,7 +210,7 @@ export async function login(prevState: any, formData: FormData): Promise<{ succe
       path: '/',
     });
     
-    return { success: true, message: 'Connexion réussie !' };
+    redirect(`/${locale}/admin/dashboard`);
 
   } catch (error: any) {
     let errorMessage = "Une erreur inconnue est survenue.";
@@ -233,6 +234,7 @@ export async function login(prevState: any, formData: FormData): Promise<{ succe
 export async function userLogin(prevState: any, formData: FormData): Promise<{ success: boolean; message?: string; error?: string; }> {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
+  const locale = formData.get('locale') as string || 'fr';
 
   if (!email || !password) {
     return { success: false, error: 'Veuillez fournir un email et un mot de passe.' };
@@ -1481,6 +1483,17 @@ export async function saveCreation(
     }
 
     try {
+        // Convert dates back to Timestamps if they are strings
+        const cleanPlacedCharms = cartItem.placedCharms.map(pc => ({
+            ...pc,
+            charm: {
+                ...pc.charm,
+                lastOrderedAt: pc.charm.lastOrderedAt ? Timestamp.fromDate(new Date(pc.charm.lastOrderedAt)) : null,
+                restockedAt: pc.charm.restockedAt ? Timestamp.fromDate(new Date(pc.charm.restockedAt)) : null,
+            }
+        }));
+
+
         const creationData: Omit<Creation, 'id'> = {
             creatorId: creatorId,
             creatorName: creatorName,
@@ -1488,7 +1501,7 @@ export async function saveCreation(
             description,
             jewelryTypeId: cartItem.jewelryType.id,
             modelId: cartItem.model.id,
-            placedCharms: cartItem.placedCharms,
+            placedCharms: cleanPlacedCharms,
             previewImageUrl: cartItem.previewImage, // This might be a data URL
             createdAt: new Date(),
             salesCount: 0
@@ -1544,5 +1557,6 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
     }
 }
     
+
 
 
