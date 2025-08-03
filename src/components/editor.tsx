@@ -30,7 +30,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { ShareDialog } from './share-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from './ui/scroll-area';
+import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { Loader2 } from 'lucide-react';
 
 interface PlacedCharmComponentProps {
@@ -876,8 +876,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                               {placedCharms.length === 0 ? (
                                   <p className="text-muted-foreground text-sm text-center py-4">{t('added_charms_placeholder')}</p>
                               ) : (
-                                  <ScrollArea className="w-full">
-                                      <div className="flex gap-2 pb-4 pt-2 pl-2 flex-wrap">
+                                  <ScrollArea className="w-full whitespace-nowrap" orientation="horizontal">
+                                      <div className="flex w-max space-x-2 p-4">
                                           {sortedPlacedCharms.map((pc) => (
                                               <div key={pc.id}
                                                   className={cn("p-2 rounded-md border flex flex-col items-center gap-1 cursor-pointer w-20 relative group",
@@ -911,6 +911,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                               </div>
                                           ))}
                                       </div>
+                                      <ScrollBar orientation="horizontal" />
                                   </ScrollArea>
                               )}
                           </CardContent>
