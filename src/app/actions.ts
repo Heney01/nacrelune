@@ -300,6 +300,7 @@ export async function signup(prevState: any, formData: FormData): Promise<{ succ
             email: user.email,
             displayName: user.displayName,
             photoURL: user.photoURL,
+            rewardPoints: 0,
         };
         await setDoc(doc(db, 'users', user.uid), userData);
 
@@ -358,6 +359,7 @@ export async function userLoginWithGoogle(formData: FormData): Promise<{ success
         email,
         displayName,
         photoURL,
+        rewardPoints: 0,
       };
       await setDoc(userDocRef, newUser);
     }
@@ -897,6 +899,15 @@ export async function createOrder(
                     const creationRef = doc(db, 'creations', item.creationId);
                     transaction.update(creationRef, { salesCount: increment(1) });
                 }
+
+                if (item.creatorId) {
+                    const points = Math.floor((itemPrice * 0.05) * 10);
+                    if (points > 0) {
+                        const creatorRef = doc(db, 'users', item.creatorId);
+                        transaction.update(creatorRef, { rewardPoints: increment(points) });
+                    }
+                }
+
 
                 return {
                     modelId: item.model.id,

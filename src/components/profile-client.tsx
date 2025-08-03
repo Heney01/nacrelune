@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Loader2, ArrowLeft, PlusCircle, Heart, MoreHorizontal, Trash2, ShoppingCart, LogOut, UserCircle } from 'lucide-react';
+import { Loader2, ArrowLeft, PlusCircle, Heart, MoreHorizontal, Trash2, ShoppingCart, LogOut, UserCircle, Award } from 'lucide-react';
 import { BrandLogo } from './icons';
 import { Button } from './ui/button';
 import { useTranslations } from '@/hooks/use-translations';
@@ -302,7 +302,13 @@ export function ProfileClient({ locale }: { locale: string }) {
                             </Link>
                         </Button>
                     </div>
-                    <h1 className="text-3xl font-headline mb-2">{t('my_creations')}</h1>
+                    <div className="flex items-center gap-4 mb-2">
+                         <h1 className="text-3xl font-headline">{user?.displayName || 'Mon Profil'}</h1>
+                         <div className="flex items-center gap-2 text-primary font-bold bg-primary/10 px-3 py-1.5 rounded-full">
+                            <Award className="h-5 w-5"/>
+                            <span>{user?.rewardPoints || 0}</span>
+                         </div>
+                    </div>
                     <p className="text-muted-foreground mb-8">Retrouvez ici toutes les créations que vous avez publiées.</p>
 
                    {(creations && creations.length > 0) ? (
