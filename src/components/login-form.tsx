@@ -27,10 +27,16 @@ import { useGoogleAuth } from '@/hooks/use-google-auth';
 import { useToast } from '@/hooks/use-toast';
 
 
-const initialState = {
-  error: '',
+type State = {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
+const initialState: State = {
   success: false,
-  message: '',
+  message: undefined,
+  error: undefined,
 };
 
 function LoginButton() {
@@ -60,9 +66,10 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
         title: 'Connexion réussie',
         description: state.message,
       });
-      router.push(`/${locale}`);
+      const redirectPath = isUserAuth ? `/${locale}` : `/${locale}/admin/dashboard`;
+      router.push(redirectPath);
     }
-  }, [state.success, state.message, router, locale, toast]);
+  }, [state.success, state.message, router, locale, toast, isUserAuth]);
 
   return (
     <Card>

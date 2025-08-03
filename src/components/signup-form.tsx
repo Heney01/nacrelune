@@ -18,14 +18,18 @@ import { BrandLogo, GoogleIcon } from '@/components/icons';
 import { signup } from '@/app/actions';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from '@/hooks/use-translations';
 import { useGoogleAuth } from '@/hooks/use-google-auth';
 import { Separator } from './ui/separator';
+import { useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 const initialState = {
+  success: false,
   error: '',
+  message: '',
 };
 
 function SignUpButton() {
@@ -43,9 +47,22 @@ function SignUpButton() {
 export function SignUpForm() {
   const [state, formAction] = useFormState(signup, initialState);
   const params = useParams();
+  const router = useRouter();
   const locale = params.locale as string;
   const t = useTranslations('Auth');
   const { signInWithGoogle, error: googleError, isGoogleLoading } = useGoogleAuth();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (state.success) {
+        toast({
+            title: 'Inscription réussie',
+            description: state.message,
+        });
+        router.push(`/${locale}`);
+    }
+  }, [state.success, state.message, toast, router, locale]);
+
 
   return (
     <Card>
