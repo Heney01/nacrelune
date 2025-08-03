@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { SuggestionSidebar } from './suggestion-sidebar';
 import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Share2, Layers, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { BrandLogo, ShoppingBasketIcon } from './icons';
+import { BrandLogo } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { CharmsPanel } from './charms-panel';
@@ -32,6 +32,7 @@ import { ShareDialog } from './share-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from './ui/scroll-area';
 import { Loader2 } from 'lucide-react';
+import { ShoppingBasketIcon } from './icons';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -500,40 +501,35 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     }, 500);
   };
   
-  const handleOpenConfirmDialog = async () => {
-    try {
-        const previewImage = await getCanvasDataUri();
-        setPreviewForDialog(previewImage);
-        setIsConfirmOpen(true);
-    } catch(error) {
+  const handleOpenConfirmDialog = () => {
+    setIsConfirmOpen(true);
+    getCanvasDataUri()
+      .then(setPreviewForDialog)
+      .catch(error => {
+        console.error(error);
         toast({
           variant: "destructive",
           title: "Erreur",
           description: "Impossible de générer l'aperçu de la création.",
         });
-    }
+        setIsConfirmOpen(false); // Close dialog if preview fails
+      });
   };
 
   const handleConfirmAddToCart = async () => {
       if (!previewForDialog) return;
 
+      const itemPayload = {
+        model,
+        jewelryType,
+        placedCharms,
+        previewImage: previewForDialog,
+      };
+
       if (isEditing && cartItemId) {
-        const updatedItem = {
-          id: cartItemId,
-          model,
-          jewelryType,
-          placedCharms,
-          previewImage: previewForDialog
-        };
-        updateCartItem(cartItemId, updatedItem);
+        updateCartItem(cartItemId, { id: cartItemId, ...itemPayload });
       } else {
-        const newItem: Omit<CartItem, 'id'> = {
-          model,
-          jewelryType,
-          placedCharms,
-          previewImage: previewForDialog
-        };
-        addToCart(newItem);
+        addToCart(itemPayload);
         setPlacedCharms([]);
       }
       setIsConfirmOpen(false);
@@ -706,7 +702,12 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
           t={t}
         />
       )}
-       <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+       <Dialog open={isConfirmOpen} onOpenChange={(open) => {
+            if (!open) {
+                setPreviewForDialog(null);
+            }
+            setIsConfirmOpen(open);
+        }}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{isEditing ? t('confirm_update_title') : t('confirm_add_title')}</DialogTitle>
@@ -727,7 +728,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                     <DialogClose asChild>
                         <Button variant="outline">{t('cancel_button')}</Button>
                     </DialogClose>
-                    <Button onClick={handleConfirmAddToCart}>{t('confirm_button')}</Button>
+                    <Button onClick={handleConfirmAddToCart} disabled={!previewForDialog}>{t('confirm_button')}</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -849,6 +850,20 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       )}
                   </div>
                   
+                   <div className="p-4 lg:hidden">
+                    {isEditing ? (
+                        <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues}>
+                            <Check />
+                            {t('update_item_button')}
+                        </Button>
+                    ) : (
+                        <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
+                            <PlusCircle />
+                            {t('add_to_cart_button')}
+                        </Button>
+                    )}
+                </div>
+
                   {!isMobile && (
                       <Card>
                           <CardHeader>
@@ -856,7 +871,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                               <Layers /> {t('added_charms_title', { count: placedCharms.length })}
                               </CardTitle>
                           </CardHeader>
-                          <CardContent>
+                          <CardContent className="pt-2">
                               {placedCharms.length === 0 ? (
                                   <p className="text-muted-foreground text-sm text-center py-4">{t('added_charms_placeholder')}</p>
                               ) : (
@@ -932,20 +947,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
          {isMobile && (
             <>
-                <div className="fixed bottom-16 left-0 right-0 bg-background/80 backdrop-blur-sm p-2 border-t">
-                    {isEditing ? (
-                        <Button onClick={handleOpenConfirmDialog} variant="outline" className="w-full" disabled={hasStockIssues}>
-                            <Check className="mr-2"/>
-                            {t('update_item_button')}
-                        </Button>
-                    ) : (
-                        <Button onClick={handleOpenConfirmDialog} variant="outline" className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
-                            <PlusCircle className="mr-2"/>
-                            {t('add_to_cart_button')}
-                        </Button>
-                    )}
-                </div>
-
                 <div className="fixed bottom-0 left-0 right-0 bg-background border-t flex justify-around items-center">
                     <Sheet open={isCharmsSheetOpen} onOpenChange={setIsCharmsSheetOpen}>
                         <SheetTrigger asChild>
@@ -1066,5 +1067,3 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
-
-    
