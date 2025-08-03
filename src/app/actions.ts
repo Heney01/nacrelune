@@ -805,6 +805,7 @@ export async function createOrder(
             const itemDocsToFetch: Map<string, DocumentReference> = new Map();
             
             const stockDeductions = new Map<string, { count: number, name: string, type: string, id: string }>();
+            const creatorPointAwards: Map<string, { points: number; creatorName: string; creationName: string }> = new Map();
 
             for (const item of cartItems) {
                 const modelKey = `${item.jewelryType.id}/${item.model.id}`;
@@ -820,6 +821,16 @@ export async function createOrder(
                     stockDeductions.set(charmKey, { ...currentCharm, count: currentCharm.count + 1 });
                     if (!itemDocsToFetch.has(charmKey)) {
                         itemDocsToFetch.set(charmKey, doc(db, 'charms', pc.charm.id));
+                    }
+                }
+                
+                // Handle creator rewards
+                if (item.creatorId && item.creatorName) {
+                    const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+                    const points = Math.floor((itemPrice * 0.05) * 10);
+                    if (points > 0) {
+                        const currentAwards = creatorPointAwards.get(item.creatorId) || { points: 0, creatorName: item.creatorName, creationName: item.model.name };
+                        creatorPointAwards.set(item.creatorId, { ...currentAwards, points: currentAwards.points + points });
                     }
                 }
             }
@@ -907,6 +918,32 @@ export async function createOrder(
                     throw new Error("Points de récompense insuffisants.");
                 }
             }
+            
+            const allCreatorIds = Array.from(creatorPointAwards.keys());
+            const creatorDocs = allCreatorIds.length > 0
+                ? await Promise.all(allCreatorIds.map(id => transaction.get(doc(db, 'users', id))))
+                : [];
+            const creatorsMap = new Map(creatorDocs.map(d => [d.id, d.data() as User]));
+
+            for (const [creatorId, award] of creatorPointAwards.entries()) {
+                const creatorRef = doc(db, 'users', creatorId);
+                transaction.update(creatorRef, { rewardPoints: increment(award.points) });
+
+                const creatorData = creatorsMap.get(creatorId);
+                if (creatorData && creatorData.email) {
+                    const mailText = `Bonjour ${award.creatorName},\n\nFélicitations ! Votre création "${award.creationName}" a été achetée.\n\nVous venez de gagner ${award.points} points de récompense.\n\nContinuez à créer !`;
+                    const mailHtml = `<h1>Félicitations !</h1><p>Bonjour ${award.creatorName},</p><p>Excellente nouvelle ! Votre création, <strong>"${award.creationName}"</strong>, a été achetée par un autre utilisateur.</p><p>Pour vous récompenser, nous venons de créditer votre compte de <strong>${award.points} points</strong>.</p><p>Merci pour votre contribution à la communauté !</p>`;
+                    const mailDocData = {
+                        to: [creatorData.email],
+                        message: {
+                            subject: `Votre création a été vendue ! Vous avez gagné des points.`,
+                            text: mailText,
+                            html: mailHtml,
+                        },
+                    };
+                    transaction.set(doc(collection(db, 'mail')), mailDocData);
+                }
+            }
 
             const orderItems: Omit<OrderItem, 'modelImageUrl' | 'charms'>[] = cartItems.map((item, index) => {
                 const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
@@ -915,15 +952,6 @@ export async function createOrder(
                     const creationRef = doc(db, 'creations', item.creationId);
                     transaction.update(creationRef, { salesCount: increment(1) });
                 }
-
-                if (item.creatorId) {
-                    const points = Math.floor((itemPrice * 0.05) * 10);
-                    if (points > 0) {
-                        const creatorRef = doc(db, 'users', item.creatorId);
-                        transaction.update(creatorRef, { rewardPoints: increment(points) });
-                    }
-                }
-
 
                 return {
                     modelId: item.model.id,
@@ -1818,3 +1846,5 @@ export async function deleteCreation(idToken: string, creationId: string): Promi
         return { success: false, message: "Une erreur est survenue lors de la suppression." };
     }
 }
+
+    

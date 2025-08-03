@@ -166,6 +166,7 @@
   "Admin": {
     "reorder_dialog_title": "Gérer la commande pour {itemName}",
     "reorder_dialog_description": "Vous pouvez ouvrir l'URL du fournisseur pour commander, ou gérer le statut du stock ici.",
+    "reorder_dialog_reorder": "Commander",
     "open_reorder_url": "Ouvrir l'URL de commande",
     "mark_as_ordered": "Marquer comme commandé",
     "mark_as_restocked": "Marquer comme réapprovisionné",
@@ -212,7 +213,7 @@
     "delivery_method_pickup": "Livraison en point relais",
     "pickup_contact_customer": "Le client souhaite une livraison en point relais. Veuillez le contacter pour convenir du point de retrait."
   },
-  "Checkout": {
+   "Checkout": {
     "title": "Paiement",
     "description": "Veuillez remplir vos informations pour finaliser la commande.",
     "order_summary": "Résumé de la commande",
@@ -300,5 +301,15 @@
     "shipping_carrier": "Transporteur",
     "tracking_number": "Numéro de suivi",
     "tracking_number_copied": "Numéro de suivi copié !"
+  },
+  "Notifications": {
+    "reward_email_subject": "Votre création a été vendue ! Vous avez gagné des points.",
+    "reward_email_greeting": "Bonjour {creatorName},",
+    "reward_email_body_1": "Excellente nouvelle ! Votre création, \"{creationName}\", a été achetée par un autre utilisateur.",
+    "reward_email_body_2": "Pour vous récompenser, nous venons de créditer votre compte de {points} points.",
+    "reward_email_body_3": "Merci pour votre contribution à la communauté !",
+    "reward_email_cta": "Voir mes points"
   }
 }
+
+    

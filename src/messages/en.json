@@ -299,5 +299,15 @@
     "shipping_carrier": "Carrier",
     "tracking_number": "Tracking Number",
     "tracking_number_copied": "Tracking number copied!"
+  },
+  "Notifications": {
+    "reward_email_subject": "Your creation has been sold! You've earned points.",
+    "reward_email_greeting": "Hello {creatorName},",
+    "reward_email_body_1": "Great news! Your creation, \"{creationName}\", has been purchased by another user.",
+    "reward_email_body_2": "To reward you, we've just credited your account with {points} points.",
+    "reward_email_body_3": "Thank you for your contribution to the community!",
+    "reward_email_cta": "See my points"
   }
 }
+
+    
