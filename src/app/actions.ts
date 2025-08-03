@@ -4,7 +4,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { db, storage } from '@/lib/firebase';
-import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction, Timestamp, collectionGroup, documentId, orderBy, DocumentReference, DocumentSnapshot } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction, Timestamp, collectionGroup, documentId, orderBy, DocumentReference, DocumentSnapshot, increment } from 'firebase/firestore';
 import { ref, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
@@ -1551,7 +1551,8 @@ export async function saveCreation(
             modelId,
             placedCharms: placedCharms,
             previewImageUrl: previewImageUrl,
-            salesCount: 0
+            salesCount: 0,
+            likesCount: 0,
         };
 
         let finalPreviewUrl = creationData.previewImageUrl;
@@ -1578,6 +1579,7 @@ export async function saveCreation(
 }
 
 export async function getUserCreations(userId: string): Promise<Creation[]> {
+    console.log('[SERVER] getUserCreations called with userId:', userId);
     if (!userId) {
         return [];
     }
@@ -1587,6 +1589,7 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
     
     try {
         const querySnapshot = await getDocs(q);
+        console.log(`[SERVER] Found ${querySnapshot.docs.length} creations for user ${userId}.`);
         
         if (querySnapshot.empty) {
             return [];
@@ -1618,10 +1621,60 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
             } as Creation;
         }));
         
+        console.log('[SERVER] Returning creations:', creations);
         return creations;
     } catch (error: any) {
         console.error("[SERVER] Error fetching user creations:", error);
         return [];
+    }
+}
+
+export async function toggleLikeCreation(creationId: string, idToken: string): Promise<{ success: boolean; message?: string; newLikesCount?: number }> {
+    if (!idToken) {
+        return { success: false, message: "Utilisateur non authentifié." };
+    }
+    
+    let user;
+    try {
+        const adminAuth = getAdminAuth(adminApp);
+        user = await adminAuth.verifyIdToken(idToken, true);
+    } catch (error: any) {
+        return { success: false, message: "Jeton d'authentification invalide." };
+    }
+
+    const creationRef = doc(db, 'creations', creationId);
+    const likeRef = doc(db, 'creations', creationId, 'likes', user.uid);
+
+    try {
+        const newLikesCount = await runTransaction(db, async (transaction) => {
+            const likeDoc = await transaction.get(likeRef);
+            const creationDoc = await transaction.get(creationRef);
+
+            if (!creationDoc.exists()) {
+                throw new Error("La création n'existe pas.");
+            }
+
+            const currentLikes = creationDoc.data().likesCount || 0;
+
+            if (likeDoc.exists()) {
+                // User has liked, so unlike
+                transaction.delete(likeRef);
+                transaction.update(creationRef, { likesCount: increment(-1) });
+                return currentLikes - 1;
+            } else {
+                // User has not liked, so like
+                transaction.set(likeRef, { createdAt: serverTimestamp() });
+                transaction.update(creationRef, { likesCount: increment(1) });
+                return currentLikes + 1;
+            }
+        });
+        
+        revalidatePath('/fr/profil');
+        return { success: true, newLikesCount };
+
+    } catch (error: any) {
+        console.error("Error toggling like:", error);
+        return { success: false, message: "Une erreur est survenue lors de l'opération." };
     }
 }
     
@@ -1635,6 +1688,7 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
 
 
     
+
 
 
 

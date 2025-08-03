@@ -190,4 +190,5 @@ export interface Creation {
     previewImageUrl: string;
     createdAt: Date;
     salesCount: number;
+    likesCount: number;
 }
