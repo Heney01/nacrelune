@@ -43,6 +43,7 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
+    DialogClose,
 } from '@/components/ui/dialog';
 import { useCart } from '@/hooks/use-cart';
 import { getJewelryTypesAndModels, getCharms } from '@/lib/data';
@@ -304,10 +305,31 @@ export function ProfileClient({ locale }: { locale: string }) {
                     </div>
                     <div className="flex items-center gap-4 mb-2">
                          <h1 className="text-3xl font-headline">{user?.displayName || 'Mon Profil'}</h1>
-                         <div className="flex items-center gap-2 text-primary font-bold bg-primary/10 px-3 py-1.5 rounded-full">
-                            <Award className="h-5 w-5"/>
-                            <span>{user?.rewardPoints || 0}</span>
-                         </div>
+                         <Dialog>
+                            <DialogTrigger asChild>
+                                <div className="flex items-center gap-2 text-primary font-bold bg-primary/10 px-3 py-1.5 rounded-full cursor-pointer hover:bg-primary/20 transition-colors">
+                                    <Award className="h-5 w-5"/>
+                                    <span>{user?.rewardPoints || 0}</span>
+                                </div>
+                            </DialogTrigger>
+                             <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>{t('reward_points_title')}</DialogTitle>
+                                    <DialogDescription>{t('reward_points_description')}</DialogDescription>
+                                </DialogHeader>
+                                <ul className="list-disc list-inside space-y-2 my-4 text-sm text-muted-foreground">
+                                    <li>{t('reward_points_explanation_1')}</li>
+                                    <li>{t('reward_points_explanation_2')}</li>
+                                    <li><strong>{t('reward_points_explanation_3')}</strong></li>
+                                    <li>{t('reward_points_explanation_4')}</li>
+                                </ul>
+                                <DialogFooter>
+                                    <DialogClose asChild>
+                                        <Button>{t('reward_points_close_button')}</Button>
+                                    </DialogClose>
+                                </DialogFooter>
+                            </DialogContent>
+                         </Dialog>
                     </div>
                     <p className="text-muted-foreground mb-8">Retrouvez ici toutes les créations que vous avez publiées.</p>
 

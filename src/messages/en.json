@@ -50,7 +50,14 @@
     "my_creations": "My Creations",
     "google_login_button": "Continue with Google",
     "google_signup_button": "Sign up with Google",
-    "or_continue_with": "OR"
+    "or_continue_with": "OR",
+    "reward_points_title": "Your Reward Points",
+    "reward_points_description": "Here's how your reward points work.",
+    "reward_points_explanation_1": "Earn points when other users purchase your creations.",
+    "reward_points_explanation_2": "Redeem your points for discounts or vouchers.",
+    "reward_points_explanation_3": "Conversion rate: 10 points = €1.",
+    "reward_points_explanation_4": "Earning limit: €300 per year.",
+    "reward_points_close_button": "Got it"
   },
   "Editor": {
     "charms_title": "Charms",
