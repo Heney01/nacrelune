@@ -22,30 +22,36 @@ function getLocale(request: NextRequest): string {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  const pathnameIsMissingLocale = availableLocales.every(
-    (locale) => !pathname.startsWith(`/${locale}/`) && pathname !== `/${locale}`
-  );
-
-  // Gérer la redirection depuis la racine ou les chemins sans locale
-  if (pathnameIsMissingLocale) {
-    const locale = getLocale(request);
-    
-    // Si la requête est pour la racine, on redirige vers la page d'accueil de la locale détectée.
-    // Pour les autres chemins, on ajoute le préfixe de la locale.
-    const newPath = pathname === '/' ? '' : pathname;
-    return NextResponse.redirect(new URL(`/${locale}${newPath}`, request.url));
-  }
-
-  // Logique de protection pour l'espace admin
+  // Isolate admin logic
   if (pathname.includes('/admin')) {
+      // Allow login page to be accessed
+      if (pathname.endsWith('/admin/login')) {
+          return NextResponse.next();
+      }
+      
+      // Protect all other admin pages
       const sessionCookie = request.cookies.get('session');
       if (!sessionCookie) {
           const localeFromPath = pathname.split('/')[1] || defaultLocale;
           const loginUrl = new URL(`/${localeFromPath}/admin/login`, request.url);
           return NextResponse.redirect(loginUrl);
       }
+      // If session exists, proceed
+      return NextResponse.next();
   }
 
+  // Handle locale redirection for all other pages
+  const pathnameIsMissingLocale = availableLocales.every(
+    (locale) => !pathname.startsWith(`/${locale}/`) && pathname !== `/${locale}`
+  );
+
+  if (pathnameIsMissingLocale) {
+    const locale = getLocale(request);
+    return NextResponse.redirect(
+      new URL(`/${locale}${pathname}`, request.url)
+    );
+  }
+  
   return NextResponse.next();
 }
 
@@ -57,5 +63,5 @@ export const config = {
    * - _next/image (image optimization files)
    * - favicon.ico (favicon file)
    */
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|admin/login).*)'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };
