@@ -937,8 +937,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                 <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-2 flex justify-around items-center gap-2">
                     <Sheet open={isCharmsSheetOpen} onOpenChange={setIsCharmsSheetOpen}>
                         <SheetTrigger asChild>
-                            <Button className="flex flex-col h-auto p-2 flex-grow">
-                                <Gem className="h-6 w-6" />
+                            <Button variant="ghost" className="flex flex-col h-auto p-2 flex-grow">
+                                <Gem className="h-6 w-6 text-primary" />
                                 <span className="text-xs">{tCharm('title')}</span>
                             </Button>
                         </SheetTrigger>
@@ -1022,8 +1022,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                     </Sheet>
                     <Sheet open={isSuggestionsSheetOpen} onOpenChange={setIsSuggestionsSheetOpen}>
                         <SheetTrigger asChild>
-                            <Button className="flex flex-col h-auto p-2 flex-grow">
-                                <Sparkles className="h-6 w-6" />
+                            <Button variant="ghost" className="flex flex-col h-auto p-2 flex-grow">
+                                <Sparkles className="h-6 w-6 text-primary" />
                                 <span className="text-xs">{t('ai_suggestions_title')}</span>
                             </Button>
                         </SheetTrigger>
