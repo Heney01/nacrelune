@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -8,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, AlertCircle, ArrowLeft, Home, Store, Search, CheckCircle, TicketPercent, Check, Award } from 'lucide-react';
+import { Loader2, AlertCircle, ArrowLeft, Home, Store, Search, CheckCircle, TicketPercent, Award } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
 import { createOrder, createPaymentIntent, CreateOrderResult, SerializableCartItem, validateCoupon } from '@/app/actions';
@@ -23,14 +22,14 @@ import { Card } from './ui/card';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { Switch } from './ui/switch';
 import { Separator } from './ui/separator';
+import { Slider } from './ui/slider';
 
 type Step = 'customer' | 'shipping' | 'payment';
 
 const PaymentStep = ({
   onOrderCreated,
-  totalBeforePoints,
+  totalBeforeCoupon,
   email,
   deliveryMethod,
   shippingAddress,
@@ -39,7 +38,7 @@ const PaymentStep = ({
   setAppliedCoupon,
 }: {
   onOrderCreated: (result: CreateOrderResult) => void;
-  totalBeforePoints: number;
+  totalBeforeCoupon: number;
   email: string;
   deliveryMethod: DeliveryMethod;
   shippingAddress?: ShippingAddress;
@@ -63,12 +62,23 @@ const PaymentStep = ({
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
 
-  const [usePoints, setUsePoints] = useState(false);
-  const availablePoints = user?.rewardPoints || 0;
-  const pointsValue = Math.floor(availablePoints / 10);
-  const pointsToUse = usePoints ? Math.min(pointsValue, totalBeforePoints) : 0;
-  const total = totalBeforePoints - pointsToUse;
+  const discountAmount = appliedCoupon
+    ? appliedCoupon.discountType === 'percentage'
+      ? totalBeforeCoupon * (appliedCoupon.value / 100)
+      : appliedCoupon.value
+    : 0;
+  
+  const totalAfterCoupon = Math.max(0, totalBeforeCoupon - discountAmount);
 
+  const availablePoints = user?.rewardPoints || 0;
+  const maxPointsToUse = Math.min(availablePoints, Math.floor(totalAfterCoupon * 10));
+
+  const [pointsToUse, setPointsToUse] = useState(0);
+  const pointsValue = pointsToUse / 10;
+  
+  const finalTotal = Math.max(0, totalAfterCoupon - pointsValue);
+
+  const formatPrice = (price: number) => tCart('price', { price });
 
   const handleApplyCoupon = async () => {
     if (!couponCode) return;
@@ -124,7 +134,7 @@ const PaymentStep = ({
         finalShippingAddress,
         appliedCoupon || undefined,
         user?.uid,
-        Math.floor(pointsToUse * 10)
+        pointsToUse
     );
     
     onOrderCreated(orderResult);
@@ -134,7 +144,7 @@ const PaymentStep = ({
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (total <= 0) {
+    if (finalTotal <= 0) {
         handleFreeOrder();
         return;
     }
@@ -162,7 +172,7 @@ const PaymentStep = ({
         creationId: item.creationId,
       }));
 
-    const { clientSecret, error: intentError } = await createPaymentIntent(total);
+    const { clientSecret, error: intentError } = await createPaymentIntent(finalTotal);
 
     if (intentError || !clientSecret) {
         setErrorMessage(intentError || t('payment_intent_error'));
@@ -205,7 +215,7 @@ const PaymentStep = ({
         finalShippingAddress,
         appliedCoupon || undefined,
         user?.uid,
-        Math.floor(pointsToUse * 10)
+        pointsToUse
     );
 
     onOrderCreated(orderResult);
@@ -222,30 +232,58 @@ const PaymentStep = ({
         </Alert>
       )}
 
+      <div className="md:hidden p-4 rounded-lg border bg-muted/50 space-y-2">
+         <h4 className="font-medium text-center mb-4">{t('order_summary')}</h4>
+         <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">{t('subtotal')}</span>
+              <span>{formatPrice(totalBeforeCoupon)}</span>
+          </div>
+          {appliedCoupon && (
+              <div className="flex justify-between text-sm text-green-600">
+                  <span className="text-muted-foreground">{t('discount')} ({appliedCoupon.code})</span>
+                  <span>-{formatPrice(discountAmount)}</span>
+              </div>
+          )}
+           {pointsValue > 0 && (
+              <div className="flex justify-between text-sm text-green-600">
+                  <span className="text-muted-foreground">{t('points_discount')}</span>
+                  <span>-{formatPrice(pointsValue)}</span>
+              </div>
+          )}
+          <Separator className="my-2"/>
+          <div className="flex justify-between font-bold text-base">
+              <span>{t('total')}</span>
+              <span>{formatPrice(finalTotal)}</span>
+          </div>
+      </div>
+
+
       {user && availablePoints > 0 && (
          <div className="p-4 rounded-lg border bg-muted/50 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                    <Label htmlFor="use-points" className="font-bold flex items-center gap-2">
-                      <Award className="h-5 w-5 text-primary"/>
-                      {t('use_reward_points')}
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                        {t('you_have_points', { count: availablePoints, value: pointsValue.toFixed(2) })}
-                    </p>
-                </div>
-                <Switch 
-                  id="use-points"
-                  checked={usePoints}
-                  onCheckedChange={setUsePoints}
-                  aria-label="Utiliser les points de récompense"
-                />
+              <div className="space-y-0.5">
+                  <Label htmlFor="use-points" className="font-bold flex items-center gap-2">
+                    <Award className="h-5 w-5 text-primary"/>
+                    {t('use_reward_points')}
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                      {t('you_have_points_slider', { count: availablePoints })}
+                  </p>
               </div>
-              {usePoints && (
-                <p className="text-sm font-medium text-green-600">
-                  - {tCart('price', { price: pointsToUse })}
-                </p>
-              )}
+               <div className="flex items-center gap-4">
+                  <Slider
+                    id="points-slider"
+                    min={0}
+                    max={maxPointsToUse}
+                    step={10}
+                    value={[pointsToUse]}
+                    onValueChange={(value) => setPointsToUse(value[0])}
+                    className="flex-grow"
+                  />
+                  <div className="w-24 text-center border rounded-md p-2">
+                      <p className="text-sm font-bold text-green-600">- {formatPrice(pointsValue)}</p>
+                      <p className="text-xs text-muted-foreground">{pointsToUse} pts</p>
+                  </div>
+               </div>
          </div>
       )}
 
@@ -273,7 +311,7 @@ const PaymentStep = ({
             {couponError && <p className="text-sm text-destructive">{couponError}</p>}
         </div>
       
-      {total > 0 ? (
+      {finalTotal > 0 ? (
           <PaymentElement />
       ) : (
           <Alert>
@@ -290,8 +328,8 @@ const PaymentStep = ({
             {isProcessing ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('processing_button')}</>
             ) : (
-                total > 0
-                ? t('confirm_order_button', { total: total.toFixed(2) })
+                finalTotal > 0
+                ? t('confirm_order_button', { total: finalTotal.toFixed(2) })
                 : t('confirm_order_button_no_payment')
             )}
          </Button>
@@ -409,7 +447,7 @@ export const CheckoutForm = ({
              <div className="px-6 pb-6 flex-grow overflow-y-auto">
                   <PaymentStep
                       onOrderCreated={onOrderCreated}
-                      totalBeforePoints={total}
+                      totalBeforeCoupon={total}
                       email={email}
                       deliveryMethod={deliveryMethod}
                       shippingAddress={shippingAddress}

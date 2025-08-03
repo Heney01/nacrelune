@@ -269,8 +269,10 @@
     "coupon_applied_description": "La réduction pour le code {code} a été appliquée.",
     "remove_coupon_button": "Retirer",
     "discount": "Réduction",
+    "points_discount": "Réduction points",
     "use_reward_points": "Utiliser mes points récompense",
     "you_have_points": "Vous avez {count} points (valeur : {value} €)",
+    "you_have_points_slider": "Vous avez {count} points. Utilisez le slider pour appliquer une réduction.",
     "free_order_title": "Votre commande est gratuite !",
     "free_order_description": "Grâce à votre réduction, le montant total de votre commande est de 0€. Cliquez sur \"Confirmer la commande\" pour la finaliser sans paiement."
   },

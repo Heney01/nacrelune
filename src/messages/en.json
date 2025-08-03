@@ -268,8 +268,10 @@
     "coupon_applied_description": "The discount for code {code} has been applied.",
     "remove_coupon_button": "Remove",
     "discount": "Discount",
+    "points_discount": "Points discount",
     "use_reward_points": "Use My Reward Points",
     "you_have_points": "You have {count} points (value: {value} €)",
+    "you_have_points_slider": "You have {count} points. Use the slider to apply a discount.",
     "free_order_title": "Your Order is Free!",
     "free_order_description": "Thanks to your discount, the total amount of your order is €0. Click 'Confirm Order' to finalize it without payment."
   },

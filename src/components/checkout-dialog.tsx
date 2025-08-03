@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -41,7 +40,6 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
   
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
-  const [usePoints, setUsePoints] = useState(false);
 
   const subtotal = cart.reduce((sum, item) => {
     const modelPrice = item.model.price || 0;
@@ -57,13 +55,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
       : appliedCoupon.value
     : 0;
   
-  const totalBeforePoints = Math.max(0, subtotal - discountAmount + shippingCost);
-  
-  const availablePoints = user?.rewardPoints || 0;
-  const pointsValue = Math.floor(availablePoints / 10);
-  const pointsToUse = usePoints ? Math.min(pointsValue, totalBeforePoints) : 0;
-  
-  const finalTotal = totalBeforePoints - pointsToUse;
+  const total = Math.max(0, subtotal - discountAmount + shippingCost);
 
   const formatPrice = (price: number) => tCart('price', { price });
 
@@ -92,11 +84,11 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
               options={{
                 appearance: { theme: 'stripe' as const, variables: { colorPrimary: '#ef4444', fontFamily: 'Alegreya, Ideal Sans, system-ui, sans-serif' } },
                 mode: 'payment',
-                amount: Math.max(50, Math.round(finalTotal * 100)), // Stripe requires a minimum amount (e.g., 50 cents)
+                amount: Math.max(50, Math.round(total * 100)), // Stripe requires a minimum amount (e.g., 50 cents)
                 currency: 'eur'
           }}>
               <CheckoutForm 
-                  total={totalBeforePoints}
+                  total={subtotal} // Pass subtotal to calculate discounts correctly
                   onOrderCreated={onOrderCreated}
                   setStockError={setStockError}
                   appliedCoupon={appliedCoupon}
@@ -171,7 +163,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
                 )}
                  <div className="flex justify-between font-bold text-lg">
                     <span>{t('total')}</span>
-                    <span>{formatPrice(totalBeforePoints)}</span>
+                    <span>{formatPrice(total)}</span>
                 </div>
             </div>
         </aside>
