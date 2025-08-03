@@ -716,7 +716,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
       {isShareOpen && (
         <ShareDialog
           isOpen={isShareOpen}
-          onOpenChange={setIsShareOpen}
+          onOpenChange={() => setIsShareOpen(false)}
           getCanvasDataUri={getCanvasDataUri}
           t={t}
         />
@@ -736,16 +736,14 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
           <div className={cn("container mx-auto flex-1 flex flex-col min-h-0", isMobile && "px-0")}>
               <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0", isMobile && "grid-cols-1 gap-0")}>
               
-              <div className="lg:col-span-3 flex flex-col min-h-0 gap-6">
-                 {!isMobile && (
-                    <CharmsPanel 
-                        allCharms={availableCharms}
-                        charmCategories={charmCategories}
-                        onAddCharm={addCharmFromCharmList} 
-                        searchTerm={charmsSearchTerm}
-                        onSearchTermChange={setCharmsSearchTerm}
-                    />
-                  )}
+              <div className="lg:col-span-3 flex-col min-h-0 gap-6 hidden lg:flex">
+                <CharmsPanel 
+                  allCharms={availableCharms}
+                  charmCategories={charmCategories}
+                  onAddCharm={addCharmFromCharmList} 
+                  searchTerm={charmsSearchTerm}
+                  onSearchTermChange={setCharmsSearchTerm}
+                />
               </div>
 
               <div className={cn("lg:col-span-6 flex flex-col gap-4 min-h-0", isMobile && "order-first")}>
@@ -896,7 +894,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                   {t('update_item_button')}
                               </Button>
                               ) : (
-                              <Button onClick={handleAddToCart} className="w-full" disabled={captureRequest || hasStockIssues}>
+                              <Button onClick={handleAddToCart} className="w-full" disabled={captureRequest || hasStockIssues || placedCharms.length === 0}>
                                   <PlusCircle />
                                   {t('add_to_cart_button')}
                               </Button>
@@ -906,19 +904,17 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   )}
               </div>
 
-              {!isMobile && (
-                <div className="lg:col-span-3 flex flex-col gap-6 min-h-0">
-                  <SuggestionSidebar
-                      charms={allCharms}
-                      onAnalyze={handleAnalyzeForSuggestions}
-                      onCritique={handleCritiqueDesign}
-                      isLoading={isGenerating}
-                      suggestions={suggestions}
-                      critique={critique}
-                      onApplySuggestion={applySuggestion}
-                  />
-                </div>
-              )}
+              <div className="lg:col-span-3 flex-col gap-6 min-h-0 hidden lg:flex">
+                <SuggestionSidebar
+                    charms={allCharms}
+                    onAnalyze={handleAnalyzeForSuggestions}
+                    onCritique={handleCritiqueDesign}
+                    isLoading={isGenerating}
+                    suggestions={suggestions}
+                    critique={critique}
+                    onApplySuggestion={applySuggestion}
+                />
+              </div>
               </div>
           </div>
         </main>
@@ -927,12 +923,12 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
             <>
                 <div className="fixed bottom-[72px] left-0 right-0 bg-background/80 backdrop-blur-sm p-4 border-t">
                     {isEditing ? (
-                        <Button onClick={handleUpdateCart} className="w-full" disabled={captureRequest || hasStockIssues}>
+                        <Button onClick={handleUpdateCart} variant="outline" className="w-full" disabled={captureRequest || hasStockIssues}>
                             {captureRequest ? <Loader2 className="animate-spin" /> : <Check />}
                             {t('update_item_button')}
                         </Button>
                     ) : (
-                        <Button onClick={handleAddToCart} className="w-full" disabled={captureRequest || hasStockIssues}>
+                        <Button onClick={handleAddToCart} variant="outline" className="w-full" disabled={captureRequest || hasStockIssues || placedCharms.length === 0}>
                             <PlusCircle />
                             {t('add_to_cart_button')}
                         </Button>
@@ -941,7 +937,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                 <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-2 flex justify-around items-center gap-2">
                     <Sheet open={isCharmsSheetOpen} onOpenChange={setIsCharmsSheetOpen}>
                         <SheetTrigger asChild>
-                            <Button variant="ghost" className="flex flex-col h-auto p-2">
+                            <Button className="flex flex-col h-auto p-2 flex-grow">
                                 <Gem className="h-6 w-6" />
                                 <span className="text-xs">{tCharm('title')}</span>
                             </Button>
@@ -1026,7 +1022,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                     </Sheet>
                     <Sheet open={isSuggestionsSheetOpen} onOpenChange={setIsSuggestionsSheetOpen}>
                         <SheetTrigger asChild>
-                            <Button variant="ghost" className="flex flex-col h-auto p-2">
+                            <Button className="flex flex-col h-auto p-2 flex-grow">
                                 <Sparkles className="h-6 w-6" />
                                 <span className="text-xs">{t('ai_suggestions_title')}</span>
                             </Button>
