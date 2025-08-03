@@ -30,7 +30,7 @@ import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/comp
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogClose, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { ShareDialog } from './share-dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Loader2 } from 'lucide-react';
 import { Label } from './ui/label';
@@ -38,6 +38,7 @@ import { Textarea } from './ui/textarea';
 import { useAuth } from '@/hooks/use-auth';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -1034,64 +1035,72 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       )}
                   </div>
                   
-                  <div className="hidden lg:block flex-shrink-0">
-                      <Card>
-                          <CardHeader>
-                              <CardTitle className="font-headline text-lg flex items-center gap-2">
-                              <Layers /> {t('added_charms_title', { count: placedCharms.length })}
-                              </CardTitle>
-                          </CardHeader>
-                          <CardContent className="pt-2">
-                              {placedCharms.length === 0 ? (
-                                  <p className="text-muted-foreground text-sm text-center py-4">{t('added_charms_placeholder')}</p>
-                              ) : (
-                                  <ScrollArea className="w-full whitespace-nowrap" orientation="horizontal">
-                                      <div className="flex w-max space-x-2 p-4 flex-nowrap">
-                                          {sortedPlacedCharms.map((pc) => (
-                                              <div key={pc.id}
-                                                  className={cn("p-2 rounded-md border flex flex-col items-center gap-1 cursor-pointer w-20 relative group",
-                                                  selectedPlacedCharmId === pc.id ? 'ring-2 ring-primary' : 'hover:bg-muted/50',
-                                                  !pc.isAvailable && "bg-destructive/10"
-                                                  )}
-                                                  onClick={() => handleCharmListClick(pc.id)}
-                                              >
-                                                  <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={32} height={32} className="w-8 h-8 object-contain" />
-                                                  <span className="text-xs text-center font-medium truncate w-full">{pc.charm.name}</span>
-                                                  {!pc.isAvailable && (
-                                                      <TooltipProvider>
-                                                          <Tooltip>
-                                                              <TooltipTrigger className="absolute inset-0 z-10">
-                                                                  <span className="sr-only">Stock issue</span>
-                                                              </TooltipTrigger>
-                                                              <TooltipContent>
-                                                                  <p>{t('stock_issue_tooltip')}</p>
-                                                              </TooltipContent>
-                                                          </Tooltip>
-                                                      </TooltipProvider>
-                                                  )}
-                                                  <Button 
-                                                    variant="destructive" 
-                                                    size="icon" 
-                                                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
-                                                    onClick={(e) => { e.stopPropagation(); removeCharm(pc.id); }}
-                                                  >
-                                                      <X className="h-3 w-3" />
-                                                  </Button>
-                                              </div>
-                                          ))}
-                                      </div>
-                                      <ScrollBar orientation="horizontal" />
-                                  </ScrollArea>
-                              )}
-                          </CardContent>
-                          <CardFooter>
-                              <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
-                                  <Check />
-                                  {isEditing ? t('update_item_button') : t('finalize_button')}
-                              </Button>
-                          </CardFooter>
-                      </Card>
-                  </div>
+                   <div className="hidden lg:block flex-shrink-0">
+                        <Accordion type="single" collapsible defaultValue="item-1" className="w-full">
+                            <AccordionItem value="item-1">
+                                <Card>
+                                    <AccordionTrigger className="p-6 hover:no-underline">
+                                        <CardHeader className="p-0">
+                                            <CardTitle className="font-headline text-lg flex items-center gap-2">
+                                                <Layers /> {t('added_charms_title', { count: placedCharms.length })}
+                                            </CardTitle>
+                                        </CardHeader>
+                                    </AccordionTrigger>
+                                    <AccordionContent>
+                                        <CardContent className="pt-2">
+                                            {placedCharms.length === 0 ? (
+                                                <p className="text-muted-foreground text-sm text-center py-4">{t('added_charms_placeholder')}</p>
+                                            ) : (
+                                                <ScrollArea className="w-full whitespace-nowrap" orientation="horizontal">
+                                                    <div className="flex w-max space-x-2 p-4 flex-nowrap">
+                                                        {sortedPlacedCharms.map((pc) => (
+                                                            <div key={pc.id}
+                                                                className={cn("p-2 rounded-md border flex flex-col items-center gap-1 cursor-pointer w-20 relative group",
+                                                                selectedPlacedCharmId === pc.id ? 'ring-2 ring-primary' : 'hover:bg-muted/50',
+                                                                !pc.isAvailable && "bg-destructive/10"
+                                                                )}
+                                                                onClick={() => handleCharmListClick(pc.id)}
+                                                            >
+                                                                <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={32} height={32} className="w-8 h-8 object-contain" />
+                                                                <span className="text-xs text-center font-medium truncate w-full">{pc.charm.name}</span>
+                                                                {!pc.isAvailable && (
+                                                                    <TooltipProvider>
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger className="absolute inset-0 z-10">
+                                                                                <span className="sr-only">Stock issue</span>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent>
+                                                                                <p>{t('stock_issue_tooltip')}</p>
+                                                                            </TooltipContent>
+                                                                        </Tooltip>
+                                                                    </TooltipProvider>
+                                                                )}
+                                                                <Button 
+                                                                    variant="destructive" 
+                                                                    size="icon" 
+                                                                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                                                                    onClick={(e) => { e.stopPropagation(); removeCharm(pc.id); }}
+                                                                >
+                                                                    <X className="h-3 w-3" />
+                                                                </Button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <ScrollBar orientation="horizontal" />
+                                                </ScrollArea>
+                                            )}
+                                        </CardContent>
+                                        <CardFooter>
+                                            <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
+                                                <Check />
+                                                {isEditing ? t('update_item_button') : t('finalize_button')}
+                                            </Button>
+                                        </CardFooter>
+                                    </AccordionContent>
+                                </Card>
+                            </AccordionItem>
+                        </Accordion>
+                    </div>
               </div>
 
               <div className="lg:col-span-3 flex-col gap-6 min-h-0 hidden lg:flex">
@@ -1248,6 +1257,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
 
