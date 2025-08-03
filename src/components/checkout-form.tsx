@@ -418,7 +418,7 @@ export const CheckoutForm = ({
 
                   <div style={{ display: currentStep === 'shipping' ? 'block' : 'none' }} className="space-y-4">
                     <h3 className="text-lg font-medium">{t('shipping_title')}</h3>
-                     <ScrollArea className="h-[calc(90vh-350px)] md:h-auto -mx-6 px-6 no-scrollbar">
+                     <div className="no-scrollbar">
                         <Tabs value={deliveryMethod} onValueChange={(v) => setDeliveryMethod(v as DeliveryMethod)} className="w-full">
                           <TabsList className="grid w-full grid-cols-2">
                             <TabsTrigger value="home"><Home className="mr-2 h-4 w-4"/>{t('delivery_method_home')}</TabsTrigger>
@@ -489,7 +489,7 @@ export const CheckoutForm = ({
                              )}
                           </TabsContent>
                         </Tabs>
-                    </ScrollArea>
+                    </div>
                   </div>
                 </div>
             </div>
