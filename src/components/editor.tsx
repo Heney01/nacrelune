@@ -27,7 +27,7 @@ import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { ShareDialog } from './share-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from './ui/scroll-area';
@@ -849,20 +849,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       )}
                   </div>
                   
-                   <div className="md:hidden p-4">
-                     {isEditing ? (
-                        <Button onClick={handleOpenConfirmDialog} variant="outline" className="w-full" disabled={hasStockIssues}>
-                           <Check />
-                            {t('update_item_button')}
-                        </Button>
-                    ) : (
-                        <Button onClick={handleOpenConfirmDialog} variant="outline" className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
-                            <PlusCircle />
-                            {t('add_to_cart_button')}
-                        </Button>
-                    )}
-                   </div>
-
                   {!isMobile && (
                       <Card>
                           <CardHeader>
@@ -946,15 +932,15 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
          {isMobile && (
             <>
-                <div className="fixed bottom-16 left-0 right-0 bg-background/80 backdrop-blur-sm p-2 flex justify-around items-center gap-2 border-t">
+                <div className="fixed bottom-16 left-0 right-0 bg-background/80 backdrop-blur-sm p-2 border-t">
                     {isEditing ? (
-                        <Button onClick={handleOpenConfirmDialog} variant="outline" size="sm" className="w-auto flex-grow" disabled={hasStockIssues}>
-                            <Check />
+                        <Button onClick={handleOpenConfirmDialog} variant="outline" className="w-full" disabled={hasStockIssues}>
+                            <Check className="mr-2"/>
                             {t('update_item_button')}
                         </Button>
                     ) : (
-                        <Button onClick={handleOpenConfirmDialog} variant="outline" size="sm" className="w-auto flex-grow" disabled={hasStockIssues || placedCharms.length === 0}>
-                            <PlusCircle />
+                        <Button onClick={handleOpenConfirmDialog} variant="outline" className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
+                            <PlusCircle className="mr-2"/>
                             {t('add_to_cart_button')}
                         </Button>
                     )}
