@@ -305,9 +305,18 @@ export function ProfileClient({ locale }: { locale: string }) {
                                             {creation.description && <CardDescription className="text-xs mt-1">{creation.description}</CardDescription>}
                                         </CardContent>
                                         <CardFooter className="p-4 pt-0 flex justify-between items-center">
-                                            <p className="text-xs text-muted-foreground">
-                                                Publiée le {new Date(creation.createdAt).toLocaleDateString()}
-                                            </p>
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleAddToCart(creation);
+                                                }}
+                                            >
+                                                <ShoppingCart className="h-4 w-4" />
+                                                <span className="sr-only">Ajouter au panier</span>
+                                            </Button>
                                             <Button 
                                                 variant="ghost" 
                                                 size="sm" 
