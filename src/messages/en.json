@@ -26,7 +26,9 @@
     "support_open_mail_button": "Open Mail App",
     "coming_soon": "Coming Soon",
     "wip_title": "Project Under Construction",
-    "wip_description": "Welcome! This project is currently under development. New features and jewelry models will be added soon."
+    "wip_description": "Welcome! This project is currently under development. New features and jewelry models will be added soon.",
+    "profile_menu_button": "Profile menu",
+    "welcome_message": "Welcome, {name}!"
   },
   "Auth": {
     "login_button": "Login",

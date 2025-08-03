@@ -96,6 +96,7 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
     locale: string;
 }) {
     const t = useTranslations('HomePage');
+    const { user } = useAuth();
     
     const jewelryTypes = initialJewelryTypes.map(jt => {
         if (jt.id === 'necklace') return { ...jt, name: t('jewelry_types.necklace'), description: t('jewelry_types.necklace_description'), icon: Gem };
@@ -145,6 +146,11 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
 
         <main className="flex-grow p-4 md:p-8">
           <div className="container mx-auto">
+            {user && (
+              <div className="text-center mb-8">
+                <p className="text-lg text-muted-foreground">{t('welcome_message', { name: user.displayName })}</p>
+              </div>
+            )}
             {selectedType ? (
                 <ModelSelection 
                     selectedType={selectedType}

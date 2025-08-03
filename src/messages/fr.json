@@ -1,5 +1,4 @@
 
-
 {
   "HomePage": {
     "title": "Commencez Votre Création",
@@ -26,7 +25,8 @@
     "support_email_copied": "Adresse e-mail du support copiée !",
     "support_open_mail_button": "Ouvrir l'application de messagerie",
     "coming_soon": "Bientôt disponible",
-    "profile_menu_button": "Menu du profil"
+    "profile_menu_button": "Menu du profil",
+    "welcome_message": "Bienvenue, {name} !"
   },
   "Auth": {
     "login_button": "Connexion",
