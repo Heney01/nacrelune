@@ -606,13 +606,14 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
     }
 
     try {
-        const couponRef = doc(db, 'coupons', code.toUpperCase());
-        const couponSnap = await getDoc(couponRef);
+        const q = query(collection(db, 'coupons'), where('code', '==', code.toUpperCase()));
+        const querySnapshot = await getDocs(q);
 
-        if (!couponSnap.exists()) {
+        if (querySnapshot.empty) {
             return { success: false, message: "Ce code promo est invalide." };
         }
 
+        const couponSnap = querySnapshot.docs[0];
         const couponData = couponSnap.data();
         const coupon: Coupon = {
             id: couponSnap.id,
@@ -1321,3 +1322,4 @@ export async function getRefreshedCharms(): Promise<{ success: boolean; charms?:
         return { success: false, error: error.message || "Une erreur est survenue lors du rafraîchissement des breloques." };
     }
 }
+
