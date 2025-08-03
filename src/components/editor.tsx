@@ -828,7 +828,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       </div>
 
                       <div className="absolute bottom-4 left-4 z-10">
-                           <Dialog open={isMobile ? undefined : false}>
+                           <Dialog>
                                 <DialogTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground rounded-full hover:bg-muted/50 hover:text-foreground">
                                         <Info className="h-5 w-5" />
@@ -853,73 +853,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                         </div>
                       )}
                   </div>
-                    
-                  {!isMobile && (
-                      <Card className="flex-shrink-0">
-                          <CardHeader>
-                              <CardTitle className="font-headline text-lg">{t('added_charms_title', {count: placedCharms.length})}</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                              {placedCharms.length === 0 ? (
-                                  <p className="text-muted-foreground text-sm text-center py-4">{t('added_charms_placeholder')}</p>
-                              ) : (
-                                  <Carousel
-                                      opts={{
-                                          align: "start",
-                                      }}
-                                      className="w-full"
-                                  >
-                                      <CarouselContent>
-                                          {sortedPlacedCharms.map((pc) => (
-                                              <CarouselItem key={pc.id} className="basis-1/5">
-                                                  <div className="p-1">
-                                                      <Card
-                                                          className={cn("p-2 aspect-square flex flex-col items-center justify-center cursor-pointer relative group",
-                                                              selectedPlacedCharmId === pc.id ? 'border-primary' : 'hover:border-primary/50',
-                                                              !pc.isAvailable && "border-destructive hover:border-destructive/50"
-                                                          )}
-                                                          onClick={() => handleCharmListClick(pc.id)}
-                                                      >
-                                                          {!pc.isAvailable && (
-                                                              <TooltipProvider>
-                                                                  <Tooltip>
-                                                                      <TooltipTrigger asChild>
-                                                                          <div className="absolute inset-0 bg-destructive/20 z-10 flex items-center justify-center">
-                                                                              <AlertCircle className="h-6 w-6 text-destructive" />
-                                                                          </div>
-                                                                      </TooltipTrigger>
-                                                                      <TooltipContent>
-                                                                          <p>{t('stock_issue_tooltip')}</p>
-                                                                      </TooltipContent>
-                                                                  </Tooltip>
-                                                              </TooltipProvider>
-                                                          )}
-                                                          <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={48} height={48} className="w-12 h-12 object-contain" data-ai-hint="jewelry charm" />
-                                                          <p className="text-xs text-center mt-1 truncate w-full">{pc.charm.name}</p>
-                                                          <Button
-                                                              variant="destructive"
-                                                              size="icon"
-                                                              className={cn(
-                                                                  "absolute top-1 right-1 h-5 w-5 transition-opacity z-20",
-                                                                  selectedPlacedCharmId === pc.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                                                              )}
-                                                              onMouseDown={(e) => { e.stopPropagation(); removeCharm(pc.id); }}
-                                                              onTouchStart={(e) => { e.stopPropagation(); removeCharm(pc.id); }}
-                                                          >
-                                                              <X className="h-3 w-3" />
-                                                          </Button>
-                                                      </Card>
-                                                  </div>
-                                              </CarouselItem>
-                                          ))}
-                                      </CarouselContent>
-                                      <CarouselPrevious />
-                                      <CarouselNext />
-                                  </Carousel>
-                              )}
-                          </CardContent>
-                      </Card>
-                  )}
               </div>
 
               {!isMobile && (
@@ -959,13 +892,13 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       </Button>
                   </SheetTrigger>
                   <SheetContent side="bottom" className="h-[80%] p-0 flex flex-col" onOpenAutoFocus={(e) => e.preventDefault()}>
-                        <SheetHeader className="p-4 border-b flex-shrink-0">
-                            <TabsList className="grid w-full grid-cols-2">
-                                <TabsTrigger value="add">Ajouter</TabsTrigger>
-                                <TabsTrigger value="placed">Installées ({placedCharms.length})</TabsTrigger>
-                            </TabsList>
-                        </SheetHeader>
                         <Tabs defaultValue="add" className="flex flex-col flex-grow h-full min-h-0">
+                            <SheetHeader className="p-4 border-b flex-shrink-0">
+                                <TabsList className="grid w-full grid-cols-2">
+                                    <TabsTrigger value="add">Ajouter</TabsTrigger>
+                                    <TabsTrigger value="placed">Installées ({placedCharms.length})</TabsTrigger>
+                                </TabsList>
+                            </SheetHeader>
                             <TabsContent value="add" className="m-0 flex-grow min-h-0 flex flex-col">
                                 <div className="p-4 border-b flex-shrink-0">
                                     <div className="relative">
@@ -1080,6 +1013,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
 
