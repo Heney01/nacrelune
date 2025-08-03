@@ -30,7 +30,8 @@ export function ProfileClient({ locale }: { locale: string }) {
     const [optimisticCreations, setOptimisticCreations] = useOptimistic(
         creations,
         (state, { creationId, newLikesCount }: { creationId: string; newLikesCount: number }) => {
-            return state!.map(c => 
+            if (!state) return state;
+            return state.map(c => 
                 c.id === creationId ? { ...c, likesCount: newLikesCount } : c
             );
         }
@@ -56,7 +57,7 @@ export function ProfileClient({ locale }: { locale: string }) {
 
     }, [authLoading, firebaseUser, router, locale]);
     
-    const handleLikeClick = async (creationId: string, currentLikes: number) => {
+    const handleLikeClick = async (creationId: string) => {
         if (!firebaseUser) {
             toast({
                 variant: 'destructive',
@@ -66,18 +67,19 @@ export function ProfileClient({ locale }: { locale: string }) {
             return;
         }
         
-        // Optimistic update - for now, we assume the like will succeed
-        // A more advanced implementation would track if the user has liked it before
-        // For simplicity, we just increment. A proper check happens on the server.
-        // The server will return the true new count.
-        setOptimisticCreations({ creationId, newLikesCount: currentLikes + 1 });
-
+        // No optimistic update for now, to rely on server truth
         try {
             const idToken = await firebaseUser.getIdToken();
             const result = await toggleLikeCreation(creationId, idToken);
-            if (!result.success) {
-                // Revert optimistic update if server fails
-                setOptimisticCreations({ creationId, newLikesCount: currentLikes });
+            if (result.success && result.newLikesCount !== undefined) {
+                 // Update the state with the value from the server
+                 setCreations(prev => 
+                    prev!.map(c => 
+                        c.id === creationId ? { ...c, likesCount: result.newLikesCount! } : c
+                    )
+                );
+            }
+            else {
                 toast({
                     variant: 'destructive',
                     title: "Erreur",
@@ -85,7 +87,6 @@ export function ProfileClient({ locale }: { locale: string }) {
                 });
             }
         } catch (error) {
-             setOptimisticCreations({ creationId, newLikesCount: currentLikes });
              toast({
                 variant: 'destructive',
                 title: "Erreur",
@@ -130,7 +131,7 @@ export function ProfileClient({ locale }: { locale: string }) {
                     <p className="text-muted-foreground mb-8">Retrouvez ici toutes les créations que vous avez publiées.</p>
 
                    {(optimisticCreations && optimisticCreations.length > 0) ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                             {optimisticCreations.map(creation => (
                                 <Card key={creation.id} className="flex flex-col">
                                     <CardHeader className="p-0">
@@ -156,7 +157,7 @@ export function ProfileClient({ locale }: { locale: string }) {
                                             variant="ghost" 
                                             size="sm" 
                                             className="flex items-center gap-1.5 text-muted-foreground hover:text-primary"
-                                            onClick={() => handleLikeClick(creation.id, creation.likesCount || 0)}
+                                            onClick={() => handleLikeClick(creation.id)}
                                         >
                                             <Heart className={cn("h-4 w-4", (creation.likesCount || 0) > 0 && "text-primary fill-current")} />
                                             <span className="font-mono text-sm">{creation.likesCount || 0}</span>
