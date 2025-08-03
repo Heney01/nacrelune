@@ -970,7 +970,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                               height: '100%',
                           }}
                       >
-                          <div ref={modelImageContainerRef} className="absolute inset-0 grid place-items-center">
+                          <div ref={modelImageContainerRef} className="absolute inset-0 grid place-items-start justify-center">
                               <Image
                                   ref={modelImageRef}
                                   src={model.editorImageUrl}
@@ -1248,6 +1248,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
 
