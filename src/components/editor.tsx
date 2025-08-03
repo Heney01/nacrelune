@@ -541,6 +541,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
             previewImage: previewImage
           };
           addToCart(newItem);
+          // Reset placed charms for new creation
+          setPlacedCharms([]);
         }
         setIsCartSheetOpen(true);
       } catch (error) {
@@ -1061,5 +1063,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
 
 
