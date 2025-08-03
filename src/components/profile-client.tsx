@@ -175,22 +175,9 @@ export function ProfileClient({ locale }: { locale: string }) {
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                             {creations.map(creation => (
                                 <Dialog key={creation.id}>
-                                    <Card className="flex flex-col group">
-                                        <DialogTrigger asChild>
-                                            <CardHeader className="p-0 relative cursor-pointer">
-                                                <div className="aspect-square relative w-full bg-muted/50">
-                                                    <Image 
-                                                        src={creation.previewImageUrl} 
-                                                        alt={creation.name} 
-                                                        fill 
-                                                        className="object-contain"
-                                                        sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
-                                                    />
-                                                </div>
-                                            </CardHeader>
-                                        </DialogTrigger>
-                                        <div className="absolute top-2 right-2 z-10">
-                                            {firebaseUser?.uid === creation.creatorId && (
+                                    <Card className="flex flex-col group relative">
+                                        {firebaseUser?.uid === creation.creatorId && (
+                                            <div className="absolute top-2 right-2 z-10">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
                                                         <Button variant="secondary" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -229,8 +216,21 @@ export function ProfileClient({ locale }: { locale: string }) {
                                                         </AlertDialog>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
-                                            )}
-                                        </div>
+                                            </div>
+                                        )}
+                                        <DialogTrigger asChild>
+                                            <CardHeader className="p-0 relative cursor-pointer">
+                                                <div className="aspect-square relative w-full bg-muted/50">
+                                                    <Image 
+                                                        src={creation.previewImageUrl} 
+                                                        alt={creation.name} 
+                                                        fill 
+                                                        className="object-contain"
+                                                        sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+                                                    />
+                                                </div>
+                                            </CardHeader>
+                                        </DialogTrigger>
                                         <CardContent className="p-4 flex-grow">
                                             <CardTitle className="text-base font-headline">{creation.name}</CardTitle>
                                             {creation.description && <CardDescription className="text-xs mt-1">{creation.description}</CardDescription>}
