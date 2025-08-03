@@ -4,7 +4,7 @@
 
 import React, { useEffect, useState, useTransition } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { getUserCreations, toggleLikeCreation, deleteCreation } from '@/app/actions';
+import { getUserCreations, toggleLikeCreation, deleteCreation, logout } from '@/app/actions';
 import { Creation, JewelryModel, JewelryType, PlacedCharm, Charm } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import Image from 'next/image';
@@ -440,4 +440,3 @@ export function ProfileClient({ locale }: { locale: string }) {
         </div>
     );
 }
-
