@@ -1,76 +1,61 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth } from 'firebase-admin/auth';
-import { initAdmin } from './lib/firebase-admin';
-import Negotiator from 'negotiator';
 import { match } from '@formatjs/intl-localematcher';
+import Negotiator from 'negotiator';
 
 const availableLocales = ['en', 'fr'];
 const defaultLocale = 'fr';
 
 function getLocale(request: NextRequest): string {
-    const negotiatorHeaders: Record<string, string> = {};
-    request.headers.forEach((value, key) => (negotiatorHeaders[key] = value));
+  const negotiatorHeaders: Record<string, string> = {};
+  request.headers.forEach((value, key) => (negotiatorHeaders[key] = value));
 
-    const languages = new Negotiator({ headers: negotiatorHeaders }).languages();
+  const languages = new Negotiator({ headers: negotiatorHeaders }).languages();
 
-    try {
-        return match(languages, availableLocales, defaultLocale);
-    } catch (e) {
-        return defaultLocale;
-    }
+  try {
+    return match(languages, availableLocales, defaultLocale);
+  } catch (e) {
+    return defaultLocale;
+  }
 }
 
-
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  // Locale Redirection Logic
+  
   const pathnameIsMissingLocale = availableLocales.every(
     (locale) => !pathname.startsWith(`/${locale}/`) && pathname !== `/${locale}`
   );
 
+  // Gérer la redirection depuis la racine ou les chemins sans locale
   if (pathnameIsMissingLocale) {
     const locale = getLocale(request);
-    return NextResponse.redirect(
-      new URL(
-        `/${locale}${pathname.startsWith('/') ? '' : '/'}${pathname}`,
-        request.url
-      )
-    );
+    
+    // Si la requête est pour la racine, on redirige vers la page d'accueil de la locale détectée.
+    // Pour les autres chemins, on ajoute le préfixe de la locale.
+    const newPath = pathname === '/' ? '' : pathname;
+    return NextResponse.redirect(new URL(`/${locale}${newPath}`, request.url));
   }
 
-  // Authentication Logic
-  const sessionCookie = request.cookies.get('session')?.value;
-  const currentLocale = pathname.split('/')[1] || defaultLocale;
-
-  if (pathname.startsWith(`/${currentLocale}/admin`)) {
-    if (!sessionCookie) {
-      if (pathname !== `/${currentLocale}/admin/login`) {
-        return NextResponse.redirect(new URL(`/${currentLocale}/admin/login`, request.url));
+  // Logique de protection pour l'espace admin
+  if (pathname.includes('/admin')) {
+      const sessionCookie = request.cookies.get('session');
+      if (!sessionCookie) {
+          const localeFromPath = pathname.split('/')[1] || defaultLocale;
+          const loginUrl = new URL(`/${localeFromPath}/admin/login`, request.url);
+          return NextResponse.redirect(loginUrl);
       }
-    } else {
-      try {
-        await initAdmin();
-        await getAuth().verifySessionCookie(sessionCookie, true);
-        if (pathname === `/${currentLocale}/admin/login`) {
-          return NextResponse.redirect(new URL(`/${currentLocale}/admin/dashboard`, request.url));
-        }
-      } catch (error) {
-        // Invalid session cookie, redirect to login
-         if (pathname !== `/${currentLocale}/admin/login`) {
-            const response = NextResponse.redirect(new URL(`/${currentLocale}/admin/login`, request.url));
-            response.cookies.delete('session'); // Clear the invalid cookie
-            return response;
-         }
-      }
-    }
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  // Matcher ignoring `/_next/` and `/api/`
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  /*
+   * Match all request paths except for the ones starting with:
+   * - api (API routes)
+   * - _next/static (static files)
+   * - _next/image (image optimization files)
+   * - favicon.ico (favicon file)
+   */
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|admin/login).*)'],
 };
