@@ -10,7 +10,7 @@ import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { redirect } from 'next/navigation';
-import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm, ShippingAddress, DeliveryMethod, MailLog, User } from '@/lib/types';
+import type { JewelryModel, CharmCategory, Charm, GeneralPreferences, CartItem, OrderStatus, Order, OrderItem, PlacedCharm, ShippingAddress, DeliveryMethod, MailLog, User, Coupon } from '@/lib/types';
 import { getCharmSuggestions as getCharmSuggestionsFlow, CharmSuggestionInput, CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { getCharmAnalysisSuggestions as getCharmAnalysisSuggestionsFlow, CharmAnalysisSuggestionInput, CharmAnalysisSuggestionOutput } from '@/ai/flows/charm-analysis-suggestions';
 import { getCharmDesignCritique as getCharmDesignCritiqueFlow, CharmDesignCritiqueInput, CharmDesignCritiqueOutput } from '@/ai/flows/charm-design-critique';
@@ -352,7 +352,7 @@ export async function userLoginWithGoogle(formData: FormData) {
         email,
         displayName,
         photoURL,
-        role: 'client',
+        role: 'client', // Assign a default role
       };
       await setDoc(userDocRef, newUser);
     }
@@ -376,7 +376,7 @@ export async function userLoginWithGoogle(formData: FormData) {
 export async function logout(formData: FormData) {
   const locale = formData.get('locale') as string || 'fr';
   cookies().delete('session');
-  redirect(`/${locale}/login`);
+  redirect(`/${locale}/connexion`);
 }
 
 // --- Charm Category Actions ---
@@ -740,6 +740,39 @@ export async function markAsRestocked(formData: FormData): Promise<{ success: bo
     }
 }
 
+export async function validateCoupon(code: string): Promise<{ success: boolean; message: string; coupon?: Coupon }> {
+    if (!code) {
+        return { success: false, message: 'Veuillez entrer un code.' };
+    }
+    
+    try {
+        const q = query(collection(db, 'coupons'), where('code', '==', code.trim().toUpperCase()));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            return { success: false, message: "Ce code promo n'est pas valide." };
+        }
+        
+        const couponDoc = querySnapshot.docs[0];
+        const couponData = couponDoc.data() as Omit<Coupon, 'id'>;
+        
+        if (!couponData.isActive) {
+            return { success: false, message: "Ce code promo a expiré." };
+        }
+
+        if (couponData.validUntil && toDate(couponData.validUntil as any)! < new Date()) {
+             return { success: false, message: "Ce code promo a expiré." };
+        }
+
+        const coupon = { id: couponDoc.id, ...couponData } as Coupon;
+        return { success: true, message: 'Code promo appliqué !', coupon };
+
+    } catch (error: any) {
+        console.error("Error validating coupon:", error);
+        return { success: false, message: "Une erreur est survenue lors de la validation du code." };
+    }
+}
+
 
 export async function createOrder(
     cartItems: SerializableCartItem[], 
@@ -747,7 +780,8 @@ export async function createOrder(
     locale: string, 
     paymentIntentId: string, // Can be a placeholder for now
     deliveryMethod: DeliveryMethod,
-    shippingAddress?: ShippingAddress
+    shippingAddress?: ShippingAddress,
+    coupon?: Coupon
 ): Promise<CreateOrderResult> {
     if (!cartItems || cartItems.length === 0) {
         return { success: false, message: 'Le panier est vide.' };
@@ -835,11 +869,18 @@ export async function createOrder(
                 transaction.update(ref, { quantity: update.newQuantity });
             }
 
-            const totalOrderPrice = cartItems.reduce((sum, item) => {
+            let totalOrderPrice = cartItems.reduce((sum, item) => {
                 const modelPrice = item.model.price || 0;
                 const charmsPrice = item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
                 return sum + modelPrice + charmsPrice;
             }, 0);
+            
+            if (coupon) {
+                const discountAmount = coupon.discountType === 'percentage'
+                    ? totalOrderPrice * (coupon.value / 100)
+                    : coupon.value;
+                totalOrderPrice = Math.max(0, totalOrderPrice - discountAmount);
+            }
 
             const orderItems: Omit<OrderItem, 'modelImageUrl' | 'charms'>[] = cartItems.map((item, index) => {
                 const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
@@ -867,6 +908,7 @@ export async function createOrder(
                 paymentIntentId: paymentIntentId,
                 deliveryMethod: deliveryMethod,
                 shippingAddress: deliveryMethod === 'home' ? shippingAddress : undefined,
+                ...(coupon && { couponCode: coupon.code, couponId: coupon.id })
             };
 
             const orderRef = doc(collection(db, 'orders'));

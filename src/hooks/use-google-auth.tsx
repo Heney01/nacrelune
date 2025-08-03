@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState } from 'react';
@@ -6,6 +7,9 @@ import { getAuth, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { userLoginWithGoogle } from '@/app/actions';
 import { useParams } from 'next/navigation';
+
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 
 export const useGoogleAuth = () => {
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -16,9 +20,6 @@ export const useGoogleAuth = () => {
     const signInWithGoogle = async () => {
         setIsGoogleLoading(true);
         setError(null);
-        
-        const auth = getAuth(app);
-        const provider = new GoogleAuthProvider();
 
         try {
             const result = await signInWithPopup(auth, provider);
