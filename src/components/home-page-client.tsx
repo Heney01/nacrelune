@@ -2,7 +2,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Editor from '@/components/editor';
 import { BrandLogo } from '@/components/icons';
 import { useTranslations } from '@/hooks/use-translations';
@@ -97,6 +97,11 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
 }) {
     const t = useTranslations('HomePage');
     const { user } = useAuth();
+    const [hasMounted, setHasMounted] = useState(false);
+    
+    useEffect(() => {
+        setHasMounted(true);
+    }, []);
     
     const jewelryTypes = initialJewelryTypes.map(jt => {
         if (jt.id === 'necklace') return { ...jt, name: t('jewelry_types.necklace'), description: t('jewelry_types.necklace_description'), icon: Gem };
@@ -146,7 +151,7 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
 
         <main className="flex-grow p-4 md:p-8">
           <div className="container mx-auto">
-            {user && (
+            {hasMounted && user && (
               <div className="text-center mb-8">
                 <p className="text-lg text-muted-foreground">{t('welcome_message', { name: user.displayName })}</p>
               </div>
