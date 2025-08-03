@@ -1521,7 +1521,8 @@ export async function saveCreation(
     try {
         // Fetch full charm data from server side to ensure data integrity
         const charmIds = simplePlacedCharms.map(pc => pc.charmId);
-        const charmDocs = charmIds.length > 0 ? await db.collection('charms').where(documentId(), 'in', charmIds).get() : { docs: [] };
+        const charmDocs = charmIds.length > 0 ? await getDocs(query(collection(db, 'charms'), where(documentId(), 'in', charmIds))) : { docs: [] };
+        
         const charmsMap = new Map(charmDocs.docs.map(doc => {
             const data = doc.data();
             return [doc.id, { 
@@ -1613,3 +1614,6 @@ export async function getUserCreations(userId: string): Promise<Creation[]> {
 
 
 
+
+
+    
