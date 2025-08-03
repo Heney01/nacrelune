@@ -32,6 +32,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { ShareDialog } from './share-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from './ui/scroll-area';
+import { Loader2 } from 'lucide-react';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -842,65 +843,70 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                         </div>
                       )}
                   </div>
-                    {!isMobile && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="font-headline text-lg flex items-center gap-2">
-                                <Layers /> {t('added_charms_title', { count: placedCharms.length })}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                {placedCharms.length === 0 ? (
-                                    <p className="text-muted-foreground text-sm text-center py-4">{t('added_charms_placeholder')}</p>
-                                ) : (
-                                    <ScrollArea className="h-32">
-                                    <div className="space-y-2 pr-4">
-                                        {sortedPlacedCharms.map((pc) => (
-                                            <div key={pc.id}
-                                                className={cn("p-2 rounded-md flex items-center gap-3 cursor-pointer",
-                                                selectedPlacedCharmId === pc.id ? 'bg-muted ring-2 ring-primary' : 'hover:bg-muted/50',
-                                                !pc.isAvailable && "bg-destructive/10"
-                                                )}
-                                                onClick={() => handleCharmListClick(pc.id)}
-                                            >
-                                                <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={32} height={32} className="w-8 h-8 object-contain rounded-md border bg-white p-0.5" />
-                                                <span className="flex-grow text-sm font-medium truncate">{pc.charm.name}</span>
-                                                {!pc.isAvailable && (
-                                                    <TooltipProvider>
-                                                        <Tooltip>
-                                                            <TooltipTrigger>
-                                                                <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>
-                                                                <p>{t('stock_issue_tooltip')}</p>
-                                                            </TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
-                                                )}
-                                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); removeCharm(pc.id)}}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    </ScrollArea>
-                                )}
-                            </CardContent>
-                            <CardFooter>
-                                {isEditing ? (
-                                <Button onClick={handleUpdateCart} className="w-full" disabled={captureRequest || hasStockIssues}>
-                                    {captureRequest ? <Loader2 className="animate-spin" /> : <PlusCircle />}
-                                    {t('update_item_button')}
-                                </Button>
-                                ) : (
-                                <Button onClick={handleAddToCart} className="w-full" disabled={captureRequest || hasStockIssues}>
-                                    {captureRequest ? <Loader2 className="animate-spin" /> : <ShoppingCart />}
-                                    {t('add_to_cart_button')}
-                                </Button>
-                                )}
-                            </CardFooter>
-                        </Card>
-                    )}
+                  {!isMobile && (
+                      <Card>
+                          <CardHeader>
+                              <CardTitle className="font-headline text-lg flex items-center gap-2">
+                              <Layers /> {t('added_charms_title', { count: placedCharms.length })}
+                              </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                              {placedCharms.length === 0 ? (
+                                  <p className="text-muted-foreground text-sm text-center py-4">{t('added_charms_placeholder')}</p>
+                              ) : (
+                                  <ScrollArea className="w-full">
+                                      <div className="flex gap-2 pb-4 flex-wrap">
+                                          {sortedPlacedCharms.map((pc) => (
+                                              <div key={pc.id}
+                                                  className={cn("p-2 rounded-md border flex flex-col items-center gap-1 cursor-pointer w-20 relative group",
+                                                  selectedPlacedCharmId === pc.id ? 'ring-2 ring-primary' : 'hover:bg-muted/50',
+                                                  !pc.isAvailable && "bg-destructive/10"
+                                                  )}
+                                                  onClick={() => handleCharmListClick(pc.id)}
+                                              >
+                                                  <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={32} height={32} className="w-8 h-8 object-contain" />
+                                                  <span className="text-xs text-center font-medium truncate w-full">{pc.charm.name}</span>
+                                                  {!pc.isAvailable && (
+                                                      <TooltipProvider>
+                                                          <Tooltip>
+                                                              <TooltipTrigger className="absolute inset-0 z-10">
+                                                                  <span className="sr-only">Stock issue</span>
+                                                              </TooltipTrigger>
+                                                              <TooltipContent>
+                                                                  <p>{t('stock_issue_tooltip')}</p>
+                                                              </TooltipContent>
+                                                          </Tooltip>
+                                                      </TooltipProvider>
+                                                  )}
+                                                  <Button 
+                                                    variant="destructive" 
+                                                    size="icon" 
+                                                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                                                    onClick={(e) => { e.stopPropagation(); removeCharm(pc.id); }}
+                                                  >
+                                                      <X className="h-3 w-3" />
+                                                  </Button>
+                                              </div>
+                                          ))}
+                                      </div>
+                                  </ScrollArea>
+                              )}
+                          </CardContent>
+                          <CardFooter>
+                              {isEditing ? (
+                              <Button onClick={handleUpdateCart} className="w-full" disabled={captureRequest || hasStockIssues}>
+                                  {captureRequest ? <Loader2 className="animate-spin" /> : <PlusCircle />}
+                                  {t('update_item_button')}
+                              </Button>
+                              ) : (
+                              <Button onClick={handleAddToCart} className="w-full" disabled={captureRequest || hasStockIssues}>
+                                  {captureRequest ? <Loader2 className="animate-spin" /> : <ShoppingCart />}
+                                  {t('add_to_cart_button')}
+                              </Button>
+                              )}
+                          </CardFooter>
+                      </Card>
+                  )}
               </div>
 
               {!isMobile && (
@@ -1055,3 +1061,4 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
