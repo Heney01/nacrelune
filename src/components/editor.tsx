@@ -743,7 +743,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
             </div>
           </header>
-        <main className={cn("flex-grow flex flex-col p-4 md:p-8 min-h-0", isMobile && "p-0 pb-[80px]")}>
+        <main className={cn("flex-grow flex flex-col p-4 md:p-8 min-h-0", isMobile && "p-0 pb-[calc(4.5rem+env(safe-area-inset-bottom))]")}>
           <div className={cn("container mx-auto flex-1 flex flex-col min-h-0", isMobile && "px-0")}>
               <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0", isMobile && "grid-cols-1 gap-0")}>
               
@@ -766,10 +766,10 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                           </Link>
                       </Button>
                       <div className="flex items-center gap-2">
-                        <Dialog>
+                          <Dialog>
                             <DialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className={cn(isMobile ? "h-8 w-8 text-muted-foreground" : "")}>
-                                    <Info className={cn("h-5 w-5", !isMobile && "mr-2")} />
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                                    <Info className="h-5 w-5" />
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-md">
@@ -878,7 +878,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                   <p className="text-muted-foreground text-sm text-center py-4">{t('added_charms_placeholder')}</p>
                               ) : (
                                   <ScrollArea className="w-full whitespace-nowrap" orientation="horizontal">
-                                      <div className="flex w-max space-x-2 p-4">
+                                      <div className="flex w-max space-x-2 p-4 flex-nowrap">
                                           {sortedPlacedCharms.map((pc) => (
                                               <div key={pc.id}
                                                   className={cn("p-2 rounded-md border flex flex-col items-center gap-1 cursor-pointer w-20 relative group",
@@ -949,8 +949,20 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         </main>
 
          {isMobile && (
-            <div className="fixed bottom-0 left-0 right-0 z-20">
-                 <div className="bg-background border-t p-2.5 grid grid-cols-3 gap-2.5 flex-shrink-0">
+            <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-2.5 z-20 space-y-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))]">
+                {isEditing ? (
+                    <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
+                        <Check />
+                        {t('update_item_button')}
+                    </Button>
+                ) : (
+                    <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
+                        <PlusCircle />
+                        {t('add_to_cart_button')}
+                    </Button>
+                )}
+
+                 <div className="grid grid-cols-2 gap-2.5">
                       <Sheet open={isCharmsSheetOpen} onOpenChange={setIsCharmsSheetOpen}>
                           <SheetTrigger asChild>
                               <Button variant="outline" className="w-full">
@@ -1038,8 +1050,9 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       </Sheet>
                         <Sheet open={isSuggestionsSheetOpen} onOpenChange={setIsSuggestionsSheetOpen}>
                             <SheetTrigger asChild>
-                                <Button variant="ghost" className="w-full">
+                                <Button variant="outline" className="w-full">
                                     <Sparkles className="h-5 w-5 text-primary" />
+                                     <span className="ml-2">Suggestions IA</span>
                                 </Button>
                             </SheetTrigger>
                             <SheetContent side="bottom" className="h-[80%] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
@@ -1062,17 +1075,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                 </div>
                             </SheetContent>
                         </Sheet>
-                        {isEditing ? (
-                            <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
-                                <Check />
-                                {t('update_item_button')}
-                            </Button>
-                        ) : (
-                            <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
-                                <PlusCircle />
-                                {t('add_to_cart_button')}
-                            </Button>
-                        )}
                 </div>
             </div>
           )}
@@ -1084,3 +1086,4 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
