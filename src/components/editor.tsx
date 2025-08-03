@@ -843,7 +843,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
             </DialogContent>
         </Dialog>
 
-      <div className={cn("flex flex-col h-screen overflow-hidden", isMobile && "h-[calc(100dvh)]")}>
+      <div className={cn("flex flex-col h-screen overflow-hidden", isMobile && "h-screen")}>
         <header className="p-4 border-b flex-shrink-0">
             <div className="container mx-auto flex justify-between items-center">
               <Link href={`/${locale}`} className="flex items-center gap-2">
@@ -1184,6 +1184,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
 
