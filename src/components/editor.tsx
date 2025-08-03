@@ -744,10 +744,11 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         <main className={cn("flex-grow flex flex-col p-4 md:p-8 min-h-0", isMobile && "p-0 pb-0")}>
           <div className={cn("container mx-auto flex-1 flex flex-col min-h-0", isMobile && "px-0")}>
               <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0", isMobile && "grid-cols-1 gap-0")}>
-              {!isMobile && (
+              
+              {!isMobile ? (
                   <div className="lg:col-span-3 flex flex-col min-h-0 gap-6">
                       {charmsPanelDesktop}
-                       <Card>
+                      <Card>
                           <CardHeader>
                             <CardTitle className="font-headline text-lg flex items-center gap-2">
                               <Layers /> {t('added_charms_title', { count: placedCharms.length })}
@@ -805,7 +806,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                            </CardFooter>
                       </Card>
                   </div>
-              )}
+              ) : null}
 
               <div className={cn("lg:col-span-6 flex flex-col gap-4 min-h-0", isMobile && "order-first")}>
                   <div className={cn("flex justify-between items-center gap-4 flex-shrink-0", isMobile && "px-4 pt-4")}>
@@ -826,7 +827,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       ref={canvasWrapperRef}
                       className={cn(
                         "relative w-full aspect-square bg-card overflow-hidden touch-none grid place-items-center flex-shrink-0", 
-                        !isMobile && "border-dashed border-muted-foreground/30",
+                        !isMobile && "border-dashed border-2 border-muted-foreground/30",
                         isMobile && (isCharmsSheetOpen || isSuggestionsSheetOpen) && "pointer-events-none"
                       )}
                   >
@@ -957,16 +958,14 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                   </div>
                               </div>
                               <div className="flex-grow overflow-y-auto">
-                                  <ScrollArea className="absolute inset-0">
-                                     <CharmsPanel 
-                                        allCharms={availableCharms}
-                                        charmCategories={charmCategories}
-                                        onAddCharm={addCharmFromCharmList} 
-                                        isMobileSheet={true}
-                                        searchTerm={charmsSearchTerm}
-                                        onSearchTermChange={setCharmsSearchTerm}
-                                    />
-                                  </ScrollArea>
+                                <CharmsPanel 
+                                  allCharms={availableCharms}
+                                  charmCategories={charmCategories}
+                                  onAddCharm={addCharmFromCharmList} 
+                                  isMobileSheet={true}
+                                  searchTerm={charmsSearchTerm}
+                                  onSearchTermChange={setCharmsSearchTerm}
+                                />
                               </div>
                           </TabsContent>
                           <TabsContent value="placed" className="m-0 flex-grow overflow-y-auto no-scrollbar">
@@ -1060,6 +1059,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
 
