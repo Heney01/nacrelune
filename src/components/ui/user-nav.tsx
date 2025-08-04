@@ -73,15 +73,10 @@ export function UserNav({ locale }: { locale: string }) {
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <form action={logout}>
-                    <input type="hidden" name="locale" value={locale} />
-                    <DropdownMenuItem asChild>
-                        <button type="submit" className="w-full">
-                            <LogOut className="mr-2 h-4 w-4" />
-                            <span>{tAuth('logout_button')}</span>
-                        </button>
-                    </DropdownMenuItem>
-                </form>
+                <DropdownMenuItem onClick={() => logout(locale)} className="cursor-pointer">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>{tAuth('logout_button')}</span>
+                </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
     )

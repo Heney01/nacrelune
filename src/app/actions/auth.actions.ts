@@ -3,7 +3,7 @@
 
 import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, query, where, getDocs, collection, limit } from 'firebase/firestore';
 import { db, app } from '@/lib/firebase';
 import type { User } from '@/lib/types';
 import { redirect } from 'next/navigation';
@@ -203,8 +203,7 @@ export async function userLoginWithGoogle(formData: FormData): Promise<{ success
 }
 
 
-export async function logout(formData: FormData) {
-  const locale = formData.get('locale') as string || 'fr';
+export async function logout(locale: string) {
   cookies().delete('session');
   redirect(`/${locale}/connexion`);
 }

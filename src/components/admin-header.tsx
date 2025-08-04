@@ -54,15 +54,10 @@ function UserNav({ locale }: { locale: string }) {
                     </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <form action={logout}>
-                    <input type="hidden" name="locale" value={locale} />
-                    <DropdownMenuItem asChild>
-                        <button type="submit" className="w-full">
-                            <LogOut className="mr-2 h-4 w-4" />
-                            <span>Déconnexion</span>
-                        </button>
-                    </DropdownMenuItem>
-                </form>
+                <DropdownMenuItem onClick={() => logout(locale)} className="cursor-pointer">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Déconnexion</span>
+                </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
     )
@@ -89,4 +84,3 @@ export function AdminHeader({ locale }: { locale: string}) {
         </header>
     )
 }
-
