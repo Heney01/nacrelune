@@ -126,8 +126,6 @@ export async function saveCreation(
                 id: spc.charmId,
                 name: charmData.name,
                 imageUrl: charmData.imageUrl,
-                description: charmData.description,
-                categoryIds: charmData.categoryIds,
                 price: charmData.price,
                 width: charmData.width,
                 height: charmData.height,
@@ -422,3 +420,4 @@ export async function searchCreators(searchTerm: string): Promise<{ success: boo
     return { success: false, error: "Une erreur est survenue lors de la recherche des créateurs." };
   }
 }
+

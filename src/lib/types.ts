@@ -13,6 +13,7 @@ export interface User {
 export interface CharmCategory {
   id: string;
   name: string;
+  description: string;
   imageUrl?: string;
 }
 
