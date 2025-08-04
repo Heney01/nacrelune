@@ -375,7 +375,7 @@ export async function deleteCreation(idToken: string, creationId: string): Promi
 
 
 export async function searchCreators(searchTerm: string): Promise<{ success: boolean; creators?: User[]; error?: string }> {
-  if (!searchTerm) {
+  if (!searchTerm || searchTerm.trim().length < 2) {
     return { success: true, creators: [] };
   }
 
@@ -384,40 +384,46 @@ export async function searchCreators(searchTerm: string): Promise<{ success: boo
   try {
     const usersRef = collection(db, 'users');
     
-    // Firestore doesn't support case-insensitive or partial text search natively on non-exact fields.
-    // A common workaround for "starts-with" is to use >= and < queries.
-    const q = query(
-      usersRef,
-      where('displayName', '>=', searchTerm),
-      where('displayName', '<=', searchTerm + '\uf8ff'),
-      limit(10)
-    );
-    
-    const querySnapshot = await getDocs(q);
+    // Firestore doesn't support case-insensitive 'contains' queries.
+    // We can simulate a "starts-with" search for different parts of the name.
+    const searchTerms = normalizedSearchTerm.split(' ').filter(t => t.length > 0);
+    const queries = searchTerms.map(term => {
+      const capitalizedTerm = term.charAt(0).toUpperCase() + term.slice(1);
+      return query(
+        usersRef,
+        where('displayName', '>=', capitalizedTerm),
+        where('displayName', '<=', capitalizedTerm + '\uf8ff'),
+        limit(10)
+      );
+    });
 
-    if (querySnapshot.empty) {
-      return { success: true, creators: [] };
-    }
+    const querySnapshots = await Promise.all(queries.map(q => getDocs(q)));
 
-    const creators: User[] = [];
-    querySnapshot.forEach(doc => {
-      const data = doc.data();
-      // Additional client-side filtering for case-insensitivity if needed, though the query helps.
-      if (data.displayName.toLowerCase().includes(normalizedSearchTerm)) {
-          creators.push({
+    const creatorsMap = new Map<string, User>();
+
+    for (const querySnapshot of querySnapshots) {
+      querySnapshot.forEach(doc => {
+        if (!creatorsMap.has(doc.id)) {
+          const data = doc.data();
+          creatorsMap.set(doc.id, {
             uid: doc.id,
             displayName: data.displayName,
             email: data.email,
             photoURL: data.photoURL || null,
           });
-      }
-    });
+        }
+      });
+    }
+    
+    // Additional "contains" filtering for full flexibility on the combined results
+    const finalCreators = Array.from(creatorsMap.values()).filter(creator => 
+        creator.displayName?.toLowerCase().includes(normalizedSearchTerm)
+    );
 
-    return { success: true, creators: creators };
+    return { success: true, creators: finalCreators };
 
   } catch (error: any) {
     console.error("Error searching creators:", error);
     return { success: false, error: "Une erreur est survenue lors de la recherche des créateurs." };
   }
 }
-
