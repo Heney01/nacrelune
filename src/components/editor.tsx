@@ -39,6 +39,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { PlacedCharmsList } from './placed-charms-list';
+import html2canvas from 'html2canvas';
 
 
 interface PlacedCharmComponentProps {
