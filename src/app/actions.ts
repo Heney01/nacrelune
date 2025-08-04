@@ -770,19 +770,10 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
             return { success: false, message: "Ce code promo a expiré." };
         }
 
-        /*
-        if (couponData.validUntil) {
-            const validUntilDate = toDate(couponData.validUntil as Timestamp);
-            if (validUntilDate && validUntilDate < new Date()) {
-                return { success: false, message: "Ce code promo a expiré." };
-            }
-        }
-        */
-
         const coupon: Coupon = { 
             id: couponDoc.id, 
             ...couponData,
-            validUntil: couponData.validUntil ? toDate(couponData.validUntil as Timestamp)! : undefined
+            validUntil: couponData.validUntil ? toDate(couponData.validUntil as Timestamp) : undefined
         };
         return { success: true, message: 'Code promo appliqué !', coupon };
 
@@ -1302,6 +1293,10 @@ export async function getOrders(): Promise<Order[]> {
                 trackingNumber: data.trackingNumber,
                 cancellationReason: data.cancellationReason,
                 mailHistory: mailHistory,
+                paymentIntentId: data.paymentIntentId,
+                couponCode: data.couponCode,
+                pointsUsed: data.pointsUsed,
+                pointsValue: data.pointsValue
             };
         }));
 
