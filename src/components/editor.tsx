@@ -228,12 +228,12 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const getCanvasDataUri = useCallback(async (): Promise<string> => {
     const canvasElement = canvasRef.current;
     if (!canvasElement) {
-        throw new Error("Canvas ref is not available");
+      throw new Error("Canvas ref is not available");
     }
-
+  
     resetZoomAndPan();
     setSelectedPlacedCharmId(null);
-
+  
     const images = Array.from(canvasElement.querySelectorAll('img'));
     await Promise.all(images.map(img => {
       if (img.complete) return Promise.resolve();
@@ -242,23 +242,32 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         img.onerror = () => reject(new Error(`Failed to load image: ${img.src}`));
       });
     }));
-
+  
     return new Promise((resolve, reject) => {
-        setTimeout(async () => {
-            try {
-                const canvas = await html2canvas(canvasElement, {
-                    backgroundColor: null,
-                    logging: false,
-                    useCORS: true,
-                    scale: 2,
-                    allowTaint: false,
-                });
-                resolve(canvas.toDataURL('image/png', 0.9));
-            } catch (error) {
-                console.error("Error capturing canvas:", error);
-                reject(error);
-            }
-        }, 1000); 
+      setTimeout(async () => {
+        try {
+          const { width, height } = canvasElement.getBoundingClientRect();
+          const size = Math.min(width, height);
+          const x = (width - size) / 2;
+          const y = (height - size) / 2;
+  
+          const canvas = await html2canvas(canvasElement, {
+            backgroundColor: null,
+            logging: false,
+            useCORS: true,
+            scale: 2,
+            allowTaint: false,
+            width: size,
+            height: size,
+            x: x,
+            y: y,
+          });
+          resolve(canvas.toDataURL('image/png', 0.9));
+        } catch (error) {
+          console.error("Error capturing canvas:", error);
+          reject(error);
+        }
+      }, 500); // Reduced delay
     });
   }, [resetZoomAndPan]);
 
@@ -922,7 +931,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
             </div>
           </header>
-        <main className="flex-grow flex flex-col md:p-8 min-h-0 pb-32 md:pb-8">
+        <main className="flex-grow flex flex-col md:p-8 min-h-0 pb-32">
           <div className="container mx-auto flex-1 flex flex-col min-h-0">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0">
               
@@ -978,7 +987,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   </div>
                   <div
                       ref={canvasWrapperRef}
-                      className="relative w-full flex-grow bg-card overflow-hidden touch-none border-dashed border-2 border-muted-foreground/30 "
+                      className="relative w-full flex-grow bg-card overflow-hidden touch-none"
                   >
                       <div
                           ref={canvasRef}
@@ -1250,6 +1259,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
 
