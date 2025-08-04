@@ -342,6 +342,7 @@ export async function getOrders(): Promise<Order[]> {
                 orderNumber,
                 createdAt: (data.createdAt as Timestamp).toDate(),
                 customerEmail: data.customerEmail,
+                subtotal: data.subtotal ?? data.totalPrice, // Fallback for old orders
                 totalPrice: data.totalPrice,
                 status: data.status,
                 items: enrichedItems,

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, UploadCloud, AlertCircle } from 'lucide-react';
 import type { Charm, CharmCategory } from '@/lib/types';
-import { saveCharm } from '@/app/actions';
+import { saveCharm } from '@/app/actions/admin.actions';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Textarea } from './ui/textarea';
 import { Checkbox } from './ui/checkbox';

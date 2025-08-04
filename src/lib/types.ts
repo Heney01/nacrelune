@@ -167,7 +167,9 @@ export interface Order {
     orderNumber: string;
     createdAt: Date;
     customerEmail: string;
-    totalPrice: number;
+    userId?: string;
+    subtotal: number; // New field: Total before any discounts
+    totalPrice: number; // Final price paid by customer
     items: OrderItem[];
     status: OrderStatus;
     deliveryMethod: DeliveryMethod;

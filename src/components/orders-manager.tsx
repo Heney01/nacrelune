@@ -6,10 +6,10 @@ import React, { useState, useReducer, useTransition, Fragment, useMemo } from 'r
 import type { Order, OrderStatus, OrderItem, Charm, MailLog, DeliveryMethod } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from './ui/card';
-import { Package, Search, ChevronDown, ChevronUp, Truck, FileX, Edit, Copy, Mail, CheckCircle, XCircle, Clock, Undo2, Home, Store, CreditCard, TicketPercent, Award } from 'lucide-react';
+import { Package, Search, ChevronDown, ChevronUp, Truck, FileX, Edit, Copy, Mail, CheckCircle, XCircle, Clock, Undo2, Home, Store, CreditCard, Award, TicketPercent } from 'lucide-react';
 import { useTranslations } from '@/hooks/use-translations';
 import { Badge } from './ui/badge';
-import { updateOrderStatus, updateOrderItemStatus } from '@/app/actions';
+import { updateOrderStatus, updateOrderItemStatus } from '@/app/actions/order.actions';
 import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
@@ -313,7 +313,7 @@ const OrderDetails = ({ order, onItemStatusChange, onStatusChange, t, onEditShip
                                 <div className="bg-background p-4 rounded-lg border space-y-3">
                                     <div className="flex items-center justify-between text-sm">
                                         <p className="text-muted-foreground">Mode de paiement</p>
-                                        <p className="font-medium">{order.paymentIntentId === 'free_order' ? 'Gratuit (Points/Coupon)' : 'Carte bancaire (Stripe)'}</p>
+                                        <p className="font-medium">{order.paymentIntentId === 'free_order' ? 'Gratuit (Points/Coupon)' : `Carte bancaire (Stripe) - ${order.totalPrice.toFixed(2)}€`}</p>
                                     </div>
                                     {order.couponCode && (
                                         <div className="flex items-center justify-between text-sm">
@@ -501,7 +501,7 @@ const OrderRow = ({ order, isOpen, onToggle, onStatusChange, onItemStatusChange,
                         </Tooltip>
                     </TooltipProvider>
                 </TableCell>
-                <TableCell>{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(order.totalPrice)}</TableCell>
+                <TableCell>{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(order.subtotal)}</TableCell>
                 <TableCell>
                     <Badge variant="outline" className={cn(statusVariants[order.status])}>
                         {tStatus(order.status)}
@@ -844,7 +844,7 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
                                             </Button>
                                         </div>
                                         <div className="w-full flex justify-between items-center">
-                                            <p className="font-bold text-lg">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(order.totalPrice)}</p>
+                                            <p className="font-bold text-lg">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(order.subtotal)}</p>
                                             <Badge variant="outline" className={cn(statusVariants[order.status])}>
                                                 {tStatus(order.status)}
                                             </Badge>
@@ -870,3 +870,5 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
         )
     }
 }
+
+    

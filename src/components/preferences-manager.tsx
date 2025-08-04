@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, AlertCircle, Settings } from 'lucide-react';
 import type { GeneralPreferences } from '@/lib/types';
-import { savePreferences } from '@/app/actions';
+import { savePreferences } from '@/app/actions/admin.actions';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from './ui/card';
 import { useToast } from '@/hooks/use-toast';

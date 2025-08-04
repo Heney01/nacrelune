@@ -1,17 +1,17 @@
 
 
-"use client";
+'use client';
 
-import React, { useState, useMemo, useRef, WheelEvent as ReactWheelEvent, useCallback, useEffect, TouchEvent as ReactTouchEvent } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory, Creation } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Share2, Layers, Check, MoreHorizontal } from 'lucide-react';
+import { X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Share2, Layers, Check, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { BrandLogo, ShoppingBasketIcon } from './icons';
+import { BrandLogo } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { CharmsPanel } from './charms-panel';
@@ -20,25 +20,27 @@ import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
 import { useSearchParams, useParams, useRouter } from 'next/navigation';
 import { CartSheet } from './cart-sheet';
-import html2canvas from 'html2canvas';
 import { CartWidget } from './cart-widget';
 import { useTranslations } from '@/hooks/use-translations';
-import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction, getCharmDesignCritiqueAction, saveCreation, deleteCreation, updateCreation, toggleLikeCreation } from '@/app/actions';
+import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction, getCharmDesignCritiqueAction } from '@/app/actions/ai.actions';
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogClose, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { ShareDialog } from './share-dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Loader2 } from 'lucide-react';
-import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
-import { useAuth } from '@/hooks/use-auth';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { FinalizeCreationDialog } from './finalize-creation-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { useEditorCanvas } from '@/hooks/use-editor-canvas';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { PlacedCharmsList } from './placed-charms-list';
+import html2canvas from 'html2canvas';
+
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -77,7 +79,7 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
         };
     }, [onDragStart, placed.id]);
 
-    const handleWheel = (e: ReactWheelEvent<HTMLDivElement>) => {
+    const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
         const rotationAmount = e.deltaY > 0 ? 10 : -10; // Rotate by 10 degrees
@@ -170,37 +172,32 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
   const [selectedPlacedCharmId, setSelectedPlacedCharmId] = useState<string | null>(null);
 
-  const canvasWrapperRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const modelImageRef = useRef<HTMLImageElement>(null);
-  const modelImageContainerRef = useRef<HTMLDivElement>(null);
-  const [modelImageRect, setModelImageRect] = useState<DOMRect | null>(null);
-
   const [isCharmsSheetOpen, setIsCharmsSheetOpen] = useState(false);
   const [isSuggestionsSheetOpen, setIsSuggestionsSheetOpen] = useState(false);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [previewForDialog, setPreviewForDialog] = useState<string | null>(null);
-  const [creationName, setCreationName] = useState('');
-  const [creationDescription, setDescription] = useState('');
-  const [isPublishing, setIsPublishing] = useState(false);
-  const { firebaseUser } = useAuth();
-
-
-  const [scale, setScale] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-
+  const [isFinalizeOpen, setIsFinalizeOpen] = useState(false);
+  
   const [charmsSearchTerm, setCharmsSearchTerm] = useState('');
-
   const [isGenerating, setIsGenerating] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [critique, setCritique] = useState<string | null>(null);
-
-  const [pixelsPerMm, setPixelsPerMm] = useState<number | null>(null);
   
   const isEditing = cartItemId !== null;
 
+  const {
+    canvasWrapperRef,
+    canvasRef,
+    modelImageContainerRef,
+    modelImageRef,
+    pan,
+    scale,
+    modelImageRect,
+    pixelsPerMm,
+    handleManualZoom,
+    resetZoomAndPan,
+  } = useEditorCanvas({ model });
+  
   useEffect(() => {
     if (isEditing) {
       const itemToEdit = cart.find(item => item.id === cartItemId);
@@ -220,72 +217,72 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     }
   }, [isEditing, cart, cartItemId]);
 
-  const resetZoomAndPan = useCallback(() => {
-    setScale(1);
-    setPan({ x: 0, y: 0 });
-  }, []);
-
   const getCanvasDataUri = useCallback(async (): Promise<string> => {
     const canvasElement = canvasRef.current;
-    if (!canvasElement) {
-      throw new Error("Canvas ref is not available");
+    if (!canvasElement || !modelImageRef.current) {
+        throw new Error("Canvas or model image ref is not available");
     }
-  
+
     resetZoomAndPan();
     setSelectedPlacedCharmId(null);
-  
-    const images = Array.from(canvasElement.querySelectorAll('img'));
-    await Promise.all(images.map(img => {
-      if (img.complete) return Promise.resolve();
-      return new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error(`Failed to load image: ${img.src}`));
-      });
-    }));
-  
+    
     return new Promise((resolve, reject) => {
-      setTimeout(async () => {
-        try {
-          const { width, height } = canvasElement.getBoundingClientRect();
-          const size = Math.min(width, height);
-          const x = (width - size) / 2;
-          const y = (height - size) / 2;
-  
-          const canvas = await html2canvas(canvasElement, {
-            backgroundColor: null,
-            logging: false,
-            useCORS: true,
-            scale: 2,
-            allowTaint: false,
-            width: size,
-            height: size,
-            x: x,
-            y: y,
-          });
-          resolve(canvas.toDataURL('image/png', 0.9));
-        } catch (error) {
-          console.error("Error capturing canvas:", error);
-          reject(error);
-        }
-      }, 500); // Reduced delay
+        requestAnimationFrame(async () => {
+            try {
+                // Preload images to ensure they are in cache.
+                const imageElements = Array.from(canvasElement.getElementsByTagName('img'));
+                const imagePromises = imageElements.map(img => {
+                    if (img.complete) return Promise.resolve();
+                    return new Promise<void>((res, rej) => {
+                        const newImg = new window.Image();
+                        newImg.crossOrigin = "Anonymous";
+                        newImg.onload = () => res();
+                        newImg.onerror = () => res(); // Don't fail the whole capture for one image
+                        newImg.src = img.src;
+                    });
+                });
+                await Promise.all(imagePromises);
+
+                const modelImageElement = modelImageRef.current!;
+                const modelImageBoundingRect = modelImageElement.getBoundingClientRect();
+                const canvasBoundingRect = canvasElement.getBoundingClientRect();
+
+                const originalX = modelImageBoundingRect.left - canvasBoundingRect.left;
+                const originalY = modelImageBoundingRect.top - canvasBoundingRect.top;
+                const originalWidth = modelImageBoundingRect.width;
+                const originalHeight = modelImageBoundingRect.height;
+                
+                const size = Math.max(originalWidth, originalHeight);
+
+                const finalX = originalX - (size - originalWidth) / 2;
+                const finalY = originalY; // Align to top
+                
+                const canvas = await html2canvas(canvasElement, {
+                    backgroundColor: null,
+                    logging: false,
+                    useCORS: true,
+                    scale: 2,
+                    x: finalX,
+                    y: finalY,
+                    width: size,
+                    height: size,
+                });
+                resolve(canvas.toDataURL('image/png', 0.9));
+            } catch (error) {
+                console.error("Error capturing canvas:", error);
+                reject(error);
+            }
+        });
     });
-  }, [resetZoomAndPan]);
+}, [resetZoomAndPan, canvasRef, modelImageRef]);
 
 
   const interactionState = useRef({
     isDragging: false,
-    isPanning: false,
     dragStart: { x: 0, y: 0 },
     activeCharmId: null as string | null,
-    panStart: { x: 0, y: 0 },
-    isPinching: false,
-    pinchInitialDist: 0,
   }).current;
 
-  const panRef = useRef(pan);
-  panRef.current = pan;
-  const scaleRef = useRef(scale);
-  scaleRef.current = scale;
   const placedCharmsRef = useRef(placedCharms);
   placedCharmsRef.current = placedCharms;
 
@@ -339,7 +336,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     e.stopPropagation();
 
     interactionState.isDragging = true;
-    interactionState.isPanning = false;
     interactionState.activeCharmId = charmId;
     setSelectedPlacedCharmId(charmId);
 
@@ -353,17 +349,13 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     );
   }, []);
 
-  const zoomToPoint = useCallback((newScale: number, pointX: number, pointY: number) => {
-    const clampedScale = Math.max(0.2, Math.min(newScale, 5));
-    const currentPan = panRef.current;
-    const currentScale = scaleRef.current;
+  const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Deselect charm if clicking on the background
+    if ((e.target as HTMLElement).closest('.charm-on-canvas') === null) {
+      setSelectedPlacedCharmId(null);
+    }
+  };
 
-    const newPanX = pointX - ((pointX - currentPan.x) * (clampedScale / currentScale));
-    const newPanY = pointY - ((pointY - currentPan.y) * (clampedScale / currentScale));
-
-    setPan({ x: newPanX, y: newPanY });
-    setScale(clampedScale);
-}, []);
 
   useEffect(() => {
     const canvas = canvasWrapperRef.current;
@@ -375,50 +367,13 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
     const getPoint = (e: MouseEvent | TouchEvent) => 'touches' in e ? e.touches[0] : e;
     
-    const getTouchCenter = (touches: TouchList) => {
-        const t1 = touches[0];
-        const t2 = touches[1];
-        return {
-            x: (t1.clientX + t2.clientX) / 2,
-            y: (t1.clientY + t2.clientY) / 2,
-        };
-    };
-
-    const getTouchDistance = (touches: TouchList) => {
-        const t1 = touches[0];
-        const t2 = touches[1];
-        return Math.sqrt(
-            Math.pow(t1.clientX - t2.clientX, 2) +
-            Math.pow(t1.clientY - t2.clientY, 2)
-        );
-    };
-
     const handleInteractionEnd = () => {
       interactionState.isDragging = false;
-      interactionState.isPanning = false;
-      interactionState.isPinching = false;
       interactionState.activeCharmId = null;
     };
     
-    const handleWheel = (e: globalThis.WheelEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('.charm-on-canvas')) return;
-      e.preventDefault();
-      
-      const canvasRect = canvas.getBoundingClientRect();
-      const zoomFactor = e.deltaY * -0.005;
-      const newScale = scaleRef.current * (1 + zoomFactor);
-      
-      const pointX = e.clientX - canvasRect.left;
-      const pointY = e.clientY - canvasRect.top;
-
-      zoomToPoint(newScale, pointX, pointY);
-    };
-    
     const handleMove = (e: MouseEvent | TouchEvent) => {
-      const isInteracting = interactionState.isDragging || interactionState.isPanning || interactionState.isPinching;
-
-      if (isInteracting && 'preventDefault' in e && e.cancelable) {
+      if (interactionState.isDragging && 'preventDefault' in e && e.cancelable) {
         e.preventDefault();
       }
 
@@ -427,8 +382,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
           if (!imgRect) return;
 
           const point = getPoint(e);
-          const dx = (point.clientX - interactionState.dragStart.x) / scaleRef.current;
-          const dy = (point.clientY - interactionState.dragStart.y) / scaleRef.current;
+          const dx = (point.clientX - interactionState.dragStart.x) / scale;
+          const dy = (point.clientY - interactionState.dragStart.y) / scale;
           
           const currentPlacedCharms = placedCharmsRef.current;
           const charmToMove = currentPlacedCharms.find(pc => pc.id === interactionState.activeCharmId);
@@ -452,90 +407,24 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
           }
           
           interactionState.dragStart = { x: point.clientX, y: point.clientY };
-
-      } else if (interactionState.isPanning) {
-        const point = getPoint(e);
-        const newX = point.clientX - interactionState.panStart.x;
-        const newY = point.clientY - interactionState.panStart.y;
-        setPan({ x: newX, y: newY });
-      } else if (interactionState.isPinching && 'touches' in e && e.touches.length === 2) {
-          const newDist = getTouchDistance(e.touches);
-          const zoomFactor = newDist / interactionState.pinchInitialDist;
-          const newScale = scaleRef.current * zoomFactor;
-
-          const touchCenter = getTouchCenter(e.touches);
-          const canvasRect = canvas.getBoundingClientRect();
-          const pointX = touchCenter.x - canvasRect.left;
-          const pointY = touchCenter.y - canvasRect.top;
-          
-          zoomToPoint(newScale, pointX, pointY);
-          interactionState.pinchInitialDist = newDist;
       }
     };
 
-    const handlePanStart = (e: MouseEvent | TouchEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('.charm-on-canvas')) return;
-      
-      const isInteracting = interactionState.isDragging || interactionState.isPanning || interactionState.isPinching;
-      if (!isInteracting && 'preventDefault' in e && e.cancelable) {
-        e.preventDefault();
-      }
-      
-      setSelectedPlacedCharmId(null);
-      
-      if ('touches' in e) {
-          if (e.touches.length === 2) {
-              interactionState.isPinching = true;
-              interactionState.isPanning = false;
-              interactionState.isDragging = false;
-              interactionState.pinchInitialDist = getTouchDistance(e.touches);
-              return;
-          }
-          if (e.touches.length !== 1) return;
-      }
-
-      interactionState.isPanning = true;
-      interactionState.isDragging = false;
-      interactionState.isPinching = false;
-      
-      const point = getPoint(e);
-      interactionState.panStart = { x: point.clientX - panRef.current.x, y: point.clientY - panRef.current.y };
-    }
-    
     // Desktop
-    canvas.addEventListener('mousedown', handlePanStart);
-    canvas.addEventListener('wheel', handleWheel, { passive: false });
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleInteractionEnd);
     
     // Mobile
-    canvas.addEventListener('touchstart', handlePanStart, { passive: false });
     window.addEventListener('touchmove', handleMove, { passive: false });
     window.addEventListener('touchend', handleInteractionEnd);
     
     return () => {
-      canvas.removeEventListener('mousedown', handlePanStart);
-      canvas.removeEventListener('wheel', handleWheel);
       window.removeEventListener('mousemove', handleMove);
       window.removeEventListener('mouseup', handleInteractionEnd);
-      canvas.removeEventListener('touchstart', handlePanStart);
       window.removeEventListener('touchmove', handleMove);
       window.removeEventListener('touchend', handleInteractionEnd);
     };
-  }, [interactionState, zoomToPoint, isMobile, isCharmsSheetOpen, isSuggestionsSheetOpen]);
-
-  const handleManualZoom = (direction: 'in' | 'out') => {
-    if (!canvasWrapperRef.current) return;
-    const zoomFactor = direction === 'in' ? 1.2 : 1 / 1.2;
-    const newScale = scale * zoomFactor;
-
-    const canvasRect = canvasWrapperRef.current.getBoundingClientRect();
-    const pointX = canvasRect.width / 2;
-    const pointY = canvasRect.height / 2;
-    
-    zoomToPoint(newScale, pointX, pointY);
-  };
+  }, [interactionState, scale, isMobile, isCharmsSheetOpen, isSuggestionsSheetOpen, modelImageRef]);
   
   const handleCharmListClick = (charmId: string) => {
     setSelectedPlacedCharmId(charmId);
@@ -551,91 +440,27 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     }, 500);
   };
   
-  const handleOpenConfirmDialog = () => {
-    setIsConfirmOpen(true);
-    getCanvasDataUri()
-      .then(setPreviewForDialog)
-      .catch(error => {
-        console.error(error);
-        toast({
-          variant: "destructive",
-          title: "Erreur",
-          description: "Impossible de générer l'aperçu de la création.",
-        });
-        setIsConfirmOpen(false); // Close dialog if preview fails
-      });
+  const handleFinalize = () => {
+    setIsFinalizeOpen(true);
   };
 
-  const handleConfirmAddToCart = async () => {
-      if (!previewForDialog) return;
+  const handleAddToCart = useCallback((previewImage: string) => {
+    const itemPayload: Omit<CartItem, 'id'> = {
+      model,
+      jewelryType,
+      placedCharms,
+      previewImage: previewImage,
+    };
 
-      const itemPayload: Omit<CartItem, 'id'> = {
-        model,
-        jewelryType,
-        placedCharms,
-        previewImage: previewForDialog,
-      };
-
-      if (isEditing && cartItemId) {
-        updateCartItem(cartItemId, { id: cartItemId, ...itemPayload });
-      } else {
-        addToCart(itemPayload);
-        setPlacedCharms([]);
-      }
-      setIsConfirmOpen(false);
-      setPreviewForDialog(null);
-      setIsCartSheetOpen(true);
-  };
-
-  const handlePublish = async () => {
-      if (!previewForDialog || !firebaseUser) {
-          toast({ variant: 'destructive', title: "Non connecté", description: "Vous devez être connecté pour publier." });
-          return;
-      }
-      if (!creationName.trim()) {
-          toast({ variant: 'destructive', title: "Nom manquant", description: "Veuillez donner un nom à votre création." });
-          return;
-      }
-
-      setIsPublishing(true);
-      
-      const creationPayload = {
-          jewelryTypeId: jewelryType.id,
-          modelId: model.id,
-          placedCharms: placedCharms.map(pc => ({
-              charmId: pc.charm.id,
-              position: pc.position,
-              rotation: pc.rotation
-          })),
-          previewImageUrl: previewForDialog,
-      };
-
-      try {
-        const idToken = await firebaseUser.getIdToken();
-        const result = await saveCreation(
-            idToken,
-            creationName,
-            creationDescription,
-            JSON.stringify(creationPayload)
-        );
-
-        if (result.success) {
-            toast({ title: "Publication réussie !", description: result.message });
-            setIsConfirmOpen(false);
-            setPreviewForDialog(null);
-            // Redirect to profile page to see the new creation
-            router.push(`/${locale}/profil`);
-        } else {
-            toast({ variant: 'destructive', title: "Erreur de publication", description: result.message });
-        }
-      } catch (error: any) {
-        toast({ variant: 'destructive', title: "Erreur d'authentification", description: "Impossible de vérifier votre session. Veuillez vous reconnecter." });
-      }
-
-
-      setIsPublishing(false);
-  };
-
+    if (isEditing && cartItemId) {
+      updateCartItem(cartItemId, { id: cartItemId, ...itemPayload });
+    } else {
+      addToCart(itemPayload);
+      setPlacedCharms([]);
+    }
+    setIsFinalizeOpen(false);
+    setIsCartSheetOpen(true);
+  }, [addToCart, updateCartItem, cartItemId, isEditing, model, jewelryType, placedCharms]);
 
   const placedCharmCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -732,78 +557,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
       setIsGenerating(false);
     }
   }
-
-  const updateRects = useCallback(() => {
-    const imageEl = modelImageRef.current;
-    const containerEl = modelImageContainerRef.current;
-
-    if (imageEl && containerEl) {
-        const containerWidth = containerEl.offsetWidth;
-        const containerHeight = containerEl.offsetHeight;
-        const imageNaturalWidth = imageEl.naturalWidth;
-        const imageNaturalHeight = imageEl.naturalHeight;
-
-        if (imageNaturalWidth === 0 || imageNaturalHeight === 0) return;
-
-        const imageAspectRatio = imageNaturalWidth / imageNaturalHeight;
-        const containerAspectRatio = containerWidth / containerHeight;
-
-        let renderedWidth, renderedHeight, offsetX = 0, offsetY = 0;
-
-        if (imageAspectRatio > containerAspectRatio) {
-            // Image is limited by width
-            renderedWidth = containerWidth;
-            renderedHeight = containerWidth / imageAspectRatio;
-            offsetY = (containerHeight - renderedHeight) / 2;
-        } else {
-            // Image is limited by height
-            renderedHeight = containerHeight;
-            renderedWidth = containerHeight * imageAspectRatio;
-            offsetX = (containerWidth - renderedWidth) / 2;
-        }
-
-        const containerRect = containerEl.getBoundingClientRect();
-
-        setModelImageRect(new DOMRect(
-            containerRect.left + offsetX,
-            containerRect.top + offsetY,
-            renderedWidth,
-            renderedHeight
-        ));
-        
-        const pxPerMmWidth = renderedWidth / (model.width || 1);
-        const pxPerMmHeight = renderedHeight / (model.height || 1);
-        setPixelsPerMm((pxPerMmWidth + pxPerMmHeight) / 2);
-    }
-  }, [model.width, model.height]);
-
-
-  useEffect(() => {
-    const imageEl = modelImageRef.current;
-    if (!imageEl) return;
-
-    const handleLoad = () => updateRects();
-    
-    // If the image is already loaded, update immediately.
-    if (imageEl.complete) {
-      handleLoad();
-    } else {
-      imageEl.addEventListener('load', handleLoad);
-    }
-
-    window.addEventListener('resize', updateRects);
-    return () => {
-      window.removeEventListener('resize', updateRects)
-      if (imageEl) {
-        imageEl.removeEventListener('load', handleLoad);
-      }
-    };
-  }, [updateRects]);
-
-  useEffect(() => {
-    updateRects();
-  }, [pan, scale, updateRects]);
-
+  
   const { sortedPlacedCharms, hasStockIssues } = useMemo(() => {
     const counts = new Map<string, number>();
     const charmsWithStockInfo = placedCharms.map(pc => {
@@ -815,12 +569,11 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         ...pc,
         isAvailable: stock >= count,
       };
-    });
+    }).sort((a, b) => b.position.y - a.position.y);
 
     const hasIssues = charmsWithStockInfo.some(c => !c.isAvailable);
-    const sorted = [...charmsWithStockInfo].sort((a, b) => b.position.y - a.position.y);
     
-    return { sortedPlacedCharms: sorted, hasStockIssues: hasIssues };
+    return { sortedPlacedCharms: charmsWithStockInfo, hasStockIssues: hasIssues };
   }, [placedCharms, allCharms]);
 
 
@@ -835,90 +588,19 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
           t={t}
         />
       )}
-       <Dialog open={isConfirmOpen} onOpenChange={(open) => {
-            if (!open) {
-                setPreviewForDialog(null);
-            }
-            setIsConfirmOpen(open);
-        }}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{t('finalize_creation_title')}</DialogTitle>
-                    <DialogDescription>
-                        {isEditing ? t('confirm_update_title') : t('confirm_add_description')}
-                    </DialogDescription>
-                </DialogHeader>
-                 <div className="my-4 grid place-items-center">
-                    {previewForDialog ? (
-                        <Image src={previewForDialog} alt={t('preview_alt')} width={300} height={300} className="rounded-lg border bg-muted/50 max-w-[75%] sm:max-w-full h-auto" />
-                    ) : (
-                        <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center">
-                            <Loader2 className="animate-spin" />
-                        </div>
-                    )}
-                </div>
-                <Tabs defaultValue="buy" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="buy">{t('buy_tab')}</TabsTrigger>
-                        <TabsTrigger value="publish">{t('publish_tab')}</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="buy">
-                        <Card className="border-0 shadow-none">
-                            <CardHeader>
-                                <CardTitle>{t('buy_title')}</CardTitle>
-                                <CardDescription>{t('buy_description')}</CardDescription>
-                            </CardHeader>
-                            <CardFooter>
-                                <Button onClick={handleConfirmAddToCart} className="w-full" disabled={!previewForDialog}>
-                                    {isEditing ? t('update_item_button') : t('add_to_cart_button')}
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    </TabsContent>
-                    <TabsContent value="publish">
-                        <Card className="border-0 shadow-none">
-                            <CardHeader>
-                                <CardTitle>{t('publish_title')}</CardTitle>
-                                <CardDescription>{t('publish_description')}</CardDescription>
-                            </CardHeader>
-                            {!firebaseUser ? (
-                                <CardContent>
-                                    <Alert>
-                                        <AlertTitle>{t('publish_login_required_title')}</AlertTitle>
-                                        <AlertDescription>
-                                            {t('publish_login_required_desc')}{' '}
-                                            <Link href={`/${locale}/connexion`} className="font-bold underline">
-                                                {t('publish_login_link')}
-                                            </Link>
-                                            .
-                                        </AlertDescription>
-                                    </Alert>
-                                </CardContent>
-                            ) : (
-                                <>
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="creationName">{t('creation_name_label')}</Label>
-                                        <Input id="creationName" value={creationName} onChange={(e) => setCreationName(e.target.value)} placeholder={t('creation_name_placeholder')} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="creationDescription">{t('creation_description_label')}</Label>
-                                        <Textarea id="creationDescription" value={creationDescription} onChange={(e) => setDescription(e.target.value)} placeholder={t('creation_description_placeholder')} />
-                                    </div>
-                                </CardContent>
-                                <CardFooter>
-                                    <Button onClick={handlePublish} className="w-full" disabled={isPublishing || !creationName.trim()}>
-                                        {isPublishing && <Loader2 className="animate-spin mr-2" />}
-                                        {t('publish_button')}
-                                    </Button>
-                                </CardFooter>
-                                </>
-                            )}
-                        </Card>
-                    </TabsContent>
-                </Tabs>
-            </DialogContent>
-        </Dialog>
+      {isFinalizeOpen && (
+        <FinalizeCreationDialog
+            isOpen={isFinalizeOpen}
+            onOpenChange={setIsFinalizeOpen}
+            getCanvasDataUri={getCanvasDataUri}
+            onConfirmAddToCart={handleAddToCart}
+            isEditing={isEditing}
+            placedCharms={placedCharms}
+            jewelryType={jewelryType}
+            model={model}
+            locale={locale}
+        />
+      )}
 
       <div className="flex flex-col h-screen overflow-hidden">
         <header className="p-4 border-b flex-shrink-0">
@@ -931,7 +613,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
             </div>
           </header>
-        <main className="flex-grow flex flex-col md:p-8 min-h-0 pb-32">
+        <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0 pb-32 md:pb-8">
           <div className="container mx-auto flex-1 flex flex-col min-h-0">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0">
               
@@ -962,7 +644,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-md">
                                 <DialogHeader>
-                                <DialogTitle className="font-headline text-xl">{t('editor_disclaimer_title')}</DialogTitle>
+                                <CardTitle className="font-headline text-xl">{t('editor_disclaimer_title')}</CardTitle>
                                 </DialogHeader>
                                 <p className="text-sm text-muted-foreground mt-2">
                                 {t('editor_disclaimer')}
@@ -978,7 +660,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                 <Share2 />
                                 {t('share_button')}
                             </Button>
-                            <Button onClick={handleOpenConfirmDialog} disabled={hasStockIssues || placedCharms.length === 0}>
+                            <Button onClick={handleFinalize} disabled={hasStockIssues || placedCharms.length === 0}>
                                 <Check />
                                 {isEditing ? t('update_item_button') : t('finalize_button')}
                             </Button>
@@ -988,6 +670,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   <div
                       ref={canvasWrapperRef}
                       className="relative w-full flex-grow bg-card overflow-hidden touch-none border-2 border-dashed"
+                      onMouseDown={handleCanvasClick}
                   >
                       <div
                           ref={canvasRef}
@@ -1010,7 +693,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                   data-ai-hint="jewelry model"
                                   priority
                                   crossOrigin="anonymous"
-                                  onLoad={updateRects}
                               />
                           </div>
                           
@@ -1044,64 +726,13 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   </div>
                   
                    <div className="hidden lg:block flex-shrink-0">
-                        <Accordion type="single" collapsible className="w-full">
-                            <AccordionItem value="item-1">
-                                <Card>
-                                    <AccordionTrigger className="p-6 hover:no-underline">
-                                        <CardHeader className="p-0">
-                                            <CardTitle className="font-headline text-lg flex items-center gap-2">
-                                                <Layers /> {t('added_charms_title', { count: placedCharms.length })}
-                                            </CardTitle>
-                                        </CardHeader>
-                                    </AccordionTrigger>
-                                    <AccordionContent>
-                                        <CardContent className="pt-2">
-                                            {placedCharms.length === 0 ? (
-                                                <p className="text-muted-foreground text-sm text-center py-4">{t('added_charms_placeholder')}</p>
-                                            ) : (
-                                                <ScrollArea className="w-full whitespace-nowrap" orientation="horizontal">
-                                                    <div className="flex w-max space-x-2 p-4 flex-nowrap">
-                                                        {sortedPlacedCharms.map((pc) => (
-                                                            <div key={pc.id}
-                                                                className={cn("p-2 rounded-md border flex flex-col items-center gap-1 cursor-pointer w-20 relative group",
-                                                                selectedPlacedCharmId === pc.id ? 'ring-2 ring-primary' : 'hover:bg-muted/50',
-                                                                !pc.isAvailable && "bg-destructive/10"
-                                                                )}
-                                                                onClick={() => handleCharmListClick(pc.id)}
-                                                            >
-                                                                <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={32} height={32} className="w-8 h-8 object-contain" />
-                                                                <span className="text-xs text-center font-medium truncate w-full">{pc.charm.name}</span>
-                                                                {!pc.isAvailable && (
-                                                                    <TooltipProvider>
-                                                                        <Tooltip>
-                                                                            <TooltipTrigger className="absolute inset-0 z-10">
-                                                                                <span className="sr-only">Stock issue</span>
-                                                                            </TooltipTrigger>
-                                                                            <TooltipContent>
-                                                                                <p>{t('stock_issue_tooltip')}</p>
-                                                                            </TooltipContent>
-                                                                        </Tooltip>
-                                                                    </TooltipProvider>
-                                                                )}
-                                                                <Button 
-                                                                    variant="destructive" 
-                                                                    size="icon" 
-                                                                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
-                                                                    onClick={(e) => { e.stopPropagation(); removeCharm(pc.id); }}
-                                                                >
-                                                                    <X className="h-3 w-3" />
-                                                                </Button>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                    <ScrollBar orientation="horizontal" />
-                                                </ScrollArea>
-                                            )}
-                                        </CardContent>
-                                    </AccordionContent>
-                                </Card>
-                            </AccordionItem>
-                        </Accordion>
+                        <PlacedCharmsList 
+                            placedCharms={sortedPlacedCharms}
+                            selectedPlacedCharmId={selectedPlacedCharmId}
+                            onCharmClick={handleCharmListClick}
+                            onCharmDelete={removeCharm}
+                            isMobile={false}
+                        />
                     </div>
               </div>
 
@@ -1122,7 +753,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
          {isMobile && (
             <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-2.5 z-20 space-y-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))]">
-                <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
+                <Button onClick={handleFinalize} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
                     <Check />
                     {isEditing ? t('update_item_button') : t('finalize_button')}
                 </Button>
@@ -1169,46 +800,13 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                       </div>
                                   </TabsContent>
                                   <TabsContent value="placed" className="m-0 flex-grow min-h-0">
-                                      <div className="flex-grow overflow-y-auto h-full p-4">
-                                          {placedCharms.length === 0 ? (
-                                              <p className="text-muted-foreground text-sm text-center py-4">{t('added_charms_placeholder')}</p>
-                                          ) : (
-                                              <div className="flex gap-2 pb-4 pt-2 pl-2 flex-wrap">
-                                                  {sortedPlacedCharms.map((pc) => (
-                                                      <div key={pc.id}
-                                                          className={cn("p-2 rounded-md border flex flex-col items-center gap-1 cursor-pointer w-20 relative group",
-                                                          selectedPlacedCharmId === pc.id ? 'ring-2 ring-primary' : 'hover:bg-muted/50',
-                                                          !pc.isAvailable && "bg-destructive/10"
-                                                          )}
-                                                          onClick={() => handleCharmListClick(pc.id)}
-                                                      >
-                                                          <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={32} height={32} className="w-8 h-8 object-contain" />
-                                                          <span className="text-xs text-center font-medium truncate w-full">{pc.charm.name}</span>
-                                                          {!pc.isAvailable && (
-                                                              <TooltipProvider>
-                                                                  <Tooltip>
-                                                                      <TooltipTrigger className="absolute inset-0 z-10">
-                                                                          <span className="sr-only">Stock issue</span>
-                                                                      </TooltipTrigger>
-                                                                      <TooltipContent>
-                                                                          <p>{t('stock_issue_tooltip')}</p>
-                                                                      </TooltipContent>
-                                                                  </Tooltip>
-                                                              </TooltipProvider>
-                                                          )}
-                                                          <Button 
-                                                              variant="destructive" 
-                                                              size="icon" 
-                                                              className="absolute -top-2 -right-2 h-5 w-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
-                                                              onClick={(e) => { e.stopPropagation(); removeCharm(pc.id); }}
-                                                          >
-                                                              <X className="h-3 w-3" />
-                                                          </Button>
-                                                      </div>
-                                                  ))}
-                                              </div>
-                                          )}
-                                      </div>
+                                       <PlacedCharmsList 
+                                            placedCharms={sortedPlacedCharms}
+                                            selectedPlacedCharmId={selectedPlacedCharmId}
+                                            onCharmClick={handleCharmListClick}
+                                            onCharmDelete={removeCharm}
+                                            isMobile={true}
+                                        />
                                   </TabsContent>
                               </Tabs>
                           </SheetContent>
@@ -1247,41 +845,3 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
-
-
-
-    
-
-
-
-
-
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -157,7 +157,7 @@ export function CharmsPanel({ allCharms, charmCategories, onAddCharm, searchTerm
         return result;
     }, [filteredCharms, charmCategories]);
     
-    const renderCharmGrid = () => (
+    const renderCharmGrid = (
          <div className="p-4">
              {charmCategories.length === 0 ? (
                 <div className="flex justify-center items-center h-full p-8 text-center text-muted-foreground">
@@ -165,27 +165,30 @@ export function CharmsPanel({ allCharms, charmCategories, onAddCharm, searchTerm
                 </div>
             ) : (
                 <Accordion type="multiple" defaultValue={charmCategories.map(c => c.id)} className="w-full">
-                    {charmCategories.map(category => (
-                        charmsByCategory[category.id] && charmsByCategory[category.id].length > 0 && (
+                    {charmCategories.map(category => {
+                        const charmsForCategory = charmsByCategory[category.id] || [];
+                        if (charmsForCategory.length === 0) return null;
+                        
+                        return (
                             <AccordionItem value={category.id} key={category.id}>
                                 <AccordionTrigger className="text-base font-headline">{category.name}</AccordionTrigger>
                                 <AccordionContent>
                                     <div className={cn("grid gap-2 pt-2", isMobile ? "grid-cols-4" : "grid-cols-3")}>
-                                        {charmsByCategory[category.id].map(charm => 
+                                        {charmsForCategory.map(charm => 
                                             <CharmItem key={charm.id} charm={charm} onAddCharm={onAddCharm} />
                                         )}
                                     </div>
                                 </AccordionContent>
                             </AccordionItem>
-                        )
-                    ))}
+                        );
+                    })}
                 </Accordion>
             )}
         </div>
     );
 
     if (isMobileSheet) {
-        return renderCharmGrid();
+        return renderCharmGrid;
     }
 
     return (
@@ -206,7 +209,7 @@ export function CharmsPanel({ allCharms, charmCategories, onAddCharm, searchTerm
             </div>
             <Separator />
             <CardContent className="p-0 flex-grow overflow-y-auto no-scrollbar">
-                {renderCharmGrid()}
+                {renderCharmGrid}
             </CardContent>
         </Card>
     );

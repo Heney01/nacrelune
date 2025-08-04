@@ -1,0 +1,14 @@
+{
+  "hosting": {
+    "source": ".",
+    "site": "atelierabijoux",
+    "appHosting": {
+      "backends": [
+        {
+          "id": "nextn",
+          "region": "europe-west4"
+        }
+      ]
+    }
+  }
+}

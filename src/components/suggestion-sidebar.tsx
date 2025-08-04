@@ -110,7 +110,7 @@ export function SuggestionSidebar({
                         </div>
                     )}
                      {!isLoading && suggestions.length > 0 && (
-                        <ScrollArea className={cn("h-full", isMobile ? "h-[300px]" : "h-full")}>
+                        <ScrollArea className="h-full">
                           <div className="space-y-4 pr-4">
                             {suggestions.map((suggestion, index) => {
                               const charm = charms.find(c => c.name === suggestion.charmName);
@@ -177,7 +177,7 @@ export function SuggestionSidebar({
                         </div>
                     )}
                     {!isLoading && critique && (
-                        <ScrollArea className={cn("h-full", isMobile ? "h-[300px]" : "h-full")}>
+                        <ScrollArea className="h-full">
                             <Card className="bg-muted/50 p-4">
                                 <p className="text-sm whitespace-pre-wrap">{critique}</p>
                             </Card>
@@ -197,4 +197,3 @@ export function SuggestionSidebar({
     </Card>
   );
 }
-
