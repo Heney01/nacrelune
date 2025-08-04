@@ -166,5 +166,3 @@ export function ModelForm({ isOpen, onOpenChange, jewelryType, model, onSave, lo
         </Dialog>
     );
 }
-
-    

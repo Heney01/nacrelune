@@ -584,5 +584,3 @@ export function ProfileClient({ locale }: { locale: string }) {
         </div>
     );
 }
-
-    

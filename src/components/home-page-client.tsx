@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -24,7 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { logout } from '@/app/actions';
+import { logout } from '@/app/actions/auth.actions';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
@@ -188,4 +187,3 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
       </div>
     );
 }
-

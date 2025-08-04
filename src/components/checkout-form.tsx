@@ -11,7 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Loader2, AlertCircle, ArrowLeft, Home, Store, Search, CheckCircle, TicketPercent, Award } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
-import { createOrder, createPaymentIntent, CreateOrderResult, SerializableCartItem, validateCoupon } from '@/app/actions/order.actions';
+import { createOrder, createPaymentIntent, validateCoupon } from '@/app/actions/order.actions';
+import type { CreateOrderResult, SerializableCartItem } from '@/app/actions/order.actions';
 import { useParams } from 'next/navigation';
 import { StockErrorState } from './checkout-dialog';
 import type { ShippingAddress, DeliveryMethod, PickupPoint, Coupon } from '@/lib/types';
@@ -591,5 +592,3 @@ export const CheckoutForm = ({
     </form>
   );
 };
-
-    

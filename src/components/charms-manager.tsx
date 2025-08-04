@@ -579,5 +579,3 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
         </>
     );
 }
-
-    

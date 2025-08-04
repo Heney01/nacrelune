@@ -162,5 +162,3 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
     </Card>
   );
 }
-
-    

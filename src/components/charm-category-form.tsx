@@ -132,5 +132,3 @@ export function CharmCategoryForm({ isOpen, onOpenChange, category, onSave, loca
         </Dialog>
     );
 }
-
-    

@@ -99,5 +99,3 @@ export function PreferencesManager({ initialPreferences, locale }: PreferencesMa
         </Card>
     );
 }
-
-    

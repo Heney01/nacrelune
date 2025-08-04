@@ -185,5 +185,3 @@ export function CharmForm({ isOpen, onOpenChange, charm, allCategories, onSave, 
         </Dialog>
     );
 }
-
-    

@@ -41,6 +41,7 @@ export function TrackByNumberForm({ onOrderFound }: { onOrderFound: (order: Orde
         } else {
             onOrderFound(null);
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [orderNumberFromUrl]);
     
     useEffect(() => {
@@ -144,5 +145,3 @@ export function TrackByEmailForm() {
         </Card>
     );
 }
-
-    

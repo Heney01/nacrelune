@@ -522,5 +522,3 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
         </>
     );
 }
-
-    
