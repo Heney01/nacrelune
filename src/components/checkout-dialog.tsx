@@ -87,10 +87,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
                 mode: 'payment',
                 amount: Math.max(50, Math.round(total * 100)), // Stripe requires a minimum amount (e.g., 50 cents)
                 currency: 'eur',
-                wallets: {
-                    applePay: 'never',
-                    googlePay: 'never'
-                }
+                payment_method_types: ['card'],
           }}>
               <CheckoutForm 
                   total={subtotal} // Pass subtotal to calculate discounts correctly

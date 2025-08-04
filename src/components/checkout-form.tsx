@@ -313,7 +313,7 @@ const PaymentStep = ({
         </div>
       
       {finalTotal > 0 ? (
-          <PaymentElement />
+          <PaymentElement options={{wallets: {applePay: 'never', googlePay: 'never'}}}/>
       ) : (
           <Alert>
               <CheckCircle className="h-4 w-4" />
