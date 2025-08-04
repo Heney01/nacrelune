@@ -28,7 +28,11 @@
     "profile_menu_button": "Menu du profil",
     "inspirations_title": "Les dernières créations",
     "inspirations_subtitle": "Laissez-vous inspirer par la communauté.",
-    "use_as_template": "Personnaliser"
+    "use_as_template": "Personnaliser",
+    "creator_search_title": "Rechercher un Créateur",
+    "creator_search_subtitle": "Trouvez et explorez les galeries de vos créateurs préférés.",
+    "creator_search_placeholder": "Entrez le nom d'un créateur...",
+    "no_creators_found": "Aucun créateur trouvé."
   },
   "Auth": {
     "login_button": "Connexion",

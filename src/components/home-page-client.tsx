@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -17,6 +16,7 @@ import { SupportDialog } from './support-dialog';
 import { UserNav } from './user-nav';
 import { CreationsCarousel } from './creations-carousel';
 import { Separator } from './ui/separator';
+import { CreatorSearch } from './creator-search';
 
 export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, charmCategories, recentCreations, locale }: {
     searchParams: { [key:string]: string | string[] | undefined };
@@ -75,6 +75,10 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
             ) : (
               <>
                 <TypeSelection jewelryTypes={jewelryTypes} locale={locale} />
+                
+                <Separator className="my-12" />
+                <CreatorSearch locale={locale} />
+
                 {recentCreations.length > 0 && (
                   <>
                     <Separator className="my-12" />

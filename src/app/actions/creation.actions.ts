@@ -3,11 +3,11 @@
 
 import { revalidatePath } from 'next/cache';
 import { db, storage } from '@/lib/firebase';
-import { doc, getDoc, addDoc, updateDoc, collection, getDocs, query, where, documentId, orderBy, serverTimestamp, runTransaction, increment, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, addDoc, updateDoc, collection, getDocs, query, where, documentId, orderBy, serverTimestamp, runTransaction, increment, deleteDoc, startAfter, limit } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 import { adminApp } from '@/lib/firebase-admin';
-import type { Creation, CreationCharm, PlacedCreationCharm } from '@/lib/types';
+import type { Creation, CreationCharm, PlacedCreationCharm, User } from '@/lib/types';
 import { toDate } from '@/lib/data';
 
 
@@ -375,4 +375,50 @@ export async function deleteCreation(idToken: string, creationId: string): Promi
     }
 }
 
+
+export async function searchCreators(searchTerm: string): Promise<{ success: boolean; creators?: User[]; error?: string }> {
+  if (!searchTerm) {
+    return { success: true, creators: [] };
+  }
+
+  const normalizedSearchTerm = searchTerm.toLowerCase();
+
+  try {
+    const usersRef = collection(db, 'users');
     
+    // Firestore doesn't support case-insensitive or partial text search natively on non-exact fields.
+    // A common workaround for "starts-with" is to use >= and < queries.
+    const q = query(
+      usersRef,
+      where('displayName', '>=', searchTerm),
+      where('displayName', '<=', searchTerm + '\uf8ff'),
+      limit(10)
+    );
+    
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      return { success: true, creators: [] };
+    }
+
+    const creators: User[] = [];
+    querySnapshot.forEach(doc => {
+      const data = doc.data();
+      // Additional client-side filtering for case-insensitivity if needed, though the query helps.
+      if (data.displayName.toLowerCase().includes(normalizedSearchTerm)) {
+          creators.push({
+            uid: doc.id,
+            displayName: data.displayName,
+            email: data.email,
+            photoURL: data.photoURL || null,
+          });
+      }
+    });
+
+    return { success: true, creators: creators };
+
+  } catch (error: any) {
+    console.error("Error searching creators:", error);
+    return { success: false, error: "Une erreur est survenue lors de la recherche des créateurs." };
+  }
+}

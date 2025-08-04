@@ -31,7 +31,11 @@
     "welcome_message": "Welcome, {name}!",
     "inspirations_title": "The Latest Creations",
     "inspirations_subtitle": "Get inspired by the community.",
-    "use_as_template": "Customize"
+    "use_as_template": "Customize",
+    "creator_search_title": "Search for a Creator",
+    "creator_search_subtitle": "Find and explore the galleries of your favorite creators.",
+    "creator_search_placeholder": "Enter a creator's name...",
+    "no_creators_found": "No creators found."
   },
   "Auth": {
     "login_button": "Login",
