@@ -770,10 +770,12 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
             return { success: false, message: "Ce code promo n'est plus actif." };
         }
 
+        const validUntilDate = toDate(couponData.validUntil as Timestamp | undefined);
+
         const coupon: Coupon = { 
             id: couponDoc.id, 
             ...couponData,
-            validUntil: couponData.validUntil ? toDate(couponData.validUntil as Timestamp) : undefined
+            validUntil: validUntilDate || undefined
         };
         return { success: true, message: 'Code promo appliqué !', coupon };
 
