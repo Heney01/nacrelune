@@ -632,7 +632,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       <Button variant="outline" asChild className="lg:h-10">
                           <Link href={`/${locale}/?type=${jewelryType.id}`}>
                               <ArrowLeft className="mr-2 h-4 w-4" />
-                              <span className="hidden lg:inline">{tHome('back_button')}</span>
+                              <span>{tHome('back_button')}</span>
                           </Link>
                       </Button>
                       <div className="flex items-center gap-2">
