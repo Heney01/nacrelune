@@ -14,7 +14,6 @@ import html2canvas from 'html2canvas';
 import { generateShareContentAction } from '@/app/actions/ai.actions';
 import { useParams } from 'next/navigation';
 import { Creation } from '@/lib/types';
-import { User } from 'lucide-react';
 
 interface ShareDialogProps {
   isOpen: boolean;
@@ -33,11 +32,11 @@ const Polaroid = React.forwardRef<HTMLDivElement, { creationImage: string, title
       <div className="mt-3 text-center">
         <h3 className="font-caveat text-xl">{title || "Ma création"}</h3>
         {creatorName ? (
-            <p className="text-xs text-muted-foreground" style={{ fontFamily: 'sans-serif' }}>
-                <span className="inline-block align-middle ml-1">par {creatorName}</span>
+            <p className="text-[11px] text-muted-foreground mt-1" style={{ fontFamily: 'sans-serif' }}>
+                par {creatorName}
             </p>
         ) : null}
-         <p className="text-xs text-muted-foreground/50 mt-2" style={{ fontFamily: 'sans-serif' }}>www.atelierabijoux.com</p>
+         <p className="text-xs text-muted-foreground/50 mt-2 mb-1" style={{ fontFamily: 'sans-serif' }}>www.atelierabijoux.com</p>
       </div>
     </div>
   )
