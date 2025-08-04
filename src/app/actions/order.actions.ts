@@ -242,7 +242,8 @@ export async function createOrder(
                 if (item.creationId) {
                     transaction.update(doc(db, 'creations', item.creationId), { salesCount: increment(1) });
                 }
-                return {
+                
+                const orderItemData: any = {
                     modelId: item.model.id,
                     modelName: item.model.name,
                     jewelryTypeId: item.jewelryType.id,
@@ -251,10 +252,13 @@ export async function createOrder(
                     price: itemPrice,
                     previewImageUrl: previewImageUrls[index],
                     isCompleted: false,
-                    creationId: item.creationId,
-                    creatorId: item.creatorId,
-                    creatorName: item.creatorName,
                 };
+                
+                if (item.creationId) orderItemData.creationId = item.creationId;
+                if (item.creatorId) orderItemData.creatorId = item.creatorId;
+                if (item.creatorName) orderItemData.creatorName = item.creatorName;
+
+                return orderItemData;
             });
             
             const orderNumber = generateOrderNumber();
@@ -270,7 +274,10 @@ export async function createOrder(
             };
 
             if (deliveryMethod === 'home' && shippingAddress) {
-                newOrderData.shippingAddress = shippingAddress;
+                newOrderData.shippingAddress = {
+                    ...shippingAddress,
+                    addressLine2: shippingAddress.addressLine2 || '', // Ensure addressLine2 is not undefined
+                };
             }
             if (coupon) {
                 newOrderData.couponCode = coupon.code;
@@ -784,5 +791,3 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
         return { success: false, message: "Une erreur est survenue lors de la validation du code." };
     }
 }
-
-    
