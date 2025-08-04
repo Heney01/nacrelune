@@ -262,9 +262,11 @@ export async function createOrder(
             });
             
             const orderNumber = generateOrderNumber();
+            
             const newOrderData: any = {
                 orderNumber,
                 customerEmail: email,
+                userId: userId,
                 subtotal: subtotal,
                 totalPrice: finalPrice,
                 items: orderItems,
@@ -277,7 +279,7 @@ export async function createOrder(
             if (deliveryMethod === 'home' && shippingAddress) {
                 newOrderData.shippingAddress = {
                     ...shippingAddress,
-                    addressLine2: shippingAddress.addressLine2 || '', // Ensure addressLine2 is not undefined
+                    addressLine2: shippingAddress.addressLine2 || '',
                 };
             }
             if (coupon) {
@@ -672,11 +674,17 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
                 dataToUpdate.cancellationReason = cancellationReason;
 
                 // If the order has a paymentIntentId, process a refund.
-                if (orderData.paymentIntentId) {
+                if (orderData.paymentIntentId && orderData.paymentIntentId !== 'free_order') {
                     const refundResult = await refundStripePayment(orderData.paymentIntentId);
                     if (!refundResult.success) {
                         throw new Error(`Le remboursement a échoué: ${refundResult.message}. L'annulation a été interrompue.`);
                     }
+                }
+
+                if (orderData.userId && orderData.pointsUsed > 0) {
+                    transaction.update(doc(db, 'users', orderData.userId), {
+                        rewardPoints: increment(orderData.pointsUsed)
+                    });
                 }
 
                 if (currentStatus !== 'annulée') {
