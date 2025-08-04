@@ -1,0 +1,13 @@
+{
+  "hosting": {
+    "source": ".",
+    "appHosting": {
+      "backends": [
+        {
+          "id": "nextn",
+          "region": "europe-west9"
+        }
+      ]
+    }
+  }
+}
