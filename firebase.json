@@ -10,5 +10,8 @@
         }
       ]
     }
+  },
+  "apphosting": {
+    "location": "europe-west4"
   }
 }
