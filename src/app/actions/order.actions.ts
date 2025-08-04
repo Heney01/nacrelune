@@ -68,6 +68,9 @@ async function refundStripePayment(paymentIntentId: string): Promise<{ success: 
         }
     } catch (error: any) {
         console.error("Error creating Stripe refund:", error);
+         if (error.code === 'charge_already_refunded') {
+            return { success: true, message: 'La commande a déjà été remboursée sur Stripe.' };
+        }
         return { success: false, message: error.message || "Une erreur est survenue lors du remboursement Stripe." };
     }
 }
@@ -226,11 +229,11 @@ export async function createOrder(
             let subtotal = cartItems.reduce((sum, item) => sum + (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0), 0);
             const couponDiscount = coupon ? coupon.discountType === 'percentage' ? subtotal * (coupon.value / 100) : coupon.value : 0;
             let totalAfterCoupon = Math.max(0, subtotal - couponDiscount);
-            const pointsValue = (pointsToUse || 0) / 10;
+            const pointsValue = pointsToUse ? pointsToUse / 10 : 0;
             const finalPrice = Math.max(0, totalAfterCoupon - pointsValue);
 
-            if (userDoc) {
-                transaction.update(userDoc.ref, { rewardPoints: increment(-(pointsToUse!)) });
+            if (userDoc && pointsToUse) {
+                transaction.update(userDoc.ref, { rewardPoints: increment(-(pointsToUse)) });
             }
 
             creatorPointAwards.forEach((award, creatorId) => {
@@ -821,3 +824,6 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
 }
 
 
+
+
+    
