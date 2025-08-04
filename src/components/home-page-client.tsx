@@ -157,11 +157,6 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
 
         <main className="flex-grow p-4 md:p-8">
           <div className="container mx-auto">
-            {hasMounted && user && (
-              <div className="text-center mb-8">
-                <p className="text-lg text-muted-foreground">{t('welcome_message', { name: user.displayName })}</p>
-              </div>
-            )}
             {selectedType ? (
                 <ModelSelection 
                     selectedType={selectedType}
