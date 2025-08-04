@@ -225,17 +225,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
     resetZoomAndPan();
     setSelectedPlacedCharmId(null);
-
-    // Wait for all images to be loaded
-    const images = Array.from(canvasElement.querySelectorAll('img'));
-    await Promise.all(images.map(img => {
-        if (img.complete) return Promise.resolve();
-        return new Promise<void>((resolve, reject) => {
-            img.onload = () => resolve();
-            img.onerror = () => reject(new Error(`Failed to load image: ${img.src}`));
-        });
-    }));
-
+    
     return new Promise((resolve, reject) => {
         requestAnimationFrame(async () => {
             try {
@@ -257,8 +247,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                     backgroundColor: null,
                     logging: false,
                     useCORS: true,
-                    scale: 2, // Higher resolution
-                    allowTaint: false,
+                    scale: 2,
+                    foreignObjectRendering: true,
                     x: finalX,
                     y: finalY,
                     width: size,
