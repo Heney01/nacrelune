@@ -226,27 +226,43 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   }, []);
 
   const getCanvasDataUri = useCallback(async (): Promise<string> => {
-    if (!canvasRef.current) {
-      throw new Error("Canvas ref is not available");
+    const canvasElement = canvasRef.current;
+    if (!canvasElement) {
+        throw new Error("Canvas ref is not available");
     }
+
     resetZoomAndPan();
     setSelectedPlacedCharmId(null);
+
+    // Wait for images to load before capturing
+    const images = Array.from(canvasElement.querySelectorAll('img'));
+    const promises = images.map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise<void>((resolve, reject) => {
+            img.onload = () => resolve();
+            img.onerror = () => reject(new Error(`Failed to load image: ${img.src}`));
+        });
+    });
     
+    await Promise.all(promises);
+
     return new Promise((resolve, reject) => {
+        // A short timeout to ensure the DOM is fully rendered after state updates
         setTimeout(async () => {
             try {
-                const canvas = await html2canvas(canvasRef.current!, {
+                const canvas = await html2canvas(canvasElement, {
                     backgroundColor: null,
                     logging: false,
                     useCORS: true,
                     scale: 2,
+                    allowTaint: false,
                 });
                 resolve(canvas.toDataURL('image/png', 0.9));
             } catch (error) {
                 console.error("Error capturing canvas:", error);
                 reject(error);
             }
-        }, 50);
+        }, 100); 
     });
   }, [resetZoomAndPan]);
 
@@ -966,7 +982,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   </div>
                   <div
                       ref={canvasWrapperRef}
-                      className="relative w-full aspect-square bg-card overflow-hidden touch-none flex-grow border-dashed border-2 border-muted-foreground/30 pb-2.5 md:pb-2"
+                      className="relative w-full aspect-square bg-card overflow-hidden touch-none flex-grow border-dashed border-2 border-muted-foreground/30"
                   >
                       <div
                           ref={canvasRef}
@@ -1238,6 +1254,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
 
