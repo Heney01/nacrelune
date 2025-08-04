@@ -33,12 +33,12 @@ const Polaroid = React.forwardRef<HTMLDivElement, { creationImage: string, title
       <div className="mt-3 text-center">
         <h3 className="font-caveat text-xl">{title || "Ma création"}</h3>
         {creatorName ? (
-            <p className="text-xs text-muted-foreground font-sans flex items-center justify-center gap-1 mt-1">
-                <User className="h-3 w-3" /> 
-                <span>par {creatorName}</span>
+            <p className="text-xs text-muted-foreground" style={{ fontFamily: 'sans-serif' }}>
+                <User className="h-3 w-3 inline-block align-middle" /> 
+                <span className="inline-block align-middle ml-1">par {creatorName}</span>
             </p>
         ) : null}
-         <p className="text-xs text-muted-foreground/50 mt-2 font-sans">www.atelierabijoux.com</p>
+         <p className="text-xs text-muted-foreground/50 mt-2" style={{ fontFamily: 'sans-serif' }}>www.atelierabijoux.com</p>
       </div>
     </div>
   )
