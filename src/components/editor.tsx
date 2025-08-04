@@ -24,20 +24,13 @@ import html2canvas from 'html2canvas';
 import { CartWidget } from './cart-widget';
 import { useTranslations } from '@/hooks/use-translations';
 import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction, getCharmDesignCritiqueAction } from '@/app/actions/ai.actions';
-import { saveCreation } from '@/app/actions/creation.actions';
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogClose, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { ShareDialog } from './share-dialog';
+import { FinalizeCreationDialog } from './finalize-creation-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Loader2 } from 'lucide-react';
-import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
-import { useAuth } from '@/hooks/use-auth';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useEditorCanvas } from '@/hooks/use-editor-canvas';
 
@@ -175,12 +168,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const [isSuggestionsSheetOpen, setIsSuggestionsSheetOpen] = useState(false);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [previewForDialog, setPreviewForDialog] = useState<string | null>(null);
-  const [creationName, setCreationName] = useState('');
-  const [creationDescription, setDescription] = useState('');
-  const [isPublishing, setIsPublishing] = useState(false);
-  const { firebaseUser } = useAuth();
+  const [isFinalizeOpen, setIsFinalizeOpen] = useState(false);
   
   const [charmsSearchTerm, setCharmsSearchTerm] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -433,91 +421,27 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     }, 500);
   };
   
-  const handleOpenConfirmDialog = () => {
-    setIsConfirmOpen(true);
-    getCanvasDataUri()
-      .then(setPreviewForDialog)
-      .catch(error => {
-        console.error(error);
-        toast({
-          variant: "destructive",
-          title: "Erreur",
-          description: "Impossible de générer l'aperçu de la création.",
-        });
-        setIsConfirmOpen(false); // Close dialog if preview fails
-      });
+  const handleFinalize = () => {
+    setIsFinalizeOpen(true);
   };
 
-  const handleConfirmAddToCart = async () => {
-      if (!previewForDialog) return;
+  const handleAddToCart = useCallback((previewImage: string) => {
+    const itemPayload: Omit<CartItem, 'id'> = {
+      model,
+      jewelryType,
+      placedCharms,
+      previewImage: previewImage,
+    };
 
-      const itemPayload: Omit<CartItem, 'id'> = {
-        model,
-        jewelryType,
-        placedCharms,
-        previewImage: previewForDialog,
-      };
-
-      if (isEditing && cartItemId) {
-        updateCartItem(cartItemId, { id: cartItemId, ...itemPayload });
-      } else {
-        addToCart(itemPayload);
-        setPlacedCharms([]);
-      }
-      setIsConfirmOpen(false);
-      setPreviewForDialog(null);
-      setIsCartSheetOpen(true);
-  };
-
-  const handlePublish = async () => {
-      if (!previewForDialog || !firebaseUser) {
-          toast({ variant: 'destructive', title: "Non connecté", description: "Vous devez être connecté pour publier." });
-          return;
-      }
-      if (!creationName.trim()) {
-          toast({ variant: 'destructive', title: "Nom manquant", description: "Veuillez donner un nom à votre création." });
-          return;
-      }
-
-      setIsPublishing(true);
-      
-      const creationPayload = {
-          jewelryTypeId: jewelryType.id,
-          modelId: model.id,
-          placedCharms: placedCharms.map(pc => ({
-              charmId: pc.charm.id,
-              position: pc.position,
-              rotation: pc.rotation
-          })),
-          previewImageUrl: previewForDialog,
-      };
-
-      try {
-        const idToken = await firebaseUser.getIdToken();
-        const result = await saveCreation(
-            idToken,
-            creationName,
-            creationDescription,
-            JSON.stringify(creationPayload)
-        );
-
-        if (result.success) {
-            toast({ title: "Publication réussie !", description: result.message });
-            setIsConfirmOpen(false);
-            setPreviewForDialog(null);
-            // Redirect to profile page to see the new creation
-            router.push(`/${locale}/profil`);
-        } else {
-            toast({ variant: 'destructive', title: "Erreur de publication", description: result.message });
-        }
-      } catch (error: any) {
-        toast({ variant: 'destructive', title: "Erreur d'authentification", description: "Impossible de vérifier votre session. Veuillez vous reconnecter." });
-      }
-
-
-      setIsPublishing(false);
-  };
-
+    if (isEditing && cartItemId) {
+      updateCartItem(cartItemId, { id: cartItemId, ...itemPayload });
+    } else {
+      addToCart(itemPayload);
+      setPlacedCharms([]);
+    }
+    setIsFinalizeOpen(false);
+    setIsCartSheetOpen(true);
+  }, [addToCart, updateCartItem, cartItemId, isEditing, model, jewelryType, placedCharms]);
 
   const placedCharmCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -646,90 +570,19 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
           t={t}
         />
       )}
-       <Dialog open={isConfirmOpen} onOpenChange={(open) => {
-            if (!open) {
-                setPreviewForDialog(null);
-            }
-            setIsConfirmOpen(open);
-        }}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{t('finalize_creation_title')}</DialogTitle>
-                    <DialogDescription>
-                        {isEditing ? t('confirm_update_title') : t('confirm_add_description')}
-                    </DialogDescription>
-                </DialogHeader>
-                 <div className="my-4 grid place-items-center">
-                    {previewForDialog ? (
-                        <Image src={previewForDialog} alt={t('preview_alt')} width={300} height={300} className="rounded-lg border bg-muted/50 max-w-[75%] sm:max-w-full h-auto" />
-                    ) : (
-                        <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center">
-                            <Loader2 className="animate-spin" />
-                        </div>
-                    )}
-                </div>
-                <Tabs defaultValue="buy" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="buy">{t('buy_tab')}</TabsTrigger>
-                        <TabsTrigger value="publish">{t('publish_tab')}</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="buy">
-                        <Card className="border-0 shadow-none">
-                            <CardHeader>
-                                <CardTitle>{t('buy_title')}</CardTitle>
-                                <CardDescription>{t('buy_description')}</CardDescription>
-                            </CardHeader>
-                            <CardFooter>
-                                <Button onClick={handleConfirmAddToCart} className="w-full" disabled={!previewForDialog}>
-                                    {isEditing ? t('update_item_button') : t('add_to_cart_button')}
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    </TabsContent>
-                    <TabsContent value="publish">
-                        <Card className="border-0 shadow-none">
-                            <CardHeader>
-                                <CardTitle>{t('publish_title')}</CardTitle>
-                                <CardDescription>{t('publish_description')}</CardDescription>
-                            </CardHeader>
-                            {!firebaseUser ? (
-                                <CardContent>
-                                    <Alert>
-                                        <AlertTitle>{t('publish_login_required_title')}</AlertTitle>
-                                        <AlertDescription>
-                                            {t('publish_login_required_desc')}{' '}
-                                            <Link href={`/${locale}/connexion`} className="font-bold underline">
-                                                {t('publish_login_link')}
-                                            </Link>
-                                            .
-                                        </AlertDescription>
-                                    </Alert>
-                                </CardContent>
-                            ) : (
-                                <>
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="creationName">{t('creation_name_label')}</Label>
-                                        <Input id="creationName" value={creationName} onChange={(e) => setCreationName(e.target.value)} placeholder={t('creation_name_placeholder')} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="creationDescription">{t('creation_description_label')}</Label>
-                                        <Textarea id="creationDescription" value={creationDescription} onChange={(e) => setDescription(e.target.value)} placeholder={t('creation_description_placeholder')} />
-                                    </div>
-                                </CardContent>
-                                <CardFooter>
-                                    <Button onClick={handlePublish} className="w-full" disabled={isPublishing || !creationName.trim()}>
-                                        {isPublishing && <Loader2 className="animate-spin mr-2" />}
-                                        {t('publish_button')}
-                                    </Button>
-                                </CardFooter>
-                                </>
-                            )}
-                        </Card>
-                    </TabsContent>
-                </Tabs>
-            </DialogContent>
-        </Dialog>
+      {isFinalizeOpen && (
+        <FinalizeCreationDialog
+            isOpen={isFinalizeOpen}
+            onOpenChange={setIsFinalizeOpen}
+            getCanvasDataUri={getCanvasDataUri}
+            onConfirmAddToCart={handleAddToCart}
+            isEditing={isEditing}
+            placedCharms={placedCharms}
+            jewelryType={jewelryType}
+            model={model}
+            locale={locale}
+        />
+      )}
 
       <div className="flex flex-col h-screen overflow-hidden">
         <header className="p-4 border-b flex-shrink-0">
@@ -773,7 +626,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-md">
                                 <DialogHeader>
-                                <DialogTitle className="font-headline text-xl">{t('editor_disclaimer_title')}</DialogTitle>
+                                <CardTitle className="font-headline text-xl">{t('editor_disclaimer_title')}</CardTitle>
                                 </DialogHeader>
                                 <p className="text-sm text-muted-foreground mt-2">
                                 {t('editor_disclaimer')}
@@ -789,7 +642,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                 <Share2 />
                                 {t('share_button')}
                             </Button>
-                            <Button onClick={handleOpenConfirmDialog} disabled={hasStockIssues || placedCharms.length === 0}>
+                            <Button onClick={handleFinalize} disabled={hasStockIssues || placedCharms.length === 0}>
                                 <Check />
                                 {isEditing ? t('update_item_button') : t('finalize_button')}
                             </Button>
@@ -932,7 +785,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
          {isMobile && (
             <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-2.5 z-20 space-y-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))]">
-                <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
+                <Button onClick={handleFinalize} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
                     <Check />
                     {isEditing ? t('update_item_button') : t('finalize_button')}
                 </Button>
@@ -1057,4 +910,5 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
 
