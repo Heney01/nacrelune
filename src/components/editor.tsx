@@ -229,16 +229,19 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     return new Promise((resolve, reject) => {
         requestAnimationFrame(async () => {
             try {
-                // Ensure all images are loaded before capture
-                const images = Array.from(canvasElement.getElementsByTagName('img'));
-                const imageLoadPromises = images.map(img => {
+                // Preload images to ensure they are in cache.
+                const imageElements = Array.from(canvasElement.getElementsByTagName('img'));
+                const imagePromises = imageElements.map(img => {
                     if (img.complete) return Promise.resolve();
-                    return new Promise<void>(resolve => {
-                        img.onload = () => resolve();
-                        img.onerror = () => resolve(); // Don't let a single broken image fail everything
+                    return new Promise<void>((res, rej) => {
+                        const newImg = new window.Image();
+                        newImg.crossOrigin = "Anonymous";
+                        newImg.onload = () => res();
+                        newImg.onerror = () => res(); // Don't fail the whole capture for one image
+                        newImg.src = img.src;
                     });
                 });
-                await Promise.all(imageLoadPromises);
+                await Promise.all(imagePromises);
 
                 const modelImageElement = modelImageRef.current!;
                 const modelImageBoundingRect = modelImageElement.getBoundingClientRect();
@@ -833,9 +836,3 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
-
-
-
-
-
-    

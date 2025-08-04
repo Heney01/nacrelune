@@ -197,4 +197,3 @@ export function SuggestionSidebar({
     </Card>
   );
 }
-
