@@ -41,7 +41,7 @@ export async function createPaymentIntent(
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Amount in cents
       currency: 'eur',
-      payment_method_types: ['card'],
+      // payment_method_types is not specified to let Stripe use automatic payment methods.
     });
     return { clientSecret: paymentIntent.client_secret };
   } catch (error: any) {
@@ -538,12 +538,12 @@ export async function getOrders(): Promise<Order[]> {
         const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
         // Fetch all required charms in a single query
-        let charmsMap = new Map<string, any>();
+        let charmsMap = new Map<string, Charm>();
         if (uniqueCharmIds.length > 0) {
             const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', uniqueCharmIds));
             const charmsSnapshot = await getDocs(charmsQuery);
             for (const charmDoc of charmsSnapshot.docs) {
-                const charmData = charmDoc.data();
+                const charmData = charmDoc.data() as Omit<Charm, 'id'>;
                 const imageUrl = await getUrl(charmData.imageUrl, 'https://placehold.co/100x100.png');
                 charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id, imageUrl });
             }
@@ -555,7 +555,7 @@ export async function getOrders(): Promise<Order[]> {
             const enrichedItems: OrderItem[] = (data.items || []).map((item: OrderItem) => {
                 const enrichedCharms = (item.charmIds || [])
                     .map(id => charmsMap.get(id))
-                    .filter((c): c is any => !!c); // Filter out undefined charms
+                    .filter((c): c is Charm => !!c); // Filter out undefined charms
 
                 return {
                     ...item,
@@ -579,7 +579,7 @@ export async function getOrders(): Promise<Order[]> {
                 orderNumber,
                 createdAt: (data.createdAt as Timestamp).toDate(),
                 customerEmail: data.customerEmail,
-                subtotal: data.subtotal ?? data.totalPrice,
+                subtotal: data.subtotal ?? data.totalPrice, // Fallback for old orders
                 totalPrice: data.totalPrice,
                 status: data.status,
                 items: enrichedItems,
@@ -611,13 +611,14 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
     if (!orderId || !newStatus) {
         return { success: false, message: "Informations manquantes." };
     }
+    
+    let orderDataForEmail: Order | null = null;
+    let cancellationReasonForEmail: string | null = null;
+    let shouldSendEmail = false;
 
     try {
-        const orderRef = doc(db, 'orders', orderId);
-        let orderDataForEmail: Order | null = null;
-        let cancellationReasonForEmail: string | null = null;
-
         await runTransaction(db, async (transaction) => {
+            const orderRef = doc(db, 'orders', orderId);
             const orderDoc = await transaction.get(orderRef);
             if (!orderDoc.exists()) {
                 throw new Error("Commande non trouvée.");
@@ -649,6 +650,7 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
                 }
                 dataToUpdate.cancellationReason = cancellationReason;
                 cancellationReasonForEmail = cancellationReason;
+                shouldSendEmail = true;
 
                 if (orderData.paymentIntentId && orderData.paymentIntentId !== 'free_order') {
                     const refundResult = await refundStripePayment(orderData.paymentIntentId);
@@ -695,12 +697,12 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
             orderDataForEmail = { ...orderData, ...dataToUpdate };
         });
 
-        if (newStatus === 'annulée' && orderDataForEmail && cancellationReasonForEmail) {
+        if (shouldSendEmail && orderDataForEmail && cancellationReasonForEmail) {
             const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@atelierabijoux.com';
             const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${supportEmail} en précisant votre numéro de commande (${orderDataForEmail.orderNumber}).`;
             const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${supportEmail}">${supportEmail}</a> en précisant votre numéro de commande (${orderDataForEmail.orderNumber}).</p>`;
             
-            const isPaidOrder = orderDataForEmail.paymentIntentId !== 'free_order';
+            const isPaidOrder = orderDataForEmail.paymentIntentId && orderDataForEmail.paymentIntentId !== 'free_order';
             const refundText = isPaidOrder ? `\nLe remboursement complet a été initié et devrait apparaître sur votre compte d'ici quelques jours.` : '';
             const refundHtml = isPaidOrder ? `<p>Le remboursement complet a été initié et devrait apparaître sur votre compte d'ici quelques jours.</p>` : '';
 
