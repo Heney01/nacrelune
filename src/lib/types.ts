@@ -189,8 +189,7 @@ export interface Coupon {
     code: string;
     discountType: 'percentage' | 'fixed';
     value: number;
-    isActive: boolean;
-    validUntil?: Date;
+    expiresAt?: Date;
     minPurchase?: number;
 }
 

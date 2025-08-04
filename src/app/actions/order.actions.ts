@@ -782,22 +782,28 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
         }
         
         const couponDoc = querySnapshot.docs[0];
-        const couponData = couponDoc.data() as Omit<Coupon, 'id'>;
-        const validUntilDate = toDate(couponData.validUntil as Timestamp | undefined);
+        const couponData = couponDoc.data();
+        
+        const expiresAtDate = toDate(couponData.expiresAt as Timestamp | undefined);
 
-        if (validUntilDate && validUntilDate < new Date()) {
+        if (expiresAtDate && expiresAtDate < new Date()) {
             return { success: false, message: "Ce code promo a expiré." };
         }
         
-        if (!couponData.isActive) {
-            return { success: false, message: "Ce code promo n'est plus actif." };
+        const value = typeof couponData.value === 'string' ? parseFloat(couponData.value) : couponData.value;
+        if (isNaN(value)) {
+             return { success: false, message: "La valeur du code promo est invalide." };
         }
 
         const coupon: Coupon = { 
             id: couponDoc.id, 
-            ...couponData,
-            validUntil: validUntilDate || undefined
+            code: couponData.code,
+            discountType: couponData.discountType,
+            value: value,
+            expiresAt: expiresAtDate || undefined,
+            minPurchase: couponData.minPurchase,
         };
+
         return { success: true, message: 'Code promo appliqué !', coupon };
 
     } catch (error: any) {
