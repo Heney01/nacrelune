@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { db, storage } from '@/lib/firebase';
 import { doc, addDoc, updateDoc, collection, getDoc, getDocs, runTransaction, query, where, setDoc, serverTimestamp, collectionGroup, documentId, orderBy, DocumentReference, DocumentSnapshot, Timestamp, increment } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
-import type { JewelryModel, PlacedCharm, OrderStatus, Order, OrderItem, ShippingAddress, DeliveryMethod, MailLog, Coupon, User, Charm } from '@/lib/types';
+import type { JewelryModel, PlacedCharm, OrderStatus, Order, OrderItem, ShippingAddress, DeliveryMethod, MailLog, Coupon, User } from '@/lib/types';
 import { toDate } from '@/lib/data';
 import Stripe from 'stripe';
 
@@ -236,7 +236,6 @@ export async function createOrder(
             }
 
             creatorPointAwards.forEach((award, creatorId) => {
-                transaction.update(doc(db, 'users', creatorId), { rewardPoints: increment(award.points) });
                 const creatorData = creatorsMap.get(creatorId);
                 if (creatorData && creatorData.email) {
                     const mailText = `Bonjour ${award.creatorName},\n\nFélicitations ! Votre création "${award.creationName}" a été achetée.\n\nVous venez de gagner ${award.points} points de récompense.\n\nContinuez à créer !`;
@@ -350,7 +349,7 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
         const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
         // Fetch all required charms in a single query
-        let charmsMap = new Map<string, Charm>();
+        let charmsMap = new Map<string, any>();
         if (uniqueCharmIds.length > 0) {
             const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', uniqueCharmIds));
             const charmsSnapshot = await getDocs(charmsQuery);
@@ -360,7 +359,7 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
                     ...charmData,
                     id: charmDoc.id,
                     imageUrl: await getUrl(charmData.imageUrl, 'https://placehold.co/100x100.png')
-                } as Charm);
+                } as any);
             }
         }
         
@@ -555,12 +554,12 @@ export async function getOrders(): Promise<Order[]> {
         const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
         // Fetch all required charms in a single query
-        let charmsMap = new Map<string, Charm>();
+        let charmsMap = new Map<string, any>();
         if (uniqueCharmIds.length > 0) {
             const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', uniqueCharmIds));
             const charmsSnapshot = await getDocs(charmsQuery);
             for (const charmDoc of charmsSnapshot.docs) {
-                const charmData = charmDoc.data() as Omit<Charm, 'id'>;
+                const charmData = charmDoc.data() as Omit<any, 'id'>;
                 const imageUrl = await getUrl(charmData.imageUrl, 'https://placehold.co/100x100.png');
                 charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id, imageUrl });
             }
@@ -572,7 +571,7 @@ export async function getOrders(): Promise<Order[]> {
             const enrichedItems: OrderItem[] = (data.items || []).map((item: OrderItem) => {
                 const enrichedCharms = (item.charmIds || [])
                     .map(id => charmsMap.get(id))
-                    .filter((c): c is Charm => !!c); // Filter out undefined charms
+                    .filter((c): c is any => !!c); // Filter out undefined charms
 
                 return {
                     ...item,
@@ -690,9 +689,9 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
                         stockToRestore.set(charmPath, (stockToRestore.get(charmPath) || 0) + 1);
                     }
                 }
-                for (const [path, quantity] of stockToRestore.entries()) {
-                     transaction.update(doc(db, path), { quantity: increment(quantity) });
-                }
+                stockToRestore.forEach((quantity, path) => {
+                    transaction.update(doc(db, path), { quantity: increment(quantity) });
+                });
             }
 
             transaction.update(orderRef, dataToUpdate);
