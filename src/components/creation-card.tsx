@@ -331,14 +331,22 @@ export function CreationCard({
               </DialogTrigger>
           </div>
           <CardContent className="p-4 flex-grow flex flex-col">
-            <h3 className="font-headline text-lg truncate">{creation.name}</h3>
-            {showCreatorName && (
-                <Link href={`/${locale}/creators/${creation.creatorId}`} className="text-sm text-muted-foreground hover:underline flex items-center gap-1 mt-1">
-                    <User className="h-3 w-3" />
-                    {creation.creatorName}
-                </Link>
-            )}
-            <div className="flex justify-end items-center mt-auto pt-2">
+            <div className="flex-grow">
+                <h3 className="font-headline text-lg truncate">{creation.name}</h3>
+                {showCreatorName && (
+                    <Link href={`/${locale}/creators/${creation.creatorId}`} className="text-sm text-muted-foreground hover:underline flex items-center gap-1 mt-1">
+                        <User className="h-3 w-3" />
+                        {creation.creatorName}
+                    </Link>
+                )}
+            </div>
+             <div className="flex justify-end items-center mt-auto pt-4 gap-4">
+                <Button variant="ghost" size="icon" className="h-auto p-0 text-muted-foreground hover:text-primary transition-colors disabled:cursor-not-allowed" onClick={handleAddToCart} disabled={!allCharms.length}>
+                    <ShoppingCart className="h-5 w-5" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-auto p-0 text-muted-foreground hover:text-primary transition-colors" onClick={handleShareClick}>
+                    <Share2 className="h-5 w-5" />
+                </Button>
                 <button
                     onClick={handleLikeClick}
                     disabled={isLikePending}
@@ -347,22 +355,12 @@ export function CreationCard({
                     {isLikePending ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                        <Heart className={cn("h-4 w-4", optimisticLikes > 0 && "text-primary fill-current")} />
+                        <Heart className={cn("h-5 w-5", optimisticLikes > 0 && "text-primary fill-current")} />
                     )}
-                    <span className="text-sm">{optimisticLikes}</span>
+                    <span className="text-sm font-medium">{optimisticLikes}</span>
                 </button>
             </div>
           </CardContent>
-          <CardFooter className="p-4 pt-0 grid grid-cols-2 gap-2">
-             <Button variant="outline" size="sm" onClick={handleAddToCart} disabled={!allCharms.length}>
-                <ShoppingCart className="mr-2 h-4 w-4" />
-                {tCart('checkout_button')}
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleShareClick}>
-                <Share2 className="mr-2 h-4 w-4" />
-                {tEditor('share_button')}
-              </Button>
-          </CardFooter>
         </Card>
 
         <DialogContent className="max-w-xl">
