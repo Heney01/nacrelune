@@ -244,13 +244,18 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
             try {
                 // Use the model image itself as the basis for the screenshot dimensions and position
                 const modelImageElement = modelImageRef.current!;
-                const modelImageRect = modelImageElement.getBoundingClientRect();
-                const canvasRect = canvasElement.getBoundingClientRect();
+                const modelImageBoundingRect = modelImageElement.getBoundingClientRect();
+                const canvasBoundingRect = canvasElement.getBoundingClientRect();
 
-                const x = modelImageRect.left - canvasRect.left;
-                const y = modelImageRect.top - canvasRect.top;
-                const width = modelImageRect.width;
-                const height = modelImageRect.height;
+                const originalX = modelImageBoundingRect.left - canvasBoundingRect.left;
+                const originalY = modelImageBoundingRect.top - canvasBoundingRect.top;
+                const originalWidth = modelImageBoundingRect.width;
+                const originalHeight = modelImageBoundingRect.height;
+                
+                const size = Math.max(originalWidth, originalHeight);
+
+                const finalX = originalX - (size - originalWidth) / 2;
+                const finalY = originalY - (size - originalHeight) / 2;
                 
                 const canvas = await html2canvas(canvasElement, {
                     backgroundColor: null,
@@ -258,10 +263,10 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                     useCORS: true,
                     scale: 2, // Higher resolution
                     allowTaint: false,
-                    x: x,
-                    y: y,
-                    width: width,
-                    height: height,
+                    x: finalX,
+                    y: finalY,
+                    width: size,
+                    height: size,
                 });
                 resolve(canvas.toDataURL('image/png', 0.9));
             } catch (error) {
