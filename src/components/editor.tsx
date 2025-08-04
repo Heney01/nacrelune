@@ -629,7 +629,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
               <div className="lg:col-span-6 flex flex-col gap-4 min-h-0 order-first lg:order-none max-h-full">
                   <div className="flex justify-between items-center gap-4 flex-shrink-0 px-4 pt-4 lg:p-0">
-                      <Button variant="ghost" asChild className="p-0 h-auto lg:h-10 lg:p-2">
+                      <Button variant="outline" asChild className="lg:h-10">
                           <Link href={`/${locale}/?type=${jewelryType.id}`}>
                               <ArrowLeft className="mr-2 h-4 w-4" />
                               <span className="hidden lg:inline">{tHome('back_button')}</span>
