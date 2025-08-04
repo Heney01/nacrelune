@@ -2,7 +2,7 @@
 {
   "HomePage": {
     "title": "Commencez Votre Création",
-    "subtitle": "Choisissez un type de bijou pour commencer à concevoir. Chaque pièce est une toile pour votre histoire, attendant d'être ornée de breloques qui vous parlent.",
+    "subtitle": "Choisissez un type de bijou pour commencer à concevoir.",
     "jewelry_types": {
       "necklace": "Colliers",
       "necklace_description": "Chaînes et pendentifs gracieux.",

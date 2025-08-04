@@ -2,7 +2,7 @@
 {
   "HomePage": {
     "title": "Begin Your Creation",
-    "subtitle": "Choose a jewelry type to start designing. Each piece is a canvas for your story, waiting to be adorned with charms that speak to you.",
+    "subtitle": "Choose a jewelry type to start designing.",
     "jewelry_types": {
       "necklace": "Necklaces",
       "necklace_description": "Graceful chains and pendants.",
