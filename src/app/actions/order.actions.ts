@@ -824,7 +824,7 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
         const coupon: Coupon = { 
             id: couponDoc.id, 
             ...couponData,
-            validUntil: validUntilDate
+            validUntil: validUntilDate || undefined
         };
         return { success: true, message: 'Code promo appliqué !', coupon };
 
@@ -838,4 +838,5 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
 
 
     
+
 
