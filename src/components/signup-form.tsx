@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useFormState, useFormStatus } from 'react-dom';
@@ -15,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { BrandLogo, GoogleIcon } from '@/components/icons';
-import { signup } from '@/app/actions';
+import { signup, userLoginWithGoogle } from '@/app/actions/auth.actions';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useParams, useRouter } from 'next/navigation';
@@ -25,6 +24,7 @@ import { useGoogleAuth } from '@/hooks/use-google-auth';
 import { Separator } from './ui/separator';
 import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+
 
 type State = {
   success: boolean;
@@ -56,7 +56,33 @@ export function SignUpForm() {
   const router = useRouter();
   const locale = params.locale as string;
   const t = useTranslations('Auth');
-  const { signInWithGoogle, error: googleError, isGoogleLoading } = useGoogleAuth();
+  const { signInWithGoogle, error: googleError, isGoogleLoading } = useGoogleAuth({
+      onSuccess: async (user) => {
+          const idToken = await user.getIdToken();
+          const formData = new FormData();
+          formData.append('idToken', idToken);
+          formData.append('locale', locale);
+          formData.append('uid', user.uid);
+          formData.append('displayName', user.displayName || '');
+          formData.append('email', user.email || '');
+          formData.append('photoURL', user.photoURL || '');
+          
+          const result = await userLoginWithGoogle(formData);
+          if (result.success) {
+            toast({
+                title: 'Connexion réussie',
+                description: result.message,
+            });
+            router.push(`/${locale}`);
+          } else {
+            toast({
+              variant: 'destructive',
+              title: t('login_error_title'),
+              description: result.message,
+            });
+          }
+      }
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -147,3 +173,5 @@ export function SignUpForm() {
     </Card>
   );
 }
+
+    

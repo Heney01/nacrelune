@@ -11,9 +11,9 @@ import Image from 'next/image';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { loadStripe, Stripe } from '@stripe/stripe-js';
+import { loadStripe, Stripe, StripeElementsOptions } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
-import { createPaymentIntent, CreateOrderResult } from '@/app/actions';
+import { CreateOrderResult } from '@/app/actions/order.actions';
 import { CheckoutForm } from './checkout-form';
 import type { ShippingAddress, Coupon } from '@/lib/types';
 import { Button } from './ui/button';
@@ -68,6 +68,20 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
     }
   }, []);
 
+  const stripeOptions: StripeElementsOptions = {
+    mode: 'payment',
+    amount: Math.max(50, Math.round(total * 100)), // Stripe requires a minimum amount (e.g., 50 cents)
+    currency: 'eur',
+    appearance: { 
+        theme: 'stripe', 
+        variables: { 
+            colorPrimary: '#ef4444', 
+            fontFamily: 'Alegreya, Ideal Sans, system-ui, sans-serif' 
+        } 
+    },
+    paymentMethodCreation: 'manual',
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
         if (!open) {
@@ -82,13 +96,8 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
         <div className="flex flex-col h-full max-h-[90vh] md:max-h-none overflow-y-auto no-scrollbar">
           <Elements 
               stripe={stripePromise} 
-              options={{
-                appearance: { theme: 'stripe' as const, variables: { colorPrimary: '#ef4444', fontFamily: 'Alegreya, Ideal Sans, system-ui, sans-serif' } },
-                mode: 'payment',
-                amount: Math.max(50, Math.round(total * 100)), // Stripe requires a minimum amount (e.g., 50 cents)
-                currency: 'eur',
-                payment_method_types: ['card'],
-          }}>
+              options={stripeOptions}
+          >
               <CheckoutForm 
                   total={subtotal} // Pass subtotal to calculate discounts correctly
                   onOrderCreated={onOrderCreated}

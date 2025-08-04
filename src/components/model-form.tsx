@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, UploadCloud, AlertCircle } from 'lucide-react';
 import type { JewelryModel, JewelryType } from '@/lib/types';
-import { saveModel } from '@/app/actions';
+import { saveModel } from '@/app/actions/admin.actions';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 interface ModelFormProps {
@@ -166,3 +166,5 @@ export function ModelForm({ isOpen, onOpenChange, jewelryType, model, onSave, lo
         </Dialog>
     );
 }
+
+    

@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -12,7 +11,7 @@ import { Loader2, Share2, AlertCircle, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import html2canvas from 'html2canvas';
-import { generateShareContentAction } from '@/app/actions';
+import { generateShareContentAction } from '@/app/actions/ai.actions';
 import { useParams } from 'next/navigation';
 
 interface ShareDialogProps {

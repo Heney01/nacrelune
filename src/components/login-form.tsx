@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useFormState, useFormStatus } from 'react-dom';
@@ -15,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { BrandLogo, GoogleIcon } from '@/components/icons';
-import { login, userLogin } from '@/app/actions';
+import { login, userLogin, userLoginWithGoogle } from '@/app/actions/auth.actions';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useEffect } from 'react';
@@ -57,7 +56,33 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
   const locale = params.locale as string;
   const router = useRouter();
   const t = useTranslations('Auth');
-  const { signInWithGoogle, error, isGoogleLoading } = useGoogleAuth();
+  const { signInWithGoogle, error, isGoogleLoading } = useGoogleAuth({
+      onSuccess: async (user) => {
+          const idToken = await user.getIdToken();
+          const formData = new FormData();
+          formData.append('idToken', idToken);
+          formData.append('locale', locale);
+          formData.append('uid', user.uid);
+          formData.append('displayName', user.displayName || '');
+          formData.append('email', user.email || '');
+          formData.append('photoURL', user.photoURL || '');
+          
+          const result = await userLoginWithGoogle(formData);
+          if (result.success) {
+            toast({
+                title: 'Connexion réussie',
+                description: result.message,
+            });
+            router.push(`/${locale}`);
+          } else {
+            toast({
+              variant: 'destructive',
+              title: t('login_error_title'),
+              description: result.message,
+            });
+          }
+      }
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -137,3 +162,5 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
     </Card>
   );
 }
+
+    

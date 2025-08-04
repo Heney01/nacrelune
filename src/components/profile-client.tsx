@@ -1,10 +1,10 @@
 
-
 'use client';
 
 import React, { useEffect, useState, useTransition } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { getUserCreations, toggleLikeCreation, deleteCreation, logout, updateCreation } from '@/app/actions';
+import { getUserCreations, toggleLikeCreation, deleteCreation, updateCreation } from '@/app/actions/creation.actions';
+import { logout } from '@/app/actions/auth.actions';
 import { Creation, JewelryModel, JewelryType, PlacedCharm, Charm } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import Image from 'next/image';
@@ -584,3 +584,5 @@ export function ProfileClient({ locale }: { locale: string }) {
         </div>
     );
 }
+
+    

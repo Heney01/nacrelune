@@ -31,7 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { CharmCategoryForm } from './charm-category-form';
 import { CharmForm } from './charm-form';
-import { deleteCharmCategory, deleteCharm, markAsOrdered, markAsRestocked } from '@/app/actions';
+import { deleteCharmCategory, deleteCharm, markAsOrdered, markAsRestocked } from '@/app/actions/admin.actions';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { useTranslations } from '@/hooks/use-translations';
@@ -579,3 +579,5 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
         </>
     );
 }
+
+    
