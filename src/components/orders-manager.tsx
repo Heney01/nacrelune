@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useReducer, useTransition, Fragment, useMemo } from 'react';
@@ -312,7 +313,7 @@ const OrderDetails = ({ order, onItemStatusChange, onStatusChange, t, onEditShip
                                 <div className="bg-background p-4 rounded-lg border space-y-3">
                                     <div className="flex items-center justify-between text-sm">
                                         <p className="text-muted-foreground">Mode de paiement</p>
-                                        <p className="font-medium">{order.paymentIntentId === 'free_order' ? 'Gratuit (Points/Coupon)' : 'Carte bancaire (Stripe)'}</p>
+                                        <p className="font-medium">{order.paymentIntentId === 'free_order' ? 'Gratuit (Points/Coupon)' : `Carte bancaire (Stripe) - ${order.totalPrice.toFixed(2)}€`}</p>
                                     </div>
                                     {order.couponCode && (
                                         <div className="flex items-center justify-between text-sm">
@@ -869,3 +870,5 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
         )
     }
 }
+
+    
