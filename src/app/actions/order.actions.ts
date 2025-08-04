@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -108,7 +109,7 @@ export async function createOrder(
     cartItems: SerializableCartItem[], 
     email: string, 
     locale: string, 
-    paymentIntentId: string,
+    paymentIntentClientSecret: string,
     deliveryMethod: DeliveryMethod,
     shippingAddress?: ShippingAddress,
     coupon?: Coupon,
@@ -263,6 +264,8 @@ export async function createOrder(
             
             const orderNumber = generateOrderNumber();
             
+            const paymentIntentId = paymentIntentClientSecret.split('_secret_')[0];
+
             const newOrderData: any = {
                 orderNumber,
                 customerEmail: email,
@@ -409,6 +412,7 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
             shippingAddress: orderData.shippingAddress,
             shippingCarrier: orderData.shippingCarrier,
             trackingNumber: orderData.trackingNumber,
+            paymentIntentId: orderData.paymentIntentId,
         };
         
         return { success: true, message: "Commande trouvée.", order: order };
@@ -649,9 +653,7 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
                     throw new Error("Le motif de l'annulation est obligatoire.");
                 }
                 dataToUpdate.cancellationReason = cancellationReason;
-                cancellationReasonForEmail = cancellationReason;
-                shouldSendEmail = true;
-
+                
                 if (orderData.paymentIntentId && orderData.paymentIntentId !== 'free_order') {
                     const refundResult = await refundStripePayment(orderData.paymentIntentId);
                     if (!refundResult.success) {
@@ -694,9 +696,16 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
             }
             
             transaction.update(orderRef, dataToUpdate);
-            orderDataForEmail = { ...orderData, ...dataToUpdate };
+
+            // Prepare data for email but don't send it inside the transaction
+            if (newStatus === 'annulée') {
+                shouldSendEmail = true;
+                cancellationReasonForEmail = dataToUpdate.cancellationReason!;
+                orderDataForEmail = { ...orderData, ...dataToUpdate };
+            }
         });
 
+        // Send email AFTER the transaction has successfully committed
         if (shouldSendEmail && orderDataForEmail && cancellationReasonForEmail) {
             const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@atelierabijoux.com';
             const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${supportEmail} en précisant votre numéro de commande (${orderDataForEmail.orderNumber}).`;
@@ -802,3 +811,4 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
         return { success: false, message: "Une erreur est survenue lors de la validation du code." };
     }
 }
+
