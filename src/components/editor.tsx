@@ -987,7 +987,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   </div>
                   <div
                       ref={canvasWrapperRef}
-                      className="relative w-full flex-grow bg-card overflow-hidden touch-none"
+                      className="relative w-full flex-grow bg-card overflow-hidden touch-none border-2 border-dashed"
                   >
                       <div
                           ref={canvasRef}
@@ -1259,6 +1259,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
 
