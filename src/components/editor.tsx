@@ -229,6 +229,17 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     return new Promise((resolve, reject) => {
         requestAnimationFrame(async () => {
             try {
+                // Ensure all images are loaded before capture
+                const images = Array.from(canvasElement.getElementsByTagName('img'));
+                const imageLoadPromises = images.map(img => {
+                    if (img.complete) return Promise.resolve();
+                    return new Promise<void>(resolve => {
+                        img.onload = () => resolve();
+                        img.onerror = () => resolve(); // Don't let a single broken image fail everything
+                    });
+                });
+                await Promise.all(imageLoadPromises);
+
                 const modelImageElement = modelImageRef.current!;
                 const modelImageBoundingRect = modelImageElement.getBoundingClientRect();
                 const canvasBoundingRect = canvasElement.getBoundingClientRect();
@@ -248,7 +259,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                     logging: false,
                     useCORS: true,
                     scale: 2,
-                    foreignObjectRendering: true,
                     x: finalX,
                     y: finalY,
                     width: size,
