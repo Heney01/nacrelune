@@ -71,7 +71,7 @@ export default function AdminDashboardPage({ params }: { params: { locale: strin
                         <CardTitle className="text-2xl font-headline">Bienvenue sur votre tableau de bord</CardTitle>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {tabs.filter(t => t.id !== 'dashboard').map(tab => (
-                                <Card key={tab.id} className="hover:shadow-lg transition-shadow">
+                                <Card key={tab.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setActiveTab(tab.id)}>
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2 text-xl">
                                             <tab.icon className="w-6 h-6 text-primary" />
@@ -83,11 +83,6 @@ export default function AdminDashboardPage({ params }: { params: { locale: strin
                                             Accédez au module de gestion des {tab.label.toLowerCase()}.
                                         </p>
                                     </CardContent>
-                                    <CardFooter>
-                                        <Button variant="outline" onClick={() => setActiveTab(tab.id)}>
-                                            Ouvrir <ArrowRight className="ml-2 h-4 w-4" />
-                                        </Button>
-                                    </CardFooter>
                                 </Card>
                             ))}
                         </div>
