@@ -3,8 +3,8 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Box, Tag, Package, Settings, BarChart2, Mail } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Loader2, Box, Tag, Package, Settings, BarChart2, Mail, LayoutDashboard, ArrowRight } from "lucide-react";
 import { ModelsManager } from '@/components/models-manager';
 import type { JewelryType, Charm, CharmCategory, GeneralPreferences, Order, MailLog } from '@/lib/types';
 import { CharmsManager } from '@/components/charms-manager';
@@ -25,7 +25,7 @@ type AdminData = {
 export default function AdminDashboardPage({ params }: { params: { locale: string }}) {
     const [data, setData] = useState<AdminData | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('orders');
+    const [activeTab, setActiveTab] = useState('dashboard');
 
     useEffect(() => {
         async function fetchData() {
@@ -46,6 +46,7 @@ export default function AdminDashboardPage({ params }: { params: { locale: strin
     }, []);
 
     const tabs = [
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { id: 'orders', label: 'Commandes', icon: Package },
         { id: 'models', label: 'Modèles', icon: Box },
         { id: 'charms', label: 'Breloques', icon: Tag },
@@ -64,6 +65,34 @@ export default function AdminDashboardPage({ params }: { params: { locale: strin
         }
         
         switch(activeTab) {
+            case 'dashboard':
+                return (
+                    <div className="space-y-6">
+                        <CardTitle className="text-2xl font-headline">Bienvenue sur votre tableau de bord</CardTitle>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {tabs.filter(t => t.id !== 'dashboard').map(tab => (
+                                <Card key={tab.id} className="hover:shadow-lg transition-shadow">
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2 text-xl">
+                                            <tab.icon className="w-6 h-6 text-primary" />
+                                            {tab.label}
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="text-muted-foreground text-sm">
+                                            Accédez au module de gestion des {tab.label.toLowerCase()}.
+                                        </p>
+                                    </CardContent>
+                                    <CardFooter>
+                                        <Button variant="outline" onClick={() => setActiveTab(tab.id)}>
+                                            Ouvrir <ArrowRight className="ml-2 h-4 w-4" />
+                                        </Button>
+                                    </CardFooter>
+                                </Card>
+                            ))}
+                        </div>
+                    </div>
+                )
             case 'models':
                 return <ModelsManager initialJewelryTypes={data.jewelryTypes} locale={params.locale} preferences={data.preferences} />;
             case 'charms':
