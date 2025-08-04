@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Loader2, Box, Tag, Package, Settings, BarChart2, Mail, LayoutDashboard, ArrowRight } from "lucide-react";
+import { Loader2, Box, Tag, Package, Settings, BarChart2, Mail, LayoutDashboard, ArrowLeft } from "lucide-react";
 import { ModelsManager } from '@/components/models-manager';
 import type { JewelryType, Charm, CharmCategory, GeneralPreferences, Order, MailLog } from '@/lib/types';
 import { CharmsManager } from '@/components/charms-manager';
@@ -64,57 +64,73 @@ export default function AdminDashboardPage({ params }: { params: { locale: strin
             )
         }
         
-        switch(activeTab) {
-            case 'dashboard':
-                return (
-                    <div className="space-y-6">
-                        <CardTitle className="text-2xl font-headline">Bienvenue sur votre tableau de bord</CardTitle>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {tabs.filter(t => t.id !== 'dashboard').map(tab => (
-                                <Card key={tab.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setActiveTab(tab.id)}>
+        const currentTab = tabs.find(t => t.id === activeTab);
+        
+        return (
+            <div>
+                 {activeTab !== 'dashboard' && (
+                    <div className="sm:hidden mb-4">
+                        <Button variant="outline" onClick={() => setActiveTab('dashboard')}>
+                            <ArrowLeft className="mr-2 h-4 w-4"/>
+                            Retour au Dashboard
+                        </Button>
+                    </div>
+                )}
+                {(() => {
+                    switch(activeTab) {
+                        case 'dashboard':
+                            return (
+                                <div className="space-y-6">
+                                    <CardTitle className="text-2xl font-headline">Bienvenue sur votre tableau de bord</CardTitle>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {tabs.filter(t => t.id !== 'dashboard').map(tab => (
+                                            <Card key={tab.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setActiveTab(tab.id)}>
+                                                <CardHeader>
+                                                    <CardTitle className="flex items-center gap-2 text-xl">
+                                                        <tab.icon className="w-6 h-6 text-primary" />
+                                                        {tab.label}
+                                                    </CardTitle>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    <p className="text-muted-foreground text-sm">
+                                                        Accédez au module de gestion des {tab.label.toLowerCase()}.
+                                                    </p>
+                                                </CardContent>
+                                            </Card>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        case 'models':
+                            return <ModelsManager initialJewelryTypes={data.jewelryTypes} locale={params.locale} preferences={data.preferences} />;
+                        case 'charms':
+                             return <CharmsManager initialCharms={data.charms} initialCharmCategories={data.charmCategories} locale={params.locale} preferences={data.preferences} />;
+                        case 'preferences':
+                            return <PreferencesManager initialPreferences={data.preferences} locale={params.locale} />;
+                        case 'orders':
+                            return <OrdersManager initialOrders={data.orders} locale={params.locale} />;
+                         case 'mail':
+                            return <MailManager initialMailLogs={data.mailLogs} />;
+                        case 'statistics':
+                             return (
+                                <Card>
                                     <CardHeader>
-                                        <CardTitle className="flex items-center gap-2 text-xl">
-                                            <tab.icon className="w-6 h-6 text-primary" />
-                                            {tab.label}
-                                        </CardTitle>
+                                        <CardTitle>Statistiques</CardTitle>
+                                        <CardDescription>Cette section est en cours de construction.</CardDescription>
                                     </CardHeader>
                                     <CardContent>
-                                        <p className="text-muted-foreground text-sm">
-                                            Accédez au module de gestion des {tab.label.toLowerCase()}.
-                                        </p>
+                                         <div className="flex justify-center items-center h-48 border-2 border-dashed rounded-lg">
+                                            <p className="text-muted-foreground">Bientôt disponible</p>
+                                        </div>
                                     </CardContent>
                                 </Card>
-                            ))}
-                        </div>
-                    </div>
-                )
-            case 'models':
-                return <ModelsManager initialJewelryTypes={data.jewelryTypes} locale={params.locale} preferences={data.preferences} />;
-            case 'charms':
-                 return <CharmsManager initialCharms={data.charms} initialCharmCategories={data.charmCategories} locale={params.locale} preferences={data.preferences} />;
-            case 'preferences':
-                return <PreferencesManager initialPreferences={data.preferences} locale={params.locale} />;
-            case 'orders':
-                return <OrdersManager initialOrders={data.orders} locale={params.locale} />;
-             case 'mail':
-                return <MailManager initialMailLogs={data.mailLogs} />;
-            case 'statistics':
-                 return (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Statistiques</CardTitle>
-                            <CardDescription>Cette section est en cours de construction.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                             <div className="flex justify-center items-center h-48 border-2 border-dashed rounded-lg">
-                                <p className="text-muted-foreground">Bientôt disponible</p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                );
-            default:
-                return null;
-        }
+                            );
+                        default:
+                            return null;
+                    }
+                })()}
+            </div>
+        )
     }
 
     return (
