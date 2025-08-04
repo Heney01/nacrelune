@@ -500,7 +500,7 @@ const OrderRow = ({ order, isOpen, onToggle, onStatusChange, onItemStatusChange,
                         </Tooltip>
                     </TooltipProvider>
                 </TableCell>
-                <TableCell>{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(order.totalPrice)}</TableCell>
+                <TableCell>{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(order.subtotal)}</TableCell>
                 <TableCell>
                     <Badge variant="outline" className={cn(statusVariants[order.status])}>
                         {tStatus(order.status)}
@@ -843,7 +843,7 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
                                             </Button>
                                         </div>
                                         <div className="w-full flex justify-between items-center">
-                                            <p className="font-bold text-lg">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(order.totalPrice)}</p>
+                                            <p className="font-bold text-lg">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(order.subtotal)}</p>
                                             <Badge variant="outline" className={cn(statusVariants[order.status])}>
                                                 {tStatus(order.status)}
                                             </Badge>

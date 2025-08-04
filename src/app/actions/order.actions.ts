@@ -265,6 +265,7 @@ export async function createOrder(
             const newOrderData: any = {
                 orderNumber,
                 customerEmail: email,
+                subtotal: subtotal,
                 totalPrice: finalPrice,
                 items: orderItems,
                 status: 'commandée',
@@ -398,6 +399,7 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
             orderNumber: orderData.orderNumber,
             createdAt: (orderData.createdAt as Timestamp).toDate(),
             customerEmail: orderData.customerEmail,
+            subtotal: orderData.subtotal || orderData.totalPrice, // Fallback for old orders
             totalPrice: orderData.totalPrice,
             items: enrichedItems,
             status: orderData.status,
@@ -575,6 +577,7 @@ export async function getOrders(): Promise<Order[]> {
                 orderNumber,
                 createdAt: (data.createdAt as Timestamp).toDate(),
                 customerEmail: data.customerEmail,
+                subtotal: data.subtotal || data.totalPrice, // Fallback for old orders
                 totalPrice: data.totalPrice,
                 status: data.status,
                 items: enrichedItems,
