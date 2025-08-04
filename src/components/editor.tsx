@@ -33,6 +33,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useEditorCanvas } from '@/hooks/use-editor-canvas';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -910,5 +918,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
 
 
