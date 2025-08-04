@@ -1,7 +1,7 @@
 {
   "hosting": {
     "source": ".",
-    "site": "atelierabijoux",
+    "site": "nacrelune",
     "appHosting": {
       "backends": [
         {
