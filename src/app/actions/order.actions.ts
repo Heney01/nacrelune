@@ -28,6 +28,28 @@ const getUrl = async (path: string | undefined | null, fallback: string): Promis
     }
 };
 
+function removeUndefinedFields(obj: any): any {
+  if (typeof obj !== 'object' || obj === null) {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => removeUndefinedFields(item));
+  }
+
+  const newObj: any = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const value = obj[key];
+      if (value !== undefined) {
+        newObj[key] = removeUndefinedFields(value);
+      }
+    }
+  }
+  return newObj;
+}
+
+
 // --- Order Actions ---
 
 export async function createPaymentIntent(
@@ -265,10 +287,11 @@ export async function createOrder(
                 status: 'commandée',
                 paymentIntentId: paymentIntentId,
                 deliveryMethod: deliveryMethod,
-                shippingAddress: deliveryMethod === 'home' ? shippingAddress : undefined,
+                ...((deliveryMethod === 'home' && shippingAddress) && { shippingAddress: shippingAddress }),
                 ...(coupon && { couponCode: coupon.code, couponId: coupon.id }),
-                ...(pointsToUse && { pointsUsed: pointsToUse, pointsValue: pointsValue }),
+                ...((pointsToUse && pointsToUse > 0) && { pointsUsed: pointsToUse, pointsValue: pointsValue }),
             };
+            
             transaction.set(doc(collection(db, 'orders')), { ...newOrderData, createdAt: serverTimestamp() });
             
             const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@atelierabijoux.com';
@@ -772,3 +795,5 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
         return { success: false, message: "Une erreur est survenue lors de la validation du code." };
     }
 }
+
+    
