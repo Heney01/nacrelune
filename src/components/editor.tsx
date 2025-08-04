@@ -252,22 +252,16 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                 const width = modelImageRect.width;
                 const height = modelImageRect.height;
                 
-                // Crop to a square from the center of the image
-                const size = Math.min(width, height);
-                const cropX = x + (width - size) / 2;
-                const cropY = y + (height - size) / 2;
-
-
                 const canvas = await html2canvas(canvasElement, {
                     backgroundColor: null,
                     logging: false,
                     useCORS: true,
                     scale: 2, // Higher resolution
                     allowTaint: false,
-                    x: cropX,
-                    y: cropY,
-                    width: size,
-                    height: size,
+                    x: x,
+                    y: y,
+                    width: width,
+                    height: height,
                 });
                 resolve(canvas.toDataURL('image/png', 0.9));
             } catch (error) {
