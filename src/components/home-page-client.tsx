@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -8,7 +9,7 @@ import { useTranslations } from '@/hooks/use-translations';
 import { Gem, HandMetal, Ear, Truck, UserCircle, LogOut, User } from 'lucide-react';
 import { TypeSelection } from '@/components/type-selection';
 import { ModelSelection } from '@/components/model-selection';
-import type { JewelryType, Charm, CharmCategory } from '@/lib/types';
+import type { JewelryType, Charm, CharmCategory, Creation } from '@/lib/types';
 import Link from 'next/link';
 import { CartWidget } from './cart-widget';
 import { Button } from './ui/button';
@@ -25,6 +26,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { logout } from '@/app/actions/auth.actions';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { CreationsCarousel } from './creations-carousel';
+import { Separator } from './ui/separator';
 
 
 function UserNav({ locale }: { locale: string }) {
@@ -94,11 +97,12 @@ function UserNav({ locale }: { locale: string }) {
 }
 
 
-export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, charmCategories, locale }: {
+export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, charmCategories, recentCreations, locale }: {
     searchParams: { [key:string]: string | string[] | undefined };
     jewelryTypes: Omit<JewelryType, 'icon'>[];
     allCharms: Charm[];
     charmCategories: CharmCategory[];
+    recentCreations: Creation[];
     locale: string;
 }) {
     const t = useTranslations('HomePage');
@@ -123,7 +127,8 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
     const selectedModel = selectedType && selectedModelId ? selectedType.models.find(m => m.id === selectedModelId) : null;
     
     if (selectedModel && selectedType) {
-      return <Editor model={selectedModel} jewelryType={selectedType} allCharms={allCharms} charmCategories={charmCategories} />;
+      const creationTemplate = searchParams?.creationId ? recentCreations.find(c => c.id === searchParams.creationId) : undefined;
+      return <Editor model={selectedModel} jewelryType={selectedType} allCharms={allCharms} charmCategories={charmCategories} creationTemplate={creationTemplate} />;
     }
   
     return (
@@ -163,7 +168,15 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
                     locale={locale}
                 />
             ) : (
+              <>
                 <TypeSelection jewelryTypes={jewelryTypes} locale={locale} />
+                {recentCreations.length > 0 && (
+                  <>
+                    <Separator className="my-12" />
+                    <CreationsCarousel creations={recentCreations} locale={locale} />
+                  </>
+                )}
+              </>
             )}
           </div>
         </main>

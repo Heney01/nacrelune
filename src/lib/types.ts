@@ -1,4 +1,5 @@
 
+
 import { DocumentReference } from 'firebase/firestore';
 
 export interface User {
@@ -12,7 +13,6 @@ export interface User {
 export interface CharmCategory {
   id: string;
   name: string;
-  description: string;
   imageUrl?: string;
 }
 
@@ -37,8 +37,6 @@ export interface CreationCharm {
   id: string;
   name: string;
   imageUrl: string;
-  description: string;
-  categoryIds: string[];
   price?: number;
   width?: number; // in mm
   height?: number; // in mm

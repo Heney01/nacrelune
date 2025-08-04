@@ -26,7 +26,9 @@
     "support_open_mail_button": "Ouvrir l'application de messagerie",
     "coming_soon": "Bientôt disponible",
     "profile_menu_button": "Menu du profil",
-    "welcome_message": "Bienvenue, {name} !"
+    "inspirations_title": "Nos dernières créations",
+    "inspirations_subtitle": "Laissez-vous inspirer par la communauté. Chaque création peut être utilisée comme point de départ pour la vôtre.",
+    "use_as_template": "Utiliser comme modèle"
   },
   "Auth": {
     "login_button": "Connexion",

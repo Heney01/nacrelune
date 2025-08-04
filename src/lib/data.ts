@@ -1,9 +1,9 @@
 
 
 import { db, storage } from '@/lib/firebase';
-import { collection, getDocs, DocumentReference, getDoc, doc, Timestamp, query, orderBy, where, documentId } from 'firebase/firestore';
+import { collection, getDocs, DocumentReference, getDoc, doc, Timestamp, query, orderBy, where, documentId, limit } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
-import type { JewelryModel, JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderItem, MailLog, MailDelivery } from '@/lib/types';
+import type { JewelryModel, JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderItem, MailLog, MailDelivery, Creation, PlacedCreationCharm } from '@/lib/types';
 
 const getUrl = async (path: string, fallback: string) => {
     if (path && (path.startsWith('http://') || path.startsWith('https://'))) {
@@ -362,6 +362,41 @@ export async function getOrders(): Promise<Order[]> {
         return orders;
     } catch (error) {
         console.error("Error fetching orders:", error);
+        return [];
+    }
+}
+
+
+export async function getRecentCreations(): Promise<Creation[]> {
+    const creationsRef = collection(db, 'creations');
+    const q = query(creationsRef, orderBy('createdAt', 'desc'), limit(10));
+    
+    try {
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+            return [];
+        }
+
+        const creations = await Promise.all(querySnapshot.docs.map(async (doc) => {
+            const data = doc.data();
+            const previewImageUrl = await getUrl(data.previewImageUrl, 'https://placehold.co/400x400.png');
+            
+            // Note: PlacedCharms in creations are simplified. We don't need to resolve full charm data here
+            // as the editor will handle that when it loads the template.
+
+            return {
+                id: doc.id,
+                ...data,
+                previewImageUrl,
+                placedCharms: data.placedCharms || [], // Ensure it's always an array
+                createdAt: toDate(data.createdAt as any)!,
+            } as Creation;
+        }));
+        
+        return creations;
+    } catch (error) {
+        console.error("Error fetching recent creations:", error);
         return [];
     }
 }
