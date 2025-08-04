@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/carousel';
 import { useTranslations } from '@/hooks/use-translations';
 import { CreationCard } from './creation-card';
+import Autoplay from "embla-carousel-autoplay"
 
 
 interface CreationsCarouselProps {
@@ -21,6 +22,9 @@ interface CreationsCarouselProps {
 
 export function CreationsCarousel({ creations, locale }: CreationsCarouselProps) {
   const t = useTranslations('HomePage');
+  const plugin = React.useRef(
+    Autoplay({ delay: 3000, stopOnInteraction: true })
+  )
 
   return (
     <section>
@@ -28,11 +32,14 @@ export function CreationsCarousel({ creations, locale }: CreationsCarouselProps)
       <p className="text-muted-foreground mb-12 max-w-2xl mx-auto text-center">{t('inspirations_subtitle')}</p>
       
       <Carousel
+        plugins={[plugin.current]}
         opts={{
           align: 'start',
-          loop: false,
+          loop: true,
         }}
         className="w-full"
+        onMouseEnter={plugin.current.stop}
+        onMouseLeave={plugin.current.reset}
       >
         <CarouselContent>
           {creations.map((creation) => (
@@ -43,8 +50,8 @@ export function CreationsCarousel({ creations, locale }: CreationsCarouselProps)
             </CarouselItem>
           ))}
         </CarouselContent>
-        <CarouselPrevious className="hidden sm:flex" />
-        <CarouselNext className="hidden sm:flex" />
+        <CarouselPrevious />
+        <CarouselNext />
       </Carousel>
     </section>
   );
