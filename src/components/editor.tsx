@@ -13,7 +13,7 @@ import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOu
 import { cn } from '@/lib/utils';
 import { BrandLogo, ShoppingBasketIcon } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import { CharmsPanel } from './charms-panel';
 import { Input } from './ui/input';
 import { useCart } from '@/hooks/use-cart';
@@ -262,7 +262,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                 console.error("Error capturing canvas:", error);
                 reject(error);
             }
-        }, 100); 
+        }, 150); 
     });
   }, [resetZoomAndPan]);
 
@@ -926,7 +926,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
             </div>
           </header>
-        <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0">
+        <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0 md:pb-[calc(2rem+env(safe-area-inset-bottom))] pb-[calc(4.5rem+env(safe-area-inset-bottom))]">
           <div className="container mx-auto flex-1 flex flex-col min-h-0">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0">
               
@@ -982,7 +982,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   </div>
                   <div
                       ref={canvasWrapperRef}
-                      className="relative w-full aspect-square bg-card overflow-hidden touch-none flex-grow border-dashed border-2 border-muted-foreground/30"
+                      className="relative w-full aspect-square bg-card overflow-hidden touch-none flex-grow border-dashed border-2 border-muted-foreground/30 border-b-0"
                   >
                       <div
                           ref={canvasRef}
@@ -1254,6 +1254,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
 
