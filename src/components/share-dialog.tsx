@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -25,7 +26,7 @@ const Polaroid = React.forwardRef<HTMLDivElement, { creationImage: string, title
   ({ creationImage, title, description }, ref) => (
     <div ref={ref} className="bg-white p-4 pb-2 shadow-lg rounded-sm" data-polaroid-container>
       <div className="bg-gray-200">
-        <Image src={creationImage} alt="User creation" width={400} height={400} className="w-full h-auto object-contain" />
+        <Image src={creationImage} alt="User creation" width={400} height={400} className="w-full h-auto object-contain" crossOrigin="anonymous" />
       </div>
       <div className="mt-3 text-center">
         <h3 className="font-caveat text-xl">{title || "Ma création"}</h3>
@@ -96,7 +97,6 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t }: Share
         const canvas = await html2canvas(polaroidRef.current, { 
             backgroundColor: null, 
             useCORS: true,
-            allowTaint: true,
             scale: 3
         });
         
@@ -127,7 +127,7 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t }: Share
         } else if (err instanceof DOMException && err.name === 'NotAllowedError') {
            console.warn("Share API permission denied, falling back to download.");
             try {
-                const canvas = await html2canvas(polaroidRef.current!, { backgroundColor: null, useCORS: true, allowTaint: true, scale: 3 });
+                const canvas = await html2canvas(polaroidRef.current!, { backgroundColor: null, useCORS: true, scale: 3 });
                 downloadImage(canvas);
             } catch (downloadErr) {
                  console.error('Download fallback error:', downloadErr);

@@ -30,7 +30,7 @@ import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/comp
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogClose, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { ShareDialog } from './share-dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Loader2 } from 'lucide-react';
 import { Label } from './ui/label';
@@ -239,10 +239,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                     backgroundColor: null,
                     logging: false,
                     useCORS: true,
-                    allowTaint: true,
                     scale: 2,
-                    width: canvasRef.current!.scrollWidth,
-                    height: canvasRef.current!.scrollHeight,
                 });
                 resolve(canvas.toDataURL('image/png', 0.9));
             } catch (error) {
@@ -969,7 +966,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   </div>
                   <div
                       ref={canvasWrapperRef}
-                      className="relative w-full aspect-square bg-card overflow-hidden touch-none flex-grow border-dashed border-2 border-muted-foreground/30 border-b-0 pb-2"
+                      className="relative w-full aspect-square bg-card overflow-hidden touch-none flex-grow border-dashed border-2 border-muted-foreground/30 pb-2.5 md:pb-2"
                   >
                       <div
                           ref={canvasRef}
@@ -1241,6 +1238,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
 
