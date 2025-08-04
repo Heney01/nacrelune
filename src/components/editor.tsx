@@ -234,20 +234,16 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     resetZoomAndPan();
     setSelectedPlacedCharmId(null);
 
-    // Wait for images to load before capturing
     const images = Array.from(canvasElement.querySelectorAll('img'));
-    const promises = images.map(img => {
-        if (img.complete) return Promise.resolve();
-        return new Promise<void>((resolve, reject) => {
-            img.onload = () => resolve();
-            img.onerror = () => reject(new Error(`Failed to load image: ${img.src}`));
-        });
-    });
-    
-    await Promise.all(promises);
+    await Promise.all(images.map(img => {
+      if (img.complete) return Promise.resolve();
+      return new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error(`Failed to load image: ${img.src}`));
+      });
+    }));
 
     return new Promise((resolve, reject) => {
-        // A short timeout to ensure the DOM is fully rendered after state updates
         setTimeout(async () => {
             try {
                 const canvas = await html2canvas(canvasElement, {
@@ -262,7 +258,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                 console.error("Error capturing canvas:", error);
                 reject(error);
             }
-        }, 250); 
+        }, 500); 
     });
   }, [resetZoomAndPan]);
 
@@ -926,7 +922,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
             </div>
           </header>
-        <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0 md:pb-[calc(2rem+env(safe-area-inset-bottom))]">
+        <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0 md:pb-8 pb-32">
           <div className="container mx-auto flex-1 flex flex-col min-h-0">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0">
               
@@ -982,7 +978,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   </div>
                   <div
                       ref={canvasWrapperRef}
-                      className="relative w-full aspect-square bg-card overflow-hidden touch-none h-[calc(100%-4rem)] flex-grow-0 border-dashed border-2 border-b-0 border-muted-foreground/30 "
+                      className="relative w-full aspect-square bg-card overflow-hidden touch-none h-auto border-dashed border-2 border-muted-foreground/30 "
                   >
                       <div
                           ref={canvasRef}
@@ -1254,6 +1250,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
 
