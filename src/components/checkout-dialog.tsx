@@ -75,10 +75,11 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
         onOpenChange(open);
     }}>
       <DialogContent 
-        className="max-w-4xl w-full grid p-0 max-h-[90vh] overflow-y-auto no-scrollbar md:grid-cols-2"
+        className="max-w-4xl w-full grid p-0 max-h-[90vh] md:grid-cols-2"
         onOpenAutoFocus={(e) => e.preventDefault()}
+        allow="payment"
       >
-        <div className="flex flex-col h-full max-h-[90vh] md:max-h-none">
+        <div className="flex flex-col h-full max-h-[90vh] md:max-h-none overflow-y-auto no-scrollbar">
           <Elements 
               stripe={stripePromise} 
               options={{
