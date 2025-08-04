@@ -922,7 +922,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
             </div>
           </header>
-        <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0 pb-32 md:pb-8">
+        <main className="flex-grow flex flex-col md:p-8 min-h-0 pb-32 md:pb-8">
           <div className="container mx-auto flex-1 flex flex-col min-h-0">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0">
               
@@ -978,7 +978,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   </div>
                   <div
                       ref={canvasWrapperRef}
-                      className="relative w-full aspect-square bg-card overflow-hidden touch-none h-auto border-dashed border-2 border-muted-foreground/30 "
+                      className="relative w-full flex-grow bg-card overflow-hidden touch-none border-dashed border-2 border-muted-foreground/30 "
                   >
                       <div
                           ref={canvasRef}
@@ -1250,6 +1250,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
 
