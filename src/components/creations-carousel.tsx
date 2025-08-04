@@ -23,7 +23,7 @@ interface CreationsCarouselProps {
 export function CreationsCarousel({ creations, locale }: CreationsCarouselProps) {
   const t = useTranslations('HomePage');
   const plugin = React.useRef(
-    Autoplay({ delay: 3000, stopOnInteraction: true })
+    Autoplay({ delay: 6000, stopOnInteraction: true })
   )
 
   return (
