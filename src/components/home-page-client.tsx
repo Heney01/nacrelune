@@ -53,10 +53,10 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
               <BrandLogo className="h-8 w-auto text-foreground" />
             </Link>
             <div className="flex items-center gap-2 flex-wrap">
-                <Button asChild variant="ghost">
+                <Button asChild variant="ghost" size="icon">
                     <Link href={`/${locale}/orders/track`}>
-                        <Truck className="mr-2 h-4 w-4" />
-                        {t('track_order_link')}
+                        <Truck className="h-6 w-6" />
+                        <span className="sr-only">{t('track_order_link')}</span>
                     </Link>
                 </Button>
               <CartWidget />
