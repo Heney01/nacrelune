@@ -220,7 +220,7 @@ export async function createOrder(
             let subtotal = cartItems.reduce((sum, item) => sum + (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0), 0);
             const couponDiscount = coupon ? coupon.discountType === 'percentage' ? subtotal * (coupon.value / 100) : coupon.value : 0;
             let totalAfterCoupon = Math.max(0, subtotal - couponDiscount);
-            const pointsValue = Math.floor((pointsToUse || 0) / 10);
+            const pointsValue = (pointsToUse || 0) / 10;
             const finalPrice = Math.max(0, totalAfterCoupon - pointsValue);
 
             if (userDoc) {
