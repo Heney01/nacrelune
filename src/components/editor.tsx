@@ -222,49 +222,62 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
   const getCanvasDataUri = useCallback(async (): Promise<string> => {
     const canvasElement = canvasRef.current;
-    if (!canvasElement) {
-      throw new Error("Canvas ref is not available");
+    if (!canvasElement || !modelImageRef.current) {
+        throw new Error("Canvas or model image ref is not available");
     }
-  
+
     resetZoomAndPan();
     setSelectedPlacedCharmId(null);
-  
+
+    // Wait for all images to be loaded
     const images = Array.from(canvasElement.querySelectorAll('img'));
     await Promise.all(images.map(img => {
-      if (img.complete) return Promise.resolve();
-      return new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error(`Failed to load image: ${img.src}`));
-      });
+        if (img.complete) return Promise.resolve();
+        return new Promise<void>((resolve, reject) => {
+            img.onload = () => resolve();
+            img.onerror = () => reject(new Error(`Failed to load image: ${img.src}`));
+        });
     }));
-  
+
     return new Promise((resolve, reject) => {
-      setTimeout(async () => {
-        try {
-          const { width, height } = canvasElement.getBoundingClientRect();
-          const size = Math.min(width, height);
-          const x = (width - size) / 2;
-          const y = (height - size) / 2;
-  
-          const canvas = await html2canvas(canvasElement, {
-            backgroundColor: null,
-            logging: false,
-            useCORS: true,
-            scale: 2,
-            allowTaint: false,
-            width: size,
-            height: size,
-            x: x,
-            y: y,
-          });
-          resolve(canvas.toDataURL('image/png', 0.9));
-        } catch (error) {
-          console.error("Error capturing canvas:", error);
-          reject(error);
-        }
-      }, 500); // Reduced delay
+        // A short timeout to ensure the DOM is fully updated after state changes (like resetZoomAndPan)
+        setTimeout(async () => {
+            try {
+                // Use the model image itself as the basis for the screenshot dimensions and position
+                const modelImageElement = modelImageRef.current!;
+                const modelImageRect = modelImageElement.getBoundingClientRect();
+                const canvasRect = canvasElement.getBoundingClientRect();
+
+                const x = modelImageRect.left - canvasRect.left;
+                const y = modelImageRect.top - canvasRect.top;
+                const width = modelImageRect.width;
+                const height = modelImageRect.height;
+                
+                // Crop to a square from the center of the image
+                const size = Math.min(width, height);
+                const cropX = x + (width - size) / 2;
+                const cropY = y + (height - size) / 2;
+
+
+                const canvas = await html2canvas(canvasElement, {
+                    backgroundColor: null,
+                    logging: false,
+                    useCORS: true,
+                    scale: 2, // Higher resolution
+                    allowTaint: false,
+                    x: cropX,
+                    y: cropY,
+                    width: size,
+                    height: size,
+                });
+                resolve(canvas.toDataURL('image/png', 0.9));
+            } catch (error) {
+                console.error("Error capturing canvas:", error);
+                reject(error);
+            }
+        }, 300); // A small delay can help ensure all styles are applied
     });
-  }, [resetZoomAndPan, canvasRef]);
+}, [resetZoomAndPan, canvasRef, modelImageRef]);
 
 
   const interactionState = useRef({
