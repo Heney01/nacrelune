@@ -95,15 +95,12 @@ export function SignUpForm() {
         });
         router.refresh();
     }
-  }, [state.success, state.message, toast, router, locale]);
+  }, [state.success, state.message, toast, router]);
 
 
   return (
     <Card>
       <CardHeader className="text-center">
-        <div className="mx-auto mb-4">
-            <BrandLogo className="h-10 w-auto" />
-        </div>
         <CardTitle className="text-2xl">{t('user_signup_title')}</CardTitle>
         <CardDescription>
            {t('user_signup_description')}

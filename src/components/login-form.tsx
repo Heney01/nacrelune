@@ -95,14 +95,11 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
       });
       router.refresh();
     }
-  }, [state.success, state.message, router, locale, toast, isUserAuth]);
+  }, [state.success, state.message, router, toast]);
 
   return (
     <Card>
       <CardHeader className="text-center">
-        <div className="mx-auto mb-4">
-            <BrandLogo className="h-10 w-auto" />
-        </div>
         <CardTitle className="text-2xl">{isUserAuth ? t('user_login_title') : t('admin_login_title')}</CardTitle>
         <CardDescription>
            {isUserAuth ? t('user_login_description') : t('admin_login_description')}
