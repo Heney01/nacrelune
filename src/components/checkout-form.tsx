@@ -158,7 +158,42 @@ const PaymentStep = ({
 
     setIsProcessing(true);
     setErrorMessage(null);
+    
+    // 1. Trigger form validation and gather data
+    const { error: submitError } = await elements.submit();
+    if (submitError) {
+      setErrorMessage(submitError.message || t('payment_error_default'));
+      setIsProcessing(false);
+      return;
+    }
 
+    // 2. Create PaymentIntent on the server
+    const { clientSecret, error: intentError } = await createPaymentIntent(finalTotal);
+
+    if (intentError || !clientSecret) {
+        setErrorMessage(intentError || t('payment_intent_error'));
+        setIsProcessing(false);
+        return;
+    }
+
+    // 3. Confirm the payment
+    const { error: paymentError } = await stripe.confirmPayment({
+      elements,
+      clientSecret,
+      confirmParams: {
+        return_url: `${window.location.origin}/${locale}/orders/track`,
+        receipt_email: email,
+      },
+      redirect: 'if_required',
+    });
+
+    if (paymentError) {
+      setErrorMessage(paymentError.message || t('payment_error_default'));
+      setIsProcessing(false);
+      return;
+    }
+
+    // 4. Create the order in Firestore
     const serializableCart: SerializableCartItem[] = cart.map(item => ({
         id: item.id,
         model: item.model,
@@ -173,30 +208,6 @@ const PaymentStep = ({
         creatorName: item.creatorName,
         creationId: item.creationId,
       }));
-
-    const { clientSecret, error: intentError } = await createPaymentIntent(finalTotal);
-
-    if (intentError || !clientSecret) {
-        setErrorMessage(intentError || t('payment_intent_error'));
-        setIsProcessing(false);
-        return;
-    }
-
-    const { error: paymentError } = await stripe.confirmPayment({
-      elements,
-      clientSecret,
-      confirmParams: {
-        receipt_email: email,
-        return_url: `${window.location.origin}/${locale}/orders/track`,
-      },
-      redirect: 'if_required',
-    });
-
-    if (paymentError) {
-      setErrorMessage(paymentError.message || t('payment_error_default'));
-      setIsProcessing(false);
-      return;
-    }
 
     const finalShippingAddress = deliveryMethod === 'pickup' && selectedPickupPoint
       ? {
