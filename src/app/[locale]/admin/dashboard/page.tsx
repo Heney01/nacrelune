@@ -156,11 +156,12 @@ export default function AdminDashboardPage({ params }: { params: { locale: strin
             </aside>
             <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-72">
                  <AdminHeader locale={params.locale} />
-                 <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-                    {renderContent()}
+                 <main className="flex-1 p-4 sm:px-6 sm:py-0">
+                    <div className="w-full h-full flex flex-col items-start">
+                      {renderContent()}
+                    </div>
                 </main>
             </div>
         </div>
     );
 }
-
