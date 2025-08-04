@@ -13,12 +13,14 @@ import { cn } from '@/lib/utils';
 import html2canvas from 'html2canvas';
 import { generateShareContentAction } from '@/app/actions/ai.actions';
 import { useParams } from 'next/navigation';
+import { Creation } from '@/lib/types';
 
 interface ShareDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   getCanvasDataUri: () => Promise<string>;
   t: (key: string, values?: any) => string;
+  creation?: Creation;
 }
 
 const Polaroid = React.forwardRef<HTMLDivElement, { creationImage: string, title: string }>(
@@ -37,9 +39,9 @@ const Polaroid = React.forwardRef<HTMLDivElement, { creationImage: string, title
 Polaroid.displayName = 'Polaroid';
 
 
-export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t }: ShareDialogProps) {
+export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t, creation }: ShareDialogProps) {
   const [creationImage, setCreationImage] = useState<string | null>(null);
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState(creation?.name || '');
   const [isLoading, setIsLoading] = useState(true);
   const [isSharing, setIsSharing] = useState(false);
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
@@ -67,11 +69,11 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t }: Share
     } else {
         // Reset state on close
         setCreationImage(null);
-        setTitle('');
+        setTitle(creation?.name || '');
         setIsLoading(true);
         setError(null);
     }
-  }, [isOpen, getCanvasDataUri, t]);
+  }, [isOpen, getCanvasDataUri, t, creation]);
 
   const downloadImage = (canvas: HTMLCanvasElement) => {
     const link = document.createElement('a');
@@ -88,6 +90,10 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t }: Share
     
     setIsSharing(true);
     setError(null);
+
+    const shareUrl = creation 
+      ? `${window.location.origin}/${locale}/creators/${creation.creatorId}?creation=${creation.id}`
+      : window.location.origin;
 
     try {
         const canvas = await html2canvas(polaroidRef.current, { 
@@ -110,12 +116,17 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t }: Share
 
         const file = new File([blob], 'ma-creation.png', { type: 'image/png' });
 
-        await navigator.share({
-            title: title || t('share_default_title'),
-            text: t('share_default_text'),
-            files: [file],
-            url: window.location.origin
-        });
+        const shareData: ShareData = {
+          title: title || t('share_default_title'),
+          text: t('share_default_text'),
+          url: shareUrl
+        };
+
+        if (navigator.canShare({ files: [file] })) {
+          shareData.files = [file];
+        }
+
+        await navigator.share(shareData);
 
     } catch (err: any) {
         if (err instanceof DOMException && (err.name === 'AbortError')) {

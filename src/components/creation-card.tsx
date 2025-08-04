@@ -105,11 +105,13 @@ export function CreationCard({
     locale,
     onUpdate,
     onDelete,
+    openOnLoad,
 }: { 
     creation: Creation; 
     locale: string;
     onUpdate?: (updatedCreation: Partial<Creation>) => void;
     onDelete?: (creationId: string) => void;
+    openOnLoad?: boolean;
 }) {
   const t = useTranslations('HomePage');
   const tEditor = useTranslations('Editor');
@@ -128,6 +130,12 @@ export function CreationCard({
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  useEffect(() => {
+    if (openOnLoad) {
+      setIsPreviewOpen(true);
+    }
+  }, [openOnLoad]);
 
   // Pre-fetch base data needed to add to cart
   React.useEffect(() => {
@@ -373,6 +381,7 @@ export function CreationCard({
             isOpen={isShareOpen}
             onOpenChange={() => setIsShareOpen(false)}
             getCanvasDataUri={() => Promise.resolve(creation.previewImageUrl)}
+            creation={creation}
             t={tEditor}
         />
       )}
