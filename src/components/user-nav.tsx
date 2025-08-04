@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { logout } from '@/app/actions/auth.actions';
 import { useTranslations } from '@/hooks/use-translations';
-import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 export function UserNav({ locale }: { locale: string }) {
     const { user, firebaseUser } = useAuth();
