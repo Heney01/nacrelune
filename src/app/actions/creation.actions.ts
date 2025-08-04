@@ -69,7 +69,6 @@ const deleteFileFromStorage = async (fileUrl: string) => {
 export async function saveCreation(
     idToken: string,
     name: string,
-    description: string,
     creationPayload: string
 ): Promise<{ success: boolean; message: string; creationId?: string }> {
 
@@ -146,7 +145,6 @@ export async function saveCreation(
             creatorId: user.uid,
             creatorName: user.name || user.email || "Créateur anonyme",
             name,
-            description,
             jewelryTypeId,
             modelId,
             placedCharms: placedCharms,
@@ -286,8 +284,7 @@ export async function toggleLikeCreation(creationId: string, idToken: string): P
 export async function updateCreation(
     idToken: string,
     creationId: string,
-    name: string,
-    description: string
+    name: string
 ): Promise<{ success: boolean; message: string; }> {
     if (!idToken) {
         return { success: false, message: "Utilisateur non authentifié." };
@@ -318,7 +315,6 @@ export async function updateCreation(
 
         await updateDoc(creationRef, {
             name,
-            description,
         });
         
         revalidatePath('/fr/profil');

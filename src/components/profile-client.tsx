@@ -116,7 +116,6 @@ function EditCreationDialog({ creation, onOpenChange, isOpen }: { creation: Crea
     const t = useTranslations('Auth');
     const tEditor = useTranslations('Editor');
     const [name, setName] = useState(creation.name);
-    const [description, setDescription] = useState(creation.description);
     const [isUpdating, setIsUpdating] = useState(false);
     const { firebaseUser } = useAuth();
     const { toast } = useToast();
@@ -128,7 +127,7 @@ function EditCreationDialog({ creation, onOpenChange, isOpen }: { creation: Crea
         setIsUpdating(true);
         try {
             const idToken = await firebaseUser.getIdToken();
-            const result = await updateCreation(idToken, creation.id, name, description);
+            const result = await updateCreation(idToken, creation.id, name);
             if (result.success) {
                 toast({ title: t('edit_creation_success_title'), description: result.message });
                 onOpenChange(false);
@@ -156,10 +155,6 @@ function EditCreationDialog({ creation, onOpenChange, isOpen }: { creation: Crea
                         <div className="space-y-2">
                             <Label htmlFor="edit-name">{tEditor('creation_name_label')}</Label>
                             <Input id="edit-name" value={name} onChange={(e) => setName(e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="edit-description">{tEditor('creation_description_label')}</Label>
-                            <Textarea id="edit-description" value={description} onChange={(e) => setDescription(e.target.value)} />
                         </div>
                     </div>
                     <DialogFooter>
@@ -484,7 +479,6 @@ export function ProfileClient({ locale }: { locale: string }) {
                                         </div>
                                         <CardContent className="p-4 flex-grow">
                                             <CardTitle className="text-base font-headline">{creation.name}</CardTitle>
-                                            {creation.description && <CardDescription className="text-xs mt-1">{creation.description}</CardDescription>}
                                         </CardContent>
                                         <CardFooter className="p-4 pt-0 flex justify-between items-center">
                                             <div className="flex items-center gap-1">
@@ -528,9 +522,6 @@ export function ProfileClient({ locale }: { locale: string }) {
                                      <DialogContent className="max-w-2xl">
                                         <DialogHeader>
                                             <DialogTitle>{creation.name}</DialogTitle>
-                                            <DialogDescription>
-                                                {creation.description || `Une création de ${creation.creatorName}`}
-                                            </DialogDescription>
                                         </DialogHeader>
                                         <div className="mt-4 grid place-items-center">
                                             <Image 

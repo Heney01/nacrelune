@@ -50,7 +50,6 @@ export function FinalizeCreationDialog({
 
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [creationName, setCreationName] = useState('');
-    const [creationDescription, setDescription] = useState('');
     const [isPublishing, setIsPublishing] = useState(false);
     const [isLoadingPreview, setIsLoadingPreview] = useState(true);
 
@@ -102,7 +101,6 @@ export function FinalizeCreationDialog({
             const result = await saveCreation(
                 idToken,
                 creationName,
-                creationDescription,
                 JSON.stringify(creationPayload)
             );
 
@@ -182,10 +180,6 @@ export function FinalizeCreationDialog({
                                     <div className="space-y-2">
                                         <Label htmlFor="creationName">{t('creation_name_label')}</Label>
                                         <Input id="creationName" value={creationName} onChange={(e) => setCreationName(e.target.value)} placeholder={t('creation_name_placeholder')} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="creationDescription">{t('creation_description_label')}</Label>
-                                        <Textarea id="creationDescription" value={creationDescription} onChange={(e) => setDescription(e.target.value)} placeholder={t('creation_description_placeholder')} />
                                     </div>
                                 </CardContent>
                                 <CardFooter>

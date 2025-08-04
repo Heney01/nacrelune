@@ -1,5 +1,4 @@
 
-
 import { DocumentReference } from 'firebase/firestore';
 
 export interface User {
@@ -202,7 +201,6 @@ export interface Creation {
     creatorId: string;
     creatorName: string;
     name: string;
-    description: string;
     jewelryTypeId: string;
     modelId: string;
     placedCharms: PlacedCreationCharm[];

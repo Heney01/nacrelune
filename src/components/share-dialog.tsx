@@ -21,15 +21,14 @@ interface ShareDialogProps {
   t: (key: string, values?: any) => string;
 }
 
-const Polaroid = React.forwardRef<HTMLDivElement, { creationImage: string, title: string, description: string }>(
-  ({ creationImage, title, description }, ref) => (
+const Polaroid = React.forwardRef<HTMLDivElement, { creationImage: string, title: string }>(
+  ({ creationImage, title }, ref) => (
     <div ref={ref} className="bg-white p-4 pb-2 shadow-lg rounded-sm" data-polaroid-container>
       <div className="bg-gray-200">
         <Image src={creationImage} alt="User creation" width={400} height={400} className="w-full h-auto object-contain" crossOrigin="anonymous" />
       </div>
       <div className="mt-3 text-center">
         <h3 className="font-caveat text-xl">{title || "Ma création"}</h3>
-        {description && <p className="font-caveat text-base text-muted-foreground mt-1">{description}</p>}
         <p className="text-xs text-muted-foreground/50 mt-2 font-sans">www.atelierabijoux.com</p>
       </div>
     </div>
@@ -41,7 +40,6 @@ Polaroid.displayName = 'Polaroid';
 export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t }: ShareDialogProps) {
   const [creationImage, setCreationImage] = useState<string | null>(null);
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSharing, setIsSharing] = useState(false);
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
@@ -70,7 +68,6 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t }: Share
         // Reset state on close
         setCreationImage(null);
         setTitle('');
-        setDescription('');
         setIsLoading(true);
         setError(null);
     }
@@ -115,7 +112,7 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t }: Share
 
         await navigator.share({
             title: title || t('share_default_title'),
-            text: description || t('share_default_text'),
+            text: t('share_default_text'),
             files: [file],
             url: window.location.origin
         });
@@ -156,7 +153,6 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t }: Share
 
       if (result.success && result.content) {
         setTitle(result.content.title);
-        setDescription(result.content.description);
       } else {
         throw new Error(result.error || t('ai_error_generic'));
       }
@@ -181,7 +177,7 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t }: Share
             {creationImage && (
               <div className="space-y-4">
                 <div className="grid place-items-center">
-                    <Polaroid ref={polaroidRef} creationImage={creationImage} title={title} description={description} />
+                    <Polaroid ref={polaroidRef} creationImage={creationImage} title={title} />
                 </div>
                 <div className="space-y-2">
                     <div className="flex justify-between items-center">
@@ -191,10 +187,6 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t }: Share
                         </Button>
                     </div>
                     <Input id="share-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('share_title_placeholder')} />
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="share-description">{t('share_description_label')}</Label>
-                    <Textarea id="share-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('share_description_placeholder')} />
                 </div>
               </div>
             )}

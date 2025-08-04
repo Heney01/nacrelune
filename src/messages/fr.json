@@ -58,7 +58,7 @@
     "reward_points_close_button": "J'ai compris",
     "edit_creation_button": "Modifier",
     "edit_creation_title": "Modifier la création",
-    "edit_creation_description": "Mettez à jour le nom et la description de votre création.",
+    "edit_creation_description": "Mettez à jour le nom de votre création.",
     "save_changes_button": "Enregistrer",
     "edit_creation_success_title": "Succès",
     "edit_creation_error_title": "Erreur"
@@ -98,8 +98,6 @@
     "share_creation_description": "Donnez un nom à votre création et partagez-la !",
     "share_title_label": "Titre de votre création",
     "share_title_placeholder": "ex: Mon collier d'été",
-    "share_description_label": "Description (facultatif)",
-    "share_description_placeholder": "ex: Une création qui me rappelle les vacances...",
     "share_error_image": "Impossible de charger l'image de votre création.",
     "share_not_supported": "Le partage n'est pas supporté par ce navigateur.",
     "share_error_generic": "Une erreur est survenue lors du partage.",
@@ -118,14 +116,12 @@
     "buy_title": "Acheter pour vous",
     "buy_description": "Ajoutez cette création unique à votre panier pour l'acquérir.",
     "publish_title": "Publier votre création",
-    "publish_description": "Partagez votre design avec la communauté. Donnez-lui un nom et une description.",
+    "publish_description": "Partagez votre design avec la communauté. Donnez-lui un nom.",
     "publish_login_required_title": "Connexion requise",
     "publish_login_required_desc": "Vous devez être connecté pour publier une création.",
     "publish_login_link": "Connectez-vous ou inscrivez-vous",
     "creation_name_label": "Nom de la création",
     "creation_name_placeholder": "ex: Mon Collier d'Été",
-    "creation_description_label": "Description (optionnel)",
-    "creation_description_placeholder": "Racontez l'histoire de votre design...",
     "publish_button": "Publier"
   },
   "Cart": {
@@ -311,5 +307,3 @@
     "reward_email_cta": "Voir mes points"
   }
 }
-
-    
