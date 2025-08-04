@@ -34,7 +34,6 @@ const Polaroid = React.forwardRef<HTMLDivElement, { creationImage: string, title
         <h3 className="font-caveat text-xl">{title || "Ma création"}</h3>
         {creatorName ? (
             <p className="text-xs text-muted-foreground" style={{ fontFamily: 'sans-serif' }}>
-                <User className="h-3 w-3 inline-block align-middle" /> 
                 <span className="inline-block align-middle ml-1">par {creatorName}</span>
             </p>
         ) : null}
@@ -185,8 +184,8 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t, creatio
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-headline">{t('share_creation_title')}</DialogTitle>
-          <DialogDescription>{t('share_creation_description')}</DialogDescription>
+          <DialogTitle className="font-headline">{creation ? `Partager la création de ${creation.creatorName}` : t('share_creation_title')}</DialogTitle>
+          <DialogDescription>{creation ? "Partagez cette trouvaille avec vos amis !" : t('share_creation_description')}</DialogDescription>
         </DialogHeader>
 
         <div className="my-4">
@@ -197,17 +196,17 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t, creatio
                 <div className="grid place-items-center">
                     <Polaroid ref={polaroidRef} creationImage={creationImage} title={title} creatorName={creation?.creatorName} />
                 </div>
-                <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                        <Label htmlFor="share-title">{t('share_title_label')}</Label>
-                         {!creation && (
-                             <Button variant="ghost" size="sm" onClick={handleGenerateContent} disabled={isGeneratingContent}>
-                                 {isGeneratingContent ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                {!creation && (
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <Label htmlFor="share-title">{t('share_title_label')}</Label>
+                            <Button variant="ghost" size="sm" onClick={handleGenerateContent} disabled={isGeneratingContent}>
+                                {isGeneratingContent ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                             </Button>
-                         )}
+                        </div>
+                        <Input id="share-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('share_title_placeholder')} />
                     </div>
-                    <Input id="share-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('share_title_placeholder')} disabled={!!creation} />
-                </div>
+                )}
               </div>
             )}
         </div>
