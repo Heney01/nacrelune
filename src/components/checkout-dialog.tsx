@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -77,7 +78,6 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
       <DialogContent 
         className="max-w-4xl w-full grid p-0 max-h-[90vh] md:grid-cols-2"
         onOpenAutoFocus={(e) => e.preventDefault()}
-        allow="payment"
       >
         <div className="flex flex-col h-full max-h-[90vh] md:max-h-none overflow-y-auto no-scrollbar">
           <Elements 
@@ -86,7 +86,11 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
                 appearance: { theme: 'stripe' as const, variables: { colorPrimary: '#ef4444', fontFamily: 'Alegreya, Ideal Sans, system-ui, sans-serif' } },
                 mode: 'payment',
                 amount: Math.max(50, Math.round(total * 100)), // Stripe requires a minimum amount (e.g., 50 cents)
-                currency: 'eur'
+                currency: 'eur',
+                wallets: {
+                    applePay: 'never',
+                    googlePay: 'never'
+                }
           }}>
               <CheckoutForm 
                   total={subtotal} // Pass subtotal to calculate discounts correctly
@@ -98,7 +102,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
           </Elements>
         </div>
         
-        <aside className="hidden md:flex flex-col bg-muted/50 p-6 overflow-hidden">
+        <aside className="hidden md:flex flex-col bg-muted/50 p-6 overflow-y-auto no-scrollbar">
             <h3 className="text-lg font-medium">{t('order_summary')}</h3>
             <div className="mt-6 flex-grow -mx-6 overflow-y-auto no-scrollbar">
                 <div className="space-y-4 px-6">
