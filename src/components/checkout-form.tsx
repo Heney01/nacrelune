@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -26,8 +27,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { Separator } from './ui/separator';
 import { Slider } from './ui/slider';
-
-type Step = 'customer' | 'shipping' | 'payment';
 
 const PaymentStep = ({
   onOrderCreated,
@@ -101,10 +100,7 @@ const PaymentStep = ({
     setIsApplyingCoupon(false);
   }
 
-  const handleFreeOrder = async () => {
-    setIsProcessing(true);
-    setErrorMessage(null);
-
+  const handleCreateOrder = async (paymentIntentId: string): Promise<CreateOrderResult> => {
     const serializableCart: SerializableCartItem[] = cart.map(item => ({
       id: item.id,
       model: item.model,
@@ -127,18 +123,23 @@ const PaymentStep = ({
         }
       : shippingAddress;
 
-    const orderResult = await createOrder(
+    return await createOrder(
         serializableCart,
         email,
         locale,
-        'free_order', // No payment intent for free orders
+        paymentIntentId,
         deliveryMethod,
         finalShippingAddress,
         appliedCoupon || undefined,
         user?.uid,
         pointsToUse
     );
-    
+  }
+
+  const handleFreeOrder = async () => {
+    setIsProcessing(true);
+    setErrorMessage(null);
+    const orderResult = await handleCreateOrder('free_order');
     onOrderCreated(orderResult);
     setIsProcessing(false);
   }
@@ -176,64 +177,42 @@ const PaymentStep = ({
         return;
     }
 
-    // 3. Confirm the payment
+    // 3. Create the order in Firestore *before* confirming payment
+    const paymentIntentId = clientSecret.split('_secret_')[0];
+    const orderResult = await handleCreateOrder(paymentIntentId);
+
+    // If order creation fails (e.g., stock issue), stop before payment.
+    if (!orderResult.success) {
+        onOrderCreated(orderResult);
+        setIsProcessing(false);
+        return;
+    }
+    
+    // 4. Confirm the payment
     const { error: paymentError } = await stripe.confirmPayment({
       elements,
       clientSecret,
       confirmParams: {
-        return_url: `${window.location.origin}/${locale}/orders/track`,
+        return_url: `${window.location.origin}/${locale}/orders/track?orderNumber=${orderResult.orderNumber}`,
         receipt_email: email,
       },
-      redirect: 'if_required',
+      // redirect: 'if_required', // We want to redirect to the bank page
     });
 
     if (paymentError) {
+      // This part will only be reached if an immediate error occurs, 
+      // e.g., the card is declined without a 3D Secure redirect.
+      // The user might be stuck on the checkout page here.
       setErrorMessage(paymentError.message || t('payment_error_default'));
       setIsProcessing(false);
+      // We might need a mechanism to cancel the created order here if payment fails definitively.
+      // For now, we leave it as 'pending' for manual review.
       return;
     }
-
-    // 4. Create the order in Firestore
-    const serializableCart: SerializableCartItem[] = cart.map(item => ({
-        id: item.id,
-        model: item.model,
-        jewelryType: {
-          id: item.jewelryType.id,
-          name: item.jewelryType.name,
-          description: item.jewelryType.description
-        },
-        placedCharms: item.placedCharms,
-        previewImage: item.previewImage,
-        creatorId: item.creatorId,
-        creatorName: item.creatorName,
-        creationId: item.creationId,
-      }));
-
-    const finalShippingAddress = deliveryMethod === 'pickup' && selectedPickupPoint
-      ? {
-          name: shippingAddress?.name || '', // Customer name
-          addressLine1: selectedPickupPoint.name, // Relay name
-          addressLine2: `${selectedPickupPoint.address}, ${selectedPickupPoint.city}`, // Relay address
-          city: selectedPickupPoint.city,
-          postalCode: selectedPickupPoint.postcode,
-          country: selectedPickupPoint.country,
-        }
-      : shippingAddress;
     
-    const orderResult = await createOrder(
-        serializableCart,
-        email,
-        locale,
-        clientSecret,
-        deliveryMethod,
-        finalShippingAddress,
-        appliedCoupon || undefined,
-        user?.uid,
-        pointsToUse
-    );
-
-    onOrderCreated(orderResult);
-    setIsProcessing(false);
+    // If we get here, it means we are redirecting to the bank. 
+    // The onOrderCreated callback will be handled by the return_url page logic.
+    // The button will show a spinner until the redirect happens.
   };
 
   return (
