@@ -57,14 +57,8 @@ export default function AdminDashboardPage({ params }: { params: { locale: strin
     ];
     
     const renderContent = () => {
-        if (loading || !data) {
-            return (
-                <div className="flex justify-center items-center h-full">
-                    <Loader2 className="h-16 w-16 animate-spin text-primary" />
-                </div>
-            )
-        }
-        
+        if (!data) return null;
+
         const currentTab = tabs.find(t => t.id === activeTab);
         
         return (
@@ -134,9 +128,17 @@ export default function AdminDashboardPage({ params }: { params: { locale: strin
         )
     }
 
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center h-screen">
+                <Loader2 className="h-16 w-16 animate-spin text-primary" />
+            </div>
+        )
+    }
+
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/40">
-            <aside className="hidden w-64 flex-col border-r bg-background sm:flex">
+            <aside className="hidden w-64 flex-col border-r bg-background sm:flex fixed h-full">
                 <div className="border-b p-4">
                     <h1 className="text-xl font-bold font-headline">Tableau de bord</h1>
                 </div>
@@ -156,10 +158,8 @@ export default function AdminDashboardPage({ params }: { params: { locale: strin
             </aside>
             <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-72">
                  <AdminHeader locale={params.locale} />
-                 <main className="flex-1 p-4 sm:px-6 sm:py-0">
-                    <div className="w-full h-full flex flex-col items-start">
-                      {renderContent()}
-                    </div>
+                 <main className="p-4 sm:px-6">
+                    {renderContent()}
                 </main>
             </div>
         </div>
