@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { db, storage } from '@/lib/firebase';
 import { doc, addDoc, updateDoc, collection, getDoc, getDocs, runTransaction, query, where, setDoc, serverTimestamp, collectionGroup, documentId, orderBy, DocumentReference, DocumentSnapshot, Timestamp, increment } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
-import type { JewelryModel, PlacedCharm, OrderStatus, Order, OrderItem, ShippingAddress, DeliveryMethod, MailLog, Coupon, User } from '@/lib/types';
+import type { JewelryModel, PlacedCharm, OrderStatus, Order, OrderItem, ShippingAddress, DeliveryMethod, MailLog, Coupon, User, Charm } from '@/lib/types';
 import { toDate } from '@/lib/data';
 import Stripe from 'stripe';
 
@@ -647,9 +647,12 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
 
             // Read all necessary documents if cancelling
             const itemsToRead = new Map<string, DocumentReference>();
-            const userRef = (orderData.userId && orderData.pointsUsed && orderData.pointsUsed > 0) ? doc(db, 'users', orderData.userId) : null;
-            
+            let userRef: DocumentReference | null = null;
+
             if (newStatus === 'annulée' && currentStatus !== 'annulée') {
+                if (orderData.userId && orderData.pointsUsed && orderData.pointsUsed > 0) {
+                     userRef = doc(db, 'users', orderData.userId);
+                }
                 for (const item of orderData.items) {
                     itemsToRead.set(doc(db, item.jewelryTypeId, item.modelId).path, doc(db, item.jewelryTypeId, item.modelId));
                     for (const charmId of item.charmIds) {
