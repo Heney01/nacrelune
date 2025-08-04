@@ -187,6 +187,7 @@ const PaymentStep = ({
       clientSecret,
       confirmParams: {
         receipt_email: email,
+        return_url: `${window.location.origin}/${locale}/orders/track`,
       },
       redirect: 'if_required',
     });
