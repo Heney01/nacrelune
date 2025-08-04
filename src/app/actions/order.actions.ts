@@ -351,7 +351,7 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
         const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
         // Fetch all required charms in a single query
-        let charmsMap = new Map<string, any>();
+        let charmsMap = new Map<string, Charm>();
         if (uniqueCharmIds.length > 0) {
             const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', uniqueCharmIds));
             const charmsSnapshot = await getDocs(charmsQuery);
@@ -361,7 +361,7 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
                     ...charmData,
                     id: charmDoc.id,
                     imageUrl: await getUrl(charmData.imageUrl, 'https://placehold.co/100x100.png')
-                });
+                } as Charm);
             }
         }
         
@@ -630,26 +630,36 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
         return { success: false, message: "Informations manquantes." };
     }
     
-    let orderDataForEmail: Order | null = null;
+    let orderForEmail: Order | null = null;
     let cancellationReasonForEmail: string | null = null;
-    let shouldSendEmail = false;
 
     try {
         await runTransaction(db, async (transaction) => {
-            // --- READ PHASE ---
             const orderRef = doc(db, 'orders', orderId);
             const orderDoc = await transaction.get(orderRef);
-            if (!orderDoc.exists()) throw new Error("Commande non trouvée.");
+
+            if (!orderDoc.exists()) {
+                throw new Error("Commande non trouvée.");
+            }
             
             const orderData = orderDoc.data() as Order;
             const currentStatus = orderData.status;
-            if (currentStatus === newStatus) throw new Error(`La commande est déjà au statut : ${newStatus}.`);
 
-            // Read all necessary documents if cancelling
+            if (currentStatus === newStatus) {
+                throw new Error(`La commande est déjà au statut : ${newStatus}.`);
+            }
+
             const itemsToRead = new Map<string, DocumentReference>();
             let userRef: DocumentReference | null = null;
 
             if (newStatus === 'annulée' && currentStatus !== 'annulée') {
+                if (orderData.paymentIntentId && orderData.paymentIntentId !== 'free_order') {
+                    const refundResult = await refundStripePayment(orderData.paymentIntentId);
+                    if (!refundResult.success) {
+                        throw new Error(`Le remboursement a échoué: ${refundResult.message}. L'annulation a été interrompue.`);
+                    }
+                }
+
                 if (orderData.userId && orderData.pointsUsed && orderData.pointsUsed > 0) {
                      userRef = doc(db, 'users', orderData.userId);
                 }
@@ -660,33 +670,31 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
                     }
                 }
             }
+            
             const itemDocs = await Promise.all(Array.from(itemsToRead.values()).map(ref => transaction.get(ref)));
             const userDoc = userRef ? await transaction.get(userRef) : null;
             
-            // --- EXTERNAL CALLS & VALIDATION PHASE (NO WRITES) ---
-            if (newStatus === 'annulée' && orderData.paymentIntentId && orderData.paymentIntentId !== 'free_order') {
-                const refundResult = await refundStripePayment(orderData.paymentIntentId);
-                if (!refundResult.success) throw new Error(`Le remboursement a échoué: ${refundResult.message}. L'annulation a été interrompue.`);
-            }
-
-            // --- WRITE PHASE ---
             let dataToUpdate: Partial<Order> = { status: newStatus };
 
             if (newStatus === 'expédiée') {
                 const shippingCarrier = formData.get('shippingCarrier') as string;
                 const trackingNumber = formData.get('trackingNumber') as string;
-                if (!shippingCarrier || !trackingNumber) throw new Error("Le transporteur et le numéro de suivi sont obligatoires pour une expédition.");
+                if (!shippingCarrier || !trackingNumber) {
+                    throw new Error("Le transporteur et le numéro de suivi sont obligatoires pour une expédition.");
+                }
                 dataToUpdate.shippingCarrier = shippingCarrier;
                 dataToUpdate.trackingNumber = trackingNumber;
             }
 
             if (newStatus === 'annulée') {
                 const cancellationReason = formData.get('cancellationReason') as string;
-                if (!cancellationReason) throw new Error("Le motif de l'annulation est obligatoire.");
+                if (!cancellationReason) {
+                    throw new Error("Le motif de l'annulation est obligatoire.");
+                }
                 dataToUpdate.cancellationReason = cancellationReason;
 
-                if (userDoc && userDoc.exists()) {
-                    transaction.update(userRef!, { rewardPoints: increment(orderData.pointsUsed!) });
+                if (userDoc && userDoc.exists() && orderData.pointsUsed) {
+                    transaction.update(userRef!, { rewardPoints: increment(orderData.pointsUsed) });
                 }
 
                 if (currentStatus !== 'annulée') {
@@ -708,32 +716,30 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
                         }
                     }
                 }
-                
-                shouldSendEmail = true;
+                orderForEmail = { ...orderData, ...dataToUpdate };
                 cancellationReasonForEmail = dataToUpdate.cancellationReason!;
-                orderDataForEmail = { ...orderData, ...dataToUpdate };
             }
 
             transaction.update(orderRef, dataToUpdate);
         });
 
         // Send email AFTER the transaction has successfully committed
-        if (shouldSendEmail && orderDataForEmail && cancellationReasonForEmail) {
+        if (orderForEmail && cancellationReasonForEmail) {
             const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@atelierabijoux.com';
-            const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${supportEmail} en précisant votre numéro de commande (${orderDataForEmail.orderNumber}).`;
-            const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${supportEmail}">${supportEmail}</a> en précisant votre numéro de commande (${orderDataForEmail.orderNumber}).</p>`;
+            const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${supportEmail} en précisant votre numéro de commande (${orderForEmail.orderNumber}).`;
+            const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${supportEmail}">${supportEmail}</a> en précisant votre numéro de commande (${orderForEmail.orderNumber}).</p>`;
             
-            const isPaidOrder = orderDataForEmail.paymentIntentId && orderDataForEmail.paymentIntentId !== 'free_order';
+            const isPaidOrder = orderForEmail.paymentIntentId && orderForEmail.paymentIntentId !== 'free_order';
             const refundText = isPaidOrder ? `\nLe remboursement complet a été initié et devrait apparaître sur votre compte d'ici quelques jours.` : '';
             const refundHtml = isPaidOrder ? `<p>Le remboursement complet a été initié et devrait apparaître sur votre compte d'ici quelques jours.</p>` : '';
 
-            const mailText = `Bonjour,\n\nVotre commande n°${orderDataForEmail.orderNumber} a été annulée.\n\nMotif : ${cancellationReasonForEmail}${refundText}\n\nNous nous excusons pour ce désagrément.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
-            const mailHtml = `<h1>Votre commande n°${orderDataForEmail.orderNumber} a été annulée</h1><p>Bonjour,</p><p>Votre commande n°<strong>${orderDataForEmail.orderNumber}</strong> a été annulée.</p><p><strong>Motif de l'annulation :</strong> ${cancellationReasonForEmail}</p>${refundHtml}<p>Nous nous excusons pour ce désagrément.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
+            const mailText = `Bonjour,\n\nVotre commande n°${orderForEmail.orderNumber} a été annulée.\n\nMotif : ${cancellationReasonForEmail}${refundText}\n\nNous nous excusons pour ce désagrément.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
+            const mailHtml = `<h1>Votre commande n°${orderForEmail.orderNumber} a été annulée</h1><p>Bonjour,</p><p>Votre commande n°<strong>${orderForEmail.orderNumber}</strong> a été annulée.</p><p><strong>Motif de l'annulation :</strong> ${cancellationReasonForEmail}</p>${refundHtml}<p>Nous nous excusons pour ce désagrément.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
             
             const mailDocData = {
-                to: [orderDataForEmail.customerEmail],
+                to: [orderForEmail.customerEmail],
                 message: {
-                    subject: `Annulation de votre commande n°${orderDataForEmail.orderNumber}`,
+                    subject: `Annulation de votre commande n°${orderForEmail.orderNumber}`,
                     text: mailText.trim(),
                     html: mailHtml.trim(),
                 },
