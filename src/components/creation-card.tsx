@@ -30,7 +30,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { useCart } from '@/hooks/use-cart';
 import { getJewelryTypesAndModels, getCharms } from '@/lib/data';
 import { ShareDialog } from './share-dialog';
@@ -126,6 +126,7 @@ export function CreationCard({
   
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   // Pre-fetch base data needed to add to cart
   React.useEffect(() => {
@@ -256,98 +257,119 @@ export function CreationCard({
 
   return (
     <>
-      <Card className="overflow-hidden group flex flex-col h-full">
-        <div className="relative">
-            {user?.uid === creation.creatorId && onDelete && (
-                <div className="absolute top-2 right-2 z-10">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="secondary" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                            <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Modifier
-                            </DropdownMenuItem>
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <DropdownMenuItem
-                                        className="text-destructive focus:text-destructive"
-                                        onSelect={(e) => e.preventDefault()}
-                                    >
-                                        <Trash2 className="mr-2 h-4 w-4" /> Supprimer
-                                    </DropdownMenuItem>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Êtes-vous sûr de vouloir supprimer "{creation.name}" ?</AlertDialogTitle>
-                                        <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                        <AlertDialogAction
-                                            onClick={handleDeleteClick}
-                                            className="bg-destructive hover:bg-destructive/90"
-                                            disabled={isDeletePending}
-                                        >
-                                            {isDeletePending ? <Loader2 className="animate-spin" /> : "Supprimer"}
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <Card className="overflow-hidden group flex flex-col h-full">
+          <div className="relative">
+              {user?.uid === creation.creatorId && onDelete && (
+                  <div className="absolute top-2 right-2 z-10">
+                      <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                              <Button variant="secondary" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                              <DropdownMenuItem onSelect={() => setIsEditOpen(true)}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Modifier
+                              </DropdownMenuItem>
+                              <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                      <DropdownMenuItem
+                                          className="text-destructive focus:text-destructive"
+                                          onSelect={(e) => e.preventDefault()}
+                                      >
+                                          <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                                      </DropdownMenuItem>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                          <AlertDialogTitle>Êtes-vous sûr de vouloir supprimer "{creation.name}" ?</AlertDialogTitle>
+                                          <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                          <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                          <AlertDialogAction
+                                              onClick={handleDeleteClick}
+                                              className="bg-destructive hover:bg-destructive/90"
+                                              disabled={isDeletePending}
+                                          >
+                                              {isDeletePending ? <Loader2 className="animate-spin" /> : "Supprimer"}
+                                          </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                  </AlertDialogContent>
+                              </AlertDialog>
+                          </DropdownMenuContent>
+                      </DropdownMenu>
+                  </div>
+              )}
+              <DialogTrigger asChild>
+                <div className="bg-muted/50 aspect-square relative overflow-hidden cursor-pointer">
+                  <Image
+                      src={creation.previewImageUrl}
+                      alt={creation.name}
+                      fill
+                      sizes="(max-width: 768px) 50vw, 33vw"
+                      className="object-contain group-hover:scale-105 transition-transform duration-300"
+                  />
                 </div>
-            )}
-             <Link href={editUrl} className="contents" onClick={() => setIsLoading(true)}>
-                <div className="bg-muted/50 aspect-square relative overflow-hidden">
-                <Image
-                    src={creation.previewImageUrl}
-                    alt={creation.name}
-                    fill
-                    sizes="(max-width: 768px) 50vw, 33vw"
-                    className="object-contain group-hover:scale-105 transition-transform duration-300"
-                />
-                {isLoading && (
-                    <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-                        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                    </div>
-                )}
-                </div>
+              </DialogTrigger>
+          </div>
+          <CardContent className="p-4 flex-grow flex flex-col">
+            <h3 className="font-headline text-lg truncate">{creation.name}</h3>
+            <Link href={`/${locale}/creators/${creation.creatorId}`} className="contents">
+              <p className="text-sm text-muted-foreground flex items-center gap-1.5 hover:underline">
+                  <User className="h-3 w-3" />
+                  {creation.creatorName}
+              </p>
             </Link>
-        </div>
-        <CardContent className="p-4 flex-grow flex flex-col">
-          <h3 className="font-headline text-lg truncate">{creation.name}</h3>
-          <Link href={`/${locale}/creators/${creation.creatorId}`} className="contents">
-            <p className="text-sm text-muted-foreground flex items-center gap-1.5 hover:underline">
-                <User className="h-3 w-3" />
-                {creation.creatorName}
-            </p>
-           </Link>
-        </CardContent>
-        <CardFooter className="p-4 pt-0 flex justify-between items-center">
-            <div className="flex items-center gap-1">
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleAddToCart} disabled={!allCharms.length}>
-                    <ShoppingCart className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setIsShareOpen(true)}>
-                    <Share2 className="h-4 w-4" />
-                </Button>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex items-center gap-1.5"
-              onClick={handleLikeClick}
-              disabled={isLikePending}
-            >
-              <Heart className={cn("h-4 w-4", optimisticLikes > 0 && "text-primary fill-current")} />
-              <span>{optimisticLikes}</span>
-            </Button>
-        </CardFooter>
-      </Card>
+          </CardContent>
+          <CardFooter className="p-4 pt-0 flex justify-between items-center">
+             <Button asChild variant="outline" size="sm">
+                <Link href={editUrl} onClick={() => setIsLoading(true)}>
+                  {t('use_as_template')}
+                </Link>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-1.5"
+                onClick={handleLikeClick}
+                disabled={isLikePending}
+              >
+                {isLikePending ? <Loader2 className="h-4 w-4 animate-spin"/> : <Heart className={cn("h-4 w-4", optimisticLikes > 0 && "text-primary fill-current")} />}
+                <span>{optimisticLikes}</span>
+              </Button>
+          </CardFooter>
+        </Card>
+
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+              <DialogTitle className="font-headline text-2xl">{creation.name}</DialogTitle>
+              <DialogDescription>Par {creation.creatorName}</DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 -mx-6 sm:mx-0">
+            <Image
+                src={creation.previewImageUrl}
+                alt={creation.name}
+                width={800}
+                height={800}
+                className="w-full h-auto object-contain rounded-lg max-w-full max-h-[70vh]"
+            />
+          </div>
+           <DialogFooter className="sm:justify-start gap-2">
+              <Button onClick={handleAddToCart} disabled={!allCharms.length}>
+                  <ShoppingCart className="mr-2 h-4 w-4" />
+                  {tEditor('add_to_cart_button')}
+              </Button>
+               <Button variant="outline" onClick={() => setIsShareOpen(true)}>
+                  <Share2 className="mr-2 h-4 w-4" />
+                  {tEditor('share_button')}
+              </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {isShareOpen && (
          <ShareDialog
             isOpen={isShareOpen}
