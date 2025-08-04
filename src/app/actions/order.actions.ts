@@ -53,8 +53,13 @@ export async function createPaymentIntent(
 
 async function refundStripePayment(paymentIntentId: string): Promise<{ success: boolean; message: string }> {
     try {
+        // Handle both client_secret and payment_intent_id for backward compatibility
+        const idToRefund = paymentIntentId.includes('_secret_')
+            ? paymentIntentId.split('_secret_')[0]
+            : paymentIntentId;
+
         const refund = await stripe.refunds.create({
-            payment_intent: paymentIntentId,
+            payment_intent: idToRefund,
         });
         if (refund.status === 'succeeded' || refund.status === 'pending') {
             return { success: true, message: `Remboursement initié avec succès (Status: ${refund.status}).` };
@@ -255,9 +260,15 @@ export async function createOrder(
                     isCompleted: false,
                 };
                 
-                if (item.creationId) orderItemData.creationId = item.creationId;
-                if (item.creatorId) orderItemData.creatorId = item.creatorId;
-                if (item.creatorName) orderItemData.creatorName = item.creatorName;
+                if (item.creationId) {
+                    orderItemData.creationId = item.creationId;
+                }
+                if (item.creatorId) {
+                    orderItemData.creatorId = item.creatorId;
+                }
+                if (item.creatorName) {
+                    orderItemData.creatorName = item.creatorName;
+                }
 
                 return orderItemData;
             });
@@ -693,16 +704,13 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
                         }
                     }
                 }
-            }
-            
-            transaction.update(orderRef, dataToUpdate);
-
-            // Prepare data for email but don't send it inside the transaction
-            if (newStatus === 'annulée') {
+                 // Prepare data for email but don't send it inside the transaction
                 shouldSendEmail = true;
                 cancellationReasonForEmail = dataToUpdate.cancellationReason!;
                 orderDataForEmail = { ...orderData, ...dataToUpdate };
             }
+            
+            transaction.update(orderRef, dataToUpdate);
         });
 
         // Send email AFTER the transaction has successfully committed
@@ -811,4 +819,5 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
         return { success: false, message: "Une erreur est survenue lors de la validation du code." };
     }
 }
+
 
