@@ -3,7 +3,7 @@
 import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, DocumentReference, getDoc, doc, Timestamp, query, orderBy, where, documentId, limit } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
-import type { JewelryModel, JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderItem, MailLog, MailDelivery, Creation, PlacedCreationCharm } from '@/lib/types';
+import type { JewelryModel, JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderItem, MailLog, MailDelivery, Creation, PlacedCreationCharm, User } from '@/lib/types';
 
 const getUrl = async (path: string, fallback: string) => {
     if (path && (path.startsWith('http://') || path.startsWith('https://'))) {
@@ -400,3 +400,46 @@ export async function getRecentCreations(): Promise<Creation[]> {
         return [];
     }
 }
+
+
+export async function getCreatorShowcaseData(creatorId: string): Promise<{ creator: User | null, creations: Creation[] }> {
+    try {
+        const userDocRef = doc(db, 'users', creatorId);
+        const creationsRef = collection(db, 'creations');
+        const q = query(creationsRef, where('creatorId', '==', creatorId), orderBy('createdAt', 'desc'));
+
+        const [userDoc, creationsSnapshot] = await Promise.all([
+            getDoc(userDocRef),
+            getDocs(q)
+        ]);
+
+        let creator: User | null = null;
+        if (userDoc.exists()) {
+            const data = userDoc.data();
+            creator = {
+                uid: userDoc.id,
+                displayName: data.displayName,
+                email: data.email,
+                photoURL: data.photoURL,
+            };
+        }
+
+        const creations = await Promise.all(creationsSnapshot.docs.map(async (doc) => {
+            const data = doc.data();
+            const previewImageUrl = await getUrl(data.previewImageUrl, 'https://placehold.co/400x400.png');
+            return {
+                id: doc.id,
+                ...data,
+                previewImageUrl,
+                placedCharms: data.placedCharms || [],
+                createdAt: toDate(data.createdAt as any)!,
+            } as Creation;
+        }));
+
+        return { creator, creations };
+    } catch (error) {
+        console.error(`Error fetching showcase data for creator ${creatorId}:`, error);
+        return { creator: null, creations: [] };
+    }
+}
+

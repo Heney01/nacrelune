@@ -3,172 +3,21 @@
 
 import React, { useEffect, useState, useTransition } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { getUserCreations, toggleLikeCreation, deleteCreation, updateCreation } from '@/app/actions/creation.actions';
+import { getUserCreations, deleteCreation, updateCreation } from '@/app/actions/creation.actions';
 import { logout } from '@/app/actions/auth.actions';
 import { Creation, JewelryModel, JewelryType, PlacedCharm, Charm } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import Image from 'next/image';
-import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Loader2, ArrowLeft, PlusCircle, Heart, MoreHorizontal, Trash2, ShoppingCart, LogOut, UserCircle, Award, Share2, Edit } from 'lucide-react';
+import { Loader2, ArrowLeft, PlusCircle, Award } from 'lucide-react';
 import { BrandLogo } from './icons';
-import { Button } from './ui/button';
+import Link from 'next/link';
 import { useTranslations } from '@/hooks/use-translations';
-import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-    DialogClose,
-} from '@/components/ui/dialog';
-import { useCart } from '@/hooks/use-cart';
 import { getJewelryTypesAndModels, getCharms } from '@/lib/data';
 import { CartWidget } from './cart-widget';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { ShareDialog } from './share-dialog';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
+import { UserNav } from './user-nav';
+import { CreationCard } from './creation-card';
 
-
-function UserNav({ locale }: { locale: string }) {
-    const { user, firebaseUser } = useAuth();
-    const t = useTranslations('HomePage');
-    const tAuth = useTranslations('Auth');
-
-    if (!firebaseUser) {
-        return (
-            <Button asChild variant="ghost" size="icon">
-                <Link href={`/${locale}/connexion`}>
-                    <UserCircle className="h-6 w-6" />
-                    <span className="sr-only">{tAuth('login_button')}</span>
-                </Link>
-            </Button>
-        )
-    }
-    
-    const fallbackDisplayName = user?.displayName?.charAt(0) || firebaseUser?.email?.charAt(0) || '?';
-
-    return (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                    <Avatar className="h-8 w-8">
-                        <AvatarImage src={user?.photoURL || firebaseUser.photoURL || undefined} alt={user?.displayName || 'Avatar'} />
-                        <AvatarFallback>{fallbackDisplayName.toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <span className="sr-only">{t('profile_menu_button')}</span>
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-                <DropdownMenuLabel>
-                    <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user?.displayName || firebaseUser.email}</p>
-                        <p className="text-xs leading-none text-muted-foreground">
-                            {user?.email || firebaseUser.email}
-                        </p>
-                    </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                     <Link href={`/${locale}/profil`}>{tAuth('my_creations')}</Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <form action={logout}>
-                    <input type="hidden" name="locale" value={locale} />
-                    <DropdownMenuItem asChild>
-                        <button type="submit" className="w-full">
-                            <LogOut className="mr-2 h-4 w-4" />
-                            <span>{tAuth('logout_button')}</span>
-                        </button>
-                    </DropdownMenuItem>
-                </form>
-            </DropdownMenuContent>
-        </DropdownMenu>
-    )
-}
-
-function EditCreationDialog({ creation, onOpenChange, isOpen }: { creation: Creation, isOpen: boolean, onOpenChange: (open: boolean) => void }) {
-    const t = useTranslations('Auth');
-    const tEditor = useTranslations('Editor');
-    const [name, setName] = useState(creation.name);
-    const [isUpdating, setIsUpdating] = useState(false);
-    const { firebaseUser } = useAuth();
-    const { toast } = useToast();
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!firebaseUser) return;
-        
-        setIsUpdating(true);
-        try {
-            const idToken = await firebaseUser.getIdToken();
-            const result = await updateCreation(idToken, creation.id, name);
-            if (result.success) {
-                toast({ title: t('edit_creation_success_title'), description: result.message });
-                onOpenChange(false);
-                 // Note: The parent component will optimistically update the state.
-                 // To trigger a full re-render, we could use a callback passed from the parent.
-            } else {
-                toast({ variant: 'destructive', title: t('edit_creation_error_title'), description: result.message });
-            }
-        } catch (error) {
-            toast({ variant: 'destructive', title: t('edit_creation_error_title'), description: "Une erreur inattendue est survenue." });
-        } finally {
-            setIsUpdating(false);
-        }
-    };
-
-    return (
-        <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent>
-                 <form onSubmit={handleSubmit}>
-                    <DialogHeader>
-                        <DialogTitle>{t('edit_creation_title')}</DialogTitle>
-                        <DialogDescription>{t('edit_creation_description')}</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="edit-name">{tEditor('creation_name_label')}</Label>
-                            <Input id="edit-name" value={name} onChange={(e) => setName(e.target.value)} />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isUpdating}>{tEditor('cancel_button')}</Button>
-                        <Button type="submit" disabled={isUpdating}>
-                            {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {t('save_changes_button')}
-                        </Button>
-                    </DialogFooter>
-                 </form>
-            </DialogContent>
-        </Dialog>
-    )
-}
 
 export function ProfileClient({ locale }: { locale: string }) {
     const { user, firebaseUser, loading: authLoading } = useAuth();
@@ -176,17 +25,8 @@ export function ProfileClient({ locale }: { locale: string }) {
     const [loadingCreations, setLoadingCreations] = useState(true);
     const router = useRouter();
     const t = useTranslations('Auth');
-    const tEditor = useTranslations('Editor');
     const { toast } = useToast();
     const [isPending, startTransition] = useTransition();
-    const { addToCart } = useCart();
-    
-    // State to hold all base models and charms for cart logic
-    const [jewelryTypes, setJewelryTypes] = useState<Omit<JewelryType, 'icon'>[]>([]);
-    const [allCharms, setAllCharms] = useState<Charm[]>([]);
-    const [creationToShare, setCreationToShare] = useState<Creation | null>(null);
-    const [creationToEdit, setCreationToEdit] = useState<Creation | null>(null);
-
 
     useEffect(() => {
         if (authLoading) {
@@ -204,147 +44,19 @@ export function ProfileClient({ locale }: { locale: string }) {
             setLoadingCreations(false);
         };
 
-        const fetchBaseData = async () => {
-             const JEWELRY_TYPES_INFO: Omit<JewelryType, 'models' | 'icon'>[] = [
-                { id: 'necklace', name: "Colliers", description: "" },
-                { id: 'bracelet', name: "Bracelets", description: "" },
-                { id: 'earring', name: "Boucles d'oreilles", description: "" },
-            ];
-            const [types, charms] = await Promise.all([
-                getJewelryTypesAndModels(JEWELRY_TYPES_INFO),
-                getCharms()
-            ]);
-            setJewelryTypes(types);
-            setAllCharms(charms);
-        };
-        
         fetchCreations();
-        fetchBaseData();
 
     }, [authLoading, firebaseUser, router, locale]);
-    
-    const handleLikeClick = async (creationId: string) => {
-        if (!firebaseUser) {
-            toast({
-                variant: 'destructive',
-                title: "Vous n'êtes pas connecté",
-                description: "Vous devez être connecté pour aimer une création.",
-            });
-            return;
-        }
-        
-        const currentCreation = creations?.find(c => c.id === creationId);
-        if (!currentCreation) return;
 
-        startTransition(async () => {
-            try {
-                const idToken = await firebaseUser.getIdToken();
-                const result = await toggleLikeCreation(creationId, idToken);
-                if (result.success && result.newLikesCount !== undefined) {
-                     setCreations(prev => 
-                        prev!.map(c => 
-                            c.id === creationId ? { ...c, likesCount: result.newLikesCount! } : c
-                        )
-                    );
-                }
-                else {
-                    toast({
-                        variant: 'destructive',
-                        title: "Erreur",
-                        description: result.message,
-                    });
-                }
-            } catch (error) {
-                 toast({
-                    variant: 'destructive',
-                    title: "Erreur",
-                    description: "Une erreur inattendue est survenue.",
-                });
-            }
-        });
+    const onCreationUpdate = (updatedCreation: Partial<Creation>) => {
+        setCreations(prev => 
+            prev?.map(c => c.id === updatedCreation.id ? { ...c, ...updatedCreation } : c) || null
+        );
     };
 
-    const handleDeleteClick = (creationId: string) => {
-        if (!firebaseUser) {
-            toast({ variant: 'destructive', title: "Non autorisé", description: "Vous devez être connecté." });
-            return;
-        }
-        
-        startTransition(async () => {
-            try {
-                const idToken = await firebaseUser.getIdToken();
-                const result = await deleteCreation(idToken, creationId);
-                
-                if (result.success) {
-                    toast({ title: "Succès", description: result.message });
-                    // Optimistic update: remove from local state
-                    setCreations(prev => prev ? prev.filter(c => c.id !== creationId) : null);
-                } else {
-                    toast({ variant: 'destructive', title: "Erreur", description: result.message });
-                }
-            } catch (error) {
-                 toast({ variant: 'destructive', title: "Erreur", description: "Une erreur inattendue est survenue." });
-            }
-        });
+    const onCreationDelete = (creationId: string) => {
+        setCreations(prev => prev?.filter(c => c.id !== creationId) || null);
     };
-    
-    const handleAddToCart = (creation: Creation) => {
-        const jewelryType = jewelryTypes.find(jt => jt.id === creation.jewelryTypeId);
-        if (!jewelryType) {
-            toast({ variant: 'destructive', title: 'Erreur', description: "Type de bijou non trouvé."});
-            return;
-        }
-
-        const model = jewelryType.models.find(m => m.id === creation.modelId);
-         if (!model) {
-            toast({ variant: 'destructive', title: 'Erreur', description: "Modèle de base non trouvé."});
-            return;
-        }
-
-        const placedCharms: PlacedCharm[] = creation.placedCharms.map(pc => {
-            const fullCharm = allCharms.find(c => c.id === pc.charm.id);
-            if (!fullCharm) {
-                // This should not happen if data is consistent
-                throw new Error(`Charm with ID ${pc.charm.id} not found in allCharms list.`);
-            }
-            return {
-                id: pc.id,
-                charm: fullCharm,
-                position: pc.position,
-                rotation: pc.rotation,
-            };
-        }).filter(Boolean);
-        
-        addToCart({
-            model,
-            jewelryType: { id: jewelryType.id, name: jewelryType.name, description: jewelryType.description },
-            placedCharms,
-            previewImage: creation.previewImageUrl,
-            creationId: creation.id,
-            creatorId: creation.creatorId,
-            creatorName: creation.creatorName,
-        });
-
-        toast({
-            title: "Ajouté au panier !",
-            description: `La création "${creation.name}" est dans votre panier.`,
-        });
-    }
-
-    const handleEditDialogOpen = (creation: Creation) => {
-        setCreationToEdit(creation);
-    };
-
-    const handleEditDialogClose = () => {
-        const fetchCreations = async () => {
-            if (firebaseUser) {
-                const userCreations = await getUserCreations(firebaseUser.uid);
-                setCreations(userCreations);
-            }
-        };
-        fetchCreations();
-        setCreationToEdit(null);
-    }
 
 
     if (authLoading || loadingCreations) {
@@ -382,165 +94,29 @@ export function ProfileClient({ locale }: { locale: string }) {
                             </Link>
                         </Button>
                     </div>
-                    <div className="flex items-center gap-4 mb-2">
-                         <h1 className="text-3xl font-headline">{user?.displayName || 'Mon Profil'}</h1>
-                         <Dialog>
-                            <DialogTrigger asChild>
-                                <div className="flex items-center gap-2 text-primary font-bold bg-primary/10 px-3 py-1.5 rounded-full cursor-pointer hover:bg-primary/20 transition-colors">
-                                    <Award className="h-5 w-5"/>
-                                    <span>{user?.rewardPoints || 0}</span>
-                                </div>
-                            </DialogTrigger>
-                             <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>{t('reward_points_title')}</DialogTitle>
-                                    <DialogDescription>{t('reward_points_description')}</DialogDescription>
-                                </DialogHeader>
-                                <ul className="list-disc list-inside space-y-2 my-4 text-sm text-muted-foreground">
-                                    <li>{t('reward_points_explanation_1')}</li>
-                                    <li>{t('reward_points_explanation_2')}</li>
-                                    <li><strong>{t('reward_points_explanation_3')}</strong></li>
-                                    <li>{t('reward_points_explanation_4')}</li>
-                                </ul>
-                                <DialogFooter>
-                                    <DialogClose asChild>
-                                        <Button>{t('reward_points_close_button')}</Button>
-                                    </DialogClose>
-                                </DialogFooter>
-                            </DialogContent>
-                         </Dialog>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
+                        <div>
+                             <h1 className="text-3xl font-headline">{user?.displayName || 'Mon Profil'}</h1>
+                             <p className="text-muted-foreground mt-2">Retrouvez ici toutes les créations que vous avez publiées.</p>
+                        </div>
+                         <div className="flex items-center gap-4 self-start sm:self-center">
+                             <div className="flex items-center gap-2 text-primary font-bold bg-primary/10 px-3 py-1.5 rounded-full">
+                                <Award className="h-5 w-5"/>
+                                <span>{user?.rewardPoints || 0} Points</span>
+                            </div>
+                        </div>
                     </div>
-                    <p className="text-muted-foreground mb-8">Retrouvez ici toutes les créations que vous avez publiées.</p>
 
                    {(creations && creations.length > 0) ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                             {creations.map(creation => (
-                                <Dialog key={creation.id}>
-                                    <Card className="flex flex-col group">
-                                         <div className="relative">
-                                            {firebaseUser?.uid === creation.creatorId && (
-                                                <div className="absolute top-2 right-2 z-10">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="secondary" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent>
-                                                            <DropdownMenuItem onSelect={() => handleEditDialogOpen(creation)}>
-                                                                <Edit className="mr-2 h-4 w-4" />
-                                                                {t('edit_creation_button')}
-                                                            </DropdownMenuItem>
-                                                            <AlertDialog>
-                                                                <AlertDialogTrigger asChild>
-                                                                    <DropdownMenuItem
-                                                                        className="text-destructive focus:text-destructive"
-                                                                        onSelect={(e) => e.preventDefault()}
-                                                                    >
-                                                                        <Trash2 className="mr-2 h-4 w-4" /> Supprimer
-                                                                    </DropdownMenuItem>
-                                                                </AlertDialogTrigger>
-                                                                <AlertDialogContent>
-                                                                    <AlertDialogHeader>
-                                                                        <AlertDialogTitle>Êtes-vous sûr de vouloir supprimer "{creation.name}" ?</AlertDialogTitle>
-                                                                        <AlertDialogDescription>
-                                                                            Cette action est irréversible. Votre création sera définitivement supprimée.
-                                                                        </AlertDialogDescription>
-                                                                    </AlertDialogHeader>
-                                                                    <AlertDialogFooter>
-                                                                        <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                                                        <AlertDialogAction
-                                                                            onClick={() => handleDeleteClick(creation.id)}
-                                                                            className="bg-destructive hover:bg-destructive/90"
-                                                                            disabled={isPending}
-                                                                        >
-                                                                            {isPending ? <Loader2 className="animate-spin" /> : "Supprimer"}
-                                                                        </AlertDialogAction>
-                                                                    </AlertDialogFooter>
-                                                                </AlertDialogContent>
-                                                            </AlertDialog>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </div>
-                                            )}
-                                            <DialogTrigger asChild>
-                                                <CardHeader className="p-0 relative cursor-pointer">
-                                                    <div className="aspect-square relative w-full bg-muted/50">
-                                                        <Image 
-                                                            src={creation.previewImageUrl} 
-                                                            alt={creation.name} 
-                                                            fill 
-                                                            className="object-contain"
-                                                            sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
-                                                        />
-                                                    </div>
-                                                </CardHeader>
-                                            </DialogTrigger>
-                                        </div>
-                                        <CardContent className="p-4 flex-grow">
-                                            <CardTitle className="text-base font-headline">{creation.name}</CardTitle>
-                                        </CardContent>
-                                        <CardFooter className="p-4 pt-0 flex justify-between items-center">
-                                            <div className="flex items-center gap-1">
-                                                <Button
-                                                    variant="outline"
-                                                    size="icon"
-                                                    className="h-8 w-8"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleAddToCart(creation);
-                                                    }}
-                                                >
-                                                    <ShoppingCart className="h-4 w-4" />
-                                                    <span className="sr-only">Ajouter au panier</span>
-                                                </Button>
-                                                 <Button
-                                                    variant="outline"
-                                                    size="icon"
-                                                    className="h-8 w-8"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setCreationToShare(creation);
-                                                    }}
-                                                >
-                                                    <Share2 className="h-4 w-4" />
-                                                    <span className="sr-only">Partager</span>
-                                                </Button>
-                                            </div>
-                                            <Button 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                className="flex items-center gap-1.5 text-muted-foreground hover:text-primary"
-                                                onClick={() => handleLikeClick(creation.id)}
-                                                disabled={isPending}
-                                            >
-                                                <Heart className={cn("h-4 w-4", (creation.likesCount || 0) > 0 && "text-primary fill-current")} />
-                                                <span className="font-mono text-sm">{creation.likesCount || 0}</span>
-                                            </Button>
-                                        </CardFooter>
-                                    </Card>
-                                     <DialogContent className="max-w-2xl">
-                                        <DialogHeader>
-                                            <DialogTitle>{creation.name}</DialogTitle>
-                                        </DialogHeader>
-                                        <div className="mt-4 grid place-items-center">
-                                            <Image 
-                                                src={creation.previewImageUrl} 
-                                                alt={creation.name} 
-                                                width={800}
-                                                height={800}
-                                                className="w-full h-auto object-contain rounded-lg max-w-full max-h-[80vh]"
-                                                sizes="100vw"
-                                            />
-                                        </div>
-                                        <DialogFooter>
-                                            <Button className="w-full" onClick={() => handleAddToCart(creation)}>
-                                                <ShoppingCart className="mr-2 h-4 w-4" />
-                                                {tEditor('add_to_cart_button')}
-                                            </Button>
-                                        </DialogFooter>
-                                    </DialogContent>
-                                </Dialog>
+                                <CreationCard 
+                                    key={creation.id} 
+                                    creation={creation} 
+                                    locale={locale} 
+                                    onUpdate={onCreationUpdate}
+                                    onDelete={onCreationDelete}
+                                />
                             ))}
                         </div>
                    ) : (
@@ -557,21 +133,7 @@ export function ProfileClient({ locale }: { locale: string }) {
                    )}
                 </div>
             </main>
-            {creationToShare && (
-                <ShareDialog
-                    isOpen={!!creationToShare}
-                    onOpenChange={() => setCreationToShare(null)}
-                    getCanvasDataUri={() => Promise.resolve(creationToShare.previewImageUrl)}
-                    t={tEditor}
-                />
-            )}
-            {creationToEdit && (
-                <EditCreationDialog
-                    creation={creationToEdit}
-                    isOpen={!!creationToEdit}
-                    onOpenChange={handleEditDialogClose}
-                />
-            )}
         </div>
     );
 }
+
