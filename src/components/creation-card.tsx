@@ -113,6 +113,7 @@ export function CreationCard({
 }) {
   const t = useTranslations('HomePage');
   const tEditor = useTranslations('Editor');
+  const tCart = useTranslations('Cart');
   const [optimisticLikes, setOptimisticLikes] = useState(creation.likesCount);
   const { user, firebaseUser } = useAuth();
   const { toast } = useToast();
@@ -253,7 +254,11 @@ export function CreationCard({
     });
 };
 
-  const editUrl = `/${locale}/?type=${creation.jewelryTypeId}&model=${creation.modelId}&creationId=${creation.id}`;
+  const handleShareClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsShareOpen(true);
+  };
 
   return (
     <>
@@ -324,21 +329,14 @@ export function CreationCard({
               </p>
             </Link>
           </CardContent>
-          <CardFooter className="p-4 pt-0 flex justify-between items-center">
-             <Button asChild variant="outline" size="sm">
-                <Link href={editUrl} onClick={() => setIsLoading(true)}>
-                  {t('use_as_template')}
-                </Link>
+          <CardFooter className="p-4 pt-0 grid grid-cols-2 gap-2">
+             <Button variant="outline" size="sm" onClick={handleAddToCart} disabled={!allCharms.length}>
+                <ShoppingCart className="mr-2 h-4 w-4" />
+                {tCart('checkout_button')}
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex items-center gap-1.5"
-                onClick={handleLikeClick}
-                disabled={isLikePending}
-              >
-                {isLikePending ? <Loader2 className="h-4 w-4 animate-spin"/> : <Heart className={cn("h-4 w-4", optimisticLikes > 0 && "text-primary fill-current")} />}
-                <span>{optimisticLikes}</span>
+              <Button variant="outline" size="sm" onClick={handleShareClick}>
+                <Share2 className="mr-2 h-4 w-4" />
+                {tEditor('share_button')}
               </Button>
           </CardFooter>
         </Card>
