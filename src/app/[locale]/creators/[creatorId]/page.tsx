@@ -1,24 +1,26 @@
 
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { getCreatorShowcaseData } from '@/lib/data';
 import { CreationCard } from '@/components/creation-card';
 import { notFound, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User } from 'lucide-react';
+import { ArrowLeft, User, Heart, Clock } from 'lucide-react';
 import { BrandLogo } from '@/components/icons';
 import { CartWidget } from '@/components/cart-widget';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Creation, User as Creator } from '@/lib/types';
 import Loading from '../../loading';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: string }) {
   const [data, setData] = useState<{ creator: Creator | null; creations: Creation[] } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState<'date' | 'likes'>('date');
   const searchParams = useSearchParams();
   const creationIdFromUrl = searchParams.get('creation');
 
@@ -32,6 +34,19 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
     fetchData();
   }, [creatorId]);
   
+  const sortedCreations = useMemo(() => {
+    if (!data?.creations) return [];
+    
+    const creationsCopy = [...data.creations];
+    
+    if (sortBy === 'likes') {
+      return creationsCopy.sort((a, b) => b.likesCount - a.likesCount);
+    }
+    
+    // Default to date sort
+    return creationsCopy.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [data?.creations, sortBy]);
+
   if (loading) {
     return <Loading />;
   }
@@ -79,10 +94,19 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
           </div>
 
           <Separator className="my-8" />
+          
+          <div className="mb-8">
+            <Tabs value={sortBy} onValueChange={(value) => setSortBy(value as 'date' | 'likes')}>
+              <TabsList>
+                <TabsTrigger value="date"><Clock className="mr-2 h-4 w-4"/>Les plus récentes</TabsTrigger>
+                <TabsTrigger value="likes"><Heart className="mr-2 h-4 w-4"/>Les plus populaires</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
 
-          {creations.length > 0 ? (
+          {sortedCreations.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {creations.map(creation => (
+              {sortedCreations.map(creation => (
                 <CreationCard 
                   key={creation.id} 
                   creation={creation} 
