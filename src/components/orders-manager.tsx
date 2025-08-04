@@ -5,7 +5,7 @@ import React, { useState, useReducer, useTransition, Fragment, useMemo } from 'r
 import type { Order, OrderStatus, OrderItem, Charm, MailLog, DeliveryMethod } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from './ui/card';
-import { Package, Search, ChevronDown, ChevronUp, Truck, FileX, Edit, Copy, Mail, CheckCircle, XCircle, Clock, Undo2, Home, Store, CreditCard, TicketPercent, Award } from 'lucide-react';
+import { Package, Search, ChevronDown, ChevronUp, Truck, FileX, Edit, Copy, Mail, CheckCircle, XCircle, Clock, Undo2, Home, Store, CreditCard, Award, TicketPercent } from 'lucide-react';
 import { useTranslations } from '@/hooks/use-translations';
 import { Badge } from './ui/badge';
 import { updateOrderStatus, updateOrderItemStatus } from '@/app/actions/order.actions';
@@ -869,5 +869,3 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
         )
     }
 }
-
-    
