@@ -330,13 +330,7 @@ export function CreationCard({
           </div>
           <CardContent className="p-4 flex-grow flex flex-col">
             <h3 className="font-headline text-lg truncate">{creation.name}</h3>
-            <div className="flex justify-between items-center mt-1">
-                <Link href={`/${locale}/creators/${creation.creatorId}`} className="contents">
-                    <p className="text-sm text-muted-foreground flex items-center gap-1.5 hover:underline">
-                        <User className="h-3 w-3" />
-                        {creation.creatorName}
-                    </p>
-                </Link>
+            <div className="flex justify-end items-center mt-1">
                 <button
                     onClick={handleLikeClick}
                     disabled={isLikePending}
