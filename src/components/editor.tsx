@@ -1,16 +1,16 @@
 
 'use client';
 
-import React, { useState, useMemo, useRef, WheelEvent as ReactWheelEvent, useCallback, useEffect, TouchEvent as ReactTouchEvent } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory, Creation } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Share2, Layers, Check, MoreHorizontal } from 'lucide-react';
+import { X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Share2, Layers, Check, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { BrandLogo, ShoppingBasketIcon } from './icons';
+import { BrandLogo } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { CharmsPanel } from './charms-panel';
@@ -25,7 +25,6 @@ import { useTranslations } from '@/hooks/use-translations';
 import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction, getCharmDesignCritiqueAction } from '@/app/actions/ai.actions';
 import { saveCreation } from '@/app/actions/creation.actions';
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogClose, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
@@ -37,8 +36,9 @@ import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { useAuth } from '@/hooks/use-auth';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { useEditorCanvas } from '@/hooks/use-editor-canvas';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -77,7 +77,7 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
         };
     }, [onDragStart, placed.id]);
 
-    const handleWheel = (e: ReactWheelEvent<HTMLDivElement>) => {
+    const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
         const rotationAmount = e.deltaY > 0 ? 10 : -10; // Rotate by 10 degrees
@@ -170,12 +170,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
   const [selectedPlacedCharmId, setSelectedPlacedCharmId] = useState<string | null>(null);
 
-  const canvasWrapperRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const modelImageRef = useRef<HTMLImageElement>(null);
-  const modelImageContainerRef = useRef<HTMLDivElement>(null);
-  const [modelImageRect, setModelImageRect] = useState<DOMRect | null>(null);
-
   const [isCharmsSheetOpen, setIsCharmsSheetOpen] = useState(false);
   const [isSuggestionsSheetOpen, setIsSuggestionsSheetOpen] = useState(false);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
@@ -186,21 +180,27 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const [creationDescription, setDescription] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
   const { firebaseUser } = useAuth();
-
-
-  const [scale, setScale] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-
+  
   const [charmsSearchTerm, setCharmsSearchTerm] = useState('');
-
   const [isGenerating, setIsGenerating] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [critique, setCritique] = useState<string | null>(null);
-
-  const [pixelsPerMm, setPixelsPerMm] = useState<number | null>(null);
   
   const isEditing = cartItemId !== null;
 
+  const {
+    canvasWrapperRef,
+    canvasRef,
+    modelImageContainerRef,
+    modelImageRef,
+    pan,
+    scale,
+    modelImageRect,
+    pixelsPerMm,
+    handleManualZoom,
+    resetZoomAndPan,
+  } = useEditorCanvas({ model });
+  
   useEffect(() => {
     if (isEditing) {
       const itemToEdit = cart.find(item => item.id === cartItemId);
@@ -219,11 +219,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
       refreshCharmStocks();
     }
   }, [isEditing, cart, cartItemId]);
-
-  const resetZoomAndPan = useCallback(() => {
-    setScale(1);
-    setPan({ x: 0, y: 0 });
-  }, []);
 
   const getCanvasDataUri = useCallback(async (): Promise<string> => {
     const canvasElement = canvasRef.current;
@@ -269,23 +264,15 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         }
       }, 500); // Reduced delay
     });
-  }, [resetZoomAndPan]);
+  }, [resetZoomAndPan, canvasRef]);
 
 
   const interactionState = useRef({
     isDragging: false,
-    isPanning: false,
     dragStart: { x: 0, y: 0 },
     activeCharmId: null as string | null,
-    panStart: { x: 0, y: 0 },
-    isPinching: false,
-    pinchInitialDist: 0,
   }).current;
 
-  const panRef = useRef(pan);
-  panRef.current = pan;
-  const scaleRef = useRef(scale);
-  scaleRef.current = scale;
   const placedCharmsRef = useRef(placedCharms);
   placedCharmsRef.current = placedCharms;
 
@@ -339,7 +326,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     e.stopPropagation();
 
     interactionState.isDragging = true;
-    interactionState.isPanning = false;
     interactionState.activeCharmId = charmId;
     setSelectedPlacedCharmId(charmId);
 
@@ -353,18 +339,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     );
   }, []);
 
-  const zoomToPoint = useCallback((newScale: number, pointX: number, pointY: number) => {
-    const clampedScale = Math.max(0.2, Math.min(newScale, 5));
-    const currentPan = panRef.current;
-    const currentScale = scaleRef.current;
-
-    const newPanX = pointX - ((pointX - currentPan.x) * (clampedScale / currentScale));
-    const newPanY = pointY - ((pointY - currentPan.y) * (clampedScale / currentScale));
-
-    setPan({ x: newPanX, y: newPanY });
-    setScale(clampedScale);
-}, []);
-
   useEffect(() => {
     const canvas = canvasWrapperRef.current;
     if (!canvas) return;
@@ -375,50 +349,13 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
     const getPoint = (e: MouseEvent | TouchEvent) => 'touches' in e ? e.touches[0] : e;
     
-    const getTouchCenter = (touches: TouchList) => {
-        const t1 = touches[0];
-        const t2 = touches[1];
-        return {
-            x: (t1.clientX + t2.clientX) / 2,
-            y: (t1.clientY + t2.clientY) / 2,
-        };
-    };
-
-    const getTouchDistance = (touches: TouchList) => {
-        const t1 = touches[0];
-        const t2 = touches[1];
-        return Math.sqrt(
-            Math.pow(t1.clientX - t2.clientX, 2) +
-            Math.pow(t1.clientY - t2.clientY, 2)
-        );
-    };
-
     const handleInteractionEnd = () => {
       interactionState.isDragging = false;
-      interactionState.isPanning = false;
-      interactionState.isPinching = false;
       interactionState.activeCharmId = null;
     };
     
-    const handleWheel = (e: globalThis.WheelEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('.charm-on-canvas')) return;
-      e.preventDefault();
-      
-      const canvasRect = canvas.getBoundingClientRect();
-      const zoomFactor = e.deltaY * -0.005;
-      const newScale = scaleRef.current * (1 + zoomFactor);
-      
-      const pointX = e.clientX - canvasRect.left;
-      const pointY = e.clientY - canvasRect.top;
-
-      zoomToPoint(newScale, pointX, pointY);
-    };
-    
     const handleMove = (e: MouseEvent | TouchEvent) => {
-      const isInteracting = interactionState.isDragging || interactionState.isPanning || interactionState.isPinching;
-
-      if (isInteracting && 'preventDefault' in e && e.cancelable) {
+      if (interactionState.isDragging && 'preventDefault' in e && e.cancelable) {
         e.preventDefault();
       }
 
@@ -427,8 +364,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
           if (!imgRect) return;
 
           const point = getPoint(e);
-          const dx = (point.clientX - interactionState.dragStart.x) / scaleRef.current;
-          const dy = (point.clientY - interactionState.dragStart.y) / scaleRef.current;
+          const dx = (point.clientX - interactionState.dragStart.x) / scale;
+          const dy = (point.clientY - interactionState.dragStart.y) / scale;
           
           const currentPlacedCharms = placedCharmsRef.current;
           const charmToMove = currentPlacedCharms.find(pc => pc.id === interactionState.activeCharmId);
@@ -452,90 +389,24 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
           }
           
           interactionState.dragStart = { x: point.clientX, y: point.clientY };
-
-      } else if (interactionState.isPanning) {
-        const point = getPoint(e);
-        const newX = point.clientX - interactionState.panStart.x;
-        const newY = point.clientY - interactionState.panStart.y;
-        setPan({ x: newX, y: newY });
-      } else if (interactionState.isPinching && 'touches' in e && e.touches.length === 2) {
-          const newDist = getTouchDistance(e.touches);
-          const zoomFactor = newDist / interactionState.pinchInitialDist;
-          const newScale = scaleRef.current * zoomFactor;
-
-          const touchCenter = getTouchCenter(e.touches);
-          const canvasRect = canvas.getBoundingClientRect();
-          const pointX = touchCenter.x - canvasRect.left;
-          const pointY = touchCenter.y - canvasRect.top;
-          
-          zoomToPoint(newScale, pointX, pointY);
-          interactionState.pinchInitialDist = newDist;
       }
     };
 
-    const handlePanStart = (e: MouseEvent | TouchEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('.charm-on-canvas')) return;
-      
-      const isInteracting = interactionState.isDragging || interactionState.isPanning || interactionState.isPinching;
-      if (!isInteracting && 'preventDefault' in e && e.cancelable) {
-        e.preventDefault();
-      }
-      
-      setSelectedPlacedCharmId(null);
-      
-      if ('touches' in e) {
-          if (e.touches.length === 2) {
-              interactionState.isPinching = true;
-              interactionState.isPanning = false;
-              interactionState.isDragging = false;
-              interactionState.pinchInitialDist = getTouchDistance(e.touches);
-              return;
-          }
-          if (e.touches.length !== 1) return;
-      }
-
-      interactionState.isPanning = true;
-      interactionState.isDragging = false;
-      interactionState.isPinching = false;
-      
-      const point = getPoint(e);
-      interactionState.panStart = { x: point.clientX - panRef.current.x, y: point.clientY - panRef.current.y };
-    }
-    
     // Desktop
-    canvas.addEventListener('mousedown', handlePanStart);
-    canvas.addEventListener('wheel', handleWheel, { passive: false });
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleInteractionEnd);
     
     // Mobile
-    canvas.addEventListener('touchstart', handlePanStart, { passive: false });
     window.addEventListener('touchmove', handleMove, { passive: false });
     window.addEventListener('touchend', handleInteractionEnd);
     
     return () => {
-      canvas.removeEventListener('mousedown', handlePanStart);
-      canvas.removeEventListener('wheel', handleWheel);
       window.removeEventListener('mousemove', handleMove);
       window.removeEventListener('mouseup', handleInteractionEnd);
-      canvas.removeEventListener('touchstart', handlePanStart);
       window.removeEventListener('touchmove', handleMove);
       window.removeEventListener('touchend', handleInteractionEnd);
     };
-  }, [interactionState, zoomToPoint, isMobile, isCharmsSheetOpen, isSuggestionsSheetOpen]);
-
-  const handleManualZoom = (direction: 'in' | 'out') => {
-    if (!canvasWrapperRef.current) return;
-    const zoomFactor = direction === 'in' ? 1.2 : 1 / 1.2;
-    const newScale = scale * zoomFactor;
-
-    const canvasRect = canvasWrapperRef.current.getBoundingClientRect();
-    const pointX = canvasRect.width / 2;
-    const pointY = canvasRect.height / 2;
-    
-    zoomToPoint(newScale, pointX, pointY);
-  };
+  }, [interactionState, scale, isMobile, isCharmsSheetOpen, isSuggestionsSheetOpen, modelImageRef]);
   
   const handleCharmListClick = (charmId: string) => {
     setSelectedPlacedCharmId(charmId);
@@ -732,78 +603,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
       setIsGenerating(false);
     }
   }
-
-  const updateRects = useCallback(() => {
-    const imageEl = modelImageRef.current;
-    const containerEl = modelImageContainerRef.current;
-
-    if (imageEl && containerEl) {
-        const containerWidth = containerEl.offsetWidth;
-        const containerHeight = containerEl.offsetHeight;
-        const imageNaturalWidth = imageEl.naturalWidth;
-        const imageNaturalHeight = imageEl.naturalHeight;
-
-        if (imageNaturalWidth === 0 || imageNaturalHeight === 0) return;
-
-        const imageAspectRatio = imageNaturalWidth / imageNaturalHeight;
-        const containerAspectRatio = containerWidth / containerHeight;
-
-        let renderedWidth, renderedHeight, offsetX = 0, offsetY = 0;
-
-        if (imageAspectRatio > containerAspectRatio) {
-            // Image is limited by width
-            renderedWidth = containerWidth;
-            renderedHeight = containerWidth / imageAspectRatio;
-            offsetY = (containerHeight - renderedHeight) / 2;
-        } else {
-            // Image is limited by height
-            renderedHeight = containerHeight;
-            renderedWidth = containerHeight * imageAspectRatio;
-            offsetX = (containerWidth - renderedWidth) / 2;
-        }
-
-        const containerRect = containerEl.getBoundingClientRect();
-
-        setModelImageRect(new DOMRect(
-            containerRect.left + offsetX,
-            containerRect.top + offsetY,
-            renderedWidth,
-            renderedHeight
-        ));
-        
-        const pxPerMmWidth = renderedWidth / (model.width || 1);
-        const pxPerMmHeight = renderedHeight / (model.height || 1);
-        setPixelsPerMm((pxPerMmWidth + pxPerMmHeight) / 2);
-    }
-  }, [model.width, model.height]);
-
-
-  useEffect(() => {
-    const imageEl = modelImageRef.current;
-    if (!imageEl) return;
-
-    const handleLoad = () => updateRects();
-    
-    // If the image is already loaded, update immediately.
-    if (imageEl.complete) {
-      handleLoad();
-    } else {
-      imageEl.addEventListener('load', handleLoad);
-    }
-
-    window.addEventListener('resize', updateRects);
-    return () => {
-      window.removeEventListener('resize', updateRects)
-      if (imageEl) {
-        imageEl.removeEventListener('load', handleLoad);
-      }
-    };
-  }, [updateRects]);
-
-  useEffect(() => {
-    updateRects();
-  }, [pan, scale, updateRects]);
-
+  
   const { sortedPlacedCharms, hasStockIssues } = useMemo(() => {
     const counts = new Map<string, number>();
     const charmsWithStockInfo = placedCharms.map(pc => {
@@ -1010,7 +810,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                   data-ai-hint="jewelry model"
                                   priority
                                   crossOrigin="anonymous"
-                                  onLoad={updateRects}
                               />
                           </div>
                           
