@@ -12,6 +12,8 @@ import { PreferencesManager } from '@/components/preferences-manager';
 import { OrdersManager } from '@/components/orders-manager';
 import { MailManager } from '@/components/mail-manager';
 import { AdminHeader } from '@/components/admin-header';
+import { Badge } from '@/components/ui/badge';
+import { useTranslations } from '@/hooks/use-translations';
 
 
 type AdminData = {
@@ -27,6 +29,7 @@ export default function AdminDashboardPage({ params }: { params: { locale: strin
     const [data, setData] = useState<AdminData | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('dashboard');
+    const tStatus = useTranslations('OrderStatus');
 
     useEffect(() => {
         async function fetchData() {
@@ -60,6 +63,9 @@ export default function AdminDashboardPage({ params }: { params: { locale: strin
         if (!data) return null;
 
         const currentTab = tabs.find(t => t.id === activeTab);
+
+        const ordersCommandees = data.orders.filter(o => o.status === 'commandée').length;
+        const ordersEnPreparation = data.orders.filter(o => o.status === 'en cours de préparation').length;
         
         return (
             <div>
@@ -79,18 +85,34 @@ export default function AdminDashboardPage({ params }: { params: { locale: strin
                                     <CardTitle className="text-2xl font-headline">Bienvenue sur votre tableau de bord</CardTitle>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                         {tabs.filter(t => t.id !== 'dashboard').map(tab => (
-                                            <Card key={tab.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setActiveTab(tab.id)}>
+                                            <Card key={tab.id} className="hover:shadow-lg transition-shadow cursor-pointer flex flex-col" onClick={() => setActiveTab(tab.id)}>
                                                 <CardHeader>
                                                     <CardTitle className="flex items-center gap-2 text-xl">
                                                         <tab.icon className="w-6 h-6 text-primary" />
                                                         {tab.label}
                                                     </CardTitle>
                                                 </CardHeader>
-                                                <CardContent>
+                                                <CardContent className="flex-grow">
                                                     <p className="text-muted-foreground text-sm">
                                                         Accédez au module de gestion des {tab.label.toLowerCase()}.
                                                     </p>
                                                 </CardContent>
+                                                {tab.id === 'orders' && (ordersCommandees > 0 || ordersEnPreparation > 0) && (
+                                                    <CardFooter className="flex-col items-start gap-2">
+                                                        {ordersCommandees > 0 && (
+                                                            <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+                                                                {ordersCommandees} {tStatus('commandée')}
+                                                                {ordersCommandees > 1 ? 's' : ''}
+                                                            </Badge>
+                                                        )}
+                                                        {ordersEnPreparation > 0 && (
+                                                            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                                                                {ordersEnPreparation} {tStatus('en cours de préparation')}
+                                                                {ordersEnPreparation > 1 ? 's' : ''}
+                                                            </Badge>
+                                                        )}
+                                                    </CardFooter>
+                                                )}
                                             </Card>
                                         ))}
                                     </div>
