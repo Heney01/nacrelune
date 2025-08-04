@@ -28,27 +28,6 @@ const getUrl = async (path: string | undefined | null, fallback: string): Promis
     }
 };
 
-function removeUndefinedFields(obj: any): any {
-  if (typeof obj !== 'object' || obj === null) {
-    return obj;
-  }
-
-  if (Array.isArray(obj)) {
-    return obj.map(item => removeUndefinedFields(item));
-  }
-
-  const newObj: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const value = obj[key];
-      if (value !== undefined) {
-        newObj[key] = removeUndefinedFields(value);
-      }
-    }
-  }
-  return newObj;
-}
-
 
 // --- Order Actions ---
 
@@ -279,7 +258,7 @@ export async function createOrder(
             });
             
             const orderNumber = generateOrderNumber();
-            const newOrderData: Omit<Order, 'id' | 'createdAt'> = {
+            const newOrderData: any = {
                 orderNumber,
                 customerEmail: email,
                 totalPrice: finalPrice,
@@ -287,12 +266,22 @@ export async function createOrder(
                 status: 'commandée',
                 paymentIntentId: paymentIntentId,
                 deliveryMethod: deliveryMethod,
-                ...((deliveryMethod === 'home' && shippingAddress) && { shippingAddress: shippingAddress }),
-                ...(coupon && { couponCode: coupon.code, couponId: coupon.id }),
-                ...((pointsToUse && pointsToUse > 0) && { pointsUsed: pointsToUse, pointsValue: pointsValue }),
+                createdAt: serverTimestamp()
             };
+
+            if (deliveryMethod === 'home' && shippingAddress) {
+                newOrderData.shippingAddress = shippingAddress;
+            }
+            if (coupon) {
+                newOrderData.couponCode = coupon.code;
+                newOrderData.couponId = coupon.id;
+            }
+            if (pointsToUse && pointsToUse > 0) {
+                newOrderData.pointsUsed = pointsToUse;
+                newOrderData.pointsValue = pointsValue;
+            }
             
-            transaction.set(doc(collection(db, 'orders')), { ...newOrderData, createdAt: serverTimestamp() });
+            transaction.set(doc(collection(db, 'orders')), newOrderData);
             
             const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@atelierabijoux.com';
             const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${supportEmail} en précisant votre numéro de commande (${orderNumber}).`;
