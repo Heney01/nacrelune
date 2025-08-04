@@ -240,8 +240,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     }));
 
     return new Promise((resolve, reject) => {
-        // A short timeout to ensure the DOM is fully updated after state changes (like resetZoomAndPan)
-        setTimeout(async () => {
+        requestAnimationFrame(async () => {
             try {
                 // Use the model image itself as the basis for the screenshot dimensions and position
                 const modelImageElement = modelImageRef.current!;
@@ -275,7 +274,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                 console.error("Error capturing canvas:", error);
                 reject(error);
             }
-        }, 300); // A small delay can help ensure all styles are applied
+        });
     });
 }, [resetZoomAndPan, canvasRef, modelImageRef]);
 
