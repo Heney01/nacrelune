@@ -37,9 +37,8 @@ const Polaroid = React.forwardRef<HTMLDivElement, { creationImage: string, title
                 <User className="h-3 w-3" /> 
                 <span>par {creatorName}</span>
             </p>
-        ) : (
-             <p className="text-xs text-muted-foreground/50 mt-2 font-sans">www.atelierabijoux.com</p>
-        )}
+        ) : null}
+         <p className="text-xs text-muted-foreground/50 mt-2 font-sans">www.atelierabijoux.com</p>
       </div>
     </div>
   )
