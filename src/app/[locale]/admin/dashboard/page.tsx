@@ -11,6 +11,7 @@ import { CharmsManager } from '@/components/charms-manager';
 import { PreferencesManager } from '@/components/preferences-manager';
 import { OrdersManager } from '@/components/orders-manager';
 import { MailManager } from '@/components/mail-manager';
+import { AdminHeader } from '@/components/admin-header';
 
 
 type AdminData = {
@@ -134,7 +135,7 @@ export default function AdminDashboardPage({ params }: { params: { locale: strin
     }
 
     return (
-        <div className="flex min-h-screen bg-muted/40">
+        <div className="flex min-h-screen w-full flex-col bg-muted/40">
             <aside className="hidden w-64 flex-col border-r bg-background sm:flex">
                 <div className="border-b p-4">
                     <h1 className="text-xl font-bold font-headline">Tableau de bord</h1>
@@ -153,9 +154,13 @@ export default function AdminDashboardPage({ params }: { params: { locale: strin
                     ))}
                 </nav>
             </aside>
-            <main className="flex-1 p-4 sm:p-8">
-               {renderContent()}
-            </main>
+            <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-72">
+                 <AdminHeader locale={params.locale} />
+                 <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
+                    {renderContent()}
+                </main>
+            </div>
         </div>
     );
 }
+
