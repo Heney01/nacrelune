@@ -783,14 +783,14 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
         
         const couponDoc = querySnapshot.docs[0];
         const couponData = couponDoc.data() as Omit<Coupon, 'id'>;
+        const validUntilDate = toDate(couponData.validUntil as Timestamp | undefined);
+
+        if (validUntilDate && validUntilDate < new Date()) {
+            return { success: false, message: "Ce code promo a expiré." };
+        }
         
         if (!couponData.isActive) {
             return { success: false, message: "Ce code promo n'est plus actif." };
-        }
-
-        const validUntilDate = toDate(couponData.validUntil as Timestamp | undefined);
-        if (validUntilDate && validUntilDate < new Date()) {
-            return { success: false, message: "Ce code promo a expiré." };
         }
 
         const coupon: Coupon = { 
