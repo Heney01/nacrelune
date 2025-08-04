@@ -636,68 +636,66 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
 
     try {
         await runTransaction(db, async (transaction) => {
+            // --- READ PHASE ---
             const orderRef = doc(db, 'orders', orderId);
             const orderDoc = await transaction.get(orderRef);
-            if (!orderDoc.exists()) {
-                throw new Error("Commande non trouvée.");
-            }
+            if (!orderDoc.exists()) throw new Error("Commande non trouvée.");
             
             const orderData = orderDoc.data() as Order;
             const currentStatus = orderData.status;
+            if (currentStatus === newStatus) throw new Error(`La commande est déjà au statut : ${newStatus}.`);
 
-            if (currentStatus === newStatus) {
-                 throw new Error(`La commande est déjà au statut : ${newStatus}.`);
-            }
+            // Read all necessary documents if cancelling
+            const itemsToRead = new Map<string, DocumentReference>();
+            const userRef = (orderData.userId && orderData.pointsUsed && orderData.pointsUsed > 0) ? doc(db, 'users', orderData.userId) : null;
             
+            if (newStatus === 'annulée' && currentStatus !== 'annulée') {
+                for (const item of orderData.items) {
+                    itemsToRead.set(doc(db, item.jewelryTypeId, item.modelId).path, doc(db, item.jewelryTypeId, item.modelId));
+                    for (const charmId of item.charmIds) {
+                         itemsToRead.set(doc(db, 'charms', charmId).path, doc(db, 'charms', charmId));
+                    }
+                }
+            }
+            const itemDocs = await Promise.all(Array.from(itemsToRead.values()).map(ref => transaction.get(ref)));
+            const userDoc = userRef ? await transaction.get(userRef) : null;
+            
+            // --- EXTERNAL CALLS & VALIDATION PHASE (NO WRITES) ---
+            if (newStatus === 'annulée' && orderData.paymentIntentId && orderData.paymentIntentId !== 'free_order') {
+                const refundResult = await refundStripePayment(orderData.paymentIntentId);
+                if (!refundResult.success) throw new Error(`Le remboursement a échoué: ${refundResult.message}. L'annulation a été interrompue.`);
+            }
+
+            // --- WRITE PHASE ---
             let dataToUpdate: Partial<Order> = { status: newStatus };
 
             if (newStatus === 'expédiée') {
                 const shippingCarrier = formData.get('shippingCarrier') as string;
                 const trackingNumber = formData.get('trackingNumber') as string;
-                if (!shippingCarrier || !trackingNumber) {
-                    throw new Error("Le transporteur et le numéro de suivi sont obligatoires pour une expédition.");
-                }
+                if (!shippingCarrier || !trackingNumber) throw new Error("Le transporteur et le numéro de suivi sont obligatoires pour une expédition.");
                 dataToUpdate.shippingCarrier = shippingCarrier;
                 dataToUpdate.trackingNumber = trackingNumber;
             }
 
             if (newStatus === 'annulée') {
                 const cancellationReason = formData.get('cancellationReason') as string;
-                if (!cancellationReason) {
-                    throw new Error("Le motif de l'annulation est obligatoire.");
-                }
+                if (!cancellationReason) throw new Error("Le motif de l'annulation est obligatoire.");
                 dataToUpdate.cancellationReason = cancellationReason;
-                
-                if (orderData.paymentIntentId && orderData.paymentIntentId !== 'free_order') {
-                    const refundResult = await refundStripePayment(orderData.paymentIntentId);
-                    if (!refundResult.success) {
-                        throw new Error(`Le remboursement a échoué: ${refundResult.message}. L'annulation a été interrompue.`);
-                    }
+
+                if (userDoc && userDoc.exists()) {
+                    transaction.update(userRef!, { rewardPoints: increment(orderData.pointsUsed!) });
                 }
 
-                if (orderData.userId && orderData.pointsUsed && orderData.pointsUsed > 0) {
-                    transaction.update(doc(db, 'users', orderData.userId), {
-                        rewardPoints: increment(orderData.pointsUsed)
-                    });
-                }
-                
                 if (currentStatus !== 'annulée') {
-                    const itemRefsToFetch = new Map<string, DocumentReference>();
                     const stockToRestore = new Map<string, number>();
-
-                    for (const item of orderData.items) {
-                        const modelRef = doc(db, item.jewelryTypeId, item.modelId);
-                        if (!itemRefsToFetch.has(modelRef.path)) itemRefsToFetch.set(modelRef.path, modelRef);
-                        stockToRestore.set(modelRef.path, (stockToRestore.get(modelRef.path) || 0) + 1);
-
+                     for (const item of orderData.items) {
+                        const modelPath = doc(db, item.jewelryTypeId, item.modelId).path;
+                        stockToRestore.set(modelPath, (stockToRestore.get(modelPath) || 0) + 1);
                         for (const charmId of item.charmIds) {
-                            const charmRef = doc(db, 'charms', charmId);
-                            if (!itemRefsToFetch.has(charmRef.path)) itemRefsToFetch.set(charmRef.path, charmRef);
-                            stockToRestore.set(charmRef.path, (stockToRestore.get(charmRef.path) || 0) + 1);
+                            const charmPath = doc(db, 'charms', charmId).path;
+                            stockToRestore.set(charmPath, (stockToRestore.get(charmPath) || 0) + 1);
                         }
                     }
-
-                    const itemDocs = await Promise.all(Array.from(itemRefsToFetch.values()).map(ref => transaction.get(ref)));
 
                     for (const itemDoc of itemDocs) {
                         if (itemDoc.exists()) {
@@ -707,12 +705,12 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
                         }
                     }
                 }
-                 // Prepare data for email but don't send it inside the transaction
+                
                 shouldSendEmail = true;
                 cancellationReasonForEmail = dataToUpdate.cancellationReason!;
                 orderDataForEmail = { ...orderData, ...dataToUpdate };
             }
-            
+
             transaction.update(orderRef, dataToUpdate);
         });
 
