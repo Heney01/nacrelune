@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
@@ -242,7 +243,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     return new Promise((resolve, reject) => {
         requestAnimationFrame(async () => {
             try {
-                // Use the model image itself as the basis for the screenshot dimensions and position
                 const modelImageElement = modelImageRef.current!;
                 const modelImageBoundingRect = modelImageElement.getBoundingClientRect();
                 const canvasBoundingRect = canvasElement.getBoundingClientRect();
@@ -255,7 +255,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                 const size = Math.max(originalWidth, originalHeight);
 
                 const finalX = originalX - (size - originalWidth) / 2;
-                const finalY = originalY - (size - originalHeight) / 2;
+                const finalY = originalY; // Align to top
                 
                 const canvas = await html2canvas(canvasElement, {
                     backgroundColor: null,
@@ -1057,3 +1057,4 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
