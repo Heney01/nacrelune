@@ -56,6 +56,8 @@ export function SignUpForm() {
   const router = useRouter();
   const locale = params.locale as string;
   const t = useTranslations('Auth');
+  const { toast } = useToast();
+
   const { signInWithGoogle, error: googleError, isGoogleLoading } = useGoogleAuth({
       onSuccess: async (user) => {
           const idToken = await user.getIdToken();
@@ -73,7 +75,7 @@ export function SignUpForm() {
                 title: 'Connexion réussie',
                 description: result.message,
             });
-            router.push(`/${locale}`);
+            router.refresh();
           } else {
             toast({
               variant: 'destructive',
@@ -83,7 +85,7 @@ export function SignUpForm() {
           }
       }
   });
-  const { toast } = useToast();
+
 
   useEffect(() => {
     if (state.success) {
@@ -91,7 +93,7 @@ export function SignUpForm() {
             title: 'Inscription réussie',
             description: state.message,
         });
-        router.push(`/${locale}`);
+        router.refresh();
     }
   }, [state.success, state.message, toast, router, locale]);
 
@@ -173,5 +175,3 @@ export function SignUpForm() {
     </Card>
   );
 }
-
-    

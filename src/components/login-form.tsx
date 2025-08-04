@@ -56,6 +56,8 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
   const locale = params.locale as string;
   const router = useRouter();
   const t = useTranslations('Auth');
+  const { toast } = useToast();
+  
   const { signInWithGoogle, error, isGoogleLoading } = useGoogleAuth({
       onSuccess: async (user) => {
           const idToken = await user.getIdToken();
@@ -73,7 +75,7 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
                 title: 'Connexion réussie',
                 description: result.message,
             });
-            router.push(`/${locale}`);
+            router.refresh();
           } else {
             toast({
               variant: 'destructive',
@@ -83,7 +85,7 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
           }
       }
   });
-  const { toast } = useToast();
+
 
   useEffect(() => {
     if (state.success) {
@@ -91,8 +93,7 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
         title: 'Connexion réussie',
         description: state.message,
       });
-      const redirectPath = isUserAuth ? `/${locale}` : `/${locale}/admin/dashboard`;
-      router.push(redirectPath);
+      router.refresh();
     }
   }, [state.success, state.message, router, locale, toast, isUserAuth]);
 
