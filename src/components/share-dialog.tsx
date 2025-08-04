@@ -14,6 +14,7 @@ import html2canvas from 'html2canvas';
 import { generateShareContentAction } from '@/app/actions/ai.actions';
 import { useParams } from 'next/navigation';
 import { Creation } from '@/lib/types';
+import { User } from 'lucide-react';
 
 interface ShareDialogProps {
   isOpen: boolean;
@@ -23,15 +24,21 @@ interface ShareDialogProps {
   creation?: Creation;
 }
 
-const Polaroid = React.forwardRef<HTMLDivElement, { creationImage: string, title: string }>(
-  ({ creationImage, title }, ref) => (
+const Polaroid = React.forwardRef<HTMLDivElement, { creationImage: string, title: string, creatorName?: string }>(
+  ({ creationImage, title, creatorName }, ref) => (
     <div ref={ref} className="bg-white p-4 pb-2 shadow-lg rounded-sm" data-polaroid-container>
       <div className="bg-gray-200">
         <Image src={creationImage} alt="User creation" width={400} height={400} className="w-full h-auto object-contain" crossOrigin="anonymous" />
       </div>
       <div className="mt-3 text-center">
         <h3 className="font-caveat text-xl">{title || "Ma création"}</h3>
-        <p className="text-xs text-muted-foreground/50 mt-2 font-sans">www.atelierabijoux.com</p>
+        {creatorName ? (
+            <p className="text-xs text-muted-foreground font-sans flex items-center justify-center gap-1 mt-1">
+                <User className="h-3 w-3" /> par {creatorName}
+            </p>
+        ) : (
+             <p className="text-xs text-muted-foreground/50 mt-2 font-sans">www.atelierabijoux.com</p>
+        )}
       </div>
     </div>
   )
@@ -188,16 +195,18 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t, creatio
             {creationImage && (
               <div className="space-y-4">
                 <div className="grid place-items-center">
-                    <Polaroid ref={polaroidRef} creationImage={creationImage} title={title} />
+                    <Polaroid ref={polaroidRef} creationImage={creationImage} title={title} creatorName={creation?.creatorName} />
                 </div>
                 <div className="space-y-2">
                     <div className="flex justify-between items-center">
                         <Label htmlFor="share-title">{t('share_title_label')}</Label>
-                         <Button variant="ghost" size="sm" onClick={handleGenerateContent} disabled={isGeneratingContent}>
-                             {isGeneratingContent ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                        </Button>
+                         {!creation && (
+                             <Button variant="ghost" size="sm" onClick={handleGenerateContent} disabled={isGeneratingContent}>
+                                 {isGeneratingContent ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                            </Button>
+                         )}
                     </div>
-                    <Input id="share-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('share_title_placeholder')} />
+                    <Input id="share-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('share_title_placeholder')} disabled={!!creation} />
                 </div>
               </div>
             )}
