@@ -7,7 +7,7 @@ import { useCart } from '@/hooks/use-cart';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, ShoppingCart, PlusCircle, Loader2, Edit, Share2 } from 'lucide-react';
+import { Trash2, ShoppingCart, PlusCircle, Loader2, Edit, Share2, User } from 'lucide-react';
 import React, { ReactNode, useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
@@ -27,6 +27,9 @@ import { CheckoutDialog, StockErrorState } from './checkout-dialog';
 import { SuccessDialog } from './success-dialog';
 import type { CartItem } from '@/lib/types';
 import { ShareDialog } from './share-dialog';
+import { Badge } from './ui/badge';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
+import { cn } from '@/lib/utils';
 
 
 export function CartSheet({ children, open, onOpenChange }: {
@@ -119,6 +122,8 @@ export function CartSheet({ children, open, onOpenChange }: {
                 {cart.map((item) => {
                   const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
                   const editUrl = `/${locale}/?type=${item.jewelryType.id}&model=${item.model.id}&cartItemId=${item.id}`;
+                  const isCreatorItem = !!item.creatorId;
+
                   return (
                     <Card key={item.id} className="overflow-hidden">
                        <CardHeader className="p-4">
@@ -158,6 +163,12 @@ export function CartSheet({ children, open, onOpenChange }: {
                               <p className="text-sm text-muted-foreground">
                                 {item.jewelryType.name}
                               </p>
+                              {item.creatorName && (
+                                <Badge variant="secondary" className="mt-1.5">
+                                  <User className="h-3 w-3 mr-1.5"/>
+                                  {t('creator_badge', { name: item.creatorName })}
+                                </Badge>
+                              )}
                               <p className="text-lg font-bold mt-2">
                                 {formatPrice(itemPrice)}
                               </p>
@@ -197,15 +208,17 @@ export function CartSheet({ children, open, onOpenChange }: {
                         </AccordionItem>
                       </Accordion>
                       
-                       <CardFooter className="p-2 bg-muted/30 border-t grid grid-cols-3 gap-2">
-                          <SheetClose asChild>
-                            <Button variant="outline" size="sm" asChild className="text-xs">
-                               <Link href={editUrl}>
+                       <CardFooter className={cn("p-2 bg-muted/30 border-t grid gap-2", isCreatorItem ? 'grid-cols-2' : 'grid-cols-3')}>
+                          {!isCreatorItem && (
+                            <SheetClose asChild>
+                              <Button variant="outline" size="sm" asChild className="text-xs">
+                                <Link href={editUrl}>
                                   <Edit />
                                   {t('edit_item_button')}
-                               </Link>
-                            </Button>
-                          </SheetClose>
+                                </Link>
+                              </Button>
+                            </SheetClose>
+                          )}
                            <Button variant="outline" size="sm" onClick={() => setSharingItem(item)} className="text-xs">
                               <Share2 />
                               {tEditor('share_button')}
@@ -269,6 +282,3 @@ export function CartSheet({ children, open, onOpenChange }: {
     </>
   );
 }
-
-
-

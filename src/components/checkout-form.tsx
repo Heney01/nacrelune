@@ -8,8 +8,8 @@ import { Button } from '@/components/ui/button';
 import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, AlertCircle, ArrowLeft, Home, Store, Search, CheckCircle, TicketPercent, Check } from 'lucide-react';
-import { Alert, AlertTitle, AlertDescription } from './ui/alert';
+import { Loader2, AlertCircle, ArrowLeft, Home, Store, Search, CheckCircle, TicketPercent, Award } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
 import { createOrder, createPaymentIntent, CreateOrderResult, SerializableCartItem, validateCoupon } from '@/app/actions';
 import { useParams } from 'next/navigation';
@@ -22,35 +22,39 @@ import { ScrollArea } from './ui/scroll-area';
 import { Card } from './ui/card';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { Separator } from './ui/separator';
+import { Slider } from './ui/slider';
 
 type Step = 'customer' | 'shipping' | 'payment';
 
 const PaymentStep = ({
   onOrderCreated,
-  total,
+  totalBeforeCoupon,
   email,
   deliveryMethod,
   shippingAddress,
   selectedPickupPoint,
   appliedCoupon,
   setAppliedCoupon,
-  subtotal,
 }: {
   onOrderCreated: (result: CreateOrderResult) => void;
-  total: number;
+  totalBeforeCoupon: number;
   email: string;
   deliveryMethod: DeliveryMethod;
   shippingAddress?: ShippingAddress;
   selectedPickupPoint?: PickupPoint;
   appliedCoupon: Coupon | null;
   setAppliedCoupon: (coupon: Coupon | null) => void;
-  subtotal: number;
 }) => {
   const stripe = useStripe();
   const elements = useElements();
   const t = useTranslations('Checkout');
+  const tCart = useTranslations('Cart');
   const { cart } = useCart();
   const locale = useParams().locale as string;
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -58,8 +62,24 @@ const PaymentStep = ({
   const [couponCode, setCouponCode] = useState('');
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
-  const { toast } = useToast();
 
+  const discountAmount = appliedCoupon
+    ? appliedCoupon.discountType === 'percentage'
+      ? totalBeforeCoupon * (appliedCoupon.value / 100)
+      : appliedCoupon.value
+    : 0;
+  
+  const totalAfterCoupon = Math.max(0, totalBeforeCoupon - discountAmount);
+
+  const availablePoints = user?.rewardPoints || 0;
+  const maxPointsToUse = Math.min(availablePoints, Math.floor(totalAfterCoupon * 10));
+
+  const [pointsToUse, setPointsToUse] = useState(0);
+  const pointsValue = pointsToUse / 10;
+  
+  const finalTotal = Math.max(0, totalAfterCoupon - pointsValue);
+
+  const formatPrice = (price: number) => tCart('price', { price });
 
   const handleApplyCoupon = async () => {
     if (!couponCode) return;
@@ -90,6 +110,9 @@ const PaymentStep = ({
       jewelryType: { id: item.jewelryType.id, name: item.jewelryType.name, description: item.jewelryType.description },
       placedCharms: item.placedCharms,
       previewImage: item.previewImage,
+      creatorId: item.creatorId,
+      creatorName: item.creatorName,
+      creationId: item.creationId,
     }));
 
     const finalShippingAddress = deliveryMethod === 'pickup' && selectedPickupPoint
@@ -111,6 +134,8 @@ const PaymentStep = ({
         deliveryMethod,
         finalShippingAddress,
         appliedCoupon || undefined,
+        user?.uid,
+        pointsToUse
     );
     
     onOrderCreated(orderResult);
@@ -120,7 +145,7 @@ const PaymentStep = ({
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (total <= 0) {
+    if (finalTotal <= 0) {
         handleFreeOrder();
         return;
     }
@@ -143,9 +168,12 @@ const PaymentStep = ({
         },
         placedCharms: item.placedCharms,
         previewImage: item.previewImage,
+        creatorId: item.creatorId,
+        creatorName: item.creatorName,
+        creationId: item.creationId,
       }));
 
-    const { clientSecret, error: intentError } = await createPaymentIntent(total);
+    const { clientSecret, error: intentError } = await createPaymentIntent(finalTotal);
 
     if (intentError || !clientSecret) {
         setErrorMessage(intentError || t('payment_intent_error'));
@@ -187,6 +215,8 @@ const PaymentStep = ({
         deliveryMethod,
         finalShippingAddress,
         appliedCoupon || undefined,
+        user?.uid,
+        pointsToUse
     );
 
     onOrderCreated(orderResult);
@@ -202,7 +232,64 @@ const PaymentStep = ({
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
       )}
-      
+
+      <div className="md:hidden p-4 rounded-lg border bg-muted/50 space-y-2">
+         <h4 className="font-medium text-center mb-4">{t('order_summary')}</h4>
+         <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">{t('subtotal')}</span>
+              <span>{formatPrice(totalBeforeCoupon)}</span>
+          </div>
+          {appliedCoupon && (
+              <div className="flex justify-between text-sm text-green-600">
+                  <span className="text-muted-foreground">{t('discount')} ({appliedCoupon.code})</span>
+                  <span>-{formatPrice(discountAmount)}</span>
+              </div>
+          )}
+           {pointsValue > 0 && (
+              <div className="flex justify-between text-sm text-green-600">
+                  <span className="text-muted-foreground">{t('points_discount')}</span>
+                  <span>-{formatPrice(pointsValue)}</span>
+              </div>
+          )}
+          <Separator className="my-2"/>
+          <div className="flex justify-between font-bold text-base">
+              <span>{t('total')}</span>
+              <span>{formatPrice(finalTotal)}</span>
+          </div>
+      </div>
+
+
+      {user && availablePoints > 0 && (
+         <div className="p-4 rounded-lg border bg-muted/50 space-y-3">
+              <div className="space-y-0.5">
+                  <Label htmlFor="use-points" className="font-bold flex items-center gap-2">
+                    <Award className="h-5 w-5 text-primary"/>
+                    {t('use_reward_points')}
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                      {t('you_have_points_slider', { count: availablePoints })}
+                  </p>
+              </div>
+               <div className="flex items-center gap-4">
+                  <Slider
+                    id="points-slider"
+                    min={0}
+                    max={maxPointsToUse}
+                    step={10}
+                    value={[pointsToUse]}
+                    onValueChange={(value) => setPointsToUse(value[0])}
+                    className="flex-grow"
+                  />
+                  <div className="w-24 text-center border rounded-md p-2">
+                      <p className="text-sm font-bold text-green-600">- {formatPrice(pointsValue)}</p>
+                      <p className="text-xs text-muted-foreground">{pointsToUse} pts</p>
+                  </div>
+               </div>
+         </div>
+      )}
+
+      <Separator />
+
        <div className="space-y-2">
             <Label>{t('coupon_code')}</Label>
             <div className="flex gap-2">
@@ -225,14 +312,14 @@ const PaymentStep = ({
             {couponError && <p className="text-sm text-destructive">{couponError}</p>}
         </div>
       
-      {total > 0 ? (
-          <PaymentElement />
+      {finalTotal > 0 ? (
+          <PaymentElement options={{wallets: {applePay: 'never', googlePay: 'never'}}}/>
       ) : (
           <Alert>
               <CheckCircle className="h-4 w-4" />
-              <AlertTitle>Votre commande est gratuite !</AlertTitle>
+              <AlertTitle>{t('free_order_title')}</AlertTitle>
               <AlertDescription>
-                  Grâce à votre code de réduction, le montant total de votre commande est de 0€. Cliquez sur "Confirmer la commande" pour la finaliser sans paiement.
+                  {t('free_order_description')}
               </AlertDescription>
           </Alert>
       )}
@@ -242,8 +329,8 @@ const PaymentStep = ({
             {isProcessing ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('processing_button')}</>
             ) : (
-                total > 0
-                ? t('confirm_order_button', { total: total.toFixed(2) })
+                finalTotal > 0
+                ? t('confirm_order_button', { total: finalTotal.toFixed(2) })
                 : t('confirm_order_button_no_payment')
             )}
          </Button>
@@ -259,17 +346,16 @@ export const CheckoutForm = ({
   setStockError,
   appliedCoupon,
   setAppliedCoupon,
-  subtotal
 }: {
   total: number;
   onOrderCreated: (result: CreateOrderResult) => void;
   setStockError: (error: StockErrorState) => void;
   appliedCoupon: Coupon | null;
   setAppliedCoupon: (coupon: Coupon | null) => void;
-  subtotal: number;
 }) => {
   const t = useTranslations('Checkout');
   const tStatus = useTranslations('OrderStatus');
+  const { user, firebaseUser } = useAuth();
 
   const [currentStep, setCurrentStep] = useState<Step>('customer');
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('home');
@@ -288,6 +374,13 @@ export const CheckoutForm = ({
   const [selectedPickupPoint, setSelectedPickupPoint] = useState<PickupPoint | null>(null);
   const [isFindingPoints, setIsFindingPoints] = useState(false);
   const [pickupPointError, setPickupPointError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) {
+        setShippingAddress(prev => ({ ...prev, name: user.displayName || '' }));
+        setEmail(user.email || '');
+    }
+  }, [user]);
 
   const handleFindPickupPoints = async () => {
     if (!postcode) {
@@ -347,22 +440,21 @@ export const CheckoutForm = ({
       return (
           <div className="flex flex-col h-full">
             <DialogHeader className="p-6 pb-4 flex-shrink-0 relative flex-row items-center justify-center">
-                <Button type="button" variant="ghost" size="icon" onClick={handleBackStep} id="checkout-back-button-payment" className="absolute left-4">
+                <Button type="button" variant="ghost" size="icon" onClick={handleBackStep} id="checkout-back-button-payment" className="absolute left-4 top-4">
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <DialogTitle className="text-2xl font-headline">{t('payment_info')}</DialogTitle>
             </DialogHeader>
-             <div className="px-6 pb-6 flex-grow overflow-y-auto">
+             <div className="px-6 pb-6 flex-grow overflow-y-auto no-scrollbar">
                   <PaymentStep
                       onOrderCreated={onOrderCreated}
-                      total={total}
+                      totalBeforeCoupon={total}
                       email={email}
                       deliveryMethod={deliveryMethod}
                       shippingAddress={shippingAddress}
                       selectedPickupPoint={selectedPickupPoint || undefined}
                       appliedCoupon={appliedCoupon}
                       setAppliedCoupon={setAppliedCoupon}
-                      subtotal={subtotal}
                   />
              </div>
           </div>
@@ -373,7 +465,7 @@ export const CheckoutForm = ({
     <form id="checkout-form" onSubmit={handleFormSubmit} className="flex flex-col h-full">
       <DialogHeader className="p-6 pb-4 flex-shrink-0 relative flex-row items-center justify-center">
         {currentStep !== 'customer' && (
-          <Button type="button" variant="ghost" size="icon" onClick={handleBackStep} id="checkout-back-button-main" className="absolute left-4">
+          <Button type="button" variant="ghost" size="icon" onClick={handleBackStep} id="checkout-back-button-main" className="absolute left-4 top-4">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
@@ -383,7 +475,7 @@ export const CheckoutForm = ({
         </div>
       </DialogHeader>
 
-      <div className="px-6 flex-grow overflow-y-auto min-h-0">
+      <div className="px-6 flex-grow overflow-y-auto no-scrollbar min-h-0">
           <div className="space-y-6">
               <div>
                   <Progress value={progressValue} className="w-full" />

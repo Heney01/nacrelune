@@ -6,7 +6,7 @@ import React, { useState, useReducer, useTransition, Fragment, useMemo } from 'r
 import type { Order, OrderStatus, OrderItem, Charm, MailLog, DeliveryMethod } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from './ui/card';
-import { Package, Search, ChevronDown, ChevronUp, Truck, FileX, Edit, Copy, Mail, CheckCircle, XCircle, Clock, Undo2, Home, Store } from 'lucide-react';
+import { Package, Search, ChevronDown, ChevronUp, Truck, FileX, Edit, Copy, Mail, CheckCircle, XCircle, Clock, Undo2, Home, Store, CreditCard, TicketPercent, Award } from 'lucide-react';
 import { useTranslations } from '@/hooks/use-translations';
 import { Badge } from './ui/badge';
 import { updateOrderStatus, updateOrderItemStatus } from '@/app/actions';
@@ -274,6 +274,8 @@ const OrderDetails = ({ order, onItemStatusChange, onStatusChange, t, onEditShip
     t: (key: string, values?: any) => string,
     onEditShipping: () => void
 }) => {
+    const hasFinancialDetails = order.paymentIntentId || order.couponCode || order.pointsUsed;
+
     return (
         <div className="bg-muted/50">
             <Tabs defaultValue="workshop" className="w-full">
@@ -282,8 +284,8 @@ const OrderDetails = ({ order, onItemStatusChange, onStatusChange, t, onEditShip
                     <TabsTrigger value="mailHistory">Historique des e-mails</TabsTrigger>
                 </TabsList>
                 <TabsContent value="workshop">
-                     <div className="p-4 md:p-6">
-                        <div className="mb-6">
+                     <div className="p-4 md:p-6 space-y-6">
+                        <div>
                              <h5 className="font-semibold mb-2 text-md flex items-center gap-2">
                                 {order.deliveryMethod === 'home' ? <Home className="h-5 w-5 text-primary" /> : <Store className="h-5 w-5 text-primary" />} 
                                 {t(`delivery_method_${order.deliveryMethod}`)}
@@ -303,20 +305,34 @@ const OrderDetails = ({ order, onItemStatusChange, onStatusChange, t, onEditShip
                             </div>
                         </div>
 
-                        {order.paymentIntentId && (
-                             <div className="mb-6">
+                        {hasFinancialDetails && (
+                            <div>
                                 <h5 className="font-semibold mb-2 text-md flex items-center gap-2">
-                                    <Undo2 className="h-5 w-5 text-primary" /> Paiement et Remboursement
+                                    <CreditCard className="h-5 w-5 text-primary" /> Détails Financiers
                                 </h5>
-                                <div className="flex items-start justify-between bg-background p-4 rounded-lg border">
-                                    <p className="text-sm">
-                                        Cette commande a été payée via Stripe. L'annulation de la commande déclenchera automatiquement un remboursement complet.
-                                    </p>
+                                <div className="bg-background p-4 rounded-lg border space-y-3">
+                                    <div className="flex items-center justify-between text-sm">
+                                        <p className="text-muted-foreground">Mode de paiement</p>
+                                        <p className="font-medium">{order.paymentIntentId === 'free_order' ? 'Gratuit (Points/Coupon)' : 'Carte bancaire (Stripe)'}</p>
+                                    </div>
+                                    {order.couponCode && (
+                                        <div className="flex items-center justify-between text-sm">
+                                            <p className="text-muted-foreground flex items-center gap-1.5"><TicketPercent className="h-4 w-4"/> Coupon</p>
+                                            <p className="font-medium">{order.couponCode}</p>
+                                        </div>
+                                    )}
+                                    {(order.pointsUsed ?? 0) > 0 && (
+                                         <div className="flex items-center justify-between text-sm">
+                                            <p className="text-muted-foreground flex items-center gap-1.5"><Award className="h-4 w-4"/> Points utilisés</p>
+                                            <p className="font-medium">{order.pointsUsed} (valeur: {order.pointsValue?.toFixed(2)}€)</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
+
                         {order.shippingCarrier && order.trackingNumber && (
-                            <div className="mb-6">
+                            <div>
                                 <h5 className="font-semibold mb-2 text-md flex items-center gap-2"><Truck className="h-5 w-5 text-primary" /> Informations d'expédition</h5>
                                 <div className="flex items-start justify-between bg-background p-4 rounded-lg border">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
@@ -336,7 +352,7 @@ const OrderDetails = ({ order, onItemStatusChange, onStatusChange, t, onEditShip
                             </div>
                         )}
                         {order.status === 'annulée' && order.cancellationReason && (
-                            <div className="mb-6">
+                            <div>
                                 <h5 className="font-semibold mb-2 text-md flex items-center gap-2"><FileX className="h-5 w-5 text-destructive" /> Commande Annulée</h5>
                                 <div className="bg-background p-4 rounded-lg border">
                                     <p className="text-sm font-medium text-muted-foreground">Motif de l'annulation</p>

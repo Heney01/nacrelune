@@ -48,7 +48,20 @@
     "my_creations": "Mes créations",
     "google_login_button": "Continuer avec Google",
     "google_signup_button": "S'inscrire avec Google",
-    "or_continue_with": "OU"
+    "or_continue_with": "OU",
+    "reward_points_title": "Vos Points Récompense",
+    "reward_points_description": "Voici comment fonctionnent vos points de récompense.",
+    "reward_points_explanation_1": "Gagnez des points lorsque d'autres utilisateurs achètent vos créations.",
+    "reward_points_explanation_2": "Échangez vos points contre des réductions ou des bons d'achat.",
+    "reward_points_explanation_3": "Taux de conversion : 10 points = 1€.",
+    "reward_points_explanation_4": "Limite de gain : 300€ par an.",
+    "reward_points_close_button": "J'ai compris",
+    "edit_creation_button": "Modifier",
+    "edit_creation_title": "Modifier la création",
+    "edit_creation_description": "Mettez à jour le nom et la description de votre création.",
+    "save_changes_button": "Enregistrer",
+    "edit_creation_success_title": "Succès",
+    "edit_creation_error_title": "Erreur"
   },
   "Editor": {
     "charms_title": "Breloques",
@@ -134,7 +147,9 @@
     "checkout_success_title": "Commande passée !",
     "checkout_success_description": "Votre commande a été passée avec succès.",
     "checkout_error_title": "Erreur de commande",
-    "sold_out": "Épuisé"
+    "sold_out": "Épuisé",
+    "creator_badge": "Création de {name}",
+    "edit_disabled_tooltip": "Les créations des autres ne sont pas modifiables."
   },
   "CharmsPanel": {
     "title": "Breloques",
@@ -151,6 +166,7 @@
   "Admin": {
     "reorder_dialog_title": "Gérer la commande pour {itemName}",
     "reorder_dialog_description": "Vous pouvez ouvrir l'URL du fournisseur pour commander, ou gérer le statut du stock ici.",
+    "reorder_dialog_reorder": "Commander",
     "open_reorder_url": "Ouvrir l'URL de commande",
     "mark_as_ordered": "Marquer comme commandé",
     "mark_as_restocked": "Marquer comme réapprovisionné",
@@ -197,7 +213,7 @@
     "delivery_method_pickup": "Livraison en point relais",
     "pickup_contact_customer": "Le client souhaite une livraison en point relais. Veuillez le contacter pour convenir du point de retrait."
   },
-  "Checkout": {
+   "Checkout": {
     "title": "Paiement",
     "description": "Veuillez remplir vos informations pour finaliser la commande.",
     "order_summary": "Résumé de la commande",
@@ -220,7 +236,7 @@
     "shipping": "Livraison",
     "total": "Total",
     "shipping_cost_free": "Gratuite",
-    "confirm_order_button": "Payer {total} et confirmer la commande",
+    "confirm_order_button": "Payer {total} € et confirmer la commande",
     "confirm_order_button_no_payment": "Confirmer la commande",
     "processing_button": "Traitement en cours...",
     "email_address": "Adresse e-mail",
@@ -253,7 +269,13 @@
     "coupon_applied_title": "Code promo appliqué !",
     "coupon_applied_description": "La réduction pour le code {code} a été appliquée.",
     "remove_coupon_button": "Retirer",
-    "discount": "Réduction"
+    "discount": "Réduction",
+    "points_discount": "Réduction points",
+    "use_reward_points": "Utiliser mes points récompense",
+    "you_have_points": "Vous avez {count} points (valeur : {value} €)",
+    "you_have_points_slider": "Vous avez {count} points. Utilisez le slider pour appliquer une réduction.",
+    "free_order_title": "Votre commande est gratuite !",
+    "free_order_description": "Grâce à votre réduction, le montant total de votre commande est de 0€. Cliquez sur \"Confirmer la commande\" pour la finaliser sans paiement."
   },
    "OrderStatus": {
     "commandée": "Commandée",
@@ -279,5 +301,15 @@
     "shipping_carrier": "Transporteur",
     "tracking_number": "Numéro de suivi",
     "tracking_number_copied": "Numéro de suivi copié !"
+  },
+  "Notifications": {
+    "reward_email_subject": "Votre création a été vendue ! Vous avez gagné des points.",
+    "reward_email_greeting": "Bonjour {creatorName},",
+    "reward_email_body_1": "Excellente nouvelle ! Votre création, \"{creationName}\", a été achetée par un autre utilisateur.",
+    "reward_email_body_2": "Pour vous récompenser, nous venons de créditer votre compte de {points} points.",
+    "reward_email_body_3": "Merci pour votre contribution à la communauté !",
+    "reward_email_cta": "Voir mes points"
   }
 }
+
+    

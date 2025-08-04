@@ -1,4 +1,6 @@
 import type { SVGProps } from "react"
+import { cn } from "@/lib/utils"
+
 
 export function BrandLogo(props: SVGProps<SVGSVGElement>) {
   return (

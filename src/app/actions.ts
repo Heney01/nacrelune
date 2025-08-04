@@ -300,6 +300,7 @@ export async function signup(prevState: any, formData: FormData): Promise<{ succ
             email: user.email,
             displayName: user.displayName,
             photoURL: user.photoURL,
+            rewardPoints: 0,
         };
         await setDoc(doc(db, 'users', user.uid), userData);
 
@@ -358,6 +359,7 @@ export async function userLoginWithGoogle(formData: FormData): Promise<{ success
         email,
         displayName,
         photoURL,
+        rewardPoints: 0,
       };
       await setDoc(userDocRef, newUser);
     }
@@ -661,6 +663,9 @@ export type SerializableCartItem = {
     };
     placedCharms: PlacedCharm[];
     previewImage: string;
+    creatorId?: string;
+    creatorName?: string;
+    creationId?: string;
 };
 
 export type StockError = {
@@ -762,14 +767,16 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
         const couponData = couponDoc.data() as Omit<Coupon, 'id'>;
         
         if (!couponData.isActive) {
-            return { success: false, message: "Ce code promo a expiré." };
+            return { success: false, message: "Ce code promo n'est plus actif." };
         }
 
-        if (couponData.validUntil && toDate(couponData.validUntil as any)! < new Date()) {
-             return { success: false, message: "Ce code promo a expiré." };
-        }
+        const validUntilDate = toDate(couponData.validUntil as Timestamp | undefined);
 
-        const coupon = { id: couponDoc.id, ...couponData } as Coupon;
+        const coupon: Coupon = { 
+            id: couponDoc.id, 
+            ...couponData,
+            validUntil: validUntilDate || undefined
+        };
         return { success: true, message: 'Code promo appliqué !', coupon };
 
     } catch (error: any) {
@@ -783,10 +790,12 @@ export async function createOrder(
     cartItems: SerializableCartItem[], 
     email: string, 
     locale: string, 
-    paymentIntentId: string, // Can be a placeholder for now
+    paymentIntentId: string,
     deliveryMethod: DeliveryMethod,
     shippingAddress?: ShippingAddress,
-    coupon?: Coupon
+    coupon?: Coupon,
+    userId?: string,
+    pointsToUse?: number,
 ): Promise<CreateOrderResult> {
     if (!cartItems || cartItems.length === 0) {
         return { success: false, message: 'Le panier est vide.' };
@@ -798,6 +807,7 @@ export async function createOrder(
             const itemDocsToFetch: Map<string, DocumentReference> = new Map();
             
             const stockDeductions = new Map<string, { count: number, name: string, type: string, id: string }>();
+            const creatorPointAwards: Map<string, { points: number; creatorName: string; creationName: string }> = new Map();
 
             for (const item of cartItems) {
                 const modelKey = `${item.jewelryType.id}/${item.model.id}`;
@@ -813,6 +823,16 @@ export async function createOrder(
                     stockDeductions.set(charmKey, { ...currentCharm, count: currentCharm.count + 1 });
                     if (!itemDocsToFetch.has(charmKey)) {
                         itemDocsToFetch.set(charmKey, doc(db, 'charms', pc.charm.id));
+                    }
+                }
+                
+                // Handle creator rewards
+                if (item.creatorId && item.creatorName) {
+                    const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+                    const points = Math.floor((itemPrice * 0.05) * 10);
+                    if (points > 0) {
+                        const currentAwards = creatorPointAwards.get(item.creatorId) || { points: 0, creatorName: item.creatorName, creationName: item.model.name };
+                        creatorPointAwards.set(item.creatorId, { ...currentAwards, points: currentAwards.points + points });
                     }
                 }
             }
@@ -874,21 +894,67 @@ export async function createOrder(
                 transaction.update(ref, { quantity: update.newQuantity });
             }
 
-            let totalOrderPrice = cartItems.reduce((sum, item) => {
+            let subtotal = cartItems.reduce((sum, item) => {
                 const modelPrice = item.model.price || 0;
                 const charmsPrice = item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
                 return sum + modelPrice + charmsPrice;
             }, 0);
             
-            if (coupon) {
-                const discountAmount = coupon.discountType === 'percentage'
-                    ? totalOrderPrice * (coupon.value / 100)
-                    : coupon.value;
-                totalOrderPrice = Math.max(0, totalOrderPrice - discountAmount);
+            const couponDiscount = coupon
+                ? coupon.discountType === 'percentage'
+                    ? subtotal * (coupon.value / 100)
+                    : coupon.value
+                : 0;
+
+            let totalAfterCoupon = Math.max(0, subtotal - couponDiscount);
+            
+            const pointsValue = Math.floor((pointsToUse || 0) / 10);
+            const finalPrice = Math.max(0, totalAfterCoupon - pointsValue);
+
+            if (userId && pointsToUse && pointsToUse > 0) {
+                const userRef = doc(db, 'users', userId);
+                const userDoc = await transaction.get(userRef);
+                if (userDoc.exists() && (userDoc.data().rewardPoints || 0) >= pointsToUse) {
+                    transaction.update(userRef, { rewardPoints: increment(-pointsToUse) });
+                } else {
+                    throw new Error("Points de récompense insuffisants.");
+                }
             }
+            
+            const allCreatorIds = Array.from(creatorPointAwards.keys());
+            const creatorDocs = allCreatorIds.length > 0
+                ? await Promise.all(allCreatorIds.map(id => transaction.get(doc(db, 'users', id))))
+                : [];
+            const creatorsMap = new Map(creatorDocs.map(d => [d.id, d.data() as User]));
+
+            creatorPointAwards.forEach((award, creatorId) => {
+                const creatorRef = doc(db, 'users', creatorId);
+                transaction.update(creatorRef, { rewardPoints: increment(award.points) });
+
+                const creatorData = creatorsMap.get(creatorId);
+                if (creatorData && creatorData.email) {
+                    const mailText = `Bonjour ${award.creatorName},\n\nFélicitations ! Votre création "${award.creationName}" a été achetée.\n\nVous venez de gagner ${award.points} points de récompense.\n\nContinuez à créer !`;
+                    const mailHtml = `<h1>Félicitations !</h1><p>Bonjour ${award.creatorName},</p><p>Excellente nouvelle ! Votre création, <strong>"${award.creationName}"</strong>, a été achetée par un autre utilisateur.</p><p>Pour vous récompenser, nous venons de créditer votre compte de <strong>${award.points} points</strong>.</p><p>Merci pour votre contribution à la communauté !</p>`;
+                    const mailDocData = {
+                        to: [creatorData.email],
+                        message: {
+                            subject: `Votre création a été vendue ! Vous avez gagné des points.`,
+                            text: mailText,
+                            html: mailHtml,
+                        },
+                    };
+                    transaction.set(doc(collection(db, 'mail')), mailDocData);
+                }
+            });
 
             const orderItems: Omit<OrderItem, 'modelImageUrl' | 'charms'>[] = cartItems.map((item, index) => {
                 const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+                
+                if (item.creationId) {
+                    const creationRef = doc(db, 'creations', item.creationId);
+                    transaction.update(creationRef, { salesCount: increment(1) });
+                }
+
                 return {
                     modelId: item.model.id,
                     modelName: item.model.name,
@@ -898,6 +964,9 @@ export async function createOrder(
                     price: itemPrice,
                     previewImageUrl: previewImageUrls[index],
                     isCompleted: false,
+                    creationId: item.creationId,
+                    creatorId: item.creatorId,
+                    creatorName: item.creatorName,
                 };
             });
             
@@ -907,13 +976,14 @@ export async function createOrder(
             const newOrderData: Omit<Order, 'id' | 'createdAt'> = {
                 orderNumber,
                 customerEmail: email,
-                totalPrice: totalOrderPrice,
+                totalPrice: finalPrice,
                 items: orderItems,
                 status: initialStatus,
                 paymentIntentId: paymentIntentId,
                 deliveryMethod: deliveryMethod,
                 shippingAddress: deliveryMethod === 'home' ? shippingAddress : undefined,
-                ...(coupon && { couponCode: coupon.code, couponId: coupon.id })
+                ...(coupon && { couponCode: coupon.code, couponId: coupon.id }),
+                ...(pointsToUse && { pointsUsed: pointsToUse, pointsValue: pointsValue }),
             };
 
             const orderRef = doc(collection(db, 'orders'));
@@ -924,8 +994,8 @@ export async function createOrder(
             const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${supportEmail}">${supportEmail}</a> en précisant votre numéro de commande (${orderNumber}).</p>`;
             const trackingUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com'}/${locale}/orders/track?orderNumber=${orderNumber}`;
 
-            const mailText = `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalOrderPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.model.name} avec ${item.placedCharms.length} breloque(s)`).join('\\n')}\n\nVous pouvez suivre votre commande ici : ${trackingUrl}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
-            const mailHtml = `<h1>Merci pour votre commande !</h1><p>Bonjour,</p><p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${totalOrderPrice.toFixed(2)}€.</p><h2>Récapitulatif :</h2><ul>${cartItems.map(item => `<li>${item.model.name} avec ${item.placedCharms.length} breloque(s)</li>`).join('')}</ul><p>Vous pouvez suivre l'avancement de votre commande en cliquant sur ce lien : <a href="${trackingUrl}">${trackingUrl}</a>.</p><p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
+            const mailText = `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${finalPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.model.name} avec ${item.placedCharms.length} breloque(s)`).join('\\n')}\n\nVous pouvez suivre votre commande ici : ${trackingUrl}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
+            const mailHtml = `<h1>Merci pour votre commande !</h1><p>Bonjour,</p><p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${finalPrice.toFixed(2)}€.</p><h2>Récapitulatif :</h2><ul>${cartItems.map(item => `<li>${item.model.name} avec ${item.placedCharms.length} breloque(s)</li>`).join('')}</ul><p>Vous pouvez suivre l'avancement de votre commande en cliquant sur ce lien : <a href="${trackingUrl}">${trackingUrl}</a>.</p><p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
 
             const mailDocData = {
                 to: [email],
@@ -939,7 +1009,7 @@ export async function createOrder(
             const mailRef = doc(collection(db, 'mail'));
             transaction.set(mailRef, mailDocData);
             
-            return { success: true, message: 'Votre commande a été passée avec succès !', orderNumber, email, totalPrice: totalOrderPrice };
+            return { success: true, message: 'Votre commande a été passée avec succès !', orderNumber, email, totalPrice: finalPrice };
         });
 
         return orderData;
@@ -1225,6 +1295,10 @@ export async function getOrders(): Promise<Order[]> {
                 trackingNumber: data.trackingNumber,
                 cancellationReason: data.cancellationReason,
                 mailHistory: mailHistory,
+                paymentIntentId: data.paymentIntentId,
+                couponCode: data.couponCode,
+                pointsUsed: data.pointsUsed,
+                pointsValue: data.pointsValue
             };
         }));
 
@@ -1683,8 +1757,51 @@ export async function toggleLikeCreation(creationId: string, idToken: string): P
     }
 }
     
-export async function updateCreation() {
-    // TODO: Implement creation update logic
+export async function updateCreation(
+    idToken: string,
+    creationId: string,
+    name: string,
+    description: string
+): Promise<{ success: boolean; message: string; }> {
+    if (!idToken) {
+        return { success: false, message: "Utilisateur non authentifié." };
+    }
+    if (!adminApp) {
+        return { success: false, message: "Le module d'administration Firebase n'est pas configuré." };
+    }
+    
+    let user;
+    try {
+        const adminAuth = getAdminAuth(adminApp);
+        user = await adminAuth.verifyIdToken(idToken, true);
+    } catch (error: any) {
+        return { success: false, message: "Jeton d'authentification invalide." };
+    }
+
+    if (!name.trim()) {
+        return { success: false, message: "Le nom de la création est obligatoire." };
+    }
+
+    const creationRef = doc(db, 'creations', creationId);
+
+    try {
+        const creationDoc = await getDoc(creationRef);
+        if (!creationDoc.exists() || creationDoc.data().creatorId !== user.uid) {
+            return { success: false, message: "Vous n'êtes pas autorisé à modifier cette création." };
+        }
+
+        await updateDoc(creationRef, {
+            name,
+            description,
+        });
+        
+        revalidatePath('/fr/profil');
+        return { success: true, message: "Votre création a été mise à jour avec succès." };
+
+    } catch (error: any) {
+        console.error("Error updating creation:", error);
+        return { success: false, message: "Une erreur est survenue lors de la mise à jour." };
+    }
 }
 
 export async function deleteCreation(idToken: string, creationId: string): Promise<{ success: boolean; message: string; }> {
@@ -1735,3 +1852,7 @@ export async function deleteCreation(idToken: string, creationId: string): Promi
         return { success: false, message: "Une erreur est survenue lors de la suppression." };
     }
 }
+
+    
+
+    

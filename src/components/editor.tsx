@@ -5,7 +5,7 @@
 import React, { useState, useMemo, useRef, WheelEvent as ReactWheelEvent, useCallback, useEffect, TouchEvent as ReactTouchEvent } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory } from '@/lib/types';
+import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory, Creation } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
@@ -38,6 +38,7 @@ import { Textarea } from './ui/textarea';
 import { useAuth } from '@/hooks/use-auth';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface PlacedCharmComponentProps {
     placed: PlacedCharm;
@@ -46,10 +47,10 @@ interface PlacedCharmComponentProps {
     onDelete: (charmId: string) => void;
     onRotate: (charmId: string, newRotation: number) => void;
     pixelSize: { width: number; height: number; };
-    scale: number;
+    modelImageRect: DOMRect | null;
 }
   
-const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDelete, onRotate, pixelSize, scale }: PlacedCharmComponentProps) => {
+const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDelete, onRotate, pixelSize, modelImageRect }: PlacedCharmComponentProps) => {
     const charmRef = useRef<HTMLDivElement>(null);
 
     const handleDelete = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -83,6 +84,27 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
         onRotate(placed.id, placed.rotation + rotationAmount);
     };
 
+    // Convert normalized position to absolute pixel position on the canvas
+    const positionStyle = useMemo(() => {
+        if (!modelImageRect) {
+            return { left: '50%', top: '50%', visibility: 'hidden' };
+        }
+        
+        const left = (placed.position.x * modelImageRect.width);
+        const top = (placed.position.y * modelImageRect.height);
+
+        return {
+            left: `${left}px`,
+            top: `${top}px`,
+            width: pixelSize.width,
+            height: 'auto',
+            transform: `translate(-50%, -50%) rotate(${placed.rotation}deg)`,
+            animation: placed.animation,
+            touchAction: 'none',
+        };
+
+    }, [placed.position, placed.rotation, placed.animation, pixelSize, modelImageRect]);
+
 
     return (
         <div
@@ -96,15 +118,7 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
                     'hover:outline-2 hover:outline-primary/50 hover:outline-dashed': !isSelected,
                 }
             )}
-            style={{
-                left: `${placed.position.x}%`,
-                top: `${placed.position.y}%`,
-                width: pixelSize.width,
-                height: 'auto',
-                transform: `translate(-50%, -50%) rotate(${placed.rotation}deg)`,
-                animation: placed.animation,
-                touchAction: 'none',
-            }}
+            style={positionStyle as React.CSSProperties}
         >
             <Image
                 src={placed.charm.imageUrl}
@@ -159,7 +173,9 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const modelImageRef = useRef<HTMLImageElement>(null);
-  
+  const modelImageContainerRef = useRef<HTMLDivElement>(null);
+  const [modelImageRect, setModelImageRect] = useState<DOMRect | null>(null);
+
   const [isCharmsSheetOpen, setIsCharmsSheetOpen] = useState(false);
   const [isSuggestionsSheetOpen, setIsSuggestionsSheetOpen] = useState(false);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
@@ -210,30 +226,48 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   }, []);
 
   const getCanvasDataUri = useCallback(async (): Promise<string> => {
-    if (!canvasRef.current) {
+    const canvasElement = canvasRef.current;
+    if (!canvasElement) {
       throw new Error("Canvas ref is not available");
     }
+  
     resetZoomAndPan();
     setSelectedPlacedCharmId(null);
-    
+  
+    const images = Array.from(canvasElement.querySelectorAll('img'));
+    await Promise.all(images.map(img => {
+      if (img.complete) return Promise.resolve();
+      return new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error(`Failed to load image: ${img.src}`));
+      });
+    }));
+  
     return new Promise((resolve, reject) => {
-        setTimeout(async () => {
-            try {
-                const canvas = await html2canvas(canvasRef.current!, {
-                    backgroundColor: null,
-                    logging: false,
-                    useCORS: true,
-                    allowTaint: true,
-                    scale: 2,
-                    width: canvasRef.current!.scrollWidth,
-                    height: canvasRef.current!.scrollHeight,
-                });
-                resolve(canvas.toDataURL('image/png', 0.9));
-            } catch (error) {
-                console.error("Error capturing canvas:", error);
-                reject(error);
-            }
-        }, 50);
+      setTimeout(async () => {
+        try {
+          const { width, height } = canvasElement.getBoundingClientRect();
+          const size = Math.min(width, height);
+          const x = (width - size) / 2;
+          const y = (height - size) / 2;
+  
+          const canvas = await html2canvas(canvasElement, {
+            backgroundColor: null,
+            logging: false,
+            useCORS: true,
+            scale: 2,
+            allowTaint: false,
+            width: size,
+            height: size,
+            x: x,
+            y: y,
+          });
+          resolve(canvas.toDataURL('image/png', 0.9));
+        } catch (error) {
+          console.error("Error capturing canvas:", error);
+          reject(error);
+        }
+      }, 500); // Reduced delay
     });
   }, [resetZoomAndPan]);
 
@@ -265,16 +299,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     let position = options.position;
 
     if (!position) {
-        if (!canvasRef.current) return;
-        const canvasRect = canvasRef.current.getBoundingClientRect();
-        const currentPan = panRef.current;
-        const currentScale = scaleRef.current;
-        const x_px = (canvasRect.width / 2) - currentPan.x;
-        const y_px = (canvasRect.height / 2) - currentPan.y;
-        position = {
-            x: (x_px / canvasRect.width / currentScale) * 100,
-            y: (y_px / canvasRect.height / currentScale) * 100,
-        };
+      // Default to center of the model image if no position is provided
+      position = { x: 0.5, y: 0.5 };
     }
 
     const newCharm: PlacedCharm = {
@@ -397,28 +423,35 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
       }
 
       if (interactionState.isDragging && interactionState.activeCharmId) {
-        const canvasEl = canvasRef.current;
-        if (!canvasEl) return;
-        const point = getPoint(e);
-        const dx = point.clientX - interactionState.dragStart.x;
-        const dy = point.clientY - interactionState.dragStart.y;
-        
-        const currentPlacedCharms = placedCharmsRef.current;
-        const charmToMove = currentPlacedCharms.find(pc => pc.id === interactionState.activeCharmId);
-        
-        if (charmToMove) {
-          const dxPercent = (dx / canvasEl.clientWidth) * 100 / scaleRef.current;
-          const dyPercent = (dy / canvasEl.clientHeight) * 100 / scaleRef.current;
+          const imgRect = modelImageRef.current?.getBoundingClientRect();
+          if (!imgRect) return;
+
+          const point = getPoint(e);
+          const dx = (point.clientX - interactionState.dragStart.x) / scaleRef.current;
+          const dy = (point.clientY - interactionState.dragStart.y) / scaleRef.current;
           
-          const newPlacedCharms = currentPlacedCharms.map(pc =>
-            pc.id === interactionState.activeCharmId
-            ? { ...pc, position: { x: pc.position.x + dxPercent, y: pc.position.y + dyPercent } }
-            : pc
-          );
-          setPlacedCharms(newPlacedCharms);
-        }
-        
-        interactionState.dragStart = { x: point.clientX, y: point.clientY };
+          const currentPlacedCharms = placedCharmsRef.current;
+          const charmToMove = currentPlacedCharms.find(pc => pc.id === interactionState.activeCharmId);
+          
+          if (charmToMove) {
+              const currentPixelX = charmToMove.position.x * imgRect.width;
+              const currentPixelY = charmToMove.position.y * imgRect.height;
+              
+              const newPixelX = currentPixelX + dx;
+              const newPixelY = currentPixelY + dy;
+
+              const newNormalizedX = newPixelX / imgRect.width;
+              const newNormalizedY = newPixelY / imgRect.height;
+
+              const newPlacedCharms = currentPlacedCharms.map(pc =>
+                  pc.id === interactionState.activeCharmId
+                  ? { ...pc, position: { x: newNormalizedX, y: newNormalizedY } }
+                  : pc
+              );
+              setPlacedCharms(newPlacedCharms);
+          }
+          
+          interactionState.dragStart = { x: point.clientX, y: point.clientY };
 
       } else if (interactionState.isPanning) {
         const point = getPoint(e);
@@ -536,7 +569,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const handleConfirmAddToCart = async () => {
       if (!previewForDialog) return;
 
-      const itemPayload = {
+      const itemPayload: Omit<CartItem, 'id'> = {
         model,
         jewelryType,
         placedCharms,
@@ -700,41 +733,76 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     }
   }
 
+  const updateRects = useCallback(() => {
+    const imageEl = modelImageRef.current;
+    const containerEl = modelImageContainerRef.current;
 
-  const calculatePixelsPerMm = useCallback(() => {
-    if (modelImageRef.current && (model.width || model.height)) {
-        const imageWidthPx = modelImageRef.current.offsetWidth;
-        const imageHeightPx = modelImageRef.current.offsetHeight;
-        const modelWidthMm = model.width || (imageWidthPx / imageHeightPx) * (model.height || 1);
-        const modelHeightMm = model.height || (imageHeightPx / imageWidthPx) * (model.width || 1);
+    if (imageEl && containerEl) {
+        const containerWidth = containerEl.offsetWidth;
+        const containerHeight = containerEl.offsetHeight;
+        const imageNaturalWidth = imageEl.naturalWidth;
+        const imageNaturalHeight = imageEl.naturalHeight;
 
-        const pxPerMmWidth = imageWidthPx / modelWidthMm;
-        const pxPerMmHeight = imageHeightPx / modelHeightMm;
+        if (imageNaturalWidth === 0 || imageNaturalHeight === 0) return;
+
+        const imageAspectRatio = imageNaturalWidth / imageNaturalHeight;
+        const containerAspectRatio = containerWidth / containerHeight;
+
+        let renderedWidth, renderedHeight, offsetX = 0, offsetY = 0;
+
+        if (imageAspectRatio > containerAspectRatio) {
+            // Image is limited by width
+            renderedWidth = containerWidth;
+            renderedHeight = containerWidth / imageAspectRatio;
+            offsetY = (containerHeight - renderedHeight) / 2;
+        } else {
+            // Image is limited by height
+            renderedHeight = containerHeight;
+            renderedWidth = containerHeight * imageAspectRatio;
+            offsetX = (containerWidth - renderedWidth) / 2;
+        }
+
+        const containerRect = containerEl.getBoundingClientRect();
+
+        setModelImageRect(new DOMRect(
+            containerRect.left + offsetX,
+            containerRect.top + offsetY,
+            renderedWidth,
+            renderedHeight
+        ));
         
+        const pxPerMmWidth = renderedWidth / (model.width || 1);
+        const pxPerMmHeight = renderedHeight / (model.height || 1);
         setPixelsPerMm((pxPerMmWidth + pxPerMmHeight) / 2);
     }
   }, [model.width, model.height]);
+
 
   useEffect(() => {
     const imageEl = modelImageRef.current;
     if (!imageEl) return;
 
-    // Initial calculation
-    const handleLoad = () => calculatePixelsPerMm();
-    imageEl.addEventListener('load', handleLoad);
+    const handleLoad = () => updateRects();
+    
+    // If the image is already loaded, update immediately.
     if (imageEl.complete) {
-        calculatePixelsPerMm();
+      handleLoad();
+    } else {
+      imageEl.addEventListener('load', handleLoad);
     }
 
-    // Recalculate on window resize
-    window.addEventListener('resize', calculatePixelsPerMm);
+    window.addEventListener('resize', updateRects);
     return () => {
-        window.removeEventListener('resize', calculatePixelsPerMm)
-        if (imageEl) {
-          imageEl.removeEventListener('load', handleLoad);
-        }
+      window.removeEventListener('resize', updateRects)
+      if (imageEl) {
+        imageEl.removeEventListener('load', handleLoad);
+      }
     };
-  }, [calculatePixelsPerMm]);
+  }, [updateRects]);
+
+  useEffect(() => {
+    updateRects();
+  }, [pan, scale, updateRects]);
 
   const { sortedPlacedCharms, hasStockIssues } = useMemo(() => {
     const counts = new Map<string, number>();
@@ -750,8 +818,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     });
 
     const hasIssues = charmsWithStockInfo.some(c => !c.isAvailable);
-
-    // Sort from lower Y to higher Y so that higher charms are rendered last (and appear on top)
     const sorted = [...charmsWithStockInfo].sort((a, b) => b.position.y - a.position.y);
     
     return { sortedPlacedCharms: sorted, hasStockIssues: hasIssues };
@@ -779,10 +845,10 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                 <DialogHeader>
                     <DialogTitle>{t('finalize_creation_title')}</DialogTitle>
                     <DialogDescription>
-                        {t('confirm_add_description')}
+                        {isEditing ? t('confirm_update_title') : t('confirm_add_description')}
                     </DialogDescription>
                 </DialogHeader>
-                 <div className="my-4 hidden sm:grid place-items-center">
+                 <div className="my-4 grid place-items-center">
                     {previewForDialog ? (
                         <Image src={previewForDialog} alt={t('preview_alt')} width={300} height={300} className="rounded-lg border bg-muted/50 max-w-[75%] sm:max-w-full h-auto" />
                     ) : (
@@ -865,7 +931,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
             </div>
           </header>
-        <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0">
+        <main className="flex-grow flex flex-col md:p-8 min-h-0 pb-32">
           <div className="container mx-auto flex-1 flex flex-col min-h-0">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0">
               
@@ -879,7 +945,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                 />
               </div>
 
-              <div className="lg:col-span-6 flex flex-col gap-4 min-h-0 order-first lg:order-none">
+              <div className="lg:col-span-6 flex flex-col gap-4 min-h-0 order-first lg:order-none max-h-full">
                   <div className="flex justify-between items-center gap-4 flex-shrink-0 px-4 pt-4 lg:p-0">
                       <Button variant="ghost" asChild className="p-0 h-auto lg:h-10 lg:p-2">
                           <Link href={`/${locale}/?type=${jewelryType.id}`}>
@@ -903,40 +969,52 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                 </p>
                             </DialogContent>
                         </Dialog>
-                        <Button variant="outline" size={isMobile ? "icon" : "default"} onClick={() => setIsShareOpen(true)}>
-                          <Share2 className={cn(!isMobile && "mr-2")}/>
-                          <span className="hidden lg:inline">{t('share_button')}</span>
+                        <Button variant="outline" size="icon" className="lg:hidden" onClick={() => setIsShareOpen(true)}>
+                          <Share2 />
+                          <span className="sr-only">{t('share_button')}</span>
                         </Button>
+                         <div className="hidden lg:inline-flex items-center gap-2">
+                            <Button variant="outline" onClick={() => setIsShareOpen(true)}>
+                                <Share2 />
+                                {t('share_button')}
+                            </Button>
+                            <Button onClick={handleOpenConfirmDialog} disabled={hasStockIssues || placedCharms.length === 0}>
+                                <Check />
+                                {isEditing ? t('update_item_button') : t('finalize_button')}
+                            </Button>
+                        </div>
                       </div>
                   </div>
                   <div
                       ref={canvasWrapperRef}
-                      className="relative w-full aspect-square bg-card overflow-hidden touch-none grid place-items-center flex-grow border-dashed border-2 border-muted-foreground/30"
+                      className="relative w-full flex-grow bg-card overflow-hidden touch-none border-2 border-dashed"
                   >
                       <div
                           ref={canvasRef}
-                          className={cn(
-                            "relative w-full h-full grid", 
-                            jewelryType.id === 'necklace' ? 'items-start justify-center' : 'place-items-center'
-                          )}
+                          className="relative"
                           style={{
                               transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
                               transformOrigin: '0 0',
+                              width: '100%',
+                              height: '100%',
                           }}
                       >
-                          <Image
-                              ref={modelImageRef}
-                              src={model.editorImageUrl}
-                              alt={model.name}
-                              width={1000}
-                              height={1000}
-                              className="pointer-events-none max-w-full max-h-full object-contain"
-                              data-ai-hint="jewelry model"
-                              priority
-                              crossOrigin="anonymous"
-                          />
+                          <div ref={modelImageContainerRef} className="absolute inset-0 grid place-items-start justify-center">
+                              <Image
+                                  ref={modelImageRef}
+                                  src={model.editorImageUrl}
+                                  alt={model.name}
+                                  width={1000}
+                                  height={1000}
+                                  className="pointer-events-none max-w-full max-h-full object-contain"
+                                  data-ai-hint="jewelry model"
+                                  priority
+                                  crossOrigin="anonymous"
+                                  onLoad={updateRects}
+                              />
+                          </div>
                           
-                          {pixelsPerMm && sortedPlacedCharms.map((placed) => {
+                          {pixelsPerMm && modelImageRect && sortedPlacedCharms.map((placed) => {
                             const pixelSize = {
                               width: (placed.charm.width ?? 20) * pixelsPerMm,
                               height: (placed.charm.height ?? 20) * pixelsPerMm,
@@ -950,31 +1028,11 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                   onDelete={removeCharm}
                                   onRotate={handleRotateCharm}
                                   pixelSize={pixelSize}
-                                  scale={scale}
+                                  modelImageRect={modelImageRect}
                               />
                             )
                           })}
                       </div>
-
-                      {!isMobile && (
-                        <div className="absolute bottom-4 left-4 z-10">
-                           <Dialog>
-                                <DialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground rounded-full hover:bg-muted/50 hover:text-foreground">
-                                        <Info className="h-5 w-5" />
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-md">
-                                    <DialogHeader>
-                                    <DialogTitle className="font-headline text-xl">{t('editor_disclaimer_title')}</DialogTitle>
-                                    </DialogHeader>
-                                    <p className="text-sm text-muted-foreground mt-2">
-                                    {t('editor_disclaimer')}
-                                    </p>
-                                </DialogContent>
-                           </Dialog>
-                        </div>
-                      )}
 
                       {!isMobile && (
                         <div className="absolute bottom-2 right-2 flex gap-2">
@@ -985,64 +1043,66 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       )}
                   </div>
                   
-                  <div className="hidden lg:block">
-                      <Card>
-                          <CardHeader>
-                              <CardTitle className="font-headline text-lg flex items-center gap-2">
-                              <Layers /> {t('added_charms_title', { count: placedCharms.length })}
-                              </CardTitle>
-                          </CardHeader>
-                          <CardContent className="pt-2">
-                              {placedCharms.length === 0 ? (
-                                  <p className="text-muted-foreground text-sm text-center py-4">{t('added_charms_placeholder')}</p>
-                              ) : (
-                                  <ScrollArea className="w-full whitespace-nowrap" orientation="horizontal">
-                                      <div className="flex w-max space-x-2 p-4 flex-nowrap">
-                                          {sortedPlacedCharms.map((pc) => (
-                                              <div key={pc.id}
-                                                  className={cn("p-2 rounded-md border flex flex-col items-center gap-1 cursor-pointer w-20 relative group",
-                                                  selectedPlacedCharmId === pc.id ? 'ring-2 ring-primary' : 'hover:bg-muted/50',
-                                                  !pc.isAvailable && "bg-destructive/10"
-                                                  )}
-                                                  onClick={() => handleCharmListClick(pc.id)}
-                                              >
-                                                  <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={32} height={32} className="w-8 h-8 object-contain" />
-                                                  <span className="text-xs text-center font-medium truncate w-full">{pc.charm.name}</span>
-                                                  {!pc.isAvailable && (
-                                                      <TooltipProvider>
-                                                          <Tooltip>
-                                                              <TooltipTrigger className="absolute inset-0 z-10">
-                                                                  <span className="sr-only">Stock issue</span>
-                                                              </TooltipTrigger>
-                                                              <TooltipContent>
-                                                                  <p>{t('stock_issue_tooltip')}</p>
-                                                              </TooltipContent>
-                                                          </Tooltip>
-                                                      </TooltipProvider>
-                                                  )}
-                                                  <Button 
-                                                    variant="destructive" 
-                                                    size="icon" 
-                                                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
-                                                    onClick={(e) => { e.stopPropagation(); removeCharm(pc.id); }}
-                                                  >
-                                                      <X className="h-3 w-3" />
-                                                  </Button>
-                                              </div>
-                                          ))}
-                                      </div>
-                                      <ScrollBar orientation="horizontal" />
-                                  </ScrollArea>
-                              )}
-                          </CardContent>
-                          <CardFooter>
-                              <Button onClick={handleOpenConfirmDialog} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
-                                  <Check />
-                                  {isEditing ? t('update_item_button') : t('finalize_button')}
-                              </Button>
-                          </CardFooter>
-                      </Card>
-                  </div>
+                   <div className="hidden lg:block flex-shrink-0">
+                        <Accordion type="single" collapsible className="w-full">
+                            <AccordionItem value="item-1">
+                                <Card>
+                                    <AccordionTrigger className="p-6 hover:no-underline">
+                                        <CardHeader className="p-0">
+                                            <CardTitle className="font-headline text-lg flex items-center gap-2">
+                                                <Layers /> {t('added_charms_title', { count: placedCharms.length })}
+                                            </CardTitle>
+                                        </CardHeader>
+                                    </AccordionTrigger>
+                                    <AccordionContent>
+                                        <CardContent className="pt-2">
+                                            {placedCharms.length === 0 ? (
+                                                <p className="text-muted-foreground text-sm text-center py-4">{t('added_charms_placeholder')}</p>
+                                            ) : (
+                                                <ScrollArea className="w-full whitespace-nowrap" orientation="horizontal">
+                                                    <div className="flex w-max space-x-2 p-4 flex-nowrap">
+                                                        {sortedPlacedCharms.map((pc) => (
+                                                            <div key={pc.id}
+                                                                className={cn("p-2 rounded-md border flex flex-col items-center gap-1 cursor-pointer w-20 relative group",
+                                                                selectedPlacedCharmId === pc.id ? 'ring-2 ring-primary' : 'hover:bg-muted/50',
+                                                                !pc.isAvailable && "bg-destructive/10"
+                                                                )}
+                                                                onClick={() => handleCharmListClick(pc.id)}
+                                                            >
+                                                                <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={32} height={32} className="w-8 h-8 object-contain" />
+                                                                <span className="text-xs text-center font-medium truncate w-full">{pc.charm.name}</span>
+                                                                {!pc.isAvailable && (
+                                                                    <TooltipProvider>
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger className="absolute inset-0 z-10">
+                                                                                <span className="sr-only">Stock issue</span>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent>
+                                                                                <p>{t('stock_issue_tooltip')}</p>
+                                                                            </TooltipContent>
+                                                                        </Tooltip>
+                                                                    </TooltipProvider>
+                                                                )}
+                                                                <Button 
+                                                                    variant="destructive" 
+                                                                    size="icon" 
+                                                                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                                                                    onClick={(e) => { e.stopPropagation(); removeCharm(pc.id); }}
+                                                                >
+                                                                    <X className="h-3 w-3" />
+                                                                </Button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <ScrollBar orientation="horizontal" />
+                                                </ScrollArea>
+                                            )}
+                                        </CardContent>
+                                    </AccordionContent>
+                                </Card>
+                            </AccordionItem>
+                        </Accordion>
+                    </div>
               </div>
 
               <div className="lg:col-span-3 flex-col gap-6 min-h-0 hidden lg:flex">
@@ -1199,3 +1259,29 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

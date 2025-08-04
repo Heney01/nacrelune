@@ -7,6 +7,7 @@ export interface User {
   email: string | null;
   displayName: string | null;
   photoURL?: string | null;
+  rewardPoints?: number;
 }
 
 export interface CharmCategory {
@@ -71,7 +72,9 @@ export interface JewelryType {
 export interface PlacedCharm {
   id: string;
   charm: Charm;
-  position: { x: number; y: number }; // As a percentage
+  // Position is normalized relative to the model image's dimensions.
+  // (0,0) is top-left, (1,1) is bottom-right.
+  position: { x: number; y: number }; 
   rotation: number;
   animation?: string;
 }
@@ -80,6 +83,8 @@ export interface PlacedCharm {
 export interface PlacedCreationCharm {
   id: string;
   charm: CreationCharm;
+   // Position is normalized relative to the model image's dimensions.
+  // (0,0) is top-left, (1,1) is bottom-right.
   position: { x: number; y: number };
   rotation: number;
 }
@@ -91,6 +96,10 @@ export interface CartItem {
     jewelryType: Omit<JewelryType, 'models' | 'icon'>;
     placedCharms: PlacedCharm[];
     previewImage: string; // URL to a generated preview of the final design
+    // For creations bought from other users
+    creationId?: string;
+    creatorId?: string;
+    creatorName?: string;
 }
 
 export interface GeneralPreferences {
@@ -112,6 +121,10 @@ export interface OrderItem {
     // Enriched data on the client:
     modelImageUrl?: string;
     charms?: Charm[];
+    // For creations bought from other users
+    creationId?: string;
+    creatorId?: string;
+    creatorName?: string;
 }
 
 export interface MailDelivery {
@@ -164,6 +177,10 @@ export interface Order {
     cancellationReason?: string;
     mailHistory?: MailLog[];
     paymentIntentId?: string;
+    couponCode?: string;
+    couponId?: string;
+    pointsUsed?: number;
+    pointsValue?: number;
 }
 
 export interface Coupon {

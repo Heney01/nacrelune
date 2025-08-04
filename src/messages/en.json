@@ -50,7 +50,20 @@
     "my_creations": "My Creations",
     "google_login_button": "Continue with Google",
     "google_signup_button": "Sign up with Google",
-    "or_continue_with": "OR"
+    "or_continue_with": "OR",
+    "reward_points_title": "Your Reward Points",
+    "reward_points_description": "Here's how your reward points work.",
+    "reward_points_explanation_1": "Earn points when other users purchase your creations.",
+    "reward_points_explanation_2": "Redeem your points for discounts or vouchers.",
+    "reward_points_explanation_3": "Conversion rate: 10 points = €1.",
+    "reward_points_explanation_4": "Earning limit: €300 per year.",
+    "reward_points_close_button": "Got it",
+    "edit_creation_button": "Edit",
+    "edit_creation_title": "Edit Creation",
+    "edit_creation_description": "Update the name and description of your creation.",
+    "save_changes_button": "Save Changes",
+    "edit_creation_success_title": "Success",
+    "edit_creation_error_title": "Error"
   },
   "Editor": {
     "charms_title": "Charms",
@@ -134,7 +147,9 @@
     "checkout_button": "Checkout",
     "price": "{price, number, ::currency/USD}",
     "checkout_error_title": "Order Error",
-    "sold_out": "Sold Out"
+    "sold_out": "Sold Out",
+    "creator_badge": "Creation by {name}",
+    "edit_disabled_tooltip": "Creations by others cannot be edited."
   },
   "CharmsPanel": {
     "title": "Charms",
@@ -246,7 +261,19 @@
     "pickup_info_description": "Pickup point selection is not yet automated. We will contact you by email after your order to choose the most convenient pickup point with you.",
     "pickup_postcode_error": "Please enter a postcode.",
     "pickup_generic_error": "Could not fetch pickup points.",
-    "pickup_select_point": "Select a pickup point"
+    "pickup_select_point": "Select a pickup point",
+    "coupon_code": "Coupon Code",
+    "apply_button": "Apply",
+    "coupon_applied_title": "Coupon Applied!",
+    "coupon_applied_description": "The discount for code {code} has been applied.",
+    "remove_coupon_button": "Remove",
+    "discount": "Discount",
+    "points_discount": "Points discount",
+    "use_reward_points": "Use My Reward Points",
+    "you_have_points": "You have {count} points (value: {value} €)",
+    "you_have_points_slider": "You have {count} points. Use the slider to apply a discount.",
+    "free_order_title": "Your Order is Free!",
+    "free_order_description": "Thanks to your discount, the total amount of your order is €0. Click 'Confirm Order' to finalize it without payment."
   },
   "OrderStatus": {
     "commandée": "Ordered",
@@ -272,5 +299,15 @@
     "shipping_carrier": "Carrier",
     "tracking_number": "Tracking Number",
     "tracking_number_copied": "Tracking number copied!"
+  },
+  "Notifications": {
+    "reward_email_subject": "Your creation has been sold! You've earned points.",
+    "reward_email_greeting": "Hello {creatorName},",
+    "reward_email_body_1": "Great news! Your creation, \"{creationName}\", has been purchased by another user.",
+    "reward_email_body_2": "To reward you, we've just credited your account with {points} points.",
+    "reward_email_body_3": "Thank you for your contribution to the community!",
+    "reward_email_cta": "See my points"
   }
 }
+
+    
