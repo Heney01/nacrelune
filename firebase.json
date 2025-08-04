@@ -6,7 +6,7 @@
       "backends": [
         {
           "id": "nextn",
-          "region": "europe-west9"
+          "region": "europe-west4"
         }
       ]
     }
