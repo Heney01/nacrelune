@@ -330,12 +330,26 @@ export function CreationCard({
           </div>
           <CardContent className="p-4 flex-grow flex flex-col">
             <h3 className="font-headline text-lg truncate">{creation.name}</h3>
-            <Link href={`/${locale}/creators/${creation.creatorId}`} className="contents">
-              <p className="text-sm text-muted-foreground flex items-center gap-1.5 hover:underline">
-                  <User className="h-3 w-3" />
-                  {creation.creatorName}
-              </p>
-            </Link>
+            <div className="flex justify-between items-center mt-1">
+                <Link href={`/${locale}/creators/${creation.creatorId}`} className="contents">
+                    <p className="text-sm text-muted-foreground flex items-center gap-1.5 hover:underline">
+                        <User className="h-3 w-3" />
+                        {creation.creatorName}
+                    </p>
+                </Link>
+                <button
+                    onClick={handleLikeClick}
+                    disabled={isLikePending}
+                    className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors disabled:cursor-not-allowed"
+                >
+                    {isLikePending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                        <Heart className={cn("h-4 w-4", optimisticLikes > 0 && "text-primary fill-current")} />
+                    )}
+                    <span className="text-sm">{optimisticLikes}</span>
+                </button>
+            </div>
           </CardContent>
           <CardFooter className="p-4 pt-0 grid grid-cols-2 gap-2">
              <Button variant="outline" size="sm" onClick={handleAddToCart} disabled={!allCharms.length}>
