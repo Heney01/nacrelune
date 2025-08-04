@@ -28,7 +28,10 @@ export function CreationsCarousel({ creations, locale }: CreationsCarouselProps)
 
   return (
     <section>
-      <h2 className="text-3xl font-headline tracking-tight mb-8 text-center">{t('inspirations_title')}</h2>
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-headline tracking-tight">{t('inspirations_title')}</h2>
+        <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">{t('inspirations_subtitle')}</p>
+      </div>
       
       <Carousel
         plugins={[plugin.current]}
