@@ -106,12 +106,14 @@ export function CreationCard({
     onUpdate,
     onDelete,
     openOnLoad,
+    showCreatorName = false,
 }: { 
     creation: Creation; 
     locale: string;
     onUpdate?: (updatedCreation: Partial<Creation>) => void;
     onDelete?: (creationId: string) => void;
     openOnLoad?: boolean;
+    showCreatorName?: boolean;
 }) {
   const t = useTranslations('HomePage');
   const tEditor = useTranslations('Editor');
@@ -330,7 +332,13 @@ export function CreationCard({
           </div>
           <CardContent className="p-4 flex-grow flex flex-col">
             <h3 className="font-headline text-lg truncate">{creation.name}</h3>
-            <div className="flex justify-end items-center mt-1">
+            {showCreatorName && (
+                <Link href={`/${locale}/creators/${creation.creatorId}`} className="text-sm text-muted-foreground hover:underline flex items-center gap-1 mt-1">
+                    <User className="h-3 w-3" />
+                    {creation.creatorName}
+                </Link>
+            )}
+            <div className="flex justify-end items-center mt-auto pt-2">
                 <button
                     onClick={handleLikeClick}
                     disabled={isLikePending}

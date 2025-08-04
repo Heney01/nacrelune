@@ -87,7 +87,8 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
                   key={creation.id} 
                   creation={creation} 
                   locale={locale}
-                  openOnLoad={creation.id === creationIdFromUrl} 
+                  openOnLoad={creation.id === creationIdFromUrl}
+                  showCreatorName={false}
                 />
               ))}
             </div>

@@ -47,7 +47,7 @@ export function CreationsCarousel({ creations, locale }: CreationsCarouselProps)
           {creations.map((creation) => (
             <CarouselItem key={creation.id} className="md:basis-1/2 lg:basis-1/4">
               <div className="p-1 h-full">
-                <CreationCard creation={creation} locale={locale} />
+                <CreationCard creation={creation} locale={locale} showCreatorName={true} />
               </div>
             </CarouselItem>
           ))}
