@@ -27,8 +27,8 @@ import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ShareDialog } from './share-dialog';
 import { FinalizeCreationDialog } from './finalize-creation-dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { useEditorCanvas } from '@/hooks/use-editor-canvas';
 import {
   Dialog,
@@ -613,7 +613,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
             </div>
           </header>
-        <main className="flex-grow flex flex-col md:p-8 min-h-0 pb-32">
+        <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0 pb-32 md:pb-8">
           <div className="container mx-auto flex-1 flex flex-col min-h-0">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0">
               
