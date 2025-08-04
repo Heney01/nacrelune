@@ -113,12 +113,15 @@ export async function signup(prevState: any, formData: FormData): Promise<{ succ
         const user = userCredential.user;
 
         await updateProfile(user, { displayName });
+        
+        const searchableTerms = displayName.toLowerCase().split(' ').filter(Boolean);
 
         const userData: Omit<User, 'uid'> = {
             email: user.email,
             displayName: user.displayName,
             photoURL: user.photoURL,
             rewardPoints: 0,
+            searchableTerms,
         };
         await setDoc(doc(db, 'users', user.uid), userData);
 
@@ -173,11 +176,13 @@ export async function userLoginWithGoogle(formData: FormData): Promise<{ success
 
     if (!userDoc.exists()) {
       // If user does not exist, create a new document
+      const searchableTerms = displayName.toLowerCase().split(' ').filter(Boolean);
       const newUser: Omit<User, 'uid'> = {
         email,
         displayName,
         photoURL,
         rewardPoints: 0,
+        searchableTerms,
       };
       await setDoc(userDocRef, newUser);
     }
@@ -203,5 +208,3 @@ export async function logout(formData: FormData) {
   cookies().delete('session');
   redirect(`/${locale}/connexion`);
 }
-
-    

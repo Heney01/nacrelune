@@ -383,47 +383,34 @@ export async function searchCreators(searchTerm: string): Promise<{ success: boo
 
   try {
     const usersRef = collection(db, 'users');
-    
-    // Firestore doesn't support case-insensitive 'contains' queries.
-    // We can simulate a "starts-with" search for different parts of the name.
-    const searchTerms = normalizedSearchTerm.split(' ').filter(t => t.length > 0);
-    const queries = searchTerms.map(term => {
-      const capitalizedTerm = term.charAt(0).toUpperCase() + term.slice(1);
-      return query(
-        usersRef,
-        where('displayName', '>=', capitalizedTerm),
-        where('displayName', '<=', capitalizedTerm + '\uf8ff'),
-        limit(10)
-      );
-    });
-
-    const querySnapshots = await Promise.all(queries.map(q => getDocs(q)));
-
-    const creatorsMap = new Map<string, User>();
-
-    for (const querySnapshot of querySnapshots) {
-      querySnapshot.forEach(doc => {
-        if (!creatorsMap.has(doc.id)) {
-          const data = doc.data();
-          creatorsMap.set(doc.id, {
-            uid: doc.id,
-            displayName: data.displayName,
-            email: data.email,
-            photoURL: data.photoURL || null,
-          });
-        }
-      });
-    }
-    
-    // Additional "contains" filtering for full flexibility on the combined results
-    const finalCreators = Array.from(creatorsMap.values()).filter(creator => 
-        creator.displayName?.toLowerCase().includes(normalizedSearchTerm)
+    const q = query(
+      usersRef,
+      where('searchableTerms', 'array-contains', normalizedSearchTerm),
+      limit(10)
     );
 
-    return { success: true, creators: finalCreators };
+    const querySnapshot = await getDocs(q);
+
+    const creators: User[] = [];
+    querySnapshot.forEach(doc => {
+      const data = doc.data();
+      creators.push({
+        uid: doc.id,
+        displayName: data.displayName,
+        email: data.email,
+        photoURL: data.photoURL || null,
+        // No need to return searchableTerms to the client
+      });
+    });
+
+    return { success: true, creators: creators };
 
   } catch (error: any) {
     console.error("Error searching creators:", error);
+    // This can happen if the composite index is not created yet.
+    if (error.code === 'failed-precondition') {
+        return { success: false, error: "La recherche est en cours de configuration. Veuillez réessayer dans quelques instants." };
+    }
     return { success: false, error: "Une erreur est survenue lors de la recherche des créateurs." };
   }
 }

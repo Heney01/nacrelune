@@ -8,6 +8,7 @@ export interface User {
   displayName: string | null;
   photoURL?: string | null;
   rewardPoints?: number;
+  searchableTerms?: string[];
 }
 
 export interface CharmCategory {
