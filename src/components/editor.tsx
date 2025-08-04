@@ -258,7 +258,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                 console.error("Error capturing canvas:", error);
                 reject(error);
             }
-        }, 500); 
+        }, 1000); 
     });
   }, [resetZoomAndPan]);
 
@@ -839,7 +839,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                         {isEditing ? t('confirm_update_title') : t('confirm_add_description')}
                     </DialogDescription>
                 </DialogHeader>
-                 <div className="my-4 hidden sm:grid place-items-center">
+                 <div className="my-4 grid place-items-center">
                     {previewForDialog ? (
                         <Image src={previewForDialog} alt={t('preview_alt')} width={300} height={300} className="rounded-lg border bg-muted/50 max-w-[75%] sm:max-w-full h-auto" />
                     ) : (
@@ -922,7 +922,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
             </div>
           </header>
-        <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0 md:pb-8 pb-32">
+        <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0 pb-32 md:pb-8">
           <div className="container mx-auto flex-1 flex flex-col min-h-0">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0">
               
@@ -1250,6 +1250,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
 
 
 
