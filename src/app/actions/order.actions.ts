@@ -119,7 +119,17 @@ export async function createOrder(
     }
 
     try {
+        // First, upload all images to storage outside of the transaction
+        const uploadPromises = cartItems.map(async (item) => {
+            const storageRef = ref(storage, `order_previews/${item.id}-${Date.now()}.png`);
+            const uploadResult = await uploadString(storageRef, item.previewImage, 'data_url');
+            return getDownloadURL(uploadResult.ref);
+        });
+        const previewImageUrls = await Promise.all(uploadPromises);
+
+
          const orderData = await runTransaction(db, async (transaction) => {
+            // --- READ PHASE ---
             const stockUpdates: Map<DocumentReference, { newQuantity: number; name: string }> = new Map();
             const itemDocsToFetch: Map<string, DocumentReference> = new Map();
             
@@ -143,7 +153,6 @@ export async function createOrder(
                     }
                 }
                 
-                // Handle creator rewards
                 if (item.creatorId && item.creatorName) {
                     const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
                     const points = Math.floor((itemPrice * 0.05) * 10);
@@ -157,11 +166,22 @@ export async function createOrder(
             const itemDocRefs = Array.from(itemDocsToFetch.values());
             const itemDocsSnapshots: DocumentSnapshot[] = [];
              for (const ref of itemDocRefs) {
-                const docSnap = await transaction.get(ref);
-                itemDocsSnapshots.push(docSnap);
+                itemDocsSnapshots.push(await transaction.get(ref));
             }
             const itemDocsMap = new Map(itemDocsSnapshots.map(d => [d.ref.path, d]));
 
+            const allCreatorIds = Array.from(creatorPointAwards.keys());
+            const creatorDocs = allCreatorIds.length > 0
+                ? await Promise.all(allCreatorIds.map(id => transaction.get(doc(db, 'users', id))))
+                : [];
+            const creatorsMap = new Map(creatorDocs.map(d => [d.id, d.data() as User]));
+            
+            let userDoc: DocumentSnapshot | null = null;
+            if(userId && pointsToUse && pointsToUse > 0) {
+                userDoc = await transaction.get(doc(db, 'users', userId));
+            }
+
+            // --- VALIDATION (NO WRITES) ---
             const unavailableItems = {
                 unavailableModelIds: new Set<string>(),
                 unavailableCharmIds: new Set<string>(),
@@ -170,19 +190,13 @@ export async function createOrder(
             for (const [key, deduction] of Array.from(stockDeductions.entries())) {
                 const itemDoc = itemDocsMap.get(itemDocsToFetch.get(key)!.path);
                 if (!itemDoc || !itemDoc.exists()) {
-                     if(deduction.type === 'charms') {
-                        unavailableItems.unavailableCharmIds.add(deduction.id);
-                     } else {
-                        unavailableItems.unavailableModelIds.add(deduction.id);
-                     }
+                     if(deduction.type === 'charms') unavailableItems.unavailableCharmIds.add(deduction.id);
+                     else unavailableItems.unavailableModelIds.add(deduction.id);
                 } else {
                     const currentStock = itemDoc.data().quantity || 0;
                     if (currentStock < deduction.count) {
-                        if(deduction.type === 'charms') {
-                           unavailableItems.unavailableCharmIds.add(deduction.id);
-                        } else {
-                           unavailableItems.unavailableModelIds.add(deduction.id);
-                        }
+                        if(deduction.type === 'charms') unavailableItems.unavailableCharmIds.add(deduction.id);
+                        else unavailableItems.unavailableModelIds.add(deduction.id);
                     } else {
                         stockUpdates.set(itemDoc.ref, { newQuantity: currentStock - deduction.count, name: deduction.name });
                     }
@@ -190,88 +204,43 @@ export async function createOrder(
             }
 
             if (unavailableItems.unavailableModelIds.size > 0 || unavailableItems.unavailableCharmIds.size > 0) {
-                 return { 
-                    success: false, 
-                    message: "Certains articles de votre panier ne sont plus en stock.",
-                    stockError: {
-                        unavailableModelIds: Array.from(unavailableItems.unavailableModelIds),
-                        unavailableCharmIds: Array.from(unavailableItems.unavailableCharmIds),
-                    }
-                };
+                 return { success: false, message: "Certains articles de votre panier ne sont plus en stock.", stockError: { unavailableModelIds: Array.from(unavailableItems.unavailableModelIds), unavailableCharmIds: Array.from(unavailableItems.unavailableCharmIds) }};
+            }
+            
+            if (userDoc && (!userDoc.exists() || (userDoc.data().rewardPoints || 0) < pointsToUse!)) {
+                throw new Error("Points de récompense insuffisants.");
             }
 
-            const uploadPromises = cartItems.map(async (item) => {
-                const storageRef = ref(storage, `order_previews/${item.id}-${Date.now()}.png`);
-                const uploadResult = await uploadString(storageRef, item.previewImage, 'data_url');
-                return getDownloadURL(uploadResult.ref);
-            });
-            const previewImageUrls = await Promise.all(uploadPromises);
-
+            // --- WRITE PHASE ---
             for (const [ref, update] of Array.from(stockUpdates.entries())) {
                 transaction.update(ref, { quantity: update.newQuantity });
             }
 
-            let subtotal = cartItems.reduce((sum, item) => {
-                const modelPrice = item.model.price || 0;
-                const charmsPrice = item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
-                return sum + modelPrice + charmsPrice;
-            }, 0);
-            
-            const couponDiscount = coupon
-                ? coupon.discountType === 'percentage'
-                    ? subtotal * (coupon.value / 100)
-                    : coupon.value
-                : 0;
-
+            let subtotal = cartItems.reduce((sum, item) => sum + (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0), 0);
+            const couponDiscount = coupon ? coupon.discountType === 'percentage' ? subtotal * (coupon.value / 100) : coupon.value : 0;
             let totalAfterCoupon = Math.max(0, subtotal - couponDiscount);
-            
             const pointsValue = Math.floor((pointsToUse || 0) / 10);
             const finalPrice = Math.max(0, totalAfterCoupon - pointsValue);
 
-            if (userId && pointsToUse && pointsToUse > 0) {
-                const userRef = doc(db, 'users', userId);
-                const userDoc = await transaction.get(userRef);
-                if (userDoc.exists() && (userDoc.data().rewardPoints || 0) >= pointsToUse) {
-                    transaction.update(userRef, { rewardPoints: increment(-pointsToUse) });
-                } else {
-                    throw new Error("Points de récompense insuffisants.");
-                }
+            if (userDoc) {
+                transaction.update(userDoc.ref, { rewardPoints: increment(-(pointsToUse!)) });
             }
-            
-            const allCreatorIds = Array.from(creatorPointAwards.keys());
-            const creatorDocs = allCreatorIds.length > 0
-                ? await Promise.all(allCreatorIds.map(id => transaction.get(doc(db, 'users', id))))
-                : [];
-            const creatorsMap = new Map(creatorDocs.map(d => [d.id, d.data() as User]));
 
             creatorPointAwards.forEach((award, creatorId) => {
-                const creatorRef = doc(db, 'users', creatorId);
-                transaction.update(creatorRef, { rewardPoints: increment(award.points) });
-
+                transaction.update(doc(db, 'users', creatorId), { rewardPoints: increment(award.points) });
                 const creatorData = creatorsMap.get(creatorId);
                 if (creatorData && creatorData.email) {
                     const mailText = `Bonjour ${award.creatorName},\n\nFélicitations ! Votre création "${award.creationName}" a été achetée.\n\nVous venez de gagner ${award.points} points de récompense.\n\nContinuez à créer !`;
                     const mailHtml = `<h1>Félicitations !</h1><p>Bonjour ${award.creatorName},</p><p>Excellente nouvelle ! Votre création, <strong>"${award.creationName}"</strong>, a été achetée par un autre utilisateur.</p><p>Pour vous récompenser, nous venons de créditer votre compte de <strong>${award.points} points</strong>.</p><p>Merci pour votre contribution à la communauté !</p>`;
-                    const mailDocData = {
-                        to: [creatorData.email],
-                        message: {
-                            subject: `Votre création a été vendue ! Vous avez gagné des points.`,
-                            text: mailText,
-                            html: mailHtml,
-                        },
-                    };
-                    transaction.set(doc(collection(db, 'mail')), mailDocData);
+                    transaction.set(doc(collection(db, 'mail')), { to: [creatorData.email], message: { subject: `Votre création a été vendue ! Vous avez gagné des points.`, text: mailText, html: mailHtml } });
                 }
             });
 
             const orderItems: Omit<OrderItem, 'modelImageUrl' | 'charms'>[] = cartItems.map((item, index) => {
                 const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
-                
                 if (item.creationId) {
-                    const creationRef = doc(db, 'creations', item.creationId);
-                    transaction.update(creationRef, { salesCount: increment(1) });
+                    transaction.update(doc(db, 'creations', item.creationId), { salesCount: increment(1) });
                 }
-
                 return {
                     modelId: item.model.id,
                     modelName: item.model.name,
@@ -287,44 +256,28 @@ export async function createOrder(
                 };
             });
             
-            const initialStatus: OrderStatus = 'commandée';
             const orderNumber = generateOrderNumber();
-            
             const newOrderData: Omit<Order, 'id' | 'createdAt'> = {
                 orderNumber,
                 customerEmail: email,
                 totalPrice: finalPrice,
                 items: orderItems,
-                status: initialStatus,
+                status: 'commandée',
                 paymentIntentId: paymentIntentId,
                 deliveryMethod: deliveryMethod,
                 shippingAddress: deliveryMethod === 'home' ? shippingAddress : undefined,
                 ...(coupon && { couponCode: coupon.code, couponId: coupon.id }),
                 ...(pointsToUse && { pointsUsed: pointsToUse, pointsValue: pointsValue }),
             };
-
-            const orderRef = doc(collection(db, 'orders'));
-            transaction.set(orderRef, { ...newOrderData, createdAt: serverTimestamp() });
+            transaction.set(doc(collection(db, 'orders')), { ...newOrderData, createdAt: serverTimestamp() });
             
             const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@atelierabijoux.com';
             const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${supportEmail} en précisant votre numéro de commande (${orderNumber}).`;
             const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${supportEmail}">${supportEmail}</a> en précisant votre numéro de commande (${orderNumber}).</p>`;
             const trackingUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com'}/${locale}/orders/track?orderNumber=${orderNumber}`;
-
             const mailText = `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${finalPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.model.name} avec ${item.placedCharms.length} breloque(s)`).join('\\n')}\n\nVous pouvez suivre votre commande ici : ${trackingUrl}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
             const mailHtml = `<h1>Merci pour votre commande !</h1><p>Bonjour,</p><p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${finalPrice.toFixed(2)}€.</p><h2>Récapitulatif :</h2><ul>${cartItems.map(item => `<li>${item.model.name} avec ${item.placedCharms.length} breloque(s)</li>`).join('')}</ul><p>Vous pouvez suivre l'avancement de votre commande en cliquant sur ce lien : <a href="${trackingUrl}">${trackingUrl}</a>.</p><p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
-
-            const mailDocData = {
-                to: [email],
-                message: {
-                    subject: `Confirmation de votre commande n°${orderNumber}`,
-                    text: mailText.trim(),
-                    html: mailHtml.trim(),
-                },
-            };
-
-            const mailRef = doc(collection(db, 'mail'));
-            transaction.set(mailRef, mailDocData);
+            transaction.set(doc(collection(db, 'mail')), { to: [email], message: { subject: `Confirmation de votre commande n°${orderNumber}`, text: mailText.trim(), html: mailHtml.trim() } });
             
             return { success: true, message: 'Votre commande a été passée avec succès !', orderNumber, email, totalPrice: finalPrice };
         });
@@ -819,5 +772,3 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
         return { success: false, message: "Une erreur est survenue lors de la validation du code." };
     }
 }
-
-    
