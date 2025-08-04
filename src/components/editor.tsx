@@ -13,7 +13,7 @@ import { Trash2, X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOu
 import { cn } from '@/lib/utils';
 import { BrandLogo, ShoppingBasketIcon } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { CharmsPanel } from './charms-panel';
 import { Input } from './ui/input';
 import { useCart } from '@/hooks/use-cart';
@@ -262,7 +262,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                 console.error("Error capturing canvas:", error);
                 reject(error);
             }
-        }, 150); 
+        }, 250); 
     });
   }, [resetZoomAndPan]);
 
@@ -982,7 +982,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   </div>
                   <div
                       ref={canvasWrapperRef}
-                      className="relative w-full aspect-square bg-card overflow-hidden touch-none flex-grow border-dashed border-2 border-muted-foreground/30 border-b-0"
+                      className="relative w-full aspect-square bg-card overflow-hidden touch-none flex-grow border-dashed border-2 border-muted-foreground/30 "
                   >
                       <div
                           ref={canvasRef}
@@ -1254,6 +1254,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
 
     
+
+
 
 
 
