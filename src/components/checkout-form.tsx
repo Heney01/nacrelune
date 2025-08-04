@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -331,6 +330,7 @@ const PaymentStep = ({
   )
 };
 
+type Step = 'customer' | 'shipping' | 'payment';
 
 export const CheckoutForm = ({
   total,
