@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -187,12 +186,14 @@ const PaymentStep = ({
         return;
     }
     
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
+
     // 4. Confirm the payment
     const { error: paymentError } = await stripe.confirmPayment({
       elements,
       clientSecret,
       confirmParams: {
-        return_url: `${window.location.origin}/${locale}/orders/track?orderNumber=${orderResult.orderNumber}`,
+        return_url: `${baseUrl}/${locale}/orders/track?orderNumber=${orderResult.orderNumber}`,
         receipt_email: email,
       },
       // redirect: 'if_required', // We want to redirect to the bank page
