@@ -151,7 +151,7 @@ export async function createOrder(
                 const currentModel = stockDeductions.get(modelKey) || { count: 0, name: item.model.name, type: item.jewelryType.id, id: item.model.id };
                 stockDeductions.set(modelKey, { ...currentModel, count: currentModel.count + 1 });
                 if (!itemDocsToFetch.has(modelKey)) {
-                    itemDocsToFetch.set(itemDocsToFetch.get(modelKey)!, doc(db, item.jewelryType.id, item.model.id));
+                    itemDocsToFetch.set(modelKey, doc(db, item.jewelryType.id, item.model.id));
                 }
 
                 for (const pc of item.placedCharms) {
@@ -649,33 +649,37 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
                 throw new Error(`La commande est déjà au statut : ${newStatus}.`);
             }
 
-            // READ PHASE
-            const itemsToRead = new Map<string, DocumentReference>();
+            // --- READ PHASE ---
             let userRef: DocumentReference | null = null;
+            let itemDocs: DocumentSnapshot[] = [];
+            let userDoc: DocumentSnapshot | null = null;
 
             if (newStatus === 'annulée' && currentStatus !== 'annulée') {
+                if (currentOrderData.userId && currentOrderData.pointsUsed && currentOrderData.pointsUsed > 0) {
+                     userRef = doc(db, 'users', currentOrderData.userId);
+                }
+
+                const itemsToRead = new Map<string, DocumentReference>();
+                for (const item of currentOrderData.items) {
+                    const modelRef = doc(db, item.jewelryTypeId, item.modelId);
+                    if (!itemsToRead.has(modelRef.path)) itemsToRead.set(modelRef.path, modelRef);
+                    for (const charmId of item.charmIds) {
+                         const charmRef = doc(db, 'charms', charmId);
+                         if (!itemsToRead.has(charmRef.path)) itemsToRead.set(charmRef.path, charmRef);
+                    }
+                }
+                itemDocs = await Promise.all(Array.from(itemsToRead.values()).map(ref => transaction.get(ref)));
+                if (userRef) userDoc = await transaction.get(userRef);
+
                 if (currentOrderData.paymentIntentId && currentOrderData.paymentIntentId !== 'free_order') {
                     const refundResult = await refundStripePayment(currentOrderData.paymentIntentId);
                     if (!refundResult.success) {
                         throw new Error(`Le remboursement a échoué: ${refundResult.message}. L'annulation a été interrompue.`);
                     }
                 }
-
-                if (currentOrderData.userId && currentOrderData.pointsUsed && currentOrderData.pointsUsed > 0) {
-                     userRef = doc(db, 'users', currentOrderData.userId);
-                }
-                for (const item of currentOrderData.items) {
-                    itemsToRead.set(doc(db, item.jewelryTypeId, item.modelId).path, doc(db, item.jewelryTypeId, item.modelId));
-                    for (const charmId of item.charmIds) {
-                         itemsToRead.set(doc(db, 'charms', charmId).path, doc(db, 'charms', charmId));
-                    }
-                }
             }
             
-            const itemDocs = await Promise.all(Array.from(itemsToRead.values()).map(ref => transaction.get(ref)));
-            const userDoc = userRef ? await transaction.get(userRef) : null;
-            
-            // WRITE PHASE
+            // --- WRITE PHASE ---
             let dataToUpdate: Partial<Order> = { status: newStatus };
 
             if (newStatus === 'expédiée') {
@@ -725,7 +729,7 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
             transaction.update(orderRef, dataToUpdate);
             return { ...currentOrderData, ...dataToUpdate }; // Return the updated order data
         });
-
+        
         // Send email AFTER the transaction has successfully committed
         if (orderForEmail && cancellationReasonForEmail) {
             const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@atelierabijoux.com';
