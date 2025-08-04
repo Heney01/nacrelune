@@ -767,7 +767,7 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
         const couponData = couponDoc.data() as Omit<Coupon, 'id'>;
         
         if (!couponData.isActive) {
-            return { success: false, message: "Ce code promo a expiré." };
+            return { success: false, message: "Ce code promo n'est plus actif." };
         }
 
         const coupon: Coupon = { 
@@ -1850,5 +1850,7 @@ export async function deleteCreation(idToken: string, creationId: string): Promi
         return { success: false, message: "Une erreur est survenue lors de la suppression." };
     }
 }
+
+    
 
     
