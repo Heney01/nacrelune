@@ -238,54 +238,52 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     resetZoomAndPan();
     setSelectedPlacedCharmId(null);
     
-    return new Promise((resolve, reject) => {
-        requestAnimationFrame(async () => {
-            try {
-                // Preload images to ensure they are in cache.
-                const imageElements = Array.from(canvasElement.getElementsByTagName('img'));
-                const imagePromises = imageElements.map(img => {
-                    if (img.complete) return Promise.resolve();
-                    return new Promise<void>((res, rej) => {
-                        const newImg = new window.Image();
-                        newImg.crossOrigin = "Anonymous";
-                        newImg.onload = () => res();
-                        newImg.onerror = () => res(); // Don't fail the whole capture for one image
-                        newImg.src = img.src;
-                    });
-                });
-                await Promise.all(imagePromises);
+    // Add a small delay to ensure the resetZoomAndPan has visually completed
+    await new Promise(resolve => setTimeout(resolve, 100));
 
-                const modelImageElement = modelImageRef.current!;
-                const modelImageBoundingRect = modelImageElement.getBoundingClientRect();
-                const canvasBoundingRect = canvasElement.getBoundingClientRect();
-
-                const originalX = modelImageBoundingRect.left - canvasBoundingRect.left;
-                const originalY = modelImageBoundingRect.top - canvasBoundingRect.top;
-                const originalWidth = modelImageBoundingRect.width;
-                const originalHeight = modelImageBoundingRect.height;
-                
-                const size = Math.max(originalWidth, originalHeight);
-
-                const finalX = originalX - (size - originalWidth) / 2;
-                const finalY = originalY; // Align to top
-                
-                const canvas = await html2canvas(canvasElement, {
-                    backgroundColor: null,
-                    logging: false,
-                    useCORS: true,
-                    scale: 2,
-                    x: finalX,
-                    y: finalY,
-                    width: size,
-                    height: size,
-                });
-                resolve(canvas.toDataURL('image/png', 0.9));
-            } catch (error) {
-                console.error("Error capturing canvas:", error);
-                reject(error);
-            }
+    try {
+        const imageElements = Array.from(canvasElement.getElementsByTagName('img'));
+        const imagePromises = imageElements.map(img => {
+            if (img.complete) return Promise.resolve();
+            return new Promise<void>((res) => {
+                const newImg = new window.Image();
+                newImg.crossOrigin = "Anonymous";
+                newImg.onload = () => res();
+                newImg.onerror = () => res(); // Don't fail the whole capture for one image
+                newImg.src = img.src;
+            });
         });
-    });
+        await Promise.all(imagePromises);
+
+        const modelImageElement = modelImageRef.current!;
+        const modelImageBoundingRect = modelImageElement.getBoundingClientRect();
+        const canvasBoundingRect = canvasElement.getBoundingClientRect();
+
+        const originalX = modelImageBoundingRect.left - canvasBoundingRect.left;
+        const originalY = modelImageBoundingRect.top - canvasBoundingRect.top;
+        const originalWidth = modelImageBoundingRect.width;
+        const originalHeight = modelImageBoundingRect.height;
+        
+        const size = Math.max(originalWidth, originalHeight);
+
+        const finalX = originalX - (size - originalWidth) / 2;
+        const finalY = originalY; // Align to top
+        
+        const canvas = await html2canvas(canvasElement, {
+            backgroundColor: null,
+            logging: false,
+            useCORS: true,
+            scale: 2,
+            x: finalX,
+            y: finalY,
+            width: size,
+            height: size,
+        });
+        return canvas.toDataURL('image/png', 0.9);
+    } catch (error) {
+        console.error("Error capturing canvas:", error);
+        throw error;
+    }
 }, [resetZoomAndPan, canvasRef, modelImageRef]);
 
 
