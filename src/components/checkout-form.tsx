@@ -101,7 +101,7 @@ const PaymentStep = ({
     setIsApplyingCoupon(false);
   }
 
-  const handleCreateOrder = async (paymentIntentId: string): Promise<CreateOrderResult> => {
+  const handleCreateOrderAndEmail = async (paymentIntentId: string): Promise<CreateOrderResult> => {
     const serializableCart: SerializableCartItem[] = cart.map(item => ({
       id: item.id,
       model: item.model,
@@ -123,10 +123,9 @@ const PaymentStep = ({
         }
       : shippingAddress;
 
-    return await createOrder(
+    const orderResult = await createOrder(
         serializableCart,
         email,
-        locale,
         paymentIntentId,
         deliveryMethod,
         finalShippingAddress,
@@ -134,15 +133,18 @@ const PaymentStep = ({
         user?.uid,
         pointsToUse
     );
+
+    if (orderResult.success && orderResult.orderId) {
+        await sendConfirmationEmail(orderResult.orderId, locale);
+    }
+    
+    return orderResult;
   }
 
   const handleFreeOrder = async () => {
     setIsProcessing(true);
     setErrorMessage(null);
-    const orderResult = await handleCreateOrder('free_order');
-    if (orderResult.success && orderResult.orderId) {
-        await sendConfirmationEmail(orderResult.orderId, locale);
-    }
+    const orderResult = await handleCreateOrderAndEmail('free_order');
     onOrderCreated(orderResult);
     setIsProcessing(false);
   }
@@ -163,7 +165,6 @@ const PaymentStep = ({
     setIsProcessing(true);
     setErrorMessage(null);
     
-    // 1. Trigger form validation and gather data
     const { error: submitError } = await elements.submit();
     if (submitError) {
       setErrorMessage(submitError.message || t('payment_error_default'));
@@ -171,8 +172,7 @@ const PaymentStep = ({
       return;
     }
 
-    // 2. Create PaymentIntent on the server
-    const { clientSecret, error: intentError } = await createPaymentIntent(finalTotal);
+    const { clientSecret, error: intentError } = await createPaymentIntent(finalTotal, email);
 
     if (intentError || !clientSecret) {
         setErrorMessage(intentError || t('payment_intent_error'));
@@ -180,19 +180,7 @@ const PaymentStep = ({
         return;
     }
 
-    // 3. Create the order in Firestore *before* confirming payment
-    const paymentIntentId = clientSecret.split('_secret_')[0];
-    const orderResult = await handleCreateOrder(paymentIntentId);
-
-    // If order creation fails (e.g., stock issue), stop before payment.
-    if (!orderResult.success) {
-        onOrderCreated(orderResult);
-        setIsProcessing(false);
-        return;
-    }
-    
-    // 4. Confirm the payment
-    const { error: paymentError } = await stripe.confirmPayment({
+    const { error: paymentError, paymentIntent } = await stripe.confirmPayment({
       elements,
       clientSecret,
       confirmParams: {
@@ -202,21 +190,19 @@ const PaymentStep = ({
     });
 
     if (paymentError) {
-      // This part will only be reached if an immediate error occurs, 
-      // e.g., the card is declined without a 3D Secure redirect.
-      // The user might be stuck on the checkout page here.
       setErrorMessage(paymentError.message || t('payment_error_default'));
       setIsProcessing(false);
-      // We might need a mechanism to cancel the created order here if payment fails definitively.
-      // For now, we leave it as 'pending' for manual review.
       return;
     }
-    
-    // If no redirect was required, the payment is successful.
-    if (orderResult.success && orderResult.orderId) {
-        await sendConfirmationEmail(orderResult.orderId, locale);
+
+    if (paymentIntent && paymentIntent.status === 'succeeded') {
+        const orderResult = await handleCreateOrderAndEmail(paymentIntent.id);
+        onOrderCreated(orderResult);
+    } else {
+        // Handle cases where redirect happened or payment is pending
+        setErrorMessage("Le paiement est en attente de confirmation. Vous serez notifié par e-mail.");
     }
-    onOrderCreated(orderResult);
+    
     setIsProcessing(false);
   };
 

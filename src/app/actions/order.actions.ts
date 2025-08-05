@@ -33,7 +33,8 @@ const getUrl = async (path: string | undefined | null, fallback: string): Promis
 // --- Order Actions ---
 
 export async function createPaymentIntent(
-  amount: number
+  amount: number,
+  email: string
 ): Promise<{ clientSecret: string | null; error?: string }> {
   if (amount <= 0) {
     return { error: 'Invalid amount.', clientSecret: null };
@@ -42,6 +43,7 @@ export async function createPaymentIntent(
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Amount in cents
       currency: 'eur',
+      receipt_email: email,
     });
     return { clientSecret: paymentIntent.client_secret };
   } catch (error: any) {
@@ -115,8 +117,7 @@ export type CreateOrderResult = {
 export async function createOrder(
     cartItems: SerializableCartItem[], 
     email: string, 
-    locale: string, 
-    paymentIntentClientSecret: string,
+    paymentIntentId: string,
     deliveryMethod: DeliveryMethod,
     shippingAddress?: ShippingAddress,
     coupon?: Coupon,
@@ -273,8 +274,6 @@ export async function createOrder(
             
             const orderNumber = generateOrderNumber();
             
-            const paymentIntentId = paymentIntentClientSecret.split('_secret_')[0];
-
             const newOrderData: any = {
                 orderNumber,
                 customerEmail: email,
@@ -836,5 +835,6 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
         return { success: false, message: "Une erreur est survenue lors de la validation du code." };
     }
 }
+
 
 
