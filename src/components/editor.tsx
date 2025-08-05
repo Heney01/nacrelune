@@ -351,7 +351,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
   const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
     // Deselect charm if clicking on the background
-    if ((e.target as HTMLElement).closest('.charm-on-canvas') === null) {
+    const target = e.target as HTMLElement;
+    if (target.closest('.charm-on-canvas') === null) {
       setSelectedPlacedCharmId(null);
     }
   }, []);
@@ -519,7 +520,10 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     if (charmToAdd) {
       addCharmToCanvas(charmToAdd, {
         source: 'suggestionsPanel',
-        position: suggestion.position
+        position: {
+          x: suggestion.position.x / 100,
+          y: suggestion.position.y / 100,
+        }
       });
     } else {
       toast({
