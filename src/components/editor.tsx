@@ -611,51 +611,43 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
             </div>
         </header>
 
-        <main className="flex-grow flex flex-col lg:flex-row min-h-0">
-          <div className="container mx-auto flex-1 flex lg:flex-row min-h-0 lg:p-4 lg:gap-6">
-              
-              <div className="w-[320px] flex-shrink-0 flex-col min-h-0 hidden lg:flex">
-                <CharmsPanel 
-                  allCharms={availableCharms}
-                  charmCategories={charmCategories}
-                  onAddCharm={addCharmFromCharmList} 
-                  searchTerm={charmsSearchTerm}
-                  onSearchTermChange={setCharmsSearchTerm}
-                />
+        <main className="flex-grow flex lg:flex-row min-h-0">
+          <div className="w-[320px] flex-shrink-0 flex-col min-h-0 hidden lg:flex">
+            <CharmsPanel 
+              allCharms={availableCharms}
+              charmCategories={charmCategories}
+              onAddCharm={addCharmFromCharmList} 
+              searchTerm={charmsSearchTerm}
+              onSearchTermChange={setCharmsSearchTerm}
+            />
+          </div>
+
+          <div className="flex flex-col flex-grow min-w-0">
+              <div className="hidden lg:flex justify-between items-center flex-shrink-0 p-4">
+                  <Button variant="outline" asChild>
+                      <Link href={`/${locale}/?type=${jewelryType.id}`}>
+                          <ArrowLeft className="mr-2 h-4 w-4" />
+                          <span>{tHome('back_button')}</span>
+                      </Link>
+                  </Button>
+                   <Dialog>
+                        <DialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-muted-foreground">
+                                <Info className="h-5 w-5" />
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                            <CardTitle className="font-headline text-xl">{t('editor_disclaimer_title')}</CardTitle>
+                            </DialogHeader>
+                            <p className="text-sm text-muted-foreground mt-2">
+                            {t('editor_disclaimer')}
+                            </p>
+                        </DialogContent>
+                    </Dialog>
               </div>
 
-              <div className="flex flex-col gap-4 min-h-0 order-first lg:order-none flex-grow">
-                  <div className="hidden lg:flex justify-between items-center gap-4 flex-shrink-0 pt-4">
-                      <Button variant="outline" asChild className="lg:h-10">
-                          <Link href={`/${locale}/?type=${jewelryType.id}`}>
-                              <ArrowLeft className="mr-2 h-4 w-4" />
-                              <span>{tHome('back_button')}</span>
-                          </Link>
-                      </Button>
-                      <div className="flex items-center gap-2">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                                    <Info className="h-5 w-5" />
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-md">
-                                <DialogHeader>
-                                <CardTitle className="font-headline text-xl">{t('editor_disclaimer_title')}</CardTitle>
-                                </DialogHeader>
-                                <p className="text-sm text-muted-foreground mt-2">
-                                {t('editor_disclaimer')}
-                                </p>
-                            </DialogContent>
-                        </Dialog>
-                         <div className="hidden lg:inline-flex items-center gap-2">
-                            <Button onClick={handleFinalize} disabled={hasStockIssues || placedCharms.length === 0}>
-                                <Check className="mr-2 h-4 w-4" />
-                                {isEditing ? t('update_item_button') : t('finalize_button')}
-                            </Button>
-                        </div>
-                      </div>
-                  </div>
+              <div className="flex-grow flex flex-col p-4 pt-0 min-h-0 min-w-0">
                   <div
                       ref={canvasWrapperRef}
                       className="relative w-full flex-grow bg-card overflow-hidden touch-none border-2 border-dashed"
@@ -724,7 +716,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       )}
                   </div>
                   
-                   <div className="hidden lg:block flex-shrink-0">
+                   <div className="hidden lg:block flex-shrink-0 pt-4">
                         <PlacedCharmsList 
                             placedCharms={sortedPlacedCharms}
                             selectedPlacedCharmId={selectedPlacedCharmId}
@@ -734,18 +726,18 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                         />
                     </div>
               </div>
+          </div>
 
-              <div className="w-[320px] flex-shrink-0 flex-col gap-6 min-h-0 hidden lg:flex">
-                <SuggestionSidebar
-                    charms={allCharms}
-                    onAnalyze={handleAnalyzeForSuggestions}
-                    onCritique={handleCritiqueDesign}
-                    isLoading={isGenerating}
-                    suggestions={suggestions}
-                    critique={critique}
-                    onApplySuggestion={applySuggestion}
-                />
-              </div>
+          <div className="w-[320px] flex-shrink-0 flex-col gap-6 min-h-0 hidden lg:flex">
+            <SuggestionSidebar
+                charms={allCharms}
+                onAnalyze={handleAnalyzeForSuggestions}
+                onCritique={handleCritiqueDesign}
+                isLoading={isGenerating}
+                suggestions={suggestions}
+                critique={critique}
+                onApplySuggestion={applySuggestion}
+            />
           </div>
         </main>
         
@@ -840,6 +832,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
 
 
 
