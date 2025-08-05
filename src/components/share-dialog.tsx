@@ -61,7 +61,7 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
 
             // 3. Draw creation image on top of the gray background
             const image = new window.Image();
-            image.crossOrigin = 'Anonymous';
+            image.crossOrigin = 'Anonymous'; // This is the key fix
             image.src = creation.previewImageUrl;
             
             await new Promise((resolve, reject) => {
@@ -104,7 +104,7 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
         } finally {
             setIsCapturing(false);
         }
-    }, [creation, creatorDisplayName, t]);
+    }, [creation, creatorDisplayName, t, toast]);
     
     const handleCopyLink = () => {
         navigator.clipboard.writeText(shareUrl);
@@ -132,7 +132,7 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
                                 className="w-full h-full object-contain"
                             />
                         </div>
-                        <div className="pt-4 text-center">
+                        <div className="pt-4 text-center bg-white">
                             <p className="font-headline text-xl text-stone-800 break-words">{creation.name}</p>
                             <p className="text-sm text-stone-500 mt-1">par {creatorDisplayName}</p>
                             <p className="text-xs text-stone-400 mt-4">www.atelierabijoux.com</p>
