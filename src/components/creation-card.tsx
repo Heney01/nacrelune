@@ -363,7 +363,7 @@ export function CreationCard({
           </CardContent>
         </Card>
 
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-xl" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
               <DialogTitle className="font-headline text-2xl">{creation.name}</DialogTitle>
               <DialogDescription>Par {creation.creatorName}</DialogDescription>
