@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { Creation } from '@/lib/types';
-import { getAllCreations } from '@/lib/data';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import type { Creation } from '@/lib/types';
+import { getPaginatedCreations } from '@/lib/data';
+import { getMoreCreations } from '@/app/actions/creation.actions';
 import { CreationCard } from '@/components/creation-card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, Clock, Heart, Calendar } from 'lucide-react';
+import { ArrowLeft, Clock, Heart, Calendar, Loader2 } from 'lucide-react';
 import Loading from '../loading';
 import { BrandLogo } from '@/components/icons';
 import { CartWidget } from '@/components/cart-widget';
@@ -14,55 +15,79 @@ import { UserNav } from '@/components/user-nav';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+type SortByType = 'date' | 'likes';
+type TimeFilterType = 'all' | 'year' | 'month' | 'week';
 
 export default function AllCreationsPage({ params }: { params: { locale: string } }) {
   const [creations, setCreations] = useState<Creation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<'date' | 'likes'>('date');
-  const [timeFilter, setTimeFilter] = useState<'all' | 'year' | 'month' | 'week'>('all');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [sortBy, setSortBy] = useState<SortByType>('date');
+  const [timeFilter, setTimeFilter] = useState<TimeFilterType>('all');
+  
+  const loaderRef = useRef(null);
+  
+  const fetchInitialCreations = useCallback(async (sort: SortByType, time: TimeFilterType) => {
+    setIsLoading(true);
+    setCreations([]);
+    setHasMore(true);
+    try {
+      const { creations: initialCreations, hasMore: initialHasMore } = await getPaginatedCreations({ sortBy: sort, timeFilter: time });
+      setCreations(initialCreations);
+      setHasMore(initialHasMore);
+    } catch (error) {
+      console.error("Failed to fetch initial creations:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+  
+  useEffect(() => {
+    fetchInitialCreations(sortBy, timeFilter);
+  }, [sortBy, timeFilter, fetchInitialCreations]);
+
+  const loadMoreCreations = useCallback(async () => {
+    if (isLoadingMore || !hasMore || creations.length === 0) return;
+
+    setIsLoadingMore(true);
+    try {
+      const lastCreation = creations[creations.length - 1];
+      const cursor = sortBy === 'date' ? lastCreation.createdAt : lastCreation.likesCount;
+      const cursorId = lastCreation.id;
+
+      const { creations: newCreations, hasMore: newHasMore } = await getMoreCreations({ sortBy, timeFilter, cursor, cursorId });
+      
+      setCreations(prev => [...prev, ...newCreations]);
+      setHasMore(newHasMore);
+    } catch (error) {
+      console.error("Failed to load more creations:", error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [isLoadingMore, hasMore, creations, sortBy, timeFilter]);
 
   useEffect(() => {
-    const fetchCreations = async () => {
-      setLoading(true);
-      const allCreations = await getAllCreations();
-      setCreations(allCreations);
-      setLoading(false);
-    };
-    fetchCreations();
-  }, []);
-
-  const sortedCreations = useMemo(() => {
-    const now = new Date();
-    
-    let filtered = creations;
-
-    if (timeFilter !== 'all') {
-      filtered = creations.filter(creation => {
-        const creationDate = new Date(creation.createdAt);
-        switch (timeFilter) {
-          case 'week':
-            return creationDate >= new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-          case 'month':
-            return creationDate >= new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-          case 'year':
-            return creationDate.getFullYear() === now.getFullYear();
-          default:
-            return true;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMoreCreations();
         }
-      });
+      },
+      { threshold: 1.0 }
+    );
+
+    if (loaderRef.current) {
+      observer.observe(loaderRef.current);
     }
 
-    const creationsCopy = [...filtered];
-    if (sortBy === 'likes') {
-      return creationsCopy.sort((a, b) => b.likesCount - a.likesCount);
-    }
-    // Default to date sort
-    return creationsCopy.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [creations, sortBy, timeFilter]);
+    return () => {
+      if (loaderRef.current) {
+        observer.unobserve(loaderRef.current);
+      }
+    };
+  }, [loadMoreCreations]);
 
-  if (loading) {
-    return <Loading />;
-  }
 
   return (
     <div className="flex flex-col min-h-screen bg-stone-50">
@@ -92,13 +117,13 @@ export default function AllCreationsPage({ params }: { params: { locale: string 
             <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">Explorez l'ensemble des bijoux imaginés par notre communauté.</p>
           </div>
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-8">
-             <Tabs value={sortBy} onValueChange={(value) => setSortBy(value as 'date' | 'likes')}>
+             <Tabs value={sortBy} onValueChange={(value) => setSortBy(value as SortByType)}>
               <TabsList>
                 <TabsTrigger value="date"><Clock className="mr-2 h-4 w-4"/>Les plus récentes</TabsTrigger>
                 <TabsTrigger value="likes"><Heart className="mr-2 h-4 w-4"/>Les plus populaires</TabsTrigger>
               </TabsList>
             </Tabs>
-             <Select value={timeFilter} onValueChange={(value) => setTimeFilter(value as any)}>
+             <Select value={timeFilter} onValueChange={(value) => setTimeFilter(value as TimeFilterType)}>
               <SelectTrigger className="w-[200px]">
                 <Calendar className="mr-2 h-4 w-4" />
                 <SelectValue placeholder="Filtrer par période" />
@@ -111,11 +136,30 @@ export default function AllCreationsPage({ params }: { params: { locale: string 
               </SelectContent>
             </Select>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {sortedCreations.map((creation) => (
-              <CreationCard key={creation.id} creation={creation} locale={params.locale} showCreator={true} />
-            ))}
-          </div>
+            {isLoading ? (
+                <div className="flex justify-center items-center h-64">
+                    <Loader2 className="h-16 w-16 animate-spin text-primary" />
+                </div>
+            ) : (
+                <>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {creations.map((creation) => (
+                        <CreationCard key={creation.id} creation={creation} locale={params.locale} showCreator={true} />
+                        ))}
+                    </div>
+                    {hasMore && (
+                        <div ref={loaderRef} className="flex justify-center items-center py-8">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                    )}
+                    {!hasMore && creations.length > 0 && (
+                        <p className="text-center text-muted-foreground py-8">Vous avez atteint la fin de la liste.</p>
+                    )}
+                    {!hasMore && creations.length === 0 && (
+                         <p className="text-center text-muted-foreground py-8">Aucune création trouvée pour ces filtres.</p>
+                    )}
+                </>
+            )}
         </div>
       </main>
     </div>

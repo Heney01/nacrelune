@@ -1,7 +1,7 @@
 
 
 import { db, storage } from '@/lib/firebase';
-import { collection, getDocs, DocumentReference, getDoc, doc, Timestamp, query, orderBy, where, documentId, limit } from 'firebase/firestore';
+import { collection, getDocs, DocumentReference, getDoc, doc, Timestamp, query, orderBy, where, documentId, limit, startAfter, QueryConstraint } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 import type { JewelryModel, JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderItem, MailLog, MailDelivery, Creation, PlacedCreationCharm, User, PlacedCharm } from '@/lib/types';
 
@@ -420,6 +420,81 @@ export async function getRecentCreations(): Promise<Creation[]> {
         return [];
     }
 }
+
+const CREATIONS_PER_PAGE = 20;
+
+export interface PaginatedCreationsOptions {
+  sortBy: 'date' | 'likes';
+  timeFilter: 'all' | 'year' | 'month' | 'week';
+  cursor?: any;
+  cursorId?: string;
+}
+
+export async function getPaginatedCreations(options: PaginatedCreationsOptions): Promise<{ creations: Creation[], hasMore: boolean }> {
+  const { sortBy, timeFilter, cursor, cursorId } = options;
+  const constraints: QueryConstraint[] = [];
+
+  // Time filter
+  if (timeFilter !== 'all') {
+    const now = new Date();
+    let startDate;
+    switch (timeFilter) {
+      case 'week':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+        break;
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+        break;
+      case 'year':
+        startDate = new Date(now.getFullYear(), 0, 1);
+        break;
+    }
+    constraints.push(where('createdAt', '>=', startDate));
+  }
+
+  // Sorting
+  // For 'likes' sort, we also add a secondary sort by date to ensure consistent ordering for items with the same like count
+  if (sortBy === 'likes') {
+    constraints.push(orderBy('likesCount', 'desc'));
+  }
+  constraints.push(orderBy('createdAt', 'desc'));
+
+  // Pagination cursor
+  if (cursor && cursorId) {
+    // We need to fetch the document for the cursor to use it in startAfter
+    const cursorDoc = await getDoc(doc(db, 'creations', cursorId));
+    if (cursorDoc.exists()) {
+      constraints.push(startAfter(cursorDoc));
+    }
+  }
+
+  constraints.push(limit(CREATIONS_PER_PAGE + 1)); // Fetch one extra to check if there's a next page
+  
+  try {
+    const q = query(collection(db, 'creations'), ...constraints);
+    const [creationsSnapshot, allCharms] = await Promise.all([
+      getDocs(q),
+      getCharms()
+    ]);
+
+    const hasMore = creationsSnapshot.docs.length > CREATIONS_PER_PAGE;
+    const docsToProcess = hasMore ? creationsSnapshot.docs.slice(0, -1) : creationsSnapshot.docs;
+
+    if (docsToProcess.length === 0) {
+      return { creations: [], hasMore: false };
+    }
+    
+    const hydratedCreations = await hydrateCreations(docsToProcess, allCharms);
+    return { creations: hydratedCreations, hasMore };
+
+  } catch (error) {
+    console.error("Error fetching paginated creations:", error);
+    // This can happen if a composite index is required.
+    // Firestore error messages are usually helpful here.
+    return { creations: [], hasMore: false };
+  }
+}
+
 
 export async function getAllCreations(): Promise<Creation[]> {
     try {

@@ -9,7 +9,7 @@ import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storag
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 import { adminApp } from '@/lib/firebase-admin';
 import type { Creation, CreationCharm, PlacedCreationCharm, User, PlacedCharm, Charm } from '@/lib/types';
-import { toDate, getCharms } from '@/lib/data';
+import { toDate, getCharms, getPaginatedCreations, PaginatedCreationsOptions } from '@/lib/data';
 
 
 // --- Helper Functions ---
@@ -159,18 +159,27 @@ export async function saveCreation(
 
 async function hydrateCreations(creationDocs: any[], allCharms: Charm[]): Promise<Creation[]> {
     const charmsMap = new Map(allCharms.map(c => [c.id, c]));
+    
+    const userIds = Array.from(new Set(creationDocs.map(d => d.data().creatorId))) as string[];
+    let creatorsMap = new Map<string, User>();
+    if (userIds.length > 0) {
+        // Firestore 'in' query is limited to 30 items. If you expect more, you'll need to chunk the requests.
+        const userDocsSnapshot = await getDocs(query(collection(db, 'users'), where(documentId(), 'in', userIds.slice(0, 30))));
+        userDocsSnapshot.docs.forEach(doc => {
+            creatorsMap.set(doc.id, { uid: doc.id, ...doc.data() } as User);
+        });
+    }
 
     const creations = await Promise.all(creationDocs.map(async (doc) => {
         const data = doc.data();
         const previewImageUrl = await getUrl(data.previewImageUrl, 'https://placehold.co/400x400.png');
         
-        // Hydrate placed charms with full charm data
         const hydratedCharms: PlacedCharm[] = (data.placedCharms || []).map((pc: PlacedCreationCharm, index: number) => {
             const charmData = charmsMap.get(pc.charmId);
-            if (!charmData) return null; // or a placeholder
+            if (!charmData) return null;
             
             return {
-                id: `${pc.charmId}-${index}`, // This ID is for React key prop, not for DB
+                id: `${pc.charmId}-${index}`,
                 charm: charmData,
                 position: pc.position,
                 rotation: pc.rotation,
@@ -180,9 +189,10 @@ async function hydrateCreations(creationDocs: any[], allCharms: Charm[]): Promis
         return {
             id: doc.id,
             ...data,
+            creator: creatorsMap.get(data.creatorId),
             previewImageUrl,
-            hydratedCharms, // The new field with full data
-            placedCharms: data.placedCharms, // Keep the original lightweight data
+            hydratedCharms,
+            placedCharms: data.placedCharms,
             createdAt: toDate(data.createdAt as any)!,
         } as Creation;
     }));
@@ -405,4 +415,25 @@ export async function searchCreators(searchTerm: string): Promise<{ success: boo
     }
     return { success: false, error: "Une erreur est survenue lors de la recherche des créateurs." };
   }
+}
+
+export async function getMoreCreations(options: PaginatedCreationsOptions): Promise<{ creations: Creation[], hasMore: boolean }> {
+  const { sortBy, timeFilter, cursor, cursorId } = options;
+  const numericCursor = typeof cursor === 'number' ? cursor : undefined;
+  const dateCursor = typeof cursor === 'object' ? cursor : undefined;
+
+  const paginatedOptions: PaginatedCreationsOptions = {
+    sortBy,
+    timeFilter,
+  };
+
+  if (sortBy === 'date' && dateCursor) {
+    paginatedOptions.cursor = dateCursor;
+    paginatedOptions.cursorId = cursorId;
+  } else if (sortBy === 'likes' && numericCursor !== undefined) {
+    paginatedOptions.cursor = numericCursor;
+    paginatedOptions.cursorId = cursorId;
+  }
+  
+  return getPaginatedCreations(paginatedOptions);
 }
