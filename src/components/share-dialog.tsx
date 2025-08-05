@@ -113,15 +113,15 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
     };
 
     return (
-        <Dialog open={isOpen} onOpenChange={onOpenChange} onOpenAutoFocus={(e) => e.preventDefault()}>
-            <DialogContent>
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
                 <DialogHeader>
                     <DialogTitle>{t('share_creation_title')}</DialogTitle>
                     <DialogDescription>{t('share_creation_description')}</DialogDescription>
                 </DialogHeader>
 
                 <div className="flex justify-center items-center my-4">
-                    <div className="shadow-lg w-full max-w-xs bg-white">
+                     <div className="shadow-lg w-full max-w-xs bg-white">
                         <div className="p-4">
                             <div className="bg-gray-100 aspect-square relative">
                                 <Image 
