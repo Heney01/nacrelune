@@ -622,12 +622,12 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
             />
           </div>
 
-          <div className="flex flex-col flex-grow min-w-0">
-             <div className="hidden lg:flex justify-between items-center flex-shrink-0 p-4 pb-0">
+          <div className="flex flex-col flex-grow min-w-0 min-h-0">
+             <div className="flex justify-between items-center flex-shrink-0 p-4 pb-0">
                 <Button variant="outline" asChild>
                     <Link href={`/${locale}/?type=${jewelryType.id}`}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        <span>{tHome('back_button')}</span>
+                        <span className="hidden sm:inline">{tHome('back_button')}</span>
                     </Link>
                 </Button>
                 <Dialog>
@@ -646,74 +646,76 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                     </DialogContent>
                 </Dialog>
             </div>
-            <div className="flex-grow p-4 min-h-0 min-w-0">
-              <div
-                  ref={canvasWrapperRef}
-                  className="relative w-full h-full bg-card overflow-hidden touch-none border-2 border-dashed"
-                  onMouseDown={handleCanvasClick}
-                  onTouchStart={handleCanvasClick}
-              >
-                  <div
-                      ref={trashZoneRef}
-                      className={cn(
-                          "absolute bottom-4 left-4 h-16 w-16 bg-destructive/20 border-2 border-dashed border-destructive/50 flex items-center justify-center text-destructive rounded-full transition-all duration-300 z-20",
-                          isDraggingCharm ? "opacity-100 scale-100" : "opacity-0 scale-0 pointer-events-none",
-                          isOverTrash && "bg-destructive/40 scale-110"
-                      )}
-                    >
-                      <Trash2 className="h-8 w-8" />
-                  </div>
-
-                  <div
-                      ref={canvasRef}
-                      className="relative"
-                      style={{
-                          transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
-                          transformOrigin: '0 0',
-                          width: '100%',
-                          height: '100%',
-                      }}
-                  >
-                      <div ref={modelImageContainerRef} className="absolute inset-0 grid place-items-start justify-center">
-                          <Image
-                              ref={modelImageRef}
-                              src={model.editorImageUrl}
-                              alt={model.name}
-                              width={1000}
-                              height={1000}
-                              className="pointer-events-none max-w-full max-h-full object-contain"
-                              data-ai-hint="jewelry model"
-                              priority
-                              crossOrigin="anonymous"
-                          />
-                      </div>
-                      
-                      {pixelsPerMm && modelImageRect && sortedPlacedCharms.map((placed) => {
-                        const pixelSize = {
-                          width: (placed.charm.width ?? 20) * pixelsPerMm,
-                          height: (placed.charm.height ?? 20) * pixelsPerMm,
-                        };
-                        return (
-                          <PlacedCharmComponent
-                              key={placed.id}
-                              placed={placed}
-                              isSelected={selectedPlacedCharmId === placed.id}
-                              onDragStart={handleDragStart}
-                              pixelSize={pixelSize}
-                              modelImageRect={modelImageRect}
-                          />
-                        )
-                      })}
-                  </div>
-
-                  {!isMobile && (
-                    <div className="absolute bottom-2 right-2 flex gap-2 z-30">
-                        <Button variant="secondary" size="icon" onClick={() => handleManualZoom('in')}><ZoomIn /></Button>
-                        <Button variant="secondary" size="icon" onClick={() => handleManualZoom('out')}><ZoomOut /></Button>
-                        <Button variant="secondary" size="icon" onClick={resetZoomAndPan}><Maximize /></Button>
+             <div className="flex-grow p-4 min-h-0 min-w-0">
+              <div className="w-full h-full p-4 bg-card border rounded-lg">
+                <div
+                    ref={canvasWrapperRef}
+                    className="relative w-full h-full bg-card overflow-hidden touch-none"
+                    onMouseDown={handleCanvasClick}
+                    onTouchStart={handleCanvasClick}
+                >
+                    <div
+                        ref={trashZoneRef}
+                        className={cn(
+                            "absolute bottom-4 left-4 h-16 w-16 bg-destructive/20 border-2 border-dashed border-destructive/50 flex items-center justify-center text-destructive rounded-full transition-all duration-300 z-20",
+                            isDraggingCharm ? "opacity-100 scale-100" : "opacity-0 scale-0 pointer-events-none",
+                            isOverTrash && "bg-destructive/40 scale-110"
+                        )}
+                        >
+                        <Trash2 className="h-8 w-8" />
                     </div>
-                  )}
-                </div>
+
+                    <div
+                        ref={canvasRef}
+                        className="relative"
+                        style={{
+                            transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
+                            transformOrigin: '0 0',
+                            width: '100%',
+                            height: '100%',
+                        }}
+                    >
+                        <div ref={modelImageContainerRef} className="absolute inset-0 grid place-items-start justify-center">
+                            <Image
+                                ref={modelImageRef}
+                                src={model.editorImageUrl}
+                                alt={model.name}
+                                width={1000}
+                                height={1000}
+                                className="pointer-events-none max-w-full max-h-full object-contain"
+                                data-ai-hint="jewelry model"
+                                priority
+                                crossOrigin="anonymous"
+                            />
+                        </div>
+                        
+                        {pixelsPerMm && modelImageRect && sortedPlacedCharms.map((placed) => {
+                            const pixelSize = {
+                            width: (placed.charm.width ?? 20) * pixelsPerMm,
+                            height: (placed.charm.height ?? 20) * pixelsPerMm,
+                            };
+                            return (
+                            <PlacedCharmComponent
+                                key={placed.id}
+                                placed={placed}
+                                isSelected={selectedPlacedCharmId === placed.id}
+                                onDragStart={handleDragStart}
+                                pixelSize={pixelSize}
+                                modelImageRect={modelImageRect}
+                            />
+                            )
+                        })}
+                    </div>
+
+                    {!isMobile && (
+                        <div className="absolute bottom-2 right-2 flex gap-2 z-30">
+                            <Button variant="secondary" size="icon" onClick={() => handleManualZoom('in')}><ZoomIn /></Button>
+                            <Button variant="secondary" size="icon" onClick={() => handleManualZoom('out')}><ZoomOut /></Button>
+                            <Button variant="secondary" size="icon" onClick={resetZoomAndPan}><Maximize /></Button>
+                        </div>
+                    )}
+                  </div>
+              </div>
             </div>
             <div className="hidden lg:block flex-shrink-0 p-4 pt-0">
                 <PlacedCharmsList 
@@ -832,3 +834,4 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
