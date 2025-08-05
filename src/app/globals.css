@@ -4,47 +4,47 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 340 82% 52%;
-    --primary-foreground: 355.7 100% 97.3%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --background: 46 50% 95%; /* Soft Beige - #F5F5DC */
+    --foreground: 20 5% 25%;
+    --card: 46 50% 95%; /* Soft Beige */
+    --card-foreground: 20 5% 25%;
+    --popover: 46 50% 95%; /* Soft Beige */
+    --popover-foreground: 20 5% 25%;
+    --primary: 0 84% 67%;     /* Pale Coral - #F08080 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 46 30% 90%;
+    --secondary-foreground: 20 5% 25%;
+    --muted: 46 30% 90%;
+    --muted-foreground: 20 5% 45%;
+    --accent: 25 84% 60%;      /* Dusty Rose - #D2691E */
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 340 82% 52%;
+    --border: 46 20% 85%;
+    --input: 46 20% 85%;
+    --ring: 0 84% 67%; /* Pale Coral */
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 340 82% 52%;
-    --primary-foreground: 355.7 100% 97.3%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --background: 20 5% 15%;
+    --foreground: 46 30% 90%;
+    --card: 20 5% 15%;
+    --card-foreground: 46 30% 90%;
+    --popover: 20 5% 15%;
+    --popover-foreground: 46 30% 90%;
+    --primary: 0 74% 62%; /* Adjusted Pale Coral */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 20 5% 25%;
+    --secondary-foreground: 46 30% 90%;
+    --muted: 20 5% 25%;
+    --muted-foreground: 46 20% 65%;
+    --accent: 25 74% 55%; /* Adjusted Dusty Rose */
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 340 82% 52%;
+    --border: 20 5% 25%;
+    --input: 20 5% 25%;
+    --ring: 0 74% 62%;
   }
 
   /* Styles de base */
