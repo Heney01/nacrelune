@@ -14,6 +14,7 @@ import { useTranslations } from '@/hooks/use-translations';
 import { CartWidget } from './cart-widget';
 import { UserNav } from './user-nav';
 import { CreationCard } from './creation-card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 
 export function ProfileClient({ locale }: { locale: string }) {
@@ -95,10 +96,29 @@ export function ProfileClient({ locale }: { locale: string }) {
                              <p className="text-muted-foreground mt-2">Retrouvez ici toutes les créations que vous avez publiées.</p>
                         </div>
                          <div className="flex items-center gap-4 self-start sm:self-center">
-                             <div className="flex items-center gap-2 text-primary font-bold bg-primary/10 px-3 py-1.5 rounded-full">
-                                <Award className="h-5 w-5"/>
-                                <span>{user?.rewardPoints || 0} Points</span>
-                            </div>
+                             <Dialog>
+                                <DialogTrigger asChild>
+                                    <div className="flex items-center gap-2 text-primary font-bold bg-primary/10 px-3 py-1.5 rounded-full cursor-pointer hover:bg-primary/20 transition-colors">
+                                        <Award className="h-5 w-5"/>
+                                        <span>{user?.rewardPoints || 0} Points</span>
+                                    </div>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>{t('reward_points_title')}</DialogTitle>
+                                        <DialogDescription>{t('reward_points_description')}</DialogDescription>
+                                    </DialogHeader>
+                                    <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground mt-4">
+                                        <li>{t('reward_points_explanation_1')}</li>
+                                        <li>{t('reward_points_explanation_2')}</li>
+                                        <li>{t('reward_points_explanation_3')}</li>
+                                        <li>{t('reward_points_explanation_4')}</li>
+                                    </ul>
+                                    <DialogFooter>
+                                        <Button onClick={() => {}}>{t('reward_points_close_button')}</Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
                              <Button asChild variant="outline">
                                 <Link href={`/${locale}/profil/parametres`}>
                                     <Settings className="mr-2 h-4 w-4" />
