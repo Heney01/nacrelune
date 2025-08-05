@@ -264,7 +264,7 @@ export async function toggleLikeCreation(creationId: string, idToken: string): P
                 return currentLikes - 1;
             } else {
                 // User has not liked, so like
-                transaction.set(likeRef, { createdAt: serverTimestamp() });
+                transaction.set(likeRef, {}); // Store an empty document
                 transaction.update(creationRef, { likesCount: increment(1) });
                 return currentLikes + 1;
             }
@@ -414,3 +414,4 @@ export async function searchCreators(searchTerm: string): Promise<{ success: boo
     return { success: false, error: "Une erreur est survenue lors de la recherche des créateurs." };
   }
 }
+
