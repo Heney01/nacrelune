@@ -11,6 +11,10 @@
       ]
     }
   },
+  "storage": {
+    "rules": "storage.rules",
+    "cors": "cors.json"
+  },
   "apphosting": {
     "location": "europe-west4"
   }
