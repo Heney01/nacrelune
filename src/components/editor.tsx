@@ -9,7 +9,7 @@ import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory,
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Share2, Layers, Check, MoreHorizontal } from 'lucide-react';
+import { X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Share2, Layers, Check, MoreHorizontal, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BrandLogo } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -54,6 +54,7 @@ interface PlacedCharmComponentProps {
   
 const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDelete, onRotate, pixelSize, modelImageRect }: PlacedCharmComponentProps) => {
     const charmRef = useRef<HTMLDivElement>(null);
+    const [isImageLoading, setIsImageLoading] = useState(true);
 
     const handleDelete = useCallback((e: React.MouseEvent | React.TouchEvent) => {
         e.stopPropagation();
@@ -122,22 +123,33 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
             )}
             style={positionStyle as React.CSSProperties}
         >
+            {isImageLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/10 rounded-full">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary-foreground" />
+                </div>
+            )}
             <Image
                 src={placed.charm.imageUrl}
                 alt={placed.charm.name}
-                className="pointer-events-none select-none object-contain w-full h-auto"
+                className={cn(
+                    "pointer-events-none select-none object-contain w-full h-auto",
+                    isImageLoading && "opacity-0"
+                )}
                 data-ai-hint="jewelry charm"
                 draggable="false"
                 width={pixelSize.width}
                 height={pixelSize.height}
                 crossOrigin="anonymous"
+                onLoad={() => setIsImageLoading(false)}
             />
-            <button
-                onMouseDown={handleDelete}
-                onTouchStart={handleDelete}
-                className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                <X size={14} />
-            </button>
+            {!isImageLoading && (
+                 <button
+                    onMouseDown={handleDelete}
+                    onTouchStart={handleDelete}
+                    className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <X size={14} />
+                </button>
+            )}
         </div>
     );
 });
