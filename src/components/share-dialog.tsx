@@ -7,7 +7,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
-import { Loader2, Share2, AlertCircle, Sparkles, Copy, Check } from 'lucide-react';
+import { Loader2, Camera, AlertCircle, Sparkles, Copy, Check } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import html2canvas from 'html2canvas';
@@ -238,12 +238,12 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t, creatio
 
         {error && <div className="text-destructive text-sm text-center my-2">{error}</div>}
 
-        <DialogFooter className="gap-2">
+        <DialogFooter className="gap-2 sm:gap-4">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             {t('close_button')}
           </Button>
           <Button onClick={handleShare} disabled={isLoading || isSharing || isGeneratingContent || !creationImage}>
-            {isSharing ? <Loader2 className="animate-spin" /> : <Share2 />}
+            {isSharing ? <Loader2 className="animate-spin" /> : <Camera />}
             {t('share_button')}
           </Button>
         </DialogFooter>
