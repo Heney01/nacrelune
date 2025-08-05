@@ -4,19 +4,19 @@
 
 @layer base {
   :root {
-    --background: 46 50% 95%; /* Soft Beige - #F5F5DC */
+    --background: 46 50% 95%; /* Soft Beige */
     --foreground: 20 5% 25%;
     --card: 46 50% 95%; /* Soft Beige */
     --card-foreground: 20 5% 25%;
     --popover: 46 50% 95%; /* Soft Beige */
     --popover-foreground: 20 5% 25%;
-    --primary: 0 84% 67%;     /* Pale Coral - #F08080 */
+    --primary: 0 84% 67%; /* Pale Coral */
     --primary-foreground: 0 0% 100%;
     --secondary: 46 30% 90%;
     --secondary-foreground: 20 5% 25%;
     --muted: 46 30% 90%;
     --muted-foreground: 20 5% 45%;
-    --accent: 25 84% 60%;      /* Dusty Rose - #D2691E */
+    --accent: 340 60% 70%; /* Dusty Rose */
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
@@ -38,7 +38,7 @@
     --secondary-foreground: 46 30% 90%;
     --muted: 20 5% 25%;
     --muted-foreground: 46 20% 65%;
-    --accent: 25 74% 55%; /* Adjusted Dusty Rose */
+    --accent: 340 50% 60%; /* Adjusted Dusty Rose */
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;

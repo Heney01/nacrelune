@@ -57,30 +57,26 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
                   <Link href={`/${locale}`} className="flex items-center gap-2">
                     <BrandLogo className="h-8 w-auto text-foreground" />
                   </Link>
-                  {isMobile && (
-                    <div className="flex items-center gap-1 -ml-2 mt-1">
-                      <Button asChild variant="ghost" size="icon" className="h-7 w-7">
-                        <Link href={`/${locale}/orders/track`}>
-                          <Truck className="h-4 w-4" />
-                          <span className="sr-only">{t('track_order_link')}</span>
-                        </Link>
-                      </Button>
-                      <CartWidget />
-                    </div>
-                  )}
-              </div>
-              <div className="flex items-center gap-2">
-                {!isMobile && (
-                   <>
-                    <Button asChild variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
-                        <Link href={`/${locale}/orders/track`}>
-                            <Truck className="h-4 w-4 sm:h-5 sm:w-5" />
-                            <span className="sr-only">{t('track_order_link')}</span>
-                        </Link>
+                  <div className="flex items-center gap-1 -ml-2 mt-1 sm:hidden">
+                    <Button asChild variant="ghost" size="icon" className="h-7 w-7">
+                      <Link href={`/${locale}/orders/track`}>
+                        <Truck className="h-4 w-4" />
+                        <span className="sr-only">{t('track_order_link')}</span>
+                      </Link>
                     </Button>
                     <CartWidget />
-                   </>
-                )}
+                  </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="hidden sm:flex items-center gap-2">
+                   <Button asChild variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
+                      <Link href={`/${locale}/orders/track`}>
+                          <Truck className="h-4 w-4 sm:h-5 sm:w-5" />
+                          <span className="sr-only">{t('track_order_link')}</span>
+                      </Link>
+                  </Button>
+                  <CartWidget />
+                </div>
                 <div className="ml-2">
                   <UserNav locale={locale} />
                 </div>
@@ -102,7 +98,7 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
                 
                 {recentCreations.length > 0 && (
                   <>
-                    <Separator className="my-8 md:my-4" />
+                    <Separator className="my-8 md:my-12" />
                     <CreationsCarousel creations={recentCreations} locale={locale} />
                   </>
                 )}
