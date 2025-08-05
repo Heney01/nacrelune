@@ -3,17 +3,18 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Loader2, Share2, AlertCircle, Sparkles } from 'lucide-react';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
+import { Label } from './ui/label';
+import { Loader2, Share2, AlertCircle, Sparkles, Copy, Check } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import html2canvas from 'html2canvas';
 import { generateShareContentAction } from '@/app/actions/ai.actions';
 import { useParams } from 'next/navigation';
 import { Creation } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 interface ShareDialogProps {
   isOpen: boolean;
@@ -54,6 +55,8 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t, creatio
   const polaroidRef = useRef<HTMLDivElement>(null);
   const params = useParams();
   const locale = params.locale as string;
+  const { toast } = useToast();
+  const [isCopied, setIsCopied] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -77,8 +80,22 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t, creatio
         setTitle(creation?.name || '');
         setIsLoading(true);
         setError(null);
+        setIsCopied(false);
     }
   }, [isOpen, getCanvasDataUri, t, creation]);
+
+   const shareUrl = creation 
+      ? `${window.location.origin}/${locale}/creators/${creation.creatorId}?creation=${creation.id}`
+      : window.location.origin;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(shareUrl);
+    setIsCopied(true);
+    toast({
+        description: "URL copiée dans le presse-papiers !",
+    });
+    setTimeout(() => setIsCopied(false), 2000); // Reset after 2 seconds
+  };
 
   const downloadImage = (canvas: HTMLCanvasElement) => {
     const link = document.createElement('a');
@@ -95,10 +112,6 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t, creatio
     
     setIsSharing(true);
     setError(null);
-
-    const shareUrl = creation 
-      ? `${window.location.origin}/${locale}/creators/${creation.creatorId}?creation=${creation.id}`
-      : window.location.origin;
 
     try {
         const canvas = await html2canvas(polaroidRef.current, { 
@@ -204,6 +217,17 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t, creatio
                             </Button>
                         </div>
                         <Input id="share-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('share_title_placeholder')} />
+                    </div>
+                )}
+                 {creation && (
+                    <div className="space-y-2">
+                        <Label htmlFor="share-url">Lien de partage</Label>
+                        <div className="flex w-full items-center space-x-2">
+                            <Input id="share-url" value={shareUrl} readOnly />
+                            <Button type="button" size="icon" onClick={handleCopy}>
+                                {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                        </div>
                     </div>
                 )}
               </div>
