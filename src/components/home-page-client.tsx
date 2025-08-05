@@ -55,7 +55,7 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
             <div className="flex items-center gap-2">
                 <Button asChild variant="ghost" size="icon">
                     <Link href={`/${locale}/orders/track`}>
-                        <Truck className="h-6 w-6" />
+                        <Truck className="h-5 w-5" />
                         <span className="sr-only">{t('track_order_link')}</span>
                     </Link>
                 </Button>

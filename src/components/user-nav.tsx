@@ -30,7 +30,7 @@ export function UserNav({ locale }: { locale: string }) {
                     <TooltipTrigger asChild>
                         <Button asChild variant="outline" size="icon">
                             <Link href={`/${locale}/connexion`}>
-                                <UserCircle className="h-6 w-6" />
+                                <UserCircle className="h-5 w-5" />
                                 <span className="sr-only">{tAuth('login_button')}</span>
                             </Link>
                         </Button>
