@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -19,6 +18,7 @@ import { CreationsCarousel } from './creations-carousel';
 import { Separator } from './ui/separator';
 import { CreatorSearch } from './creator-search';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useRouter } from 'next/navigation';
 
 export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, charmCategories, recentCreations, locale }: {
     searchParams: { [key:string]: string | string[] | undefined };
@@ -30,6 +30,7 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
 }) {
     const t = useTranslations('HomePage');
     const isMobile = useIsMobile();
+    const router = useRouter();
     
     const jewelryTypes = initialJewelryTypes.map(jt => {
         if (jt.id === 'necklace') return { ...jt, name: t('jewelry_types.necklace'), description: t('jewelry_types.necklace_description'), icon: Gem };
@@ -43,6 +44,15 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
 
     const selectedType = selectedTypeId ? jewelryTypes.find(t => t.id === selectedTypeId) : null;
     const selectedModel = selectedType && selectedModelId ? selectedType.models.find(m => m.id === selectedModelId) : null;
+    
+    useEffect(() => {
+    // If the editor is loaded via redirect, clear the URL params to avoid re-triggering.
+    if (searchParams?.type && searchParams?.model && searchParams?.charms) {
+        const newUrl = `/${locale}?type=${searchParams.type}&model=${searchParams.model}`;
+        // Use replace to not add a new entry in the history stack
+        router.replace(newUrl, { scroll: false });
+    }
+    }, [searchParams, locale, router]);
     
     if (selectedModel && selectedType) {
       return <Editor model={selectedModel} jewelryType={selectedType} allCharms={allCharms} charmCategories={charmCategories} />;

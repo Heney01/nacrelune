@@ -17,7 +17,7 @@ import { BrandLogo, GoogleIcon } from '@/components/icons';
 import { signup, userLoginWithGoogle } from '@/app/actions/auth.actions';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from '@/hooks/use-translations';
 import { useGoogleAuth } from '@/hooks/use-google-auth';
@@ -53,10 +53,23 @@ function SignUpButton() {
 export function SignUpForm() {
   const [state, formAction] = useFormState(signup, initialState);
   const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const locale = params.locale as string;
   const t = useTranslations('Auth');
   const { toast } = useToast();
+
+   const getRedirectUrl = () => {
+    const redirectPath = searchParams.get('redirect') || `/${locale}`;
+    const redirectParams = new URLSearchParams();
+    for (const [key, value] of searchParams.entries()) {
+        if (key !== 'redirect') {
+            redirectParams.append(key, value);
+        }
+    }
+    const queryString = redirectParams.toString();
+    return queryString ? `${redirectPath}?${queryString}` : redirectPath;
+  }
 
   const { signInWithGoogle, error: googleError, isGoogleLoading } = useGoogleAuth({
       onSuccess: async (user) => {
@@ -75,7 +88,7 @@ export function SignUpForm() {
                 title: 'Connexion réussie',
                 description: result.message,
             });
-            router.push(`/${locale}`);
+            router.push(getRedirectUrl());
           } else {
             toast({
               variant: 'destructive',
@@ -93,9 +106,9 @@ export function SignUpForm() {
             title: 'Inscription réussie',
             description: state.message,
         });
-        router.push(`/${locale}`);
+        router.push(getRedirectUrl());
     }
-  }, [state.success, state.message, toast, router, locale]);
+  }, [state.success, state.message, toast, router, locale, getRedirectUrl]);
 
 
   return (

@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription }
 import { SuggestionSidebar } from './suggestion-sidebar';
 import { X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Layers, Check, MoreHorizontal, Loader2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { BrandLogo } from './icons';
+import { BrandLogo } from '@/components/icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { CharmsPanel } from './charms-panel';
@@ -25,8 +25,8 @@ import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggesti
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { FinalizeCreationDialog } from './finalize-creation-dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useEditorCanvas } from '@/hooks/use-editor-canvas';
 import {
   Dialog,
@@ -136,11 +136,12 @@ interface EditorProps {
   jewelryType: Omit<JewelryType, 'models' | 'icon'>;
   allCharms: Charm[];
   charmCategories: CharmCategory[];
+  editorInitialState?: { placedCharms: PlacedCharm[] } | null;
 }
 
 export type Suggestion = CharmSuggestionOutput['suggestions'][0];
 
-export default function Editor({ model, jewelryType, allCharms: initialAllCharms, charmCategories }: EditorProps) {
+export default function Editor({ model, jewelryType, allCharms: initialAllCharms, charmCategories, editorInitialState }: EditorProps) {
   const isMobile = useIsMobile();
   const { cart, addToCart, updateCartItem } = useCart();
   const { toast } = useToast();
@@ -156,7 +157,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const cartItemId = searchParams.get('cartItemId');
   const [allCharms, setAllCharms] = useState(initialAllCharms);
   
-  const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>([]);
+  const [placedCharms, setPlacedCharms] = useState<PlacedCharm[]>(editorInitialState?.placedCharms || []);
   const [selectedPlacedCharmId, setSelectedPlacedCharmId] = useState<string | null>(null);
 
   const [isCharmsSheetOpen, setIsCharmsSheetOpen] = useState(false);
@@ -841,5 +842,3 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
-
-    

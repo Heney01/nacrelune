@@ -18,7 +18,7 @@ import { login, userLogin, userLoginWithGoogle } from '@/app/actions/auth.action
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from '@/hooks/use-translations';
 import { Separator } from './ui/separator';
@@ -53,10 +53,23 @@ function LoginButton() {
 export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
   const [state, formAction] = useFormState(isUserAuth ? userLogin : login, initialState);
   const params = useParams();
+  const searchParams = useSearchParams();
   const locale = params.locale as string;
   const router = useRouter();
   const t = useTranslations('Auth');
   const { toast } = useToast();
+  
+  const getRedirectUrl = () => {
+    const redirectPath = searchParams.get('redirect') || `/${locale}`;
+    const redirectParams = new URLSearchParams();
+    for (const [key, value] of searchParams.entries()) {
+        if (key !== 'redirect') {
+            redirectParams.append(key, value);
+        }
+    }
+    const queryString = redirectParams.toString();
+    return queryString ? `${redirectPath}?${queryString}` : redirectPath;
+  }
   
   const { signInWithGoogle, error, isGoogleLoading } = useGoogleAuth({
       onSuccess: async (user) => {
@@ -75,7 +88,7 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
                 title: 'Connexion réussie',
                 description: result.message,
             });
-            router.push(`/${locale}`);
+            router.push(getRedirectUrl());
           } else {
             toast({
               variant: 'destructive',
@@ -93,10 +106,10 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
         title: 'Connexion réussie',
         description: state.message,
       });
-      const destination = isUserAuth ? `/${locale}` : `/${locale}/admin/dashboard`;
+      const destination = isUserAuth ? getRedirectUrl() : `/${locale}/admin/dashboard`;
       router.push(destination);
     }
-  }, [state.success, state.message, router, toast, locale, isUserAuth]);
+  }, [state.success, state.message, router, toast, locale, isUserAuth, getRedirectUrl]);
 
   return (
     <Card>

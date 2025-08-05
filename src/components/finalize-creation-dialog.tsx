@@ -137,6 +137,13 @@ export function FinalizeCreationDialog({
             onConfirmAddToCart(previewImage);
         }
     }
+    
+    const getLoginRedirectUrl = () => {
+        const serializedCharms = encodeURIComponent(JSON.stringify(
+            placedCharms.map(pc => ({ id: pc.charmId, x: pc.position.x, y: pc.position.y, r: pc.rotation }))
+        ));
+        return `/${locale}/connexion?redirect=/&type=${jewelryType.id}&model=${model.id}&charms=${serializedCharms}`;
+    }
 
     const renderContent = () => {
         if (isLoadingPreview || !previewImage) {
@@ -163,7 +170,7 @@ export function FinalizeCreationDialog({
                         <AlertTitle>{t('publish_login_required_title')}</AlertTitle>
                         <AlertDescription>
                             {t('publish_login_required_desc')}{' '}
-                            <Link href={`/${locale}/connexion`} className="font-bold underline">
+                            <Link href={getLoginRedirectUrl()} className="font-bold underline">
                                 {t('publish_login_link')}
                             </Link>
                             .
@@ -183,7 +190,6 @@ export function FinalizeCreationDialog({
                                     <ul className="list-disc pl-5 mt-2 space-y-1 text-xs text-muted-foreground">
                                         <li>{t('publish_incentive_line1')}</li>
                                         <li>{t('publish_incentive_line2')}</li>
-                                        <li>{t('publish_incentive_line3')}</li>
                                     </ul>
                                 </AccordionContent>
                             </AccordionItem>

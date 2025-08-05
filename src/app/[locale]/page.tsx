@@ -1,13 +1,42 @@
 
-
 import React from 'react';
 import { getJewelryTypesAndModels, getFullCharmData, getRecentCreations } from '@/lib/data';
-import type { JewelryType, Charm, CharmCategory, Creation } from '@/lib/types';
+import type { JewelryType, Charm, CharmCategory, Creation, PlacedCharm } from '@/lib/types';
 import { HomePageClient } from '@/components/home-page-client';
 import { getStaticParams } from '@/lib/translations';
 
 export async function generateStaticParams() {
     return getStaticParams();
+}
+
+async function restoreCreationFromUrl(searchParams: { [key: string]: string | string[] | undefined }, allCharms: Charm[]): Promise<PlacedCharm[] | null> {
+    const charmsParam = searchParams?.charms as string | undefined;
+    if (!charmsParam) {
+        return null;
+    }
+
+    try {
+        const decodedCharms = JSON.parse(decodeURIComponent(charmsParam));
+        if (!Array.isArray(decodedCharms)) return null;
+
+        const charmsMap = new Map(allCharms.map(c => [c.id, c]));
+
+        const restoredPlacedCharms: PlacedCharm[] = decodedCharms.map((pc: any, index: number) => {
+            const charmData = charmsMap.get(pc.id);
+            if (!charmData) return null;
+            return {
+                id: `${pc.id}-${Date.now()}-${index}`,
+                charm: charmData,
+                position: { x: pc.x, y: pc.y },
+                rotation: pc.r,
+            };
+        }).filter(Boolean);
+
+        return restoredPlacedCharms;
+    } catch (e) {
+        console.error("Failed to parse charms from URL", e);
+        return null;
+    }
 }
 
 export default async function Home({ searchParams, params }: {
@@ -26,6 +55,10 @@ export default async function Home({ searchParams, params }: {
     getRecentCreations(),
   ]);
   
+  const restoredPlacedCharms = await restoreCreationFromUrl(searchParams, charms);
+  
+  const editorInitialState = restoredPlacedCharms ? { placedCharms: restoredPlacedCharms } : null;
+
   return (
     <HomePageClient
       searchParams={searchParams}
@@ -34,6 +67,7 @@ export default async function Home({ searchParams, params }: {
       charmCategories={charmCategories}
       recentCreations={recentCreations}
       locale={params.locale}
+      editorInitialState={editorInitialState}
     />
   );
 }
