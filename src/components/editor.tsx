@@ -9,7 +9,7 @@ import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory,
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Share2, Layers, Check, MoreHorizontal, Loader2, Trash2 } from 'lucide-react';
+import { X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Layers, Check, MoreHorizontal, Loader2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BrandLogo } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -25,7 +25,6 @@ import { useTranslations } from '@/hooks/use-translations';
 import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction, getCharmDesignCritiqueAction } from '@/app/actions/ai.actions';
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { ShareDialog } from './share-dialog';
 import { FinalizeCreationDialog } from './finalize-creation-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
@@ -164,7 +163,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const [isCharmsSheetOpen, setIsCharmsSheetOpen] = useState(false);
   const [isSuggestionsSheetOpen, setIsSuggestionsSheetOpen] = useState(false);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
-  const [isShareOpen, setIsShareOpen] = useState(false);
   const [isFinalizeOpen, setIsFinalizeOpen] = useState(false);
   
   const [charmsSearchTerm, setCharmsSearchTerm] = useState('');
@@ -587,14 +585,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   return (
     <>
       <CartSheet open={isCartSheetOpen} onOpenChange={setIsCartSheetOpen} />
-      {isShareOpen && (
-        <ShareDialog
-          isOpen={isShareOpen}
-          onOpenChange={() => setIsShareOpen(false)}
-          getCanvasDataUri={getCanvasDataUri}
-          t={t}
-        />
-      )}
       {isFinalizeOpen && (
         <FinalizeCreationDialog
             isOpen={isFinalizeOpen}
@@ -624,15 +614,11 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         {isMobile && (
            <div className="fixed top-[73px] left-0 right-0 bg-white/80 backdrop-blur-sm z-10 border-b">
               <div className="container mx-auto flex justify-end items-center p-4">
-                  <Button variant="outline" size="sm" onClick={() => setIsShareOpen(true)}>
-                    <Share2 className="mr-2 h-4 w-4" />
-                    {t('share_button')}
-                  </Button>
               </div>
            </div>
         )}
 
-        <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0 pb-[130px] md:pb-8 lg:pb-4">
+        <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-8 lg:pb-4">
           <div className="container mx-auto flex-1 flex flex-col min-h-0">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0">
               
@@ -671,10 +657,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                             </DialogContent>
                         </Dialog>
                          <div className="hidden lg:inline-flex items-center gap-2">
-                            <Button variant="outline" onClick={() => setIsShareOpen(true)}>
-                                <Share2 className="mr-2 h-4 w-4" />
-                                {t('share_button')}
-                            </Button>
                             <Button onClick={handleFinalize} disabled={hasStockIssues || placedCharms.length === 0}>
                                 <Check className="mr-2 h-4 w-4" />
                                 {isEditing ? t('update_item_button') : t('finalize_button')}
@@ -691,12 +673,12 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                        <div
                           ref={trashZoneRef}
                           className={cn(
-                              "absolute bottom-4 left-4 h-9 w-9 bg-destructive/20 border-2 border-dashed border-destructive/50 flex items-center justify-center text-destructive rounded-full transition-all duration-300 z-20",
+                              "absolute bottom-4 left-4 h-12 w-12 bg-destructive/20 border-2 border-dashed border-destructive/50 flex items-center justify-center text-destructive rounded-full transition-all duration-300 z-20",
                               isDraggingCharm ? "opacity-100 scale-100" : "opacity-0 scale-0 pointer-events-none",
                               isOverTrash && "bg-destructive/40 scale-110"
                           )}
                         >
-                          <Trash2 className="h-5 w-5" />
+                          <Trash2 className="h-6 w-6" />
                       </div>
 
                       <div

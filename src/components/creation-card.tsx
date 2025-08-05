@@ -9,7 +9,7 @@ import { Creation, JewelryModel, JewelryType, PlacedCharm, Charm, User } from '@
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/hooks/use-translations';
-import { Heart, User as UserIcon, Loader2, MoreHorizontal, Edit, Trash2, ShoppingCart, Share2 } from 'lucide-react';
+import { Heart, User as UserIcon, Loader2, MoreHorizontal, Edit, Trash2, ShoppingCart } from 'lucide-react';
 import { toggleLikeCreation, deleteCreation, updateCreation } from '@/app/actions/creation.actions';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -34,7 +34,6 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { useCart } from '@/hooks/use-cart';
 import { getJewelryTypesAndModels, getCharms } from '@/lib/data';
-import { ShareDialog } from './share-dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 
@@ -130,7 +129,6 @@ export function CreationCard({
   const [jewelryTypes, setJewelryTypes] = useState<Omit<JewelryType, 'icon'>[]>([]);
   const [allCharms, setAllCharms] = useState<Charm[]>([]);
   
-  const [isShareOpen, setIsShareOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
@@ -260,7 +258,6 @@ export function CreationCard({
   const handleShareClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsShareOpen(true);
   };
 
   return (
@@ -337,9 +334,6 @@ export function CreationCard({
                 <Button variant="ghost" size="icon" className="h-auto p-0 text-muted-foreground hover:text-primary transition-colors disabled:cursor-not-allowed" onClick={handleAddToCart} disabled={!allCharms.length}>
                     <ShoppingCart className="h-5 w-5" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-auto p-0 text-muted-foreground hover:text-primary transition-colors" onClick={handleShareClick}>
-                    <Share2 className="h-5 w-5" />
-                </Button>
                 <button
                     onClick={handleLikeClick}
                     disabled={isLikePending}
@@ -375,23 +369,9 @@ export function CreationCard({
                   <ShoppingCart className="mr-2 h-4 w-4" />
                   {tEditor('add_to_cart_button')}
               </Button>
-               <Button variant="outline" onClick={() => setIsShareOpen(true)}>
-                  <Share2 className="mr-2 h-4 w-4" />
-                  {tEditor('share_button')}
-              </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {isShareOpen && (
-         <ShareDialog
-            isOpen={isShareOpen}
-            onOpenChange={() => setIsShareOpen(false)}
-            getCanvasDataUri={() => Promise.resolve(creation.previewImageUrl)}
-            creation={creation}
-            t={tEditor}
-        />
-      )}
       {isEditOpen && onUpdate && (
           <EditCreationDialog
             creation={creation}
