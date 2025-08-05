@@ -460,11 +460,10 @@ export async function getPaginatedCreations(options: PaginatedCreationsOptions):
   constraints.push(orderBy('createdAt', 'desc'));
 
   // Pagination cursor
-  if (cursor && cursorId) {
-    // We need to fetch the document for the cursor to use it in startAfter
+  if (cursor !== undefined && cursor !== null && cursorId) {
     const cursorDoc = await getDoc(doc(db, 'creations', cursorId));
     if (cursorDoc.exists()) {
-      constraints.push(startAfter(cursorDoc));
+        constraints.push(startAfter(cursorDoc));
     }
   }
 
