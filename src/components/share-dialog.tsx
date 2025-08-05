@@ -22,6 +22,7 @@ interface ShareDialogProps {
 
 export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDialogProps) {
     const t = useTranslations('Editor');
+    const tAuth = useTranslations('Auth');
     const { toast } = useToast();
     const polaroidRef = useRef<HTMLDivElement>(null);
     const [isCapturing, setIsCapturing] = useState(false);
@@ -65,35 +66,12 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
         });
     };
 
-    const handleShareLink = async () => {
-        const shareData = {
-            title: creation.name || t('share_default_title'),
-            text: t('share_default_text'),
-            url: shareUrl,
-        };
-
-        try {
-             if (navigator.share) {
-                await navigator.share(shareData);
-            } else {
-                 handleCopyLink();
-                 toast({ description: "La fonction de partage n'est pas supportée. Le lien a été copié." });
-            }
-        } catch (error: any) {
-             if (error.name !== 'AbortError') {
-                console.error("Share error:", error);
-                handleCopyLink();
-                toast({ description: "Une erreur est survenue, le lien a été copié à la place." });
-            }
-        }
-    }
-
     const creatorDisplayName = creation.creator?.displayName || 'un créateur anonyme';
 
 
     return (
-        <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
+        <Dialog open={isOpen} onOpenChange={onOpenChange} onOpenAutoFocus={(e) => e.preventDefault()}>
+            <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{t('share_creation_title')}</DialogTitle>
                     <DialogDescription>{t('share_creation_description')}</DialogDescription>
@@ -124,9 +102,6 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
                         <Input id="share-link" value={shareUrl} readOnly />
                         <Button variant="outline" size="icon" onClick={handleCopyLink}>
                             <Copy className="h-4 w-4" />
-                        </Button>
-                         <Button variant="outline" size="icon" onClick={handleShareLink}>
-                            <Share2 className="h-4 w-4" />
                         </Button>
                     </div>
                 </div>
