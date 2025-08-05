@@ -1,20 +1,16 @@
 
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { useTranslations } from '@/hooks/use-translations';
-import { Loader2, Check } from 'lucide-react';
+import { Loader2, Check, Send, ShoppingCart, AlertCircle } from 'lucide-react';
 import Image from 'next/image';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import Link from 'next/link';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
-import { Textarea } from './ui/textarea';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -49,11 +45,22 @@ export function FinalizeCreationDialog({
     const { toast } = useToast();
     const router = useRouter();
 
+    const [step, setStep] = useState<'publish' | 'confirm'>(isEditing ? 'confirm' : 'publish');
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [creationName, setCreationName] = useState('');
     const [isPublishing, setIsPublishing] = useState(false);
     const [isLoadingPreview, setIsLoadingPreview] = useState(true);
+    const [wasPublished, setWasPublished] = useState(false);
 
+    const resetState = () => {
+        setStep(isEditing ? 'confirm' : 'publish');
+        setPreviewImage(null);
+        setCreationName('');
+        setIsPublishing(false);
+        setIsLoadingPreview(true);
+        setWasPublished(false);
+    }
+    
     useEffect(() => {
         if (isOpen) {
             setIsLoadingPreview(true);
@@ -70,11 +77,12 @@ export function FinalizeCreationDialog({
                 })
                 .finally(() => setIsLoadingPreview(false));
         } else {
-            setPreviewImage(null);
+           // Reset state when closing the dialog
+           setTimeout(resetState, 300);
         }
-    }, [isOpen, getCanvasDataUri, onOpenChange, toast]);
+    }, [isOpen, getCanvasDataUri, onOpenChange, toast, isEditing]);
 
-    const handlePublish = async () => {
+    const handlePublishAndContinue = async () => {
         if (!previewImage || !firebaseUser) {
             toast({ variant: 'destructive', title: "Non connecté", description: "Vous devez être connecté pour publier." });
             return;
@@ -107,8 +115,8 @@ export function FinalizeCreationDialog({
 
             if (result.success) {
                 toast({ title: "Publication réussie !", description: result.message });
-                onOpenChange(false);
-                router.push(`/${locale}/profil`);
+                setWasPublished(true);
+                setStep('confirm'); // Move to next step
             } else {
                 toast({ variant: 'destructive', title: "Erreur de publication", description: result.message });
             }
@@ -119,81 +127,97 @@ export function FinalizeCreationDialog({
         setIsPublishing(false);
     };
 
+    const handleSkipToPurchase = () => {
+        setStep('confirm');
+    }
+    
+    const handleAddToCartClick = () => {
+        if (previewImage) {
+            onConfirmAddToCart(previewImage);
+        }
+    }
+
+    const renderContent = () => {
+        if (isLoadingPreview || !previewImage) {
+             return (
+                <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center">
+                    <Loader2 className="animate-spin h-8 w-8 text-primary" />
+                </div>
+            );
+        }
+        
+        if (step === 'publish') {
+            return (
+                <>
+                <DialogHeader>
+                    <DialogTitle>{t('publish_title')}</DialogTitle>
+                    <DialogDescription>{t('publish_description')}</DialogDescription>
+                </DialogHeader>
+                <div className="my-4 grid place-items-center">
+                    <Image src={previewImage} alt={t('preview_alt')} width={300} height={300} className="rounded-lg border bg-muted/50 max-w-[75%] sm:max-w-full h-auto" />
+                </div>
+                {!firebaseUser ? (
+                    <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>{t('publish_login_required_title')}</AlertTitle>
+                        <AlertDescription>
+                            {t('publish_login_required_desc')}{' '}
+                            <Link href={`/${locale}/connexion`} className="font-bold underline">
+                                {t('publish_login_link')}
+                            </Link>
+                            .
+                        </AlertDescription>
+                    </Alert>
+                ) : (
+                    <div className="space-y-2">
+                        <Label htmlFor="creationName">{t('creation_name_label')}</Label>
+                        <Input id="creationName" value={creationName} onChange={(e) => setCreationName(e.target.value)} placeholder={t('creation_name_placeholder')} />
+                    </div>
+                )}
+                 <DialogFooter className="flex-col gap-2 mt-4">
+                     {firebaseUser && (
+                        <Button onClick={handlePublishAndContinue} className="w-full" disabled={isPublishing || !creationName.trim()}>
+                            {isPublishing && <Loader2 className="animate-spin mr-2" />}
+                            <Send className="mr-2 h-4 w-4" />
+                            {t('publish_button')}
+                        </Button>
+                     )}
+                     <Button variant="ghost" onClick={handleSkipToPurchase} className="w-full text-sm">
+                        Non merci, juste acheter
+                    </Button>
+                </DialogFooter>
+                </>
+            )
+        }
+        
+        if (step === 'confirm') {
+             return (
+                <>
+                <DialogHeader>
+                    <DialogTitle>{isEditing ? t('confirm_update_title') : t('buy_title')}</DialogTitle>
+                    {wasPublished && <DialogDescription>Votre création a été publiée avec succès ! Vous pouvez maintenant l'ajouter à votre panier.</DialogDescription>}
+                </DialogHeader>
+                <div className="my-4 grid place-items-center">
+                    <Image src={previewImage} alt={t('preview_alt')} width={300} height={300} className="rounded-lg border bg-muted/50 max-w-[75%] sm:max-w-full h-auto" />
+                </div>
+                <DialogFooter className="flex-col gap-2">
+                    <Button onClick={handleAddToCartClick} className="w-full" disabled={!previewImage}>
+                        <ShoppingCart className="mr-2 h-4 w-4" />
+                        {isEditing ? t('update_item_button') : t('add_to_cart_button')}
+                    </Button>
+                    <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full">
+                        Fermer
+                    </Button>
+                </DialogFooter>
+                </>
+             )
+        }
+    }
+
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{t('finalize_creation_title')}</DialogTitle>
-                    <DialogDescription>
-                        {isEditing ? t('confirm_update_title') : t('confirm_add_description')}
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="my-4 grid place-items-center">
-                    {isLoadingPreview || !previewImage ? (
-                        <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center">
-                            <Loader2 className="animate-spin" />
-                        </div>
-                    ) : (
-                        <Image src={previewImage} alt={t('preview_alt')} width={300} height={300} className="rounded-lg border bg-muted/50 max-w-[75%] sm:max-w-full h-auto" />
-                    )}
-                </div>
-                <Tabs defaultValue="buy" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="buy">{t('buy_tab')}</TabsTrigger>
-                        <TabsTrigger value="publish">{t('publish_tab')}</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="buy">
-                        <Card className="border-0 shadow-none">
-                            <CardHeader>
-                                <CardTitle>{t('buy_title')}</CardTitle>
-                                <CardDescription>{t('buy_description')}</CardDescription>
-                            </CardHeader>
-                            <CardFooter>
-                                <Button onClick={() => onConfirmAddToCart(previewImage!)} className="w-full" disabled={!previewImage}>
-                                    <Check className="mr-2 h-4 w-4" />
-                                    {isEditing ? t('update_item_button') : t('add_to_cart_button')}
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    </TabsContent>
-                    <TabsContent value="publish">
-                        <Card className="border-0 shadow-none">
-                            <CardHeader>
-                                <CardTitle>{t('publish_title')}</CardTitle>
-                                <CardDescription>{t('publish_description')}</CardDescription>
-                            </CardHeader>
-                            {!firebaseUser ? (
-                                <CardContent>
-                                    <Alert>
-                                        <AlertTitle>{t('publish_login_required_title')}</AlertTitle>
-                                        <AlertDescription>
-                                            {t('publish_login_required_desc')}{' '}
-                                            <Link href={`/${locale}/connexion`} className="font-bold underline">
-                                                {t('publish_login_link')}
-                                            </Link>
-                                            .
-                                        </AlertDescription>
-                                    </Alert>
-                                </CardContent>
-                            ) : (
-                                <>
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="creationName">{t('creation_name_label')}</Label>
-                                        <Input id="creationName" value={creationName} onChange={(e) => setCreationName(e.target.value)} placeholder={t('creation_name_placeholder')} />
-                                    </div>
-                                </CardContent>
-                                <CardFooter>
-                                    <Button onClick={handlePublish} className="w-full" disabled={isPublishing || !creationName.trim()}>
-                                        {isPublishing && <Loader2 className="animate-spin mr-2" />}
-                                        {t('publish_button')}
-                                    </Button>
-                                </CardFooter>
-                                </>
-                            )}
-                        </Card>
-                    </TabsContent>
-                </Tabs>
+                {renderContent()}
             </DialogContent>
         </Dialog>
     );
