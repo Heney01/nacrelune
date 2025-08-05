@@ -112,7 +112,7 @@ export function PlacedCharmsList({
   }
 
   return (
-    <Accordion type="single" collapsible className="w-full" defaultValue="item-1">
+    <Accordion type="single" collapsible className="w-full">
       <AccordionItem value="item-1">
         <Card>
           <AccordionTrigger className="p-6 hover:no-underline">
@@ -135,5 +135,3 @@ export function PlacedCharmsList({
     </Accordion>
   );
 }
-
-    
