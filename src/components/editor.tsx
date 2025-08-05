@@ -623,7 +623,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
           </div>
 
           <div className="flex flex-col flex-grow min-w-0">
-            <div className="hidden lg:flex justify-between items-center flex-shrink-0 p-4">
+             <div className="hidden lg:flex justify-between items-center flex-shrink-0 p-4 pb-0">
                 <Button variant="outline" asChild>
                     <Link href={`/${locale}/?type=${jewelryType.id}`}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
@@ -646,7 +646,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                     </DialogContent>
                 </Dialog>
             </div>
-            <div className="flex-grow p-4 pt-0 min-h-0 min-w-0">
+            <div className="flex-grow p-4 min-h-0 min-w-0">
               <div
                   ref={canvasWrapperRef}
                   className="relative w-full h-full bg-card overflow-hidden touch-none border-2 border-dashed"
