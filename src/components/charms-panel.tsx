@@ -100,7 +100,7 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
             <DialogContent className="max-w-md" aria-describedby={descriptionId}>
                 <DialogHeader>
                     <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
-                    <DialogDescription id={descriptionId}>{charm.description}</DialogDescription>
+                    <DialogDescription id={descriptionId}>{charm.description || " "}</DialogDescription>
                 </DialogHeader>
                 <div className="mt-4 flex justify-center">
                     <div className="w-[200px] h-[200px] relative">
