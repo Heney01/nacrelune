@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { useTranslations } from '@/hooks/use-translations';
@@ -121,9 +121,8 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
                 </DialogHeader>
 
                 <div className="flex justify-center items-center my-4">
-                    {/* This is just a visual representation for the user, not what is being captured */}
-                    <div className="shadow-lg w-full max-w-xs">
-                        <div className="bg-white p-4">
+                    <div className="shadow-lg w-full max-w-xs bg-white">
+                        <div className="p-4">
                             <div className="bg-gray-100 aspect-square relative">
                                 <Image 
                                     src={creation.previewImageUrl} 
@@ -132,7 +131,7 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
                                     className="w-full h-full object-contain"
                                 />
                             </div>
-                            <div className="pt-4 text-center bg-white">
+                            <div className="pt-4 text-center">
                                 <p className="font-headline text-xl text-stone-800 break-words">{creation.name}</p>
                                 <p className="text-sm text-stone-500 mt-1">par {creatorDisplayName}</p>
                                 <p className="text-xs text-stone-400 mt-4">www.atelierabijoux.com</p>
