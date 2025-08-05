@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -23,7 +24,7 @@ interface ShareDialogProps {
   creation?: Creation;
 }
 
-const Polaroid = React.forwardRef<HTMLDivElement, { creationImage: string, title: string, creatorName?: string }>(
+const Polaroid = React.forwardRef<HTMLDivElement, { creationImage: string, title: string, creatorName?: string | null }>(
   ({ creationImage, title, creatorName }, ref) => (
     <div ref={ref} className="bg-white p-4 pb-2 shadow-lg rounded-sm" data-polaroid-container>
       <div className="bg-gray-200">
@@ -197,7 +198,7 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t, creatio
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-headline">{creation ? `Partager la création de ${creation.creatorName}` : t('share_creation_title')}</DialogTitle>
+          <DialogTitle className="font-headline">{creation ? `Partager la création de ${creation.creator?.displayName}` : t('share_creation_title')}</DialogTitle>
           <DialogDescription>{creation ? "Partagez cette trouvaille avec vos amis !" : t('share_creation_description')}</DialogDescription>
         </DialogHeader>
 
@@ -207,7 +208,7 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t, creatio
             {creationImage && (
               <div className="space-y-4">
                 <div className="grid place-items-center">
-                    <Polaroid ref={polaroidRef} creationImage={creationImage} title={title} creatorName={creation?.creatorName} />
+                    <Polaroid ref={polaroidRef} creationImage={creationImage} title={title} creatorName={creation?.creator?.displayName} />
                 </div>
                 {!creation && (
                     <div className="space-y-2">
