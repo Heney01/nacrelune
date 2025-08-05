@@ -22,7 +22,6 @@ interface ShareDialogProps {
 export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDialogProps) {
     const t = useTranslations('Editor');
     const { toast } = useToast();
-    const polaroidDisplayRef = useRef<HTMLDivElement>(null);
     const [isCapturing, setIsCapturing] = useState(false);
     const [shareUrl, setShareUrl] = useState('');
 
@@ -61,7 +60,7 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
 
             // 3. Draw creation image on top of the gray background
             const image = new window.Image();
-            image.crossOrigin = 'Anonymous'; // This is the key fix
+            image.crossOrigin = 'Anonymous';
             image.src = creation.previewImageUrl;
             
             await new Promise((resolve, reject) => {
@@ -123,19 +122,21 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
 
                 <div className="flex justify-center items-center my-4">
                     {/* This is just a visual representation for the user, not what is being captured */}
-                    <div ref={polaroidDisplayRef} className="shadow-lg w-full max-w-xs bg-white p-4">
-                         <div className="bg-gray-100 aspect-square relative">
-                            <Image 
-                                src={creation.previewImageUrl} 
-                                alt={creation.name} 
-                                fill
-                                className="w-full h-full object-contain"
-                            />
-                        </div>
-                        <div className="pt-4 text-center bg-white">
-                            <p className="font-headline text-xl text-stone-800 break-words">{creation.name}</p>
-                            <p className="text-sm text-stone-500 mt-1">par {creatorDisplayName}</p>
-                            <p className="text-xs text-stone-400 mt-4">www.atelierabijoux.com</p>
+                    <div className="shadow-lg w-full max-w-xs">
+                        <div className="bg-white p-4">
+                            <div className="bg-gray-100 aspect-square relative">
+                                <Image 
+                                    src={creation.previewImageUrl} 
+                                    alt={creation.name} 
+                                    fill
+                                    className="w-full h-full object-contain"
+                                />
+                            </div>
+                            <div className="pt-4 text-center bg-white">
+                                <p className="font-headline text-xl text-stone-800 break-words">{creation.name}</p>
+                                <p className="text-sm text-stone-500 mt-1">par {creatorDisplayName}</p>
+                                <p className="text-xs text-stone-400 mt-4">www.atelierabijoux.com</p>
+                            </div>
                         </div>
                     </div>
                 </div>
