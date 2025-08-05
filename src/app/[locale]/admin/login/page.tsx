@@ -12,7 +12,7 @@ export default function LoginPage({ params }: { params: { locale: string }}) {
        <header className="p-4 border-b bg-white/50 backdrop-blur-lg sticky top-0 z-10">
           <div className="container mx-auto flex justify-between items-center">
             <Link href={`/${params.locale}`} className="flex items-center gap-2">
-              <BrandLogo className="h-8 w-auto text-foreground" />
+              <BrandLogo className="h-8 w-auto" />
             </Link>
              <Button asChild variant="ghost" size="icon">
                 <Link href={`/${params.locale}/orders/track`}>

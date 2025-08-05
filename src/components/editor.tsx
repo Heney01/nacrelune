@@ -610,7 +610,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         <header className="p-4 border-b flex-shrink-0">
             <div className="container mx-auto flex justify-between items-center">
               <Link href={`/${locale}`} className="flex items-center gap-2">
-                <BrandLogo className="h-8 w-auto text-foreground" />
+                <BrandLogo className="h-8 w-auto" />
               </Link>
               <div className="flex items-center gap-2">
                   <CartWidget />

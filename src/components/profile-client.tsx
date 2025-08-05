@@ -72,7 +72,7 @@ export function ProfileClient({ locale }: { locale: string }) {
              <header className="p-4 border-b bg-white">
                 <div className="container mx-auto flex justify-between items-center">
                     <Link href={`/${locale}`} className="flex items-center gap-2">
-                        <BrandLogo className="h-8 w-auto text-foreground" />
+                        <BrandLogo className="h-8 w-auto" />
                     </Link>
                     <div className="flex items-center gap-2">
                         <CartWidget />

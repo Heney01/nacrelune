@@ -1,8 +1,8 @@
 import type { SVGProps } from "react"
 import { cn } from "@/lib/utils"
-import Image from "next/image"
+import Image, { ImageProps } from "next/image"
 
-export function BrandLogo(props: React.ComponentProps<typeof Image>) {
+export function BrandLogo(props: Omit<ImageProps, 'src' | 'alt' | 'width' | 'height' | 'priority'>) {
   // The 'priority' prop ensures the logo is loaded with high priority as it's likely part of the LCP.
   // The width and height should be the intrinsic size of your logo image for best results.
   // The className allows for additional styling, like setting a fixed height in the header.
