@@ -60,7 +60,9 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
                     </Link>
                 </Button>
               <CartWidget />
-              <UserNav locale={locale} />
+              <div className="ml-2">
+                <UserNav locale={locale} />
+              </div>
             </div>
           </div>
         </header>
