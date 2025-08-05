@@ -3,17 +3,14 @@
 
 import React, { useEffect, useState, useTransition } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { getUserCreations, deleteCreation, updateCreation } from '@/app/actions/creation.actions';
-import { logout } from '@/app/actions/auth.actions';
-import { Creation, JewelryModel, JewelryType, PlacedCharm, Charm } from '@/lib/types';
+import { getUserCreations } from '@/app/actions/creation.actions';
+import { Creation } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Loader2, ArrowLeft, PlusCircle, Award } from 'lucide-react';
+import { Loader2, ArrowLeft, PlusCircle, Award, Settings } from 'lucide-react';
 import { BrandLogo } from './icons';
 import Link from 'next/link';
 import { useTranslations } from '@/hooks/use-translations';
-import { useToast } from '@/hooks/use-toast';
-import { getJewelryTypesAndModels, getCharms } from '@/lib/data';
 import { CartWidget } from './cart-widget';
 import { UserNav } from './user-nav';
 import { CreationCard } from './creation-card';
@@ -25,8 +22,6 @@ export function ProfileClient({ locale }: { locale: string }) {
     const [loadingCreations, setLoadingCreations] = useState(true);
     const router = useRouter();
     const t = useTranslations('Auth');
-    const { toast } = useToast();
-    const [isPending, startTransition] = useTransition();
 
     useEffect(() => {
         if (authLoading) {
@@ -104,6 +99,12 @@ export function ProfileClient({ locale }: { locale: string }) {
                                 <Award className="h-5 w-5"/>
                                 <span>{user?.rewardPoints || 0} Points</span>
                             </div>
+                             <Button asChild variant="outline">
+                                <Link href={`/${locale}/profil/parametres`}>
+                                    <Settings className="mr-2 h-4 w-4" />
+                                    Gérer mon compte
+                                </Link>
+                            </Button>
                         </div>
                     </div>
 
@@ -137,4 +138,3 @@ export function ProfileClient({ locale }: { locale: string }) {
         </div>
     );
 }
-
