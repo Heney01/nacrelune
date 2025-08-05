@@ -349,12 +349,12 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     );
   }, []);
 
-  const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
     // Deselect charm if clicking on the background
     if ((e.target as HTMLElement).closest('.charm-on-canvas') === null) {
       setSelectedPlacedCharmId(null);
     }
-  };
+  }, []);
 
 
   useEffect(() => {
@@ -671,6 +671,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       ref={canvasWrapperRef}
                       className="relative w-full flex-grow bg-card overflow-hidden touch-none border-2 border-dashed"
                       onMouseDown={handleCanvasClick}
+                      onTouchStart={handleCanvasClick}
                   >
                       <div
                           ref={canvasRef}
