@@ -26,9 +26,6 @@ interface SuggestionSidebarProps {
   suggestions: Suggestion[];
   critique: string | null;
   onApplySuggestion: (suggestion: Suggestion) => void;
-  onFinalize: () => void;
-  finalizeButtonDisabled: boolean;
-  isEditing: boolean;
 }
 
 export function SuggestionSidebar({
@@ -40,9 +37,6 @@ export function SuggestionSidebar({
   suggestions,
   critique,
   onApplySuggestion,
-  onFinalize,
-  finalizeButtonDisabled,
-  isEditing
 }: SuggestionSidebarProps) {
   const [error, setError] = useState<string | null>(null);
   const t = useTranslations('Editor');
@@ -84,14 +78,6 @@ export function SuggestionSidebar({
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col gap-4 min-h-0">
-        {!isMobile && (
-          <div className="flex-shrink-0">
-             <Button onClick={onFinalize} className="w-full" disabled={finalizeButtonDisabled}>
-                <Check className="mr-2 h-4 w-4" />
-                {isEditing ? t('update_item_button') : t('finalize_button')}
-            </Button>
-          </div>
-        )}
          <Tabs defaultValue="suggestions" className="w-full flex-grow flex flex-col min-h-0">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="suggestions">Suggestions</TabsTrigger>

@@ -629,21 +629,29 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                         <span>{tHome('back_button')}</span>
                     </Link>
                 </Button>
-                <Dialog>
-                    <DialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="text-muted-foreground">
-                            <Info className="h-5 w-5" />
+                 <div className="flex items-center gap-2">
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-muted-foreground">
+                                <Info className="h-5 w-5" />
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                            <CardTitle className="font-headline text-xl">{t('editor_disclaimer_title')}</CardTitle>
+                            </DialogHeader>
+                            <p className="text-sm text-muted-foreground mt-2">
+                            {t('editor_disclaimer')}
+                            </p>
+                        </DialogContent>
+                    </Dialog>
+                    {!isMobile && (
+                        <Button onClick={handleFinalize} disabled={hasStockIssues || placedCharms.length === 0}>
+                            <Check className="mr-2 h-4 w-4" />
+                            {isEditing ? t('update_item_button') : t('finalize_button')}
                         </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                        <CardTitle className="font-headline text-xl">{t('editor_disclaimer_title')}</CardTitle>
-                        </DialogHeader>
-                        <p className="text-sm text-muted-foreground mt-2">
-                        {t('editor_disclaimer')}
-                        </p>
-                    </DialogContent>
-                </Dialog>
+                    )}
+                </div>
             </div>
              <div className="flex-grow px-4 pb-4 min-h-0 min-w-0">
               <div className="w-full h-full bg-card border lg:rounded-lg">
@@ -736,9 +744,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                 suggestions={suggestions}
                 critique={critique}
                 onApplySuggestion={applySuggestion}
-                onFinalize={handleFinalize}
-                finalizeButtonDisabled={hasStockIssues || placedCharms.length === 0}
-                isEditing={isEditing}
             />
           </div>
         </main>
@@ -824,9 +829,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                             suggestions={suggestions}
                                             critique={critique}
                                             onApplySuggestion={applySuggestion}
-                                            onFinalize={handleFinalize}
-                                            finalizeButtonDisabled={hasStockIssues || placedCharms.length === 0}
-                                            isEditing={isEditing}
                                         />
                                     </div>
                                 </div>
