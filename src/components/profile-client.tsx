@@ -137,7 +137,7 @@ export function ProfileClient({ locale }: { locale: string }) {
                                     locale={locale} 
                                     onUpdate={onCreationUpdate}
                                     onDelete={onCreationDelete}
-                                    showCreatorName={false}
+                                    showCreator={false}
                                 />
                             ))}
                         </div>
