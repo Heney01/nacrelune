@@ -41,30 +41,40 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
             const canvas = await html2canvas(polaroidRef.current, { 
                 useCORS: true, 
                 allowTaint: true,
-                backgroundColor: '#ffffff' // Set a white background to avoid transparency issues
+                backgroundColor: '#ffffff'
             });
-            const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
-            
-            if (!blob) {
-                throw new Error("Impossible de générer l'image de partage.");
-            }
 
-            const file = new File([blob], `${creation.name.replace(/ /g, '_')}.png`, { type: 'image/png' });
+            // For mobile and supported browsers, use Web Share API
+            if (navigator.share) {
+                const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+                if (!blob) {
+                    throw new Error("Impossible de générer l'image de partage.");
+                }
+                const file = new File([blob], `${creation.name.replace(/ /g, '_')}.png`, { type: 'image/png' });
+                const shareData: ShareData = {
+                    title: creation.name || t('share_default_title'),
+                    text: t('share_default_text'),
+                    url: shareUrl,
+                    files: [file],
+                };
 
-            const shareData: ShareData = {
-                title: creation.name || t('share_default_title'),
-                text: t('share_default_text'),
-                url: shareUrl,
-                files: [file],
-            };
+                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share(shareData);
+                } else {
+                     await navigator.share({ title: shareData.title, text: shareData.text, url: shareData.url });
+                }
 
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                await navigator.share(shareData);
             } else {
-                 toast({ variant: "destructive", title: "Non supporté", description: t('share_not_supported') });
+                // For desktop browsers, trigger a download
+                const dataUrl = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.href = dataUrl;
+                link.download = `${creation.name.replace(/ /g, '_')}.png`;
+                link.click();
             }
+
         } catch (error: any) {
-            if (error.name !== 'AbortError') {
+            if (error.name !== 'AbortError') { // User cancellation is not an error
                 console.error("Share error:", error);
                 toast({ variant: "destructive", title: "Erreur de partage", description: error.message || t('share_error_generic') });
             }
@@ -121,7 +131,7 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
                 </div>
 
                 <DialogFooter>
-                    <Button onClick={handleShare} className="w-full" disabled={isSharing || !navigator.share}>
+                    <Button onClick={handleShare} className="w-full" disabled={isSharing}>
                         {isSharing ? <Loader2 className="animate-spin mr-2" /> : <Camera className="mr-2 h-4 w-4" />}
                         {t('share_polaroid_button')}
                     </Button>
