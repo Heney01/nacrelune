@@ -599,8 +599,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         />
       )}
 
-      <div className="flex flex-col h-screen bg-stone-50">
-        <header className="p-4 border-b flex-shrink-0 bg-white">
+    <div className="flex flex-col h-screen bg-stone-50">
+        <header className="p-4 border-b flex-shrink-0 bg-white z-10">
             <div className="container mx-auto flex justify-between items-center">
               <Link href={`/${locale}`} className="flex items-center gap-2">
                 <BrandLogo className="h-8 w-auto" />
@@ -609,11 +609,34 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   <CartWidget />
               </div>
             </div>
-          </header>
+        </header>
+
+        <div className="lg:hidden flex-shrink-0 p-4 border-b flex justify-between items-center">
+            <Button variant="ghost" asChild>
+                <Link href={`/${locale}/?type=${jewelryType.id}`}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    <span>{tHome('back_button')}</span>
+                </Link>
+            </Button>
+            <Dialog>
+                <DialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                        <Info className="h-5 w-5" />
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                    <CardTitle className="font-headline text-xl">{t('editor_disclaimer_title')}</CardTitle>
+                    </DialogHeader>
+                    <p className="text-sm text-muted-foreground mt-2">
+                    {t('editor_disclaimer')}
+                    </p>
+                </DialogContent>
+            </Dialog>
+        </div>
         
-        <main className="flex-grow flex flex-col min-h-0">
-          <div className="container mx-auto flex-1 flex flex-col min-h-0 p-4 md:p-0">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0">
+        <main className="flex-grow flex flex-col lg:flex-row min-h-0">
+          <div className="container mx-auto flex-1 flex flex-col lg:flex-row min-h-0 lg:p-4 lg:gap-6">
               
               <div className="lg:col-span-3 flex-col min-h-0 hidden lg:flex">
                 <CharmsPanel 
@@ -625,8 +648,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                 />
               </div>
 
-              <div className="lg:col-span-6 flex flex-col gap-4 min-h-0 order-first lg:order-none max-h-full">
-                  <div className="hidden lg:flex justify-between items-center gap-4 flex-shrink-0 lg:p-0">
+              <div className="lg:col-span-6 flex flex-col gap-4 min-h-0 order-first lg:order-none flex-grow">
+                  <div className="hidden lg:flex justify-between items-center gap-4 flex-shrink-0">
                       <Button variant="outline" asChild className="lg:h-10">
                           <Link href={`/${locale}/?type=${jewelryType.id}`}>
                               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -747,102 +770,99 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                     onApplySuggestion={applySuggestion}
                 />
               </div>
-              </div>
           </div>
         </main>
-
-         {isMobile && (
-             <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-2.5 z-20 space-y-2.5 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-                 <div className="flex items-center gap-2.5">
-                     <Button onClick={handleFinalize} className="w-full flex-grow" disabled={hasStockIssues || placedCharms.length === 0}>
-                        <Check className="mr-2 h-4 w-4" />
-                        {isEditing ? t('update_item_button') : t('finalize_button')}
-                    </Button>
-                </div>
-                 <div className="grid grid-cols-2 gap-2.5">
-                      <Sheet open={isCharmsSheetOpen} onOpenChange={setIsCharmsSheetOpen}>
-                          <SheetTrigger asChild>
-                              <Button variant="outline" className="w-full">
-                                  <Gem className="mr-2 h-4 w-4" />
-                                  {tCharm('title')}
-                              </Button>
-                          </SheetTrigger>
-                          <SheetContent side="bottom" className="h-[80%] p-0 flex flex-col" onOpenAutoFocus={(e) => e.preventDefault()}>
-                              <Tabs defaultValue="add" className="w-full flex-grow min-h-0 flex flex-col">
-                                  <div className="p-4 border-b flex-shrink-0">
-                                      <SheetHeader>
-                                          <SheetTitle>
-                                              <TabsList className="grid w-full grid-cols-2">
-                                                  <TabsTrigger value="add">Ajouter</TabsTrigger>
-                                                  <TabsTrigger value="placed">Installées ({placedCharms.length})</TabsTrigger>
-                                              </TabsList>
-                                          </SheetTitle>
-                                      </SheetHeader>
-                                      <div className="relative mt-4">
-                                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                          <Input
-                                              placeholder={tCharm('search_placeholder')}
-                                              value={charmsSearchTerm}
-                                              onChange={(e) => setCharmsSearchTerm(e.target.value)}
-                                              className="pl-9"
-                                          />
-                                      </div>
-                                  </div>
-                                  <TabsContent value="add" className="m-0 flex-grow min-h-0">
-                                      <div className="flex-grow overflow-y-auto h-full">
-                                          <CharmsPanel 
-                                              allCharms={availableCharms}
-                                              charmCategories={charmCategories}
-                                              onAddCharm={addCharmFromCharmList} 
-                                              isMobileSheet={true}
-                                              searchTerm={charmsSearchTerm}
-                                              onSearchTermChange={setCharmsSearchTerm}
-                                          />
-                                      </div>
-                                  </TabsContent>
-                                  <TabsContent value="placed" className="m-0 flex-grow min-h-0">
-                                       <PlacedCharmsList 
-                                            placedCharms={sortedPlacedCharms}
-                                            selectedPlacedCharmId={selectedPlacedCharmId}
-                                            onCharmClick={handleCharmListClick}
-                                            onCharmDelete={removeCharm}
-                                            isMobile={true}
-                                        />
-                                  </TabsContent>
-                              </Tabs>
-                          </SheetContent>
-                      </Sheet>
-                        <Sheet open={isSuggestionsSheetOpen} onOpenChange={setIsSuggestionsSheetOpen}>
-                            <SheetTrigger asChild>
-                                <Button variant="outline" className="w-full">
-                                    <Sparkles className="h-5 w-5 text-primary" />
-                                     <span className="ml-2">Suggestions IA</span>
-                                </Button>
-                            </SheetTrigger>
-                            <SheetContent side="bottom" className="h-[80%] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
-                                <SheetHeader className="p-4 border-b">
-                                    <SheetTitle>{t('ai_suggestions_title')}</SheetTitle>
-                                </SheetHeader>
-                                <div className="relative flex-1">
-                                    <div className="absolute inset-0">
-                                        <SuggestionSidebar 
-                                            charms={allCharms} 
-                                            isMobile={true}
-                                            onAnalyze={handleAnalyzeForSuggestions}
-                                            onCritique={handleCritiqueDesign}
-                                            isLoading={isGenerating}
-                                            suggestions={suggestions}
-                                            critique={critique}
-                                            onApplySuggestion={applySuggestion}
-                                        />
-                                    </div>
-                                </div>
-                            </SheetContent>
-                        </Sheet>
-                </div>
+         <div className="lg:hidden mt-auto flex-shrink-0 bg-background border-t p-2.5 z-20 space-y-2.5 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+             <div className="flex items-center gap-2.5">
+                 <Button onClick={handleFinalize} className="w-full flex-grow" disabled={hasStockIssues || placedCharms.length === 0}>
+                    <Check className="mr-2 h-4 w-4" />
+                    {isEditing ? t('update_item_button') : t('finalize_button')}
+                </Button>
             </div>
-          )}
+             <div className="grid grid-cols-2 gap-2.5">
+                  <Sheet open={isCharmsSheetOpen} onOpenChange={setIsCharmsSheetOpen}>
+                      <SheetTrigger asChild>
+                          <Button variant="outline" className="w-full">
+                              <Gem className="mr-2 h-4 w-4" />
+                              {tCharm('title')}
+                          </Button>
+                      </SheetTrigger>
+                      <SheetContent side="bottom" className="h-[80%] p-0 flex flex-col" onOpenAutoFocus={(e) => e.preventDefault()}>
+                          <Tabs defaultValue="add" className="w-full flex-grow min-h-0 flex flex-col">
+                              <div className="p-4 border-b flex-shrink-0">
+                                  <SheetHeader>
+                                      <SheetTitle>
+                                          <TabsList className="grid w-full grid-cols-2">
+                                              <TabsTrigger value="add">Ajouter</TabsTrigger>
+                                              <TabsTrigger value="placed">Installées ({placedCharms.length})</TabsTrigger>
+                                          </TabsList>
+                                      </SheetTitle>
+                                  </SheetHeader>
+                                  <div className="relative mt-4">
+                                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                      <Input
+                                          placeholder={tCharm('search_placeholder')}
+                                          value={charmsSearchTerm}
+                                          onChange={(e) => setCharmsSearchTerm(e.target.value)}
+                                          className="pl-9"
+                                      />
+                                  </div>
+                              </div>
+                              <TabsContent value="add" className="m-0 flex-grow min-h-0">
+                                  <div className="flex-grow overflow-y-auto h-full">
+                                      <CharmsPanel 
+                                          allCharms={availableCharms}
+                                          charmCategories={charmCategories}
+                                          onAddCharm={addCharmFromCharmList} 
+                                          isMobileSheet={true}
+                                          searchTerm={charmsSearchTerm}
+                                          onSearchTermChange={setCharmsSearchTerm}
+                                      />
+                                  </div>
+                              </TabsContent>
+                              <TabsContent value="placed" className="m-0 flex-grow min-h-0">
+                                   <PlacedCharmsList 
+                                        placedCharms={sortedPlacedCharms}
+                                        selectedPlacedCharmId={selectedPlacedCharmId}
+                                        onCharmClick={handleCharmListClick}
+                                        onCharmDelete={removeCharm}
+                                        isMobile={true}
+                                    />
+                              </TabsContent>
+                          </Tabs>
+                      </SheetContent>
+                  </Sheet>
+                    <Sheet open={isSuggestionsSheetOpen} onOpenChange={setIsSuggestionsSheetOpen}>
+                        <SheetTrigger asChild>
+                            <Button variant="outline" className="w-full">
+                                <Sparkles className="h-5 w-5 text-primary" />
+                                 <span className="ml-2">Suggestions IA</span>
+                            </Button>
+                        </SheetTrigger>
+                        <SheetContent side="bottom" className="h-[80%] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+                            <SheetHeader className="p-4 border-b">
+                                <SheetTitle>{t('ai_suggestions_title')}</SheetTitle>
+                            </SheetHeader>
+                            <div className="relative flex-1">
+                                <div className="absolute inset-0">
+                                    <SuggestionSidebar 
+                                        charms={allCharms} 
+                                        isMobile={true}
+                                        onAnalyze={handleAnalyzeForSuggestions}
+                                        onCritique={handleCritiqueDesign}
+                                        isLoading={isGenerating}
+                                        suggestions={suggestions}
+                                        critique={critique}
+                                        onApplySuggestion={applySuggestion}
+                                    />
+                                </div>
+                            </div>
+                        </SheetContent>
+                    </Sheet>
+            </div>
+        </div>
       </div>
     </>
   );
 }
+
