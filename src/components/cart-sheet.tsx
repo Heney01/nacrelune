@@ -26,7 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { CreateOrderResult } from '@/app/actions/order.actions';
 import { CheckoutDialog, StockErrorState } from './checkout-dialog';
 import { SuccessDialog } from './success-dialog';
-import type { CartItem } from '@/lib/types';
+import type { CartItem, Creation } from '@/lib/types';
 import { ShareDialog } from './share-dialog';
 import { Badge } from './ui/badge';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
@@ -280,11 +280,13 @@ export function CartSheet({ children, open, onOpenChange }: {
               creatorId: sharingItem.creator?.uid || '',
               name: sharingItem.model.name,
               previewImageUrl: sharingItem.previewImage,
-              placedCharms: [],
+              placedCharms: [], // This is a simplified version for sharing, no need for full charm data
               createdAt: new Date(),
               salesCount: 0,
               likesCount: 0,
-              creator: sharingItem.creator
+              creator: sharingItem.creator,
+              jewelryTypeId: sharingItem.jewelryType.id,
+              modelId: sharingItem.model.id,
             }}
             t={tEditor}
         />
