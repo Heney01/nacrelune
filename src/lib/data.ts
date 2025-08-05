@@ -434,8 +434,7 @@ export async function getPaginatedCreations(options: PaginatedCreationsOptions):
   const { sortBy, timeFilter, cursor, cursorId } = options;
   const constraints: QueryConstraint[] = [];
 
-  // Time filter is only applied when sorting by date to avoid composite indexes.
-  if (sortBy === 'date' && timeFilter !== 'all') {
+  if (timeFilter !== 'all') {
     const now = new Date();
     let startDate;
     switch (timeFilter) {
@@ -453,7 +452,6 @@ export async function getPaginatedCreations(options: PaginatedCreationsOptions):
   }
 
   // Sorting
-  // For 'likes' sort, we also add a secondary sort by date to ensure consistent ordering for items with the same like count
   if (sortBy === 'likes') {
     constraints.push(orderBy('likesCount', 'desc'));
   }
