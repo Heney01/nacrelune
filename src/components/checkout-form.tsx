@@ -10,7 +10,7 @@ import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/co
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, AlertCircle, ArrowLeft, Home, Store, Search, CheckCircle, TicketPercent, Award } from 'lucide-react';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
 import { createOrder, createPaymentIntent, validateCoupon } from '@/app/actions/order.actions';
 import type { CreateOrderResult, SerializableCartItem } from '@/app/actions/order.actions';
@@ -27,6 +27,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { Separator } from './ui/separator';
 import { Slider } from './ui/slider';
+import { Skeleton } from './ui/skeleton';
 
 const PaymentStep = ({
   onOrderCreated,
@@ -216,6 +217,8 @@ const PaymentStep = ({
     // The button will show a spinner until the redirect happens.
   };
 
+  const isStripeLoading = !stripe || !elements;
+
   return (
     <form id="payment-form" onSubmit={handleSubmit} className="space-y-4">
       {errorMessage && (
@@ -306,7 +309,15 @@ const PaymentStep = ({
         </div>
       
       {finalTotal > 0 ? (
-          <PaymentElement options={{wallets: {applePay: 'never', googlePay: 'never'}}}/>
+          <div className="relative">
+            <PaymentElement options={{wallets: {applePay: 'never', googlePay: 'never'}}} className={cn(isStripeLoading && 'opacity-0 h-0')}/>
+            {isStripeLoading && (
+                <div className="space-y-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                </div>
+            )}
+          </div>
       ) : (
           <Alert>
               <CheckCircle className="h-4 w-4" />
@@ -318,7 +329,7 @@ const PaymentStep = ({
       )}
       
        <DialogFooter className="pt-4 pb-6 mt-auto px-0">
-         <Button type="submit" form="payment-form" className="w-full" disabled={isProcessing || !stripe || !elements}>
+         <Button type="submit" form="payment-form" className="w-full" disabled={isProcessing || isStripeLoading}>
             {isProcessing ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('processing_button')}</>
             ) : (
