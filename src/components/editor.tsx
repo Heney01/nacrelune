@@ -9,7 +9,7 @@ import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory,
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Share2, Layers, Check, MoreHorizontal, Loader2 } from 'lucide-react';
+import { X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Share2, Layers, Check, MoreHorizontal, Loader2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BrandLogo } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -46,21 +46,13 @@ interface PlacedCharmComponentProps {
     placed: PlacedCharm;
     isSelected: boolean;
     onDragStart: (e: React.MouseEvent<HTMLDivElement> | TouchEvent, charmId: string) => void;
-    onDelete: (charmId: string) => void;
-    onRotate: (charmId: string, newRotation: number) => void;
     pixelSize: { width: number; height: number; };
     modelImageRect: DOMRect | null;
 }
   
-const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDelete, onRotate, pixelSize, modelImageRect }: PlacedCharmComponentProps) => {
+const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, pixelSize, modelImageRect }: PlacedCharmComponentProps) => {
     const charmRef = useRef<HTMLDivElement>(null);
     const [isImageLoading, setIsImageLoading] = useState(true);
-
-    const handleDelete = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-        e.stopPropagation();
-        e.preventDefault();
-        onDelete(placed.id);
-    }, [onDelete, placed.id]);
     
     useEffect(() => {
         const element = charmRef.current;
@@ -79,13 +71,6 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
             }
         };
     }, [onDragStart, placed.id]);
-
-    const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const rotationAmount = e.deltaY > 0 ? 10 : -10; // Rotate by 10 degrees
-        onRotate(placed.id, placed.rotation + rotationAmount);
-    };
 
     // Convert normalized position to absolute pixel position on the canvas
     const positionStyle = useMemo(() => {
@@ -113,10 +98,10 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
         <div
             ref={charmRef}
             onMouseDown={(e) => onDragStart(e, placed.id)}
-            onWheel={handleWheel}
             className={cn(
                 "absolute group charm-on-canvas cursor-pointer select-none flex items-center justify-center",
                 {
+                    'z-10': isSelected,
                     'outline-2 outline-primary outline-dashed': isSelected,
                     'hover:outline-2 hover:outline-primary/50 hover:outline-dashed': !isSelected,
                 }
@@ -142,14 +127,6 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
                 crossOrigin="anonymous"
                 onLoad={() => setIsImageLoading(false)}
             />
-            {!isImageLoading && (
-                 <button
-                    onMouseDown={handleDelete}
-                    onTouchStart={handleDelete}
-                    className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <X size={14} />
-                </button>
-            )}
         </div>
     );
 });
@@ -195,6 +172,10 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [critique, setCritique] = useState<string | null>(null);
   
+  const [isDraggingCharm, setIsDraggingCharm] = useState(false);
+  const [isOverTrash, setIsOverTrash] = useState(false);
+  const trashZoneRef = useRef<HTMLDivElement>(null);
+  
   const isEditing = cartItemId !== null;
 
   const {
@@ -238,7 +219,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     resetZoomAndPan();
     setSelectedPlacedCharmId(null);
     
-    // Add a small delay to ensure the resetZoomAndPan has visually completed
     await new Promise(resolve => setTimeout(resolve, 100));
 
     try {
@@ -348,6 +328,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     interactionState.isDragging = true;
     interactionState.activeCharmId = charmId;
     setSelectedPlacedCharmId(charmId);
+    setIsDraggingCharm(true);
 
     const point = 'touches' in e ? e.touches[0] : e;
     interactionState.dragStart = { x: point.clientX, y: point.clientY };
@@ -379,8 +360,13 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     const getPoint = (e: MouseEvent | TouchEvent) => 'touches' in e ? e.touches[0] : e;
     
     const handleInteractionEnd = () => {
+      if (isDraggingCharm && isOverTrash && interactionState.activeCharmId) {
+        removeCharm(interactionState.activeCharmId);
+      }
       interactionState.isDragging = false;
       interactionState.activeCharmId = null;
+      setIsDraggingCharm(false);
+      setIsOverTrash(false);
     };
     
     const handleMove = (e: MouseEvent | TouchEvent) => {
@@ -389,10 +375,17 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
       }
 
       if (interactionState.isDragging && interactionState.activeCharmId) {
+          const point = getPoint(e);
+          const trashRect = trashZoneRef.current?.getBoundingClientRect();
+          if (trashRect) {
+              const over = point.clientX >= trashRect.left && point.clientX <= trashRect.right &&
+                         point.clientY >= trashRect.top && point.clientY <= trashRect.bottom;
+              setIsOverTrash(over);
+          }
+
           const imgRect = modelImageRef.current?.getBoundingClientRect();
           if (!imgRect) return;
 
-          const point = getPoint(e);
           const dx = (point.clientX - interactionState.dragStart.x) / scale;
           const dy = (point.clientY - interactionState.dragStart.y) / scale;
           
@@ -435,7 +428,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
       window.removeEventListener('touchmove', handleMove);
       window.removeEventListener('touchend', handleInteractionEnd);
     };
-  }, [interactionState, scale, isMobile, isCharmsSheetOpen, isSuggestionsSheetOpen, modelImageRef]);
+  }, [interactionState, scale, isMobile, isCharmsSheetOpen, isSuggestionsSheetOpen, modelImageRef, isDraggingCharm, isOverTrash, removeCharm]);
   
   const handleCharmListClick = (charmId: string) => {
     setSelectedPlacedCharmId(charmId);
@@ -687,6 +680,18 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       onMouseDown={handleCanvasClick}
                       onTouchStart={handleCanvasClick}
                   >
+                       <div
+                          ref={trashZoneRef}
+                          className={cn(
+                              "absolute bottom-0 left-0 right-0 h-24 bg-destructive/20 border-t-2 border-dashed border-destructive/50 flex items-center justify-center text-destructive transition-all duration-300 z-20",
+                              isDraggingCharm ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full pointer-events-none",
+                              isOverTrash && "bg-destructive/40"
+                          )}
+                        >
+                          <Trash2 className="h-8 w-8 mr-2" />
+                          <span className="text-lg font-bold">Supprimer la breloque</span>
+                      </div>
+
                       <div
                           ref={canvasRef}
                           className="relative"
@@ -722,8 +727,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                   placed={placed}
                                   isSelected={selectedPlacedCharmId === placed.id}
                                   onDragStart={handleDragStart}
-                                  onDelete={removeCharm}
-                                  onRotate={handleRotateCharm}
                                   pixelSize={pixelSize}
                                   modelImageRect={modelImageRect}
                               />
@@ -732,7 +735,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       </div>
 
                       {!isMobile && (
-                        <div className="absolute bottom-2 right-2 flex gap-2">
+                        <div className="absolute bottom-2 right-2 flex gap-2 z-30">
                             <Button variant="secondary" size="icon" onClick={() => handleManualZoom('in')}><ZoomIn /></Button>
                             <Button variant="secondary" size="icon" onClick={() => handleManualZoom('out')}><ZoomOut /></Button>
                             <Button variant="secondary" size="icon" onClick={resetZoomAndPan}><Maximize /></Button>
@@ -860,3 +863,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
+
+    
