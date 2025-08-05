@@ -28,7 +28,7 @@ export function UserNav({ locale }: { locale: string }) {
             <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <Button asChild variant="outline" size="icon">
+                        <Button asChild variant="outline" size="icon" className="h-8 w-8">
                             <Link href={`/${locale}/connexion`}>
                                 <UserCircle className="h-5 w-5" />
                                 <span className="sr-only">{tAuth('login_button')}</span>
@@ -48,7 +48,7 @@ export function UserNav({ locale }: { locale: string }) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full">
+                <Button variant="ghost" size="icon" className="rounded-full h-8 w-8">
                     <Avatar className="h-8 w-8">
                         <AvatarImage src={user?.photoURL || firebaseUser.photoURL || undefined} alt={user?.displayName || 'Avatar'} />
                         <AvatarFallback>{fallbackDisplayName.toUpperCase()}</AvatarFallback>
@@ -87,3 +87,4 @@ export function UserNav({ locale }: { locale: string }) {
         </DropdownMenu>
     )
 }
+
