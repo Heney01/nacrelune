@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { useTranslations } from '@/hooks/use-translations';
-import { Loader2, Share2, Sparkles } from 'lucide-react';
+import { Loader2, Share2, Sparkles, Copy } from 'lucide-react';
 import Image from 'next/image';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { generateShareContentAction } from '@/app/actions/ai.actions';
 import { Creation } from '@/lib/types';
 import html2canvas from 'html2canvas';
+import { BrandLogo } from './icons';
 
 interface ShareDialogProps {
     isOpen: boolean;
@@ -58,7 +59,7 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
             const canvas = await html2canvas(polaroidRef.current, { 
                 useCORS: true, 
                 allowTaint: true,
-                backgroundColor: null 
+                backgroundColor: '#ffffff' // Set a white background to avoid transparency issues
             });
             const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
             
@@ -91,6 +92,8 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
             setIsSharing(false);
         }
     };
+    
+    const creatorDisplayName = creation.creator?.displayName || 'un créateur anonyme';
 
 
     return (
@@ -101,36 +104,31 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
                     <DialogDescription>{t('share_creation_description')}</DialogDescription>
                 </DialogHeader>
 
-                {/* Hidden Polaroid for screenshot */}
-                <div className="absolute left-[-9999px] top-[-9999px]">
-                    <div ref={polaroidRef} className="p-4 bg-white shadow-lg w-[400px]">
-                        <div className="bg-stone-100">
+                <div className="flex justify-center items-center my-4">
+                    <div ref={polaroidRef} className="p-4 bg-white shadow-lg w-full max-w-xs">
+                        <div className="bg-stone-100 aspect-square relative">
                              <Image 
                                 src={creation.previewImageUrl} 
                                 alt={creation.name} 
-                                width={400} 
-                                height={400} 
-                                className="w-full h-auto object-contain"
+                                fill
+                                className="w-full h-full object-contain"
                                 crossOrigin="anonymous"
                             />
                         </div>
                         <div className="pt-4 text-center">
-                            <p className="font-headline text-2xl text-stone-800">{title}</p>
-                            <p className="text-sm text-stone-500 mt-1">par {creation.creator?.displayName || 'un créateur anonyme'}</p>
-                             <p className="text-xs text-stone-400 mt-4">www.nacrelune.com</p>
+                            <p className="font-headline text-xl text-stone-800 break-words">{title}</p>
+                            <p className="text-sm text-stone-500 mt-1">par {creatorDisplayName}</p>
+                            <p className="text-xs text-stone-400 mt-4">www.atelierabijoux.com</p>
                         </div>
                     </div>
                 </div>
 
-                <div className="my-4 grid place-items-center">
-                     <Image src={creation.previewImageUrl} alt={t('preview_alt')} width={250} height={250} className="rounded-lg border bg-muted/50 max-w-full h-auto" />
-                </div>
                  <div className="space-y-2">
                     <Label htmlFor="share-title">{t('share_title_label')}</Label>
                     <div className="flex gap-2">
                         <Input id="share-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('share_title_placeholder')} />
-                         <Button variant="outline" onClick={handleGenerateTitle} disabled={isGeneratingTitle}>
-                            {isGeneratingTitle ? <Loader2 className="animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                         <Button variant="outline" size="icon" onClick={handleGenerateTitle} disabled={isGeneratingTitle} title="Générer un titre avec l'IA">
+                            {isGeneratingTitle ? <Loader2 className="animate-spin h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
                         </Button>
                     </div>
                 </div>
