@@ -75,7 +75,7 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
                 title: 'Connexion réussie',
                 description: result.message,
             });
-            router.refresh();
+            router.push(`/${locale}`);
           } else {
             toast({
               variant: 'destructive',
@@ -93,9 +93,10 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
         title: 'Connexion réussie',
         description: state.message,
       });
-      router.refresh();
+      const destination = isUserAuth ? `/${locale}` : `/${locale}/admin/dashboard`;
+      router.push(destination);
     }
-  }, [state.success, state.message, router, toast]);
+  }, [state.success, state.message, router, toast, locale, isUserAuth]);
 
   return (
     <Card>

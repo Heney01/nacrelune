@@ -254,7 +254,6 @@ export async function userLoginWithGoogle(formData: FormData): Promise<{ success
 
 export async function logout(locale: string) {
   cookies().delete('session');
-  redirect(`/${locale}/connexion`);
 }
 
 export async function updateUserProfile(prevState: any, formData: FormData): Promise<{ success: boolean; message?: string; error?: string; }> {

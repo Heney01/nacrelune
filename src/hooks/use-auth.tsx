@@ -8,7 +8,7 @@ import { app, db } from '@/lib/firebase';
 import type { User } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
 import { logout as serverLogout } from '@/app/actions/auth.actions';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
@@ -24,6 +24,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const params = useParams();
+  const router = useRouter();
   const locale = (params.locale as string) || 'fr';
 
   useEffect(() => {
@@ -55,14 +56,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signOut = useCallback(async () => {
     const auth = getAuth(app);
     try {
-      await firebaseSignOut(auth); // Sign out from Firebase on the client
-      await serverLogout(locale);   // Call server action to clear cookie and redirect
+      await firebaseSignOut(auth);
+      await serverLogout(locale);
+      router.push(`/${locale}`);
+      router.refresh();
     } catch (error) {
       console.error("Error signing out: ", error);
-      // Even if client signout fails, try to sign out on server
       await serverLogout(locale);
+      router.push(`/${locale}`);
+      router.refresh();
     }
-  }, [locale]);
+  }, [locale, router]);
 
 
   if (loading) {

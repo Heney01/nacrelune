@@ -75,7 +75,7 @@ export function SignUpForm() {
                 title: 'Connexion réussie',
                 description: result.message,
             });
-            router.refresh();
+            router.push(`/${locale}`);
           } else {
             toast({
               variant: 'destructive',
@@ -93,9 +93,9 @@ export function SignUpForm() {
             title: 'Inscription réussie',
             description: state.message,
         });
-        router.refresh();
+        router.push(`/${locale}`);
     }
-  }, [state.success, state.message, toast, router]);
+  }, [state.success, state.message, toast, router, locale]);
 
 
   return (
