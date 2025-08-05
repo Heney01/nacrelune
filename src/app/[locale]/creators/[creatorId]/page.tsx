@@ -15,7 +15,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Creation, User as Creator } from '@/lib/types';
 import Loading from '../../loading';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: string }) {
