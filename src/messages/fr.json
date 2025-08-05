@@ -100,6 +100,7 @@
     "editor_disclaimer": "Cet éditeur est une représentation fidèle, mais les couleurs et dimensions finales peuvent légèrement varier. Certaines images de breloques peuvent être optimisées par IA pour une meilleure intégration. Pour voir la photo originale d'une breloque, cliquez sur l'icône loupe en haut à droite de sa carte dans le panneau de sélection.",
     "editor_disclaimer_title": "Avertissement de l'éditeur",
     "share_button": "Partager",
+    "share_polaroid_button": "Partager le polaroïd",
     "share_creation_title": "Partager votre création",
     "share_creation_description": "Donnez un nom à votre création et partagez-la !",
     "share_title_label": "Titre de votre création",
@@ -313,5 +314,3 @@
     "reward_email_cta": "Voir mes points"
   }
 }
-
-    

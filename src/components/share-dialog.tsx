@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { useTranslations } from '@/hooks/use-translations';
-import { Loader2, Share2, Copy } from 'lucide-react';
+import { Loader2, Camera, Copy } from 'lucide-react';
 import Image from 'next/image';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
@@ -122,8 +122,8 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
 
                 <DialogFooter>
                     <Button onClick={handleShare} className="w-full" disabled={isSharing || !navigator.share}>
-                        {isSharing ? <Loader2 className="animate-spin mr-2" /> : <Share2 className="mr-2 h-4 w-4" />}
-                        {t('share_button')}
+                        {isSharing ? <Loader2 className="animate-spin mr-2" /> : <Camera className="mr-2 h-4 w-4" />}
+                        {t('share_polaroid_button')}
                     </Button>
                 </DialogFooter>
             </DialogContent>
