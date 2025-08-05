@@ -1,11 +1,12 @@
 
+
 'use client';
 
 import React from 'react';
 import Image from 'next/image';
 import { PlacedCharm, Charm } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { X, Layers } from 'lucide-react';
+import { Layers, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslations } from '@/hooks/use-translations';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -42,6 +43,16 @@ const CharmListItem = ({
     )}
     onClick={onClick}
   >
+     <Button
+        variant="ghost"
+        size="icon"
+        className="absolute top-0 right-0 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-20 text-destructive hover:text-destructive"
+        onClick={onDelete}
+        aria-label="Supprimer la breloque"
+    >
+        <Trash2 className="h-3.5 w-3.5" />
+    </Button>
+
     <Image src={placedCharm.charm.imageUrl} alt={placedCharm.charm.name} width={32} height={32} className="w-8 h-8 object-contain" />
     <span className="text-xs text-center font-medium truncate w-full">{placedCharm.charm.name}</span>
     {!placedCharm.isAvailable && (
@@ -56,14 +67,6 @@ const CharmListItem = ({
         </Tooltip>
       </TooltipProvider>
     )}
-    <Button
-      variant="destructive"
-      size="icon"
-      className="absolute -top-2 -right-2 h-5 w-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
-      onClick={onDelete}
-    >
-      <X className="h-3 w-3" />
-    </Button>
   </div>
 );
 

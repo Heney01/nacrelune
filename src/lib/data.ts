@@ -434,7 +434,10 @@ export async function getPaginatedCreations(options: PaginatedCreationsOptions):
   const { sortBy, timeFilter, cursor, cursorId } = options;
   const constraints: QueryConstraint[] = [];
 
-  if (timeFilter !== 'all') {
+  // Temporarily disable time-based filtering for likes to avoid composite index requirement
+  const canUseTimeFilter = sortBy === 'date';
+
+  if (timeFilter !== 'all' && canUseTimeFilter) {
     const now = new Date();
     let startDate;
     switch (timeFilter) {
@@ -450,12 +453,12 @@ export async function getPaginatedCreations(options: PaginatedCreationsOptions):
     }
     constraints.push(where('createdAt', '>=', startDate));
   }
-
+  
   // Sorting
   if (sortBy === 'likes') {
     constraints.push(orderBy('likesCount', 'desc'));
   }
-  constraints.push(orderBy('createdAt', 'desc'));
+  constraints.push(orderBy('createdAt', 'desc')); // Always sort by date as a secondary criterion
 
   // Pagination cursor
   if (cursor !== undefined && cursor !== null && cursorId) {
@@ -522,7 +525,7 @@ export async function getCreatorShowcaseData(creatorId: string): Promise<{ creat
             getCharms()
         ]);
 
-        let creator: User | null = null;
+        let creator: User | undefined = undefined;
         if (userDoc.exists()) {
             const data = userDoc.data();
             creator = {
@@ -538,7 +541,7 @@ export async function getCreatorShowcaseData(creatorId: string): Promise<{ creat
         // Manually assign the fetched creator to each creation to ensure consistency
         const finalCreations = hydratedCreations.map(c => ({ ...c, creator }));
 
-        return { creator, creations: finalCreations };
+        return { creator: creator || null, creations: finalCreations };
     } catch (error) {
         console.error(`Error fetching showcase data for creator ${creatorId}:`, error);
         return { creator: null, creations: [] };

@@ -10,15 +10,14 @@ import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/co
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, AlertCircle, ArrowLeft, Home, Store, Search, CheckCircle, TicketPercent, Award } from 'lucide-react';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
-import { createOrder, createPaymentIntent, validateCoupon } from '@/app/actions/order.actions';
 import type { CreateOrderResult, SerializableCartItem } from '@/app/actions/order.actions';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { StockErrorState } from './checkout-dialog';
 import type { ShippingAddress, DeliveryMethod, PickupPoint, Coupon, User } from '@/lib/types';
 import { Progress } from './ui/progress';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
+import { Tabs, TabsList, TabsContent, TabsTrigger } from './ui/tabs';
 import { findPickupPoints, FindPickupPointsResult } from '@/lib/pickup-points';
 import { ScrollArea } from './ui/scroll-area';
 import { Card } from './ui/card';
@@ -27,6 +26,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { Separator } from './ui/separator';
 import { Slider } from './ui/slider';
+import { Skeleton } from './ui/skeleton';
+import { createOrder, validateCoupon, sendConfirmationEmail } from '@/app/actions/order.actions';
+
 
 const PaymentStep = ({
   onOrderCreated,
@@ -100,46 +102,30 @@ const PaymentStep = ({
     setIsApplyingCoupon(false);
   }
 
-  const handleCreateOrder = async (paymentIntentId: string): Promise<CreateOrderResult> => {
-    const serializableCart: SerializableCartItem[] = cart.map(item => ({
-      id: item.id,
-      model: item.model,
-      jewelryType: { id: item.jewelryType.id, name: item.jewelryType.name, description: item.jewelryType.description },
-      placedCharms: item.placedCharms,
-      previewImage: item.previewImage,
-      creator: item.creator,
-      creationId: item.creationId,
-    }));
-
-    const finalShippingAddress = deliveryMethod === 'pickup' && selectedPickupPoint
-      ? {
-          name: shippingAddress?.name || '',
-          addressLine1: selectedPickupPoint.name,
-          addressLine2: `${selectedPickupPoint.address}, ${selectedPickupPoint.city}`,
-          city: selectedPickupPoint.city,
-          postalCode: selectedPickupPoint.postcode,
-          country: selectedPickupPoint.country,
-        }
-      : shippingAddress;
-
-    return await createOrder(
-        serializableCart,
-        email,
-        locale,
-        paymentIntentId,
-        deliveryMethod,
-        finalShippingAddress,
-        appliedCoupon || undefined,
-        user?.uid,
-        pointsToUse
-    );
-  }
-
   const handleFreeOrder = async () => {
     setIsProcessing(true);
     setErrorMessage(null);
-    const orderResult = await handleCreateOrder('free_order');
-    onOrderCreated(orderResult);
+    // Logic for free orders is now handled on the confirmation page after redirection.
+    // We just need to ensure the client secret is passed correctly, even if the amount is 0.
+    if (!elements) return;
+
+    const { error: submitError } = await elements.submit();
+    if (submitError) {
+      setErrorMessage(submitError.message || t('payment_error_default'));
+      setIsProcessing(false);
+      return;
+    }
+
+    const returnUrl = `${window.location.origin}/${locale}/orders/confirmation`;
+    const { error: paymentError } = await stripe!.confirmPayment({
+        elements,
+        confirmParams: { return_url: returnUrl, receipt_email: email },
+    });
+
+    if (paymentError) {
+        setErrorMessage(paymentError.message || t('payment_error_default'));
+    }
+
     setIsProcessing(false);
   }
 
@@ -159,7 +145,6 @@ const PaymentStep = ({
     setIsProcessing(true);
     setErrorMessage(null);
     
-    // 1. Trigger form validation and gather data
     const { error: submitError } = await elements.submit();
     if (submitError) {
       setErrorMessage(submitError.message || t('payment_error_default'));
@@ -167,54 +152,28 @@ const PaymentStep = ({
       return;
     }
 
-    // 2. Create PaymentIntent on the server
-    const { clientSecret, error: intentError } = await createPaymentIntent(finalTotal);
-
-    if (intentError || !clientSecret) {
-        setErrorMessage(intentError || t('payment_intent_error'));
-        setIsProcessing(false);
-        return;
-    }
-
-    // 3. Create the order in Firestore *before* confirming payment
-    const paymentIntentId = clientSecret.split('_secret_')[0];
-    const orderResult = await handleCreateOrder(paymentIntentId);
-
-    // If order creation fails (e.g., stock issue), stop before payment.
-    if (!orderResult.success) {
-        onOrderCreated(orderResult);
-        setIsProcessing(false);
-        return;
-    }
+    // This URL will be used by Stripe to redirect the user after payment.
+    const returnUrl = `${window.location.origin}/${locale}/orders/confirmation`;
     
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com';
-
-    // 4. Confirm the payment
     const { error: paymentError } = await stripe.confirmPayment({
       elements,
-      clientSecret,
       confirmParams: {
-        return_url: `${baseUrl}/${locale}/orders/track?orderNumber=${orderResult.orderNumber}`,
+        return_url: returnUrl,
         receipt_email: email,
       },
-      // redirect: 'if_required', // We want to redirect to the bank page
     });
 
     if (paymentError) {
-      // This part will only be reached if an immediate error occurs, 
-      // e.g., the card is declined without a 3D Secure redirect.
-      // The user might be stuck on the checkout page here.
+      // This point will only be reached if there is an immediate error when
+      // confirming the payment. Otherwise, your customer will be redirected to
+      // your `return_url`.
       setErrorMessage(paymentError.message || t('payment_error_default'));
       setIsProcessing(false);
-      // We might need a mechanism to cancel the created order here if payment fails definitively.
-      // For now, we leave it as 'pending' for manual review.
-      return;
     }
-    
-    // If we get here, it means we are redirecting to the bank. 
-    // The onOrderCreated callback will be handled by the return_url page logic.
-    // The button will show a spinner until the redirect happens.
+    // The user is redirected at this point, so no further client-side code will execute.
   };
+
+  const isStripeLoading = !stripe || !elements;
 
   return (
     <form id="payment-form" onSubmit={handleSubmit} className="space-y-4">
@@ -306,7 +265,15 @@ const PaymentStep = ({
         </div>
       
       {finalTotal > 0 ? (
-          <PaymentElement options={{wallets: {applePay: 'never', googlePay: 'never'}}}/>
+          <div className="relative">
+            <PaymentElement options={{wallets: {applePay: 'never', googlePay: 'never'}}} className={cn(isStripeLoading && 'opacity-0 h-0')}/>
+            {isStripeLoading && (
+                <div className="space-y-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                </div>
+            )}
+          </div>
       ) : (
           <Alert>
               <CheckCircle className="h-4 w-4" />
@@ -318,7 +285,7 @@ const PaymentStep = ({
       )}
       
        <DialogFooter className="pt-4 pb-6 mt-auto px-0">
-         <Button type="submit" form="payment-form" className="w-full" disabled={isProcessing || !stripe || !elements}>
+         <Button type="submit" form="payment-form" className="w-full" disabled={isProcessing || isStripeLoading}>
             {isProcessing ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('processing_button')}</>
             ) : (
@@ -350,6 +317,7 @@ export const CheckoutForm = ({
   const t = useTranslations('Checkout');
   const tStatus = useTranslations('OrderStatus');
   const { user, firebaseUser } = useAuth();
+  const router = useRouter();
 
   const [currentStep, setCurrentStep] = useState<Step>('customer');
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('home');

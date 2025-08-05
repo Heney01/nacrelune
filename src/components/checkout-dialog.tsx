@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -18,6 +19,8 @@ import { CheckoutForm } from './checkout-form';
 import type { ShippingAddress, Coupon } from '@/lib/types';
 import { Button } from './ui/button';
 import { useAuth } from '@/hooks/use-auth';
+import { useStripe, useElements } from '@stripe/react-stripe-js';
+import { StripePaymentElementOptions } from '@stripe/stripe-js';
 
 export type StockErrorState = {
   message: string;
@@ -33,13 +36,52 @@ interface CheckoutDialogProps {
   setStockError: (error: StockErrorState) => void;
 }
 
+const StripeWrapper = ({ children, total }: { children: React.ReactNode, total: number }) => {
+  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
+
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+      setStripePromise(loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY));
+    } else {
+      console.error("Stripe publishable key is not set.");
+    }
+  }, []);
+
+  const paymentElementOptions: StripePaymentElementOptions = {
+    layout: 'tabs',
+  };
+
+  const stripeOptions: StripeElementsOptions = {
+    mode: 'payment',
+    amount: Math.max(50, Math.round(total * 100)), // Stripe requires a minimum amount (e.g., 50 cents)
+    currency: 'eur',
+    appearance: { 
+        theme: 'stripe', 
+        variables: { 
+            colorPrimary: '#ef4444',
+            fontFamily: 'Montserrat, sans-serif',
+            borderRadius: '6px',
+        } 
+    },
+  };
+  
+   if (!stripePromise) {
+    return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin" /></div>;
+  }
+
+  return (
+    <Elements stripe={stripePromise} options={stripeOptions}>
+      {children}
+    </Elements>
+  )
+}
+
 export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockError, setStockError }: CheckoutDialogProps) {
   const t = useTranslations('Checkout');
   const tCart = useTranslations('Cart');
   const { cart } = useCart();
   const { user } = useAuth();
   
-  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
 
   const subtotal = cart.reduce((sum, item) => {
@@ -60,27 +102,6 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
 
   const formatPrice = (price: number) => tCart('price', { price });
 
-   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
-      setStripePromise(loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY));
-    } else {
-      console.error("Stripe publishable key is not set.");
-    }
-  }, []);
-
-  const stripeOptions: StripeElementsOptions = {
-    mode: 'payment',
-    amount: Math.max(50, Math.round(total * 100)), // Stripe requires a minimum amount (e.g., 50 cents)
-    currency: 'eur',
-    appearance: { 
-        theme: 'stripe', 
-        variables: { 
-            colorPrimary: '#ef4444', 
-            fontFamily: 'Alegreya, Ideal Sans, system-ui, sans-serif' 
-        } 
-    },
-    paymentMethodCreation: 'manual',
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -94,10 +115,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <div className="flex flex-col h-full max-h-[90vh] md:max-h-none overflow-y-auto no-scrollbar">
-          <Elements 
-              stripe={stripePromise} 
-              options={stripeOptions}
-          >
+           <StripeWrapper total={total}>
               <CheckoutForm 
                   total={subtotal} // Pass subtotal to calculate discounts correctly
                   onOrderCreated={onOrderCreated}
@@ -105,7 +123,7 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
                   appliedCoupon={appliedCoupon}
                   setAppliedCoupon={setAppliedCoupon}
               />
-          </Elements>
+          </StripeWrapper>
         </div>
         
         <aside className="hidden md:flex flex-col bg-muted/50 p-6 overflow-y-auto no-scrollbar">

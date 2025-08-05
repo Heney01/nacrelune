@@ -26,8 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { CreateOrderResult } from '@/app/actions/order.actions';
 import { CheckoutDialog, StockErrorState } from './checkout-dialog';
 import { SuccessDialog } from './success-dialog';
-import type { CartItem } from '@/lib/types';
-import { ShareDialog } from './share-dialog';
+import type { CartItem, Creation } from '@/lib/types';
 import { Badge } from './ui/badge';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -210,7 +209,7 @@ export function CartSheet({ children, open, onOpenChange }: {
                         </AccordionItem>
                       </Accordion>
                       
-                       <CardFooter className={cn("p-2 bg-muted/30 border-t grid gap-2", isCreatorItem ? 'grid-cols-2' : 'grid-cols-3')}>
+                       <CardFooter className="p-2 bg-muted/30 border-t grid gap-2 grid-cols-2">
                           {!isCreatorItem && (
                             <SheetClose asChild>
                               <Button variant="outline" size="sm" asChild className="text-xs">
@@ -220,9 +219,6 @@ export function CartSheet({ children, open, onOpenChange }: {
                               </Button>
                             </SheetClose>
                           )}
-                           <Button variant="outline" size="sm" onClick={() => setSharingItem(item)} className="text-xs">
-                              {tEditor('share_button')}
-                          </Button>
                            <Button
                             variant="outline"
                             size="sm"
@@ -268,25 +264,6 @@ export function CartSheet({ children, open, onOpenChange }: {
             onOpenChange={() => setSuccessData(null)}
             orderNumber={successData.orderNumber}
             email={successData.email}
-        />
-    )}
-    {sharingItem && (
-        <ShareDialog
-            isOpen={!!sharingItem}
-            onOpenChange={() => setSharingItem(null)}
-            getCanvasDataUri={() => Promise.resolve(sharingItem.previewImage)}
-            creation={{
-              id: sharingItem.creationId || '',
-              creatorId: sharingItem.creator?.uid || '',
-              name: sharingItem.model.name,
-              previewImageUrl: sharingItem.previewImage,
-              placedCharms: [],
-              createdAt: new Date(),
-              salesCount: 0,
-              likesCount: 0,
-              creator: sharingItem.creator
-            }}
-            t={tEditor}
         />
     )}
     </>

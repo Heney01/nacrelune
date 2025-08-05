@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
@@ -9,7 +8,7 @@ import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory,
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Share2, Layers, Check, MoreHorizontal } from 'lucide-react';
+import { X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Layers, Check, MoreHorizontal, Loader2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BrandLogo } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -25,7 +24,6 @@ import { useTranslations } from '@/hooks/use-translations';
 import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction, getCharmDesignCritiqueAction } from '@/app/actions/ai.actions';
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { ShareDialog } from './share-dialog';
 import { FinalizeCreationDialog } from './finalize-creation-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
@@ -46,20 +44,13 @@ interface PlacedCharmComponentProps {
     placed: PlacedCharm;
     isSelected: boolean;
     onDragStart: (e: React.MouseEvent<HTMLDivElement> | TouchEvent, charmId: string) => void;
-    onDelete: (charmId: string) => void;
-    onRotate: (charmId: string, newRotation: number) => void;
     pixelSize: { width: number; height: number; };
     modelImageRect: DOMRect | null;
 }
   
-const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDelete, onRotate, pixelSize, modelImageRect }: PlacedCharmComponentProps) => {
+const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, pixelSize, modelImageRect }: PlacedCharmComponentProps) => {
     const charmRef = useRef<HTMLDivElement>(null);
-
-    const handleDelete = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-        e.stopPropagation();
-        e.preventDefault();
-        onDelete(placed.id);
-    }, [onDelete, placed.id]);
+    const [isImageLoading, setIsImageLoading] = useState(true);
     
     useEffect(() => {
         const element = charmRef.current;
@@ -78,13 +69,6 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
             }
         };
     }, [onDragStart, placed.id]);
-
-    const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const rotationAmount = e.deltaY > 0 ? 10 : -10; // Rotate by 10 degrees
-        onRotate(placed.id, placed.rotation + rotationAmount);
-    };
 
     // Convert normalized position to absolute pixel position on the canvas
     const positionStyle = useMemo(() => {
@@ -112,32 +96,35 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, onDe
         <div
             ref={charmRef}
             onMouseDown={(e) => onDragStart(e, placed.id)}
-            onWheel={handleWheel}
             className={cn(
                 "absolute group charm-on-canvas cursor-pointer select-none flex items-center justify-center",
                 {
+                    'z-10': isSelected,
                     'outline-2 outline-primary outline-dashed': isSelected,
                     'hover:outline-2 hover:outline-primary/50 hover:outline-dashed': !isSelected,
                 }
             )}
             style={positionStyle as React.CSSProperties}
         >
+            {isImageLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/10 rounded-full">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary-foreground" />
+                </div>
+            )}
             <Image
                 src={placed.charm.imageUrl}
                 alt={placed.charm.name}
-                className="pointer-events-none select-none object-contain w-full h-auto"
+                className={cn(
+                    "pointer-events-none select-none object-contain w-full h-auto",
+                    isImageLoading && "opacity-0"
+                )}
                 data-ai-hint="jewelry charm"
                 draggable="false"
                 width={pixelSize.width}
                 height={pixelSize.height}
                 crossOrigin="anonymous"
+                onLoad={() => setIsImageLoading(false)}
             />
-            <button
-                onMouseDown={handleDelete}
-                onTouchStart={handleDelete}
-                className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                <X size={14} />
-            </button>
         </div>
     );
 });
@@ -175,13 +162,16 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const [isCharmsSheetOpen, setIsCharmsSheetOpen] = useState(false);
   const [isSuggestionsSheetOpen, setIsSuggestionsSheetOpen] = useState(false);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
-  const [isShareOpen, setIsShareOpen] = useState(false);
   const [isFinalizeOpen, setIsFinalizeOpen] = useState(false);
   
   const [charmsSearchTerm, setCharmsSearchTerm] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [critique, setCritique] = useState<string | null>(null);
+  
+  const [isDraggingCharm, setIsDraggingCharm] = useState(false);
+  const [isOverTrash, setIsOverTrash] = useState(false);
+  const trashZoneRef = useRef<HTMLDivElement>(null);
   
   const isEditing = cartItemId !== null;
 
@@ -226,54 +216,51 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     resetZoomAndPan();
     setSelectedPlacedCharmId(null);
     
-    return new Promise((resolve, reject) => {
-        requestAnimationFrame(async () => {
-            try {
-                // Preload images to ensure they are in cache.
-                const imageElements = Array.from(canvasElement.getElementsByTagName('img'));
-                const imagePromises = imageElements.map(img => {
-                    if (img.complete) return Promise.resolve();
-                    return new Promise<void>((res, rej) => {
-                        const newImg = new window.Image();
-                        newImg.crossOrigin = "Anonymous";
-                        newImg.onload = () => res();
-                        newImg.onerror = () => res(); // Don't fail the whole capture for one image
-                        newImg.src = img.src;
-                    });
-                });
-                await Promise.all(imagePromises);
+    await new Promise(resolve => setTimeout(resolve, 100));
 
-                const modelImageElement = modelImageRef.current!;
-                const modelImageBoundingRect = modelImageElement.getBoundingClientRect();
-                const canvasBoundingRect = canvasElement.getBoundingClientRect();
-
-                const originalX = modelImageBoundingRect.left - canvasBoundingRect.left;
-                const originalY = modelImageBoundingRect.top - canvasBoundingRect.top;
-                const originalWidth = modelImageBoundingRect.width;
-                const originalHeight = modelImageBoundingRect.height;
-                
-                const size = Math.max(originalWidth, originalHeight);
-
-                const finalX = originalX - (size - originalWidth) / 2;
-                const finalY = originalY; // Align to top
-                
-                const canvas = await html2canvas(canvasElement, {
-                    backgroundColor: null,
-                    logging: false,
-                    useCORS: true,
-                    scale: 2,
-                    x: finalX,
-                    y: finalY,
-                    width: size,
-                    height: size,
-                });
-                resolve(canvas.toDataURL('image/png', 0.9));
-            } catch (error) {
-                console.error("Error capturing canvas:", error);
-                reject(error);
-            }
+    try {
+        const imageElements = Array.from(canvasElement.getElementsByTagName('img'));
+        const imagePromises = imageElements.map(img => {
+            if (img.complete) return Promise.resolve();
+            return new Promise<void>((res) => {
+                const newImg = new window.Image();
+                newImg.crossOrigin = "Anonymous";
+                newImg.onload = () => res();
+                newImg.onerror = () => res(); // Don't fail the whole capture for one image
+                newImg.src = img.src;
+            });
         });
-    });
+        await Promise.all(imagePromises);
+
+        const modelImageElement = modelImageRef.current!;
+        const modelImageBoundingRect = modelImageElement.getBoundingClientRect();
+        const canvasBoundingRect = canvasElement.getBoundingClientRect();
+
+        const originalX = modelImageBoundingRect.left - canvasBoundingRect.left;
+        const originalY = modelImageBoundingRect.top - canvasBoundingRect.top;
+        const originalWidth = modelImageBoundingRect.width;
+        const originalHeight = modelImageBoundingRect.height;
+        
+        const size = Math.max(originalWidth, originalHeight);
+
+        const finalX = originalX - (size - originalWidth) / 2;
+        const finalY = originalY; // Align to top
+        
+        const canvas = await html2canvas(canvasElement, {
+            backgroundColor: null,
+            logging: false,
+            useCORS: true,
+            scale: 2,
+            x: finalX,
+            y: finalY,
+            width: size,
+            height: size,
+        });
+        return canvas.toDataURL('image/png', 0.9);
+    } catch (error) {
+        console.error("Error capturing canvas:", error);
+        throw error;
+    }
 }, [resetZoomAndPan, canvasRef, modelImageRef]);
 
 
@@ -338,6 +325,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     interactionState.isDragging = true;
     interactionState.activeCharmId = charmId;
     setSelectedPlacedCharmId(charmId);
+    setIsDraggingCharm(true);
 
     const point = 'touches' in e ? e.touches[0] : e;
     interactionState.dragStart = { x: point.clientX, y: point.clientY };
@@ -369,8 +357,13 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     const getPoint = (e: MouseEvent | TouchEvent) => 'touches' in e ? e.touches[0] : e;
     
     const handleInteractionEnd = () => {
+      if (isDraggingCharm && isOverTrash && interactionState.activeCharmId) {
+        removeCharm(interactionState.activeCharmId);
+      }
       interactionState.isDragging = false;
       interactionState.activeCharmId = null;
+      setIsDraggingCharm(false);
+      setIsOverTrash(false);
     };
     
     const handleMove = (e: MouseEvent | TouchEvent) => {
@@ -379,10 +372,17 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
       }
 
       if (interactionState.isDragging && interactionState.activeCharmId) {
+          const point = getPoint(e);
+          const trashRect = trashZoneRef.current?.getBoundingClientRect();
+          if (trashRect) {
+              const over = point.clientX >= trashRect.left && point.clientX <= trashRect.right &&
+                         point.clientY >= trashRect.top && point.clientY <= trashRect.bottom;
+              setIsOverTrash(over);
+          }
+
           const imgRect = modelImageRef.current?.getBoundingClientRect();
           if (!imgRect) return;
 
-          const point = getPoint(e);
           const dx = (point.clientX - interactionState.dragStart.x) / scale;
           const dy = (point.clientY - interactionState.dragStart.y) / scale;
           
@@ -425,7 +425,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
       window.removeEventListener('touchmove', handleMove);
       window.removeEventListener('touchend', handleInteractionEnd);
     };
-  }, [interactionState, scale, isMobile, isCharmsSheetOpen, isSuggestionsSheetOpen, modelImageRef]);
+  }, [interactionState, scale, isMobile, isCharmsSheetOpen, isSuggestionsSheetOpen, modelImageRef, isDraggingCharm, isOverTrash, removeCharm]);
   
   const handleCharmListClick = (charmId: string) => {
     setSelectedPlacedCharmId(charmId);
@@ -584,14 +584,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   return (
     <>
       <CartSheet open={isCartSheetOpen} onOpenChange={setIsCartSheetOpen} />
-      {isShareOpen && (
-        <ShareDialog
-          isOpen={isShareOpen}
-          onOpenChange={() => setIsShareOpen(false)}
-          getCanvasDataUri={getCanvasDataUri}
-          t={t}
-        />
-      )}
       {isFinalizeOpen && (
         <FinalizeCreationDialog
             isOpen={isFinalizeOpen}
@@ -606,163 +598,154 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         />
       )}
 
-      <div className="flex flex-col h-screen overflow-hidden">
-        <header className="p-4 border-b flex-shrink-0">
+    <div className="flex flex-col h-[100dvh] bg-stone-50">
+        <header className="p-4 border-b flex-shrink-0 bg-white z-10 lg:hidden">
             <div className="container mx-auto flex justify-between items-center">
               <Link href={`/${locale}`} className="flex items-center gap-2">
-                <BrandLogo className="h-8 w-auto text-foreground" />
+                <BrandLogo className="h-8 w-auto" />
               </Link>
               <div className="flex items-center gap-2">
                   <CartWidget />
               </div>
             </div>
-          </header>
-        <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0 pb-32 md:pb-8">
-          <div className="container mx-auto flex-1 flex flex-col min-h-0">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0">
-              
-              <div className="lg:col-span-3 flex-col min-h-0 hidden lg:flex">
-                <CharmsPanel 
-                  allCharms={availableCharms}
-                  charmCategories={charmCategories}
-                  onAddCharm={addCharmFromCharmList} 
-                  searchTerm={charmsSearchTerm}
-                  onSearchTermChange={setCharmsSearchTerm}
-                />
-              </div>
+        </header>
 
-              <div className="lg:col-span-6 flex flex-col gap-4 min-h-0 order-first lg:order-none max-h-full">
-                  <div className="flex justify-between items-center gap-4 flex-shrink-0 lg:p-0">
-                      <Button variant="outline" asChild className="lg:h-10">
-                          <Link href={`/${locale}/?type=${jewelryType.id}`}>
-                              <ArrowLeft className="mr-2 h-4 w-4" />
-                              <span>{tHome('back_button')}</span>
-                          </Link>
-                      </Button>
-                      <div className="flex items-center gap-2">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                                    <Info className="h-5 w-5" />
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-md">
-                                <DialogHeader>
-                                <CardTitle className="font-headline text-xl">{t('editor_disclaimer_title')}</CardTitle>
-                                </DialogHeader>
-                                <p className="text-sm text-muted-foreground mt-2">
-                                {t('editor_disclaimer')}
-                                </p>
-                            </DialogContent>
-                        </Dialog>
-                        <Button variant="outline" size="icon" className="lg:hidden" onClick={() => setIsShareOpen(true)}>
-                          <Share2 />
-                          <span className="sr-only">{t('share_button')}</span>
+        <main className="flex-grow flex flex-col lg:flex-row min-h-0">
+          <div className="w-[320px] flex-shrink-0 flex-col min-h-0 hidden lg:flex">
+            <CharmsPanel 
+              allCharms={availableCharms}
+              charmCategories={charmCategories}
+              onAddCharm={addCharmFromCharmList} 
+              searchTerm={charmsSearchTerm}
+              onSearchTermChange={setCharmsSearchTerm}
+            />
+          </div>
+
+          <div className="flex-grow flex flex-col min-w-0 min-h-0">
+            <div className="flex justify-between items-center flex-shrink-0 px-4 pt-4 mb-4">
+                <Button variant="outline" asChild>
+                    <Link href={`/${locale}/?type=${jewelryType.id}`}>
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        <span>{tHome('back_button')}</span>
+                    </Link>
+                </Button>
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-muted-foreground">
+                            <Info className="h-5 w-5" />
                         </Button>
-                         <div className="hidden lg:inline-flex items-center gap-2">
-                            <Button variant="outline" onClick={() => setIsShareOpen(true)}>
-                                <Share2 />
-                                {t('share_button')}
-                            </Button>
-                            <Button onClick={handleFinalize} disabled={hasStockIssues || placedCharms.length === 0}>
-                                <Check />
-                                {isEditing ? t('update_item_button') : t('finalize_button')}
-                            </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                        <CardTitle className="font-headline text-xl">{t('editor_disclaimer_title')}</CardTitle>
+                        </DialogHeader>
+                        <p className="text-sm text-muted-foreground mt-2">
+                        {t('editor_disclaimer')}
+                        </p>
+                    </DialogContent>
+                </Dialog>
+            </div>
+             <div className="flex-grow px-4 pb-4 min-h-0 min-w-0">
+              <div className="w-full h-full bg-card border lg:rounded-lg">
+                <div
+                    ref={canvasWrapperRef}
+                    className="relative w-full h-full bg-card overflow-hidden touch-none border-2 border-dashed rounded-lg"
+                    onMouseDown={handleCanvasClick}
+                    onTouchStart={handleCanvasClick}
+                >
+                    <div
+                        ref={trashZoneRef}
+                        className={cn(
+                            "absolute bottom-4 left-4 h-16 w-16 bg-destructive/20 border-2 border-dashed border-destructive/50 flex items-center justify-center text-destructive rounded-full transition-all duration-300 z-20",
+                            isDraggingCharm ? "opacity-100 scale-100" : "opacity-0 scale-0 pointer-events-none",
+                            isOverTrash && "bg-destructive/40 scale-110"
+                        )}
+                        >
+                        <Trash2 className="h-8 w-8" />
+                    </div>
+
+                    <div
+                        ref={canvasRef}
+                        className="relative"
+                        style={{
+                            transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
+                            transformOrigin: '0 0',
+                            width: '100%',
+                            height: '100%',
+                        }}
+                    >
+                        <div ref={modelImageContainerRef} className="absolute inset-0 grid place-items-start justify-center">
+                            <Image
+                                ref={modelImageRef}
+                                src={model.editorImageUrl}
+                                alt={model.name}
+                                width={1000}
+                                height={1000}
+                                className="pointer-events-none max-w-full max-h-full object-contain"
+                                data-ai-hint="jewelry model"
+                                priority
+                                crossOrigin="anonymous"
+                            />
                         </div>
-                      </div>
-                  </div>
-                  <div
-                      ref={canvasWrapperRef}
-                      className="relative w-full flex-grow bg-card overflow-hidden touch-none border-2 border-dashed"
-                      onMouseDown={handleCanvasClick}
-                      onTouchStart={handleCanvasClick}
-                  >
-                      <div
-                          ref={canvasRef}
-                          className="relative"
-                          style={{
-                              transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
-                              transformOrigin: '0 0',
-                              width: '100%',
-                              height: '100%',
-                          }}
-                      >
-                          <div ref={modelImageContainerRef} className="absolute inset-0 grid place-items-start justify-center">
-                              <Image
-                                  ref={modelImageRef}
-                                  src={model.editorImageUrl}
-                                  alt={model.name}
-                                  width={1000}
-                                  height={1000}
-                                  className="pointer-events-none max-w-full max-h-full object-contain"
-                                  data-ai-hint="jewelry model"
-                                  priority
-                                  crossOrigin="anonymous"
-                              />
-                          </div>
-                          
-                          {pixelsPerMm && modelImageRect && sortedPlacedCharms.map((placed) => {
+                        
+                        {pixelsPerMm && modelImageRect && sortedPlacedCharms.map((placed) => {
                             const pixelSize = {
-                              width: (placed.charm.width ?? 20) * pixelsPerMm,
-                              height: (placed.charm.height ?? 20) * pixelsPerMm,
+                            width: (placed.charm.width ?? 20) * pixelsPerMm,
+                            height: (placed.charm.height ?? 20) * pixelsPerMm,
                             };
                             return (
-                              <PlacedCharmComponent
-                                  key={placed.id}
-                                  placed={placed}
-                                  isSelected={selectedPlacedCharmId === placed.id}
-                                  onDragStart={handleDragStart}
-                                  onDelete={removeCharm}
-                                  onRotate={handleRotateCharm}
-                                  pixelSize={pixelSize}
-                                  modelImageRect={modelImageRect}
-                              />
+                            <PlacedCharmComponent
+                                key={placed.id}
+                                placed={placed}
+                                isSelected={selectedPlacedCharmId === placed.id}
+                                onDragStart={handleDragStart}
+                                pixelSize={pixelSize}
+                                modelImageRect={modelImageRect}
+                            />
                             )
-                          })}
-                      </div>
+                        })}
+                    </div>
 
-                      {!isMobile && (
-                        <div className="absolute bottom-2 right-2 flex gap-2">
+                    {!isMobile && (
+                        <div className="absolute bottom-2 right-2 flex gap-2 z-30">
                             <Button variant="secondary" size="icon" onClick={() => handleManualZoom('in')}><ZoomIn /></Button>
                             <Button variant="secondary" size="icon" onClick={() => handleManualZoom('out')}><ZoomOut /></Button>
                             <Button variant="secondary" size="icon" onClick={resetZoomAndPan}><Maximize /></Button>
                         </div>
-                      )}
+                    )}
                   </div>
-                  
-                   <div className="hidden lg:block flex-shrink-0">
-                        <PlacedCharmsList 
-                            placedCharms={sortedPlacedCharms}
-                            selectedPlacedCharmId={selectedPlacedCharmId}
-                            onCharmClick={handleCharmListClick}
-                            onCharmDelete={removeCharm}
-                            isMobile={false}
-                        />
-                    </div>
               </div>
-
-              <div className="lg:col-span-3 flex-col gap-6 min-h-0 hidden lg:flex">
-                <SuggestionSidebar
-                    charms={allCharms}
-                    onAnalyze={handleAnalyzeForSuggestions}
-                    onCritique={handleCritiqueDesign}
-                    isLoading={isGenerating}
-                    suggestions={suggestions}
-                    critique={critique}
-                    onApplySuggestion={applySuggestion}
+            </div>
+            <div className="hidden lg:block flex-shrink-0 p-4 pt-0">
+                <PlacedCharmsList 
+                    placedCharms={sortedPlacedCharms}
+                    selectedPlacedCharmId={selectedPlacedCharmId}
+                    onCharmClick={handleCharmListClick}
+                    onCharmDelete={removeCharm}
+                    isMobile={false}
                 />
-              </div>
-              </div>
+            </div>
+          </div>
+
+          <div className="w-[320px] flex-shrink-0 flex-col gap-6 min-h-0 hidden lg:flex">
+            <SuggestionSidebar
+                charms={allCharms}
+                onAnalyze={handleAnalyzeForSuggestions}
+                onCritique={handleCritiqueDesign}
+                isLoading={isGenerating}
+                suggestions={suggestions}
+                critique={critique}
+                onApplySuggestion={applySuggestion}
+            />
           </div>
         </main>
-
-         {isMobile && (
-            <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-2.5 z-20 space-y-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))]">
-                <Button onClick={handleFinalize} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
-                    <Check />
+        
+        <div className="lg:hidden flex-shrink-0 bg-background border-t z-20">
+             <div className="p-2.5 pb-[calc(1rem+env(safe-area-inset-bottom))] flex flex-col gap-2.5">
+                 <Button onClick={handleFinalize} className="w-full flex-grow" disabled={hasStockIssues || placedCharms.length === 0}>
+                    <Check className="mr-2 h-4 w-4" />
                     {isEditing ? t('update_item_button') : t('finalize_button')}
                 </Button>
-
                  <div className="grid grid-cols-2 gap-2.5">
                       <Sheet open={isCharmsSheetOpen} onOpenChange={setIsCharmsSheetOpen}>
                           <SheetTrigger asChild>
@@ -845,8 +828,10 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                         </Sheet>
                 </div>
             </div>
-          )}
+        </div>
       </div>
     </>
   );
 }
+
+    

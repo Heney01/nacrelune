@@ -1,5 +1,6 @@
 
 
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -9,6 +10,8 @@ import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import type { JewelryModel, PlacedCharm, OrderStatus, Order, OrderItem, ShippingAddress, DeliveryMethod, MailLog, Coupon, User } from '@/lib/types';
 import { toDate } from '@/lib/data';
 import Stripe from 'stripe';
+import { headers } from 'next/headers';
+
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -33,7 +36,8 @@ const getUrl = async (path: string | undefined | null, fallback: string): Promis
 // --- Order Actions ---
 
 export async function createPaymentIntent(
-  amount: number
+  amount: number,
+  email: string
 ): Promise<{ clientSecret: string | null; error?: string }> {
   if (amount <= 0) {
     return { error: 'Invalid amount.', clientSecret: null };
@@ -42,6 +46,7 @@ export async function createPaymentIntent(
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Amount in cents
       currency: 'eur',
+      receipt_email: email,
     });
     return { clientSecret: paymentIntent.client_secret };
   } catch (error: any) {
@@ -109,13 +114,13 @@ export type CreateOrderResult = {
     email?: string;
     stockError?: StockError;
     totalPrice?: number;
+    orderId?: string;
 };
 
 export async function createOrder(
     cartItems: SerializableCartItem[], 
     email: string, 
-    locale: string, 
-    paymentIntentClientSecret: string,
+    paymentIntentId: string,
     deliveryMethod: DeliveryMethod,
     shippingAddress?: ShippingAddress,
     coupon?: Coupon,
@@ -272,12 +277,9 @@ export async function createOrder(
             
             const orderNumber = generateOrderNumber();
             
-            const paymentIntentId = paymentIntentClientSecret.split('_secret_')[0];
-
             const newOrderData: any = {
                 orderNumber,
                 customerEmail: email,
-                userId: userId,
                 subtotal: subtotal,
                 totalPrice: finalPrice,
                 items: orderItems,
@@ -286,6 +288,10 @@ export async function createOrder(
                 deliveryMethod: deliveryMethod,
                 createdAt: serverTimestamp()
             };
+            
+            if (userId) {
+                newOrderData.userId = userId;
+            }
 
             if (deliveryMethod === 'home' && shippingAddress) {
                 newOrderData.shippingAddress = {
@@ -302,17 +308,10 @@ export async function createOrder(
                 newOrderData.pointsValue = pointsValue;
             }
             
-            transaction.set(doc(collection(db, 'orders')), newOrderData);
+            const newOrderRef = doc(collection(db, 'orders'));
+            transaction.set(newOrderRef, newOrderData);
             
-            const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@atelierabijoux.com';
-            const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${supportEmail} en précisant votre numéro de commande (${orderNumber}).`;
-            const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${supportEmail}">${supportEmail}</a> en précisant votre numéro de commande (${orderNumber}).</p>`;
-            const trackingUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com'}/${locale}/orders/track?orderNumber=${orderNumber}`;
-            const mailText = `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${finalPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.model.name} avec ${item.placedCharms.length} breloque(s)`).join('\\n')}\n\nVous pouvez suivre votre commande ici : ${trackingUrl}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
-            const mailHtml = `<h1>Merci pour votre commande !</h1><p>Bonjour,</p><p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${finalPrice.toFixed(2)}€.</p><h2>Récapitulatif :</h2><ul>${cartItems.map(item => `<li>${item.model.name} avec ${item.placedCharms.length} breloque(s)</li>`).join('')}</ul><p>Vous pouvez suivre l'avancement de votre commande en cliquant sur ce lien : <a href="${trackingUrl}">${trackingUrl}</a>.</p><p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
-            transaction.set(doc(collection(db, 'mail')), { to: [email], message: { subject: `Confirmation de votre commande n°${orderNumber}`, text: mailText.trim(), html: mailHtml.trim() } });
-            
-            return { success: true, message: 'Votre commande a été passée avec succès !', orderNumber, email, totalPrice: finalPrice };
+            return { success: true, message: 'Votre commande a été passée avec succès !', orderNumber, email, totalPrice: finalPrice, orderId: newOrderRef.id };
         });
 
         return orderData;
@@ -321,6 +320,41 @@ export async function createOrder(
         return { success: false, message: error.message || "Une erreur est survenue lors du passage de la commande." };
     }
 }
+
+export async function sendConfirmationEmail(orderId: string, locale: string): Promise<{ success: boolean; message: string }> {
+    try {
+        const orderDoc = await getDoc(doc(db, 'orders', orderId));
+        if (!orderDoc.exists()) {
+            return { success: false, message: "Commande non trouvée pour l'envoi de l'e-mail." };
+        }
+        
+        const orderData = orderDoc.data() as Order;
+        const cartItems = orderData.items; // Simplified for email content
+        const { orderNumber, customerEmail: email, totalPrice } = orderData;
+        
+        const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@atelierabijoux.com';
+        const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${supportEmail} en précisant votre numéro de commande (${orderNumber}).`;
+        const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${supportEmail}">${supportEmail}</a> en précisant votre numéro de commande (${orderNumber}).</p>`;
+        
+        const referer = headers().get('referer');
+        const baseUrl = referer ? new URL(referer).origin : (process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com');
+        const trackingUrl = `${baseUrl}/${locale}/orders/track?orderNumber=${orderNumber}`;
+
+        const mailText = `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.modelName} avec ${item.charmIds?.length || 0} breloque(s)`).join('\\n')}\n\nVous pouvez suivre votre commande ici : ${trackingUrl}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
+        const mailHtml = `<h1>Merci pour votre commande !</h1><p>Bonjour,</p><p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${totalPrice.toFixed(2)}€.</p><h2>Récapitulatif :</h2><ul>${cartItems.map(item => `<li>${item.modelName} avec ${item.charmIds?.length || 0} breloque(s)</li>`).join('')}</ul><p>Vous pouvez suivre l'avancement de votre commande en cliquant sur ce lien : <a href="${trackingUrl}">${trackingUrl}</a>.</p><p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
+        
+        await addDoc(collection(db, 'mail'), {
+            to: [email],
+            message: { subject: `Confirmation de votre commande n°${orderNumber}`, text: mailText.trim(), html: mailHtml.trim() }
+        });
+
+        return { success: true, message: "E-mail de confirmation en file d'attente." };
+    } catch (error: any) {
+        console.error("Error sending confirmation email:", error);
+        return { success: false, message: "Impossible d'envoyer l'e-mail de confirmation." };
+    }
+}
+
 
 export async function getOrderDetailsByNumber(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; order?: Order | null }> {
     const orderNumber = formData.get('orderNumber') as string;
@@ -452,8 +486,9 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
                 createdAt: (data.createdAt as Timestamp).toDate().toLocaleDateString(locale),
             };
         });
-
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com';
+        
+        const referer = headers().get('referer');
+        const baseUrl = referer ? new URL(referer).origin : (process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com');
         const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@atelierabijoux.com';
         
         const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${supportEmail}.`;
@@ -552,19 +587,27 @@ export async function getOrders(): Promise<Order[]> {
         // Fetch all required charms in a single query
         let charmsMap = new Map<string, any>();
         if (uniqueCharmIds.length > 0) {
-            const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', uniqueCharmIds));
-            const charmsSnapshot = await getDocs(charmsQuery);
-            for (const charmDoc of charmsSnapshot.docs) {
-                const charmData = charmDoc.data() as Omit<any, 'id'>;
-                const imageUrl = await getUrl(charmData.imageUrl, 'https://placehold.co/100x100.png');
-                charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id, imageUrl });
+            // Firestore 'in' query is limited to 30 items, so chunk if necessary
+            const charmIdChunks = [];
+            for (let i = 0; i < uniqueCharmIds.length; i += 30) {
+                charmIdChunks.push(uniqueCharmIds.slice(i, i + 30));
+            }
+            
+            for (const chunk of charmIdChunks) {
+                const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', chunk));
+                const charmsSnapshot = await getDocs(charmsQuery);
+                for (const charmDoc of charmsSnapshot.docs) {
+                    const charmData = charmDoc.data() as Omit<any, 'id'>;
+                    const imageUrl = await getUrl(charmData.imageUrl, 'https://placehold.co/100x100.png');
+                    charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id, imageUrl });
+                }
             }
         }
         
         const orders: Order[] = await Promise.all(ordersSnapshot.docs.map(async(orderDoc) => {
             const data = orderDoc.data();
             
-            const enrichedItems: OrderItem[] = (data.items || []).map((item: OrderItem) => {
+            const enrichedItems: OrderItem[] = await Promise.all((data.items || []).map(async (item: OrderItem) => {
                 const enrichedCharms = (item.charmIds || [])
                     .map(id => charmsMap.get(id))
                     .filter((c): c is any => !!c); // Filter out undefined charms
@@ -572,16 +615,9 @@ export async function getOrders(): Promise<Order[]> {
                 return {
                     ...item,
                     charms: enrichedCharms,
+                    previewImageUrl: await getUrl(item.previewImageUrl, 'https://placehold.co/400x400.png'),
                 };
-            });
-            
-            const previewImageUrls = await Promise.all(
-                (data.items || []).map((item: OrderItem) => getUrl(item.previewImageUrl, 'https://placehold.co/400x400.png'))
-            );
-
-            enrichedItems.forEach((item, index) => {
-                item.previewImageUrl = previewImageUrls[index];
-            });
+            }));
             
             const orderNumber = data.orderNumber;
             const mailHistory = mailLogsByOrderNumber.get(orderNumber) || [];
@@ -807,3 +843,7 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
         return { success: false, message: "Une erreur est survenue lors de la validation du code." };
     }
 }
+
+
+
+
