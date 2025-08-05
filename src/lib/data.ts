@@ -318,7 +318,7 @@ export async function getOrders(): Promise<Order[]> {
             const enrichedItems: OrderItem[] = await Promise.all((data.items || []).map(async (item: OrderItem) => {
                 const enrichedCharms = (item.charmIds || [])
                     .map(id => charmsMap.get(id))
-                    .filter((c): c is Charm => !!c);
+                    .filter((c): c is Charm => !!c); // Filter out undefined charms
 
                 return {
                     ...item,
@@ -434,8 +434,8 @@ export async function getPaginatedCreations(options: PaginatedCreationsOptions):
   const { sortBy, timeFilter, cursor, cursorId } = options;
   const constraints: QueryConstraint[] = [];
 
-  // Time filter
-  if (timeFilter !== 'all') {
+  // Time filter is only applied when sorting by date to avoid composite indexes.
+  if (sortBy === 'date' && timeFilter !== 'all') {
     const now = new Date();
     let startDate;
     switch (timeFilter) {
@@ -464,6 +464,8 @@ export async function getPaginatedCreations(options: PaginatedCreationsOptions):
     const cursorDoc = await getDoc(doc(db, 'creations', cursorId));
     if (cursorDoc.exists()) {
         constraints.push(startAfter(cursorDoc));
+    } else {
+        console.warn(`Cursor document with id ${cursorId} not found. Fetching from the beginning.`);
     }
   }
 
@@ -488,7 +490,7 @@ export async function getPaginatedCreations(options: PaginatedCreationsOptions):
 
   } catch (error) {
     console.error("Error fetching paginated creations:", error);
-    // This can happen if a composite index is required.
+    // This can happen if a composite index is not created yet.
     // Firestore error messages are usually helpful here.
     return { creations: [], hasMore: false };
   }
