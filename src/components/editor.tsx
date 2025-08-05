@@ -9,7 +9,7 @@ import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory,
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Layers, Check, MoreHorizontal, Loader2, Trash2 } from 'lucide-react';
+import { X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Layers, Check, MoreHorizontal, Loader2, Trash2, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BrandLogo } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -22,7 +22,7 @@ import { useSearchParams, useParams, useRouter } from 'next/navigation';
 import { CartSheet } from './cart-sheet';
 import { CartWidget } from './cart-widget';
 import { useTranslations } from '@/hooks/use-translations';
-import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction, getCharmDesignCritiqueAction } from '@/app/actions/ai.actions';
+import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction, getCharmDesignCritiqueAction, generateShareContentAction } from '@/app/actions/ai.actions';
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { FinalizeCreationDialog } from './finalize-creation-dialog';
@@ -611,34 +611,10 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
             </div>
         </header>
 
-        <div className="lg:hidden flex-shrink-0 p-4 border-b flex justify-between items-center">
-            <Button variant="ghost" asChild>
-                <Link href={`/${locale}/?type=${jewelryType.id}`}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    <span>{tHome('back_button')}</span>
-                </Link>
-            </Button>
-            <Dialog>
-                <DialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                        <Info className="h-5 w-5" />
-                    </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                    <CardTitle className="font-headline text-xl">{t('editor_disclaimer_title')}</CardTitle>
-                    </DialogHeader>
-                    <p className="text-sm text-muted-foreground mt-2">
-                    {t('editor_disclaimer')}
-                    </p>
-                </DialogContent>
-            </Dialog>
-        </div>
-        
         <main className="flex-grow flex flex-col lg:flex-row min-h-0">
-          <div className="container mx-auto flex-1 flex flex-col lg:flex-row min-h-0 lg:p-4 lg:gap-6">
+          <div className="container mx-auto flex-1 flex lg:flex-row min-h-0 lg:p-4 lg:gap-6">
               
-              <div className="lg:col-span-3 flex-col min-h-0 hidden lg:flex">
+              <div className="w-[320px] flex-shrink-0 flex-col min-h-0 hidden lg:flex">
                 <CharmsPanel 
                   allCharms={availableCharms}
                   charmCategories={charmCategories}
@@ -648,7 +624,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                 />
               </div>
 
-              <div className="lg:col-span-6 flex flex-col gap-4 min-h-0 order-first lg:order-none flex-grow">
+              <div className="flex flex-col gap-4 min-h-0 order-first lg:order-none flex-grow">
                   <div className="hidden lg:flex justify-between items-center gap-4 flex-shrink-0">
                       <Button variant="outline" asChild className="lg:h-10">
                           <Link href={`/${locale}/?type=${jewelryType.id}`}>
@@ -689,12 +665,12 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                        <div
                           ref={trashZoneRef}
                           className={cn(
-                              "absolute bottom-4 left-4 h-12 w-12 bg-destructive/20 border-2 border-dashed border-destructive/50 flex items-center justify-center text-destructive rounded-full transition-all duration-300 z-20",
+                              "absolute bottom-4 left-4 h-14 w-14 bg-destructive/20 border-2 border-dashed border-destructive/50 flex items-center justify-center text-destructive rounded-full transition-all duration-300 z-20",
                               isDraggingCharm ? "opacity-100 scale-100" : "opacity-0 scale-0 pointer-events-none",
                               isOverTrash && "bg-destructive/40 scale-110"
                           )}
                         >
-                          <Trash2 className="h-6 w-6" />
+                          <Trash2 className="h-7 w-7" />
                       </div>
 
                       <div
@@ -759,7 +735,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                     </div>
               </div>
 
-              <div className="lg:col-span-3 flex-col gap-6 min-h-0 hidden lg:flex">
+              <div className="w-[320px] flex-shrink-0 flex-col gap-6 min-h-0 hidden lg:flex">
                 <SuggestionSidebar
                     charms={allCharms}
                     onAnalyze={handleAnalyzeForSuggestions}
@@ -772,13 +748,12 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
           </div>
         </main>
-         <div className="lg:hidden mt-auto flex-shrink-0 bg-background border-t p-2.5 z-20 space-y-2.5 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-             <div className="flex items-center gap-2.5">
-                 <Button onClick={handleFinalize} className="w-full flex-grow" disabled={hasStockIssues || placedCharms.length === 0}>
-                    <Check className="mr-2 h-4 w-4" />
-                    {isEditing ? t('update_item_button') : t('finalize_button')}
-                </Button>
-            </div>
+        
+        <div className="lg:hidden mt-auto flex-shrink-0 bg-background border-t p-2.5 z-20 flex flex-col gap-2.5 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+             <Button onClick={handleFinalize} className="w-full flex-grow" disabled={hasStockIssues || placedCharms.length === 0}>
+                <Check className="mr-2 h-4 w-4" />
+                {isEditing ? t('update_item_button') : t('finalize_button')}
+            </Button>
              <div className="grid grid-cols-2 gap-2.5">
                   <Sheet open={isCharmsSheetOpen} onOpenChange={setIsCharmsSheetOpen}>
                       <SheetTrigger asChild>
@@ -865,4 +840,5 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
 
