@@ -609,7 +609,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         />
       )}
 
-      <div className="flex flex-col h-screen bg-stone-50">
+      <div className="flex flex-col min-h-screen bg-stone-50">
         <header className="p-4 border-b flex-shrink-0 bg-white">
             <div className="container mx-auto flex justify-between items-center">
               <Link href={`/${locale}`} className="flex items-center gap-2">
@@ -638,7 +638,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
            </div>
         )}
 
-        <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0 pb-0 md:pb-8 lg:pb-4">
+        <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0 pb-[130px] md:pb-8 lg:pb-4">
           <div className="container mx-auto flex-1 flex flex-col min-h-0">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0">
               
