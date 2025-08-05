@@ -124,6 +124,7 @@ export function CartSheet({ children, open, onOpenChange }: {
                   const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
                   const editUrl = `/${locale}/?type=${item.jewelryType.id}&model=${item.model.id}&cartItemId=${item.id}`;
                   const isCreatorItem = !!item.creatorId;
+                  const descriptionId = `item-description-${item.id}`;
 
                   return (
                     <Card key={item.id} className="overflow-hidden">
@@ -141,10 +142,10 @@ export function CartSheet({ children, open, onOpenChange }: {
                                   />
                                 </div>
                               </DialogTrigger>
-                              <DialogContent className="max-w-xl">
+                              <DialogContent className="max-w-xl" aria-describedby={descriptionId}>
                                 <DialogHeader>
                                   <DialogTitle>{t('preview_title', { modelName: item.model.name })}</DialogTitle>
-                                  <DialogDescription>
+                                  <DialogDescription id={descriptionId}>
                                     {t('preview_description')}
                                   </DialogDescription>
                                 </DialogHeader>

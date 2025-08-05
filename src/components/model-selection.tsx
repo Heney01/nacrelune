@@ -69,9 +69,10 @@ export function ModelSelection({ selectedType, locale }: ModelSelectionProps) {
                                             <ZoomIn className="h-5 w-5" />
                                         </Button>
                                     </DialogTrigger>
-                                    <DialogContent className="max-w-3xl">
+                                    <DialogContent className="max-w-3xl" aria-describedby={`model-description-${model.id}`}>
                                         <DialogHeader>
                                             <DialogTitle>{model.name}</DialogTitle>
+                                            <DialogDescription id={`model-description-${model.id}`}>{selectedType.name}</DialogDescription>
                                         </DialogHeader>
                                         <div className="mt-4 grid place-items-center">
                                             <Image src={model.displayImageUrl} alt={model.name} width={800} height={800} className="w-full h-auto object-contain rounded-lg max-w-full max-h-[80vh]" data-ai-hint="jewelry model" sizes="100vw"/>
