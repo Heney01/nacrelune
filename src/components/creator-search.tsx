@@ -17,6 +17,7 @@ export function CreatorSearch({ locale }: { locale: string }) {
   const [results, setResults] = useState<Creator[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const t = useTranslations('HomePage');
 
@@ -71,13 +72,17 @@ export function CreatorSearch({ locale }: { locale: string }) {
                                     key={creator.uid}
                                     href={`/${locale}/creators/${creator.uid}`}
                                     className="block p-2 rounded-md hover:bg-muted"
+                                    onClick={() => setNavigatingTo(creator.uid)}
                                 >
                                     <div className="flex items-center gap-3">
                                         <Avatar className="h-8 w-8">
                                             <AvatarImage src={creator.photoURL || undefined} alt={creator.displayName || 'Avatar'} />
                                             <AvatarFallback>{fallbackDisplayName(creator).toUpperCase()}</AvatarFallback>
                                         </Avatar>
-                                        <span className="font-medium">{creator.displayName}</span>
+                                        <div className="flex items-center justify-between flex-grow">
+                                            <span className="font-medium">{creator.displayName}</span>
+                                            {navigatingTo === creator.uid && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                                        </div>
                                     </div>
                                 </Link>
                             ))}
@@ -89,4 +94,3 @@ export function CreatorSearch({ locale }: { locale: string }) {
     </section>
   );
 }
-
