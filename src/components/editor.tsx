@@ -22,7 +22,7 @@ import { useSearchParams, useParams, useRouter } from 'next/navigation';
 import { CartSheet } from './cart-sheet';
 import { CartWidget } from './cart-widget';
 import { useTranslations } from '@/hooks/use-translations';
-import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction, getCharmDesignCritiqueAction, generateShareContentAction } from '@/app/actions/ai.actions';
+import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction, getCharmDesignCritiqueAction } from '@/app/actions/ai.actions';
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { FinalizeCreationDialog } from './finalize-creation-dialog';
@@ -599,7 +599,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         />
       )}
 
-    <div className="flex flex-col h-screen bg-stone-50">
+    <div className="flex flex-col h-[100dvh] bg-stone-50">
         <header className="p-4 border-b flex-shrink-0 bg-white z-10">
             <div className="container mx-auto flex justify-between items-center">
               <Link href={`/${locale}`} className="flex items-center gap-2">
@@ -625,7 +625,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
 
               <div className="flex flex-col gap-4 min-h-0 order-first lg:order-none flex-grow">
-                  <div className="hidden lg:flex justify-between items-center gap-4 flex-shrink-0">
+                  <div className="hidden lg:flex justify-between items-center gap-4 flex-shrink-0 pt-4">
                       <Button variant="outline" asChild className="lg:h-10">
                           <Link href={`/${locale}/?type=${jewelryType.id}`}>
                               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -665,12 +665,12 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                        <div
                           ref={trashZoneRef}
                           className={cn(
-                              "absolute bottom-4 left-4 h-14 w-14 bg-destructive/20 border-2 border-dashed border-destructive/50 flex items-center justify-center text-destructive rounded-full transition-all duration-300 z-20",
+                              "absolute bottom-4 left-4 h-16 w-16 bg-destructive/20 border-2 border-dashed border-destructive/50 flex items-center justify-center text-destructive rounded-full transition-all duration-300 z-20",
                               isDraggingCharm ? "opacity-100 scale-100" : "opacity-0 scale-0 pointer-events-none",
                               isOverTrash && "bg-destructive/40 scale-110"
                           )}
                         >
-                          <Trash2 className="h-7 w-7" />
+                          <Trash2 className="h-8 w-8" />
                       </div>
 
                       <div
@@ -840,5 +840,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
 
 
