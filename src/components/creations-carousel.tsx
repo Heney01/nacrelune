@@ -33,7 +33,7 @@ export function CreationsCarousel({ creations, locale }: CreationsCarouselProps)
       <div className="text-center mb-8">
         <h2 className="text-3xl font-headline tracking-tight">{t('inspirations_title')}</h2>
         <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">{t('inspirations_subtitle')}</p>
-        <div className="mt-6 mb-12">
+        <div className="mt-4 mb-8">
             <CreatorSearch locale={locale} />
         </div>
       </div>
