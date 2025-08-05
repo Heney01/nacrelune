@@ -610,9 +610,9 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
             </div>
           </header>
-
-        <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-8 lg:pb-4">
-          <div className="container mx-auto flex-1 flex flex-col min-h-0">
+        
+        <main className="flex-grow flex flex-col min-h-0">
+          <div className="container mx-auto flex-1 flex flex-col min-h-0 p-4 md:p-0">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0">
               
               <div className="lg:col-span-3 flex-col min-h-0 hidden lg:flex">
@@ -659,7 +659,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   </div>
                   <div
                       ref={canvasWrapperRef}
-                      className="relative w-full flex-grow bg-card overflow-hidden touch-none border-2 border-dashed lg:pt-0"
+                      className="relative w-full flex-grow bg-card overflow-hidden touch-none border-2 border-dashed"
                       onMouseDown={handleCanvasClick}
                       onTouchStart={handleCanvasClick}
                   >
@@ -752,9 +752,9 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         </main>
 
          {isMobile && (
-             <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-2.5 z-20 space-y-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))]">
-                <div className="flex items-center gap-2.5">
-                    <Button onClick={handleFinalize} className="w-full flex-grow" disabled={hasStockIssues || placedCharms.length === 0}>
+             <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-2.5 z-20 space-y-2.5 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+                 <div className="flex items-center gap-2.5">
+                     <Button onClick={handleFinalize} className="w-full flex-grow" disabled={hasStockIssues || placedCharms.length === 0}>
                         <Check className="mr-2 h-4 w-4" />
                         {isEditing ? t('update_item_button') : t('finalize_button')}
                     </Button>
