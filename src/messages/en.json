@@ -126,13 +126,19 @@
     "buy_title": "Buy For Yourself",
     "buy_description": "Add this unique creation to your cart to purchase it.",
     "publish_title": "Publish Your Creation",
-    "publish_description": "Share your design with the community. Give it a name.",
+    "publish_description_new": "Publish your creation to share it with the community. Give it a name and inspire other jewelry enthusiasts!",
+    "publish_incentive_title": "Earn Reward Points!",
+    "publish_incentive_line1": "When another user purchases one of your published creations, you earn 5% of the sale amount in points.",
+    "publish_incentive_line2": "Use your points to get discounts on your future orders.",
+    "publish_incentive_line3": "10 points are equivalent to a €1 discount.",
     "publish_login_required_title": "Login Required",
     "publish_login_required_desc": "You must be logged in to publish a creation.",
     "publish_login_link": "Log in or sign up",
     "creation_name_label": "Creation Name",
     "creation_name_placeholder": "e.g., My Summer Necklace",
-    "publish_button": "Publish"
+    "publish_button": "Publish and Continue",
+    "skip_publish_button": "No thanks, just purchase",
+    "publish_success_message": "Your creation has been successfully published! You can now add it to your cart."
   },
   "Cart": {
     "title": "Your Cart",

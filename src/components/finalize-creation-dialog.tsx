@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { useTranslations } from '@/hooks/use-translations';
-import { Loader2, Check, Send, ShoppingCart, AlertCircle } from 'lucide-react';
+import { Loader2, Check, Send, ShoppingCart, AlertCircle, Award } from 'lucide-react';
 import Image from 'next/image';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import Link from 'next/link';
@@ -151,7 +151,7 @@ export function FinalizeCreationDialog({
                 <>
                 <DialogHeader>
                     <DialogTitle>{t('publish_title')}</DialogTitle>
-                    <DialogDescription>{t('publish_description')}</DialogDescription>
+                    <DialogDescription>{t('publish_description_new')}</DialogDescription>
                 </DialogHeader>
                 <div className="my-4 grid place-items-center">
                     <Image src={previewImage} alt={t('preview_alt')} width={300} height={300} className="rounded-lg border bg-muted/50 max-w-[75%] sm:max-w-full h-auto" />
@@ -169,9 +169,22 @@ export function FinalizeCreationDialog({
                         </AlertDescription>
                     </Alert>
                 ) : (
-                    <div className="space-y-2">
-                        <Label htmlFor="creationName">{t('creation_name_label')}</Label>
-                        <Input id="creationName" value={creationName} onChange={(e) => setCreationName(e.target.value)} placeholder={t('creation_name_placeholder')} />
+                    <div className="space-y-4">
+                        <Alert className="border-primary/50 text-primary-foreground bg-primary/10">
+                            <Award className="h-4 w-4 !text-primary" />
+                            <AlertTitle className="text-primary font-bold">{t('publish_incentive_title')}</AlertTitle>
+                            <AlertDescription className="!text-primary/90 text-xs">
+                                <ul className="list-disc pl-4 mt-2 space-y-1">
+                                    <li>{t('publish_incentive_line1')}</li>
+                                    <li>{t('publish_incentive_line2')}</li>
+                                    <li>{t('publish_incentive_line3')}</li>
+                                </ul>
+                            </AlertDescription>
+                        </Alert>
+                         <div className="space-y-2">
+                            <Label htmlFor="creationName">{t('creation_name_label')}</Label>
+                            <Input id="creationName" value={creationName} onChange={(e) => setCreationName(e.target.value)} placeholder={t('creation_name_placeholder')} />
+                        </div>
                     </div>
                 )}
                  <DialogFooter className="flex-col gap-2 mt-4">
@@ -183,7 +196,7 @@ export function FinalizeCreationDialog({
                         </Button>
                      )}
                      <Button variant="ghost" onClick={handleSkipToPurchase} className="w-full text-sm">
-                        Non merci, juste acheter
+                        {t('skip_publish_button')}
                     </Button>
                 </DialogFooter>
                 </>
@@ -195,7 +208,7 @@ export function FinalizeCreationDialog({
                 <>
                 <DialogHeader>
                     <DialogTitle>{isEditing ? t('confirm_update_title') : t('buy_title')}</DialogTitle>
-                    {wasPublished && <DialogDescription>Votre création a été publiée avec succès ! Vous pouvez maintenant l'ajouter à votre panier.</DialogDescription>}
+                    {wasPublished && <DialogDescription>{t('publish_success_message')}</DialogDescription>}
                 </DialogHeader>
                 <div className="my-4 grid place-items-center">
                     <Image src={previewImage} alt={t('preview_alt')} width={300} height={300} className="rounded-lg border bg-muted/50 max-w-[75%] sm:max-w-full h-auto" />
@@ -206,7 +219,7 @@ export function FinalizeCreationDialog({
                         {isEditing ? t('update_item_button') : t('add_to_cart_button')}
                     </Button>
                     <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full">
-                        Fermer
+                        {t('close_button')}
                     </Button>
                 </DialogFooter>
                 </>
@@ -222,3 +235,4 @@ export function FinalizeCreationDialog({
         </Dialog>
     );
 }
+

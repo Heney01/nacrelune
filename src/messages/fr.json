@@ -123,13 +123,19 @@
     "buy_title": "Acheter pour vous",
     "buy_description": "Ajoutez cette création unique à votre panier pour l'acquérir.",
     "publish_title": "Publier votre création",
-    "publish_description": "Partagez votre design avec la communauté. Donnez-lui un nom.",
+    "publish_description_new": "Publiez votre création pour la partager avec la communauté. Donnez-lui un nom et inspirez d'autres passionnés de bijoux !",
+    "publish_incentive_title": "Gagnez des points récompense !",
+    "publish_incentive_line1": "Lorsqu'un autre utilisateur achète l'une de vos créations publiées, vous gagnez 5% du montant de la vente en points.",
+    "publish_incentive_line2": "Utilisez vos points pour obtenir des réductions sur vos prochaines commandes.",
+    "publish_incentive_line3": "10 points équivalent à 1€ de réduction.",
     "publish_login_required_title": "Connexion requise",
     "publish_login_required_desc": "Vous devez être connecté pour publier une création.",
     "publish_login_link": "Connectez-vous ou inscrivez-vous",
     "creation_name_label": "Nom de la création",
     "creation_name_placeholder": "ex: Mon Collier d'Été",
-    "publish_button": "Publier"
+    "publish_button": "Publier et Continuer",
+    "skip_publish_button": "Non merci, juste acheter",
+    "publish_success_message": "Votre création a été publiée avec succès ! Vous pouvez maintenant l'ajouter à votre panier."
   },
   "Cart": {
     "title": "Votre Panier",
