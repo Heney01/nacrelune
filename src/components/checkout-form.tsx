@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, AlertCircle, ArrowLeft, Home, Store, Search, CheckCircle, TicketPercent, Award } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
-import { createOrder, createPaymentIntent, validateCoupon } from '@/app/actions/order.actions';
+import { createOrder, createPaymentIntent, validateCoupon, sendConfirmationEmail } from '@/app/actions/order.actions';
 import type { CreateOrderResult, SerializableCartItem } from '@/app/actions/order.actions';
 import { useParams } from 'next/navigation';
 import { StockErrorState } from './checkout-dialog';
@@ -140,6 +140,9 @@ const PaymentStep = ({
     setIsProcessing(true);
     setErrorMessage(null);
     const orderResult = await handleCreateOrder('free_order');
+    if (orderResult.success && orderResult.orderId) {
+        await sendConfirmationEmail(orderResult.orderId, locale);
+    }
     onOrderCreated(orderResult);
     setIsProcessing(false);
   }
@@ -188,14 +191,11 @@ const PaymentStep = ({
         return;
     }
     
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com';
-
     // 4. Confirm the payment
     const { error: paymentError } = await stripe.confirmPayment({
       elements,
       clientSecret,
       confirmParams: {
-        return_url: `${baseUrl}/${locale}/orders/track?orderNumber=${orderResult.orderNumber}`,
         receipt_email: email,
       },
       redirect: 'if_required', 
@@ -213,7 +213,9 @@ const PaymentStep = ({
     }
     
     // If no redirect was required, the payment is successful.
-    // The redirect logic in onOrderCreated will handle displaying the success dialog.
+    if (orderResult.success && orderResult.orderId) {
+        await sendConfirmationEmail(orderResult.orderId, locale);
+    }
     onOrderCreated(orderResult);
     setIsProcessing(false);
   };
