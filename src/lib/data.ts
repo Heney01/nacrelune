@@ -421,6 +421,24 @@ export async function getRecentCreations(): Promise<Creation[]> {
     }
 }
 
+export async function getAllCreations(): Promise<Creation[]> {
+    try {
+        const [creationsSnapshot, allCharms] = await Promise.all([
+            getDocs(query(collection(db, 'creations'), orderBy('createdAt', 'desc'))),
+            getCharms()
+        ]);
+        
+        if (creationsSnapshot.empty) {
+            return [];
+        }
+        
+        return await hydrateCreations(creationsSnapshot.docs, allCharms);
+    } catch (error) {
+        console.error("Error fetching all creations:", error);
+        return [];
+    }
+}
+
 
 export async function getCreatorShowcaseData(creatorId: string): Promise<{ creator: User | null, creations: Creation[] }> {
     try {

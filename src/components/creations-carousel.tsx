@@ -15,6 +15,8 @@ import { useTranslations } from '@/hooks/use-translations';
 import { CreationCard } from './creation-card';
 import Autoplay from "embla-carousel-autoplay"
 import { CreatorSearch } from './creator-search';
+import { Button } from './ui/button';
+import Link from 'next/link';
 
 
 interface CreationsCarouselProps {
@@ -30,10 +32,10 @@ export function CreationsCarousel({ creations, locale }: CreationsCarouselProps)
 
   return (
     <section>
-      <div className="text-center mb-8">
+      <div className="text-center mb-4">
         <h2 className="text-3xl font-headline tracking-tight">{t('inspirations_title')}</h2>
         <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">{t('inspirations_subtitle')}</p>
-        <div className="mt-4 mb-8">
+        <div className="mt-4">
             <CreatorSearch locale={locale} />
         </div>
       </div>
@@ -60,6 +62,13 @@ export function CreationsCarousel({ creations, locale }: CreationsCarouselProps)
         <CarouselPrevious />
         <CarouselNext />
       </Carousel>
+      <div className="text-center mt-8">
+        <Button asChild variant="outline">
+          <Link href={`/${locale}/creations`}>
+            Voir plus de créations
+          </Link>
+        </Button>
+      </div>
     </section>
   );
 }
