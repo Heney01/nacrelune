@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { saveCreation } from '@/app/actions/creation.actions';
 import { JewelryModel, PlacedCreationCharm, JewelryType } from '@/lib/types';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 
 interface FinalizeCreationDialogProps {
     isOpen: boolean;
@@ -170,17 +171,23 @@ export function FinalizeCreationDialog({
                     </Alert>
                 ) : (
                     <div className="space-y-4">
-                        <Alert className="border-primary/50 text-primary-foreground bg-primary/10">
-                            <Award className="h-4 w-4 !text-primary" />
-                            <AlertTitle className="text-primary font-bold">{t('publish_incentive_title')}</AlertTitle>
-                            <AlertDescription className="!text-primary/90 text-xs">
-                                <ul className="list-disc pl-4 mt-2 space-y-1">
-                                    <li>{t('publish_incentive_line1')}</li>
-                                    <li>{t('publish_incentive_line2')}</li>
-                                    <li>{t('publish_incentive_line3')}</li>
-                                </ul>
-                            </AlertDescription>
-                        </Alert>
+                        <Accordion type="single" collapsible>
+                            <AccordionItem value="item-1">
+                                <AccordionTrigger className="text-sm font-semibold text-primary hover:no-underline">
+                                    <div className="flex items-center gap-2">
+                                         <Award className="h-4 w-4"/>
+                                        {t('publish_incentive_title')}
+                                    </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                    <ul className="list-disc pl-5 mt-2 space-y-1 text-xs text-muted-foreground">
+                                        <li>{t('publish_incentive_line1')}</li>
+                                        <li>{t('publish_incentive_line2')}</li>
+                                        <li>{t('publish_incentive_line3')}</li>
+                                    </ul>
+                                </AccordionContent>
+                            </AccordionItem>
+                        </Accordion>
                          <div className="space-y-2">
                             <Label htmlFor="creationName">{t('creation_name_label')}</Label>
                             <Input id="creationName" value={creationName} onChange={(e) => setCreationName(e.target.value)} placeholder={t('creation_name_placeholder')} />
@@ -235,4 +242,3 @@ export function FinalizeCreationDialog({
         </Dialog>
     );
 }
-
