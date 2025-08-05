@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { useTranslations } from '@/hooks/use-translations';
-import { Loader2, Camera, Copy } from 'lucide-react';
+import { Loader2, Camera, Copy, Share2 } from 'lucide-react';
 import Image from 'next/image';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
@@ -24,7 +24,7 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
     const t = useTranslations('Editor');
     const { toast } = useToast();
     const polaroidRef = useRef<HTMLDivElement>(null);
-    const [isSharing, setIsSharing] = useState(false);
+    const [isCapturing, setIsCapturing] = useState(false);
     const [shareUrl, setShareUrl] = useState('');
 
     useEffect(() => {
@@ -34,9 +34,9 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
     }, [locale, creation]);
 
 
-    const handleShare = async () => {
+    const handleDownloadPolaroid = async () => {
         if (!polaroidRef.current) return;
-        setIsSharing(true);
+        setIsCapturing(true);
         try {
             const canvas = await html2canvas(polaroidRef.current, { 
                 useCORS: true, 
@@ -44,42 +44,17 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
                 backgroundColor: '#ffffff'
             });
 
-            // For mobile and supported browsers, use Web Share API
-            if (navigator.share) {
-                const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
-                if (!blob) {
-                    throw new Error("Impossible de générer l'image de partage.");
-                }
-                const file = new File([blob], `${creation.name.replace(/ /g, '_')}.png`, { type: 'image/png' });
-                const shareData: ShareData = {
-                    title: creation.name || t('share_default_title'),
-                    text: t('share_default_text'),
-                    url: shareUrl,
-                    files: [file],
-                };
-
-                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share(shareData);
-                } else {
-                     await navigator.share({ title: shareData.title, text: shareData.text, url: shareData.url });
-                }
-
-            } else {
-                // For desktop browsers, trigger a download
-                const dataUrl = canvas.toDataURL('image/png');
-                const link = document.createElement('a');
-                link.href = dataUrl;
-                link.download = `${creation.name.replace(/ /g, '_')}.png`;
-                link.click();
-            }
+            const dataUrl = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = `${creation.name.replace(/ /g, '_')}.png`;
+            link.click();
 
         } catch (error: any) {
-            if (error.name !== 'AbortError') { // User cancellation is not an error
-                console.error("Share error:", error);
-                toast({ variant: "destructive", title: "Erreur de partage", description: error.message || t('share_error_generic') });
-            }
+             console.error("Capture error:", error);
+             toast({ variant: "destructive", title: "Erreur de capture", description: error.message || t('share_error_generic') });
         } finally {
-            setIsSharing(false);
+            setIsCapturing(false);
         }
     };
     
@@ -89,6 +64,29 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
             description: "Lien copié dans le presse-papiers !",
         });
     };
+
+    const handleShareLink = async () => {
+        const shareData = {
+            title: creation.name || t('share_default_title'),
+            text: t('share_default_text'),
+            url: shareUrl,
+        };
+
+        try {
+             if (navigator.share) {
+                await navigator.share(shareData);
+            } else {
+                 handleCopyLink();
+                 toast({ description: "La fonction de partage n'est pas supportée. Le lien a été copié." });
+            }
+        } catch (error: any) {
+             if (error.name !== 'AbortError') {
+                console.error("Share error:", error);
+                handleCopyLink();
+                toast({ description: "Une erreur est survenue, le lien a été copié à la place." });
+            }
+        }
+    }
 
     const creatorDisplayName = creation.creator?.displayName || 'un créateur anonyme';
 
@@ -127,12 +125,15 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
                         <Button variant="outline" size="icon" onClick={handleCopyLink}>
                             <Copy className="h-4 w-4" />
                         </Button>
+                         <Button variant="outline" size="icon" onClick={handleShareLink}>
+                            <Share2 className="h-4 w-4" />
+                        </Button>
                     </div>
                 </div>
 
                 <DialogFooter>
-                    <Button onClick={handleShare} className="w-full" disabled={isSharing}>
-                        {isSharing ? <Loader2 className="animate-spin mr-2" /> : <Camera className="mr-2 h-4 w-4" />}
+                    <Button onClick={handleDownloadPolaroid} className="w-full" disabled={isCapturing}>
+                        {isCapturing ? <Loader2 className="animate-spin mr-2" /> : <Camera className="mr-2 h-4 w-4" />}
                         {t('share_polaroid_button')}
                     </Button>
                 </DialogFooter>
@@ -140,4 +141,3 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
         </Dialog>
     );
 }
-
