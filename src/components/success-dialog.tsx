@@ -66,7 +66,7 @@ export function SuccessDialog({ isOpen, onOpenChange, orderNumber, email }: Succ
                 <Link href={`/${locale}/orders/track?orderNumber=${orderNumber}`}>{tHome('track_order_link')}</Link>
            </Button>
           <Button type="button" onClick={() => handleOpenChange(false)}>
-            {t('success_close_button')}
+            Continuer mes achats
           </Button>
         </DialogFooter>
       </DialogContent>

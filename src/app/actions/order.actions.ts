@@ -1,5 +1,6 @@
 
 
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -9,6 +10,8 @@ import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import type { JewelryModel, PlacedCharm, OrderStatus, Order, OrderItem, ShippingAddress, DeliveryMethod, MailLog, Coupon, User } from '@/lib/types';
 import { toDate } from '@/lib/data';
 import Stripe from 'stripe';
+import { headers } from 'next/headers';
+
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -332,7 +335,11 @@ export async function sendConfirmationEmail(orderId: string, locale: string): Pr
         const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@atelierabijoux.com';
         const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${supportEmail} en précisant votre numéro de commande (${orderNumber}).`;
         const emailFooterHtml = `<p style="font-size:12px;color:#666;">Pour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à <a href="mailto:${supportEmail}">${supportEmail}</a> en précisant votre numéro de commande (${orderNumber}).</p>`;
-        const trackingUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com'}/${locale}/orders/track?orderNumber=${orderNumber}`;
+        
+        const referer = headers().get('referer');
+        const baseUrl = referer ? new URL(referer).origin : (process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com');
+        const trackingUrl = `${baseUrl}/${locale}/orders/track?orderNumber=${orderNumber}`;
+
         const mailText = `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.modelName} avec ${item.charmIds?.length || 0} breloque(s)`).join('\\n')}\n\nVous pouvez suivre votre commande ici : ${trackingUrl}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
         const mailHtml = `<h1>Merci pour votre commande !</h1><p>Bonjour,</p><p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${totalPrice.toFixed(2)}€.</p><h2>Récapitulatif :</h2><ul>${cartItems.map(item => `<li>${item.modelName} avec ${item.charmIds?.length || 0} breloque(s)</li>`).join('')}</ul><p>Vous pouvez suivre l'avancement de votre commande en cliquant sur ce lien : <a href="${trackingUrl}">${trackingUrl}</a>.</p><p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
         
@@ -479,8 +486,9 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
                 createdAt: (data.createdAt as Timestamp).toDate().toLocaleDateString(locale),
             };
         });
-
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com';
+        
+        const referer = headers().get('referer');
+        const baseUrl = referer ? new URL(referer).origin : (process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com');
         const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@atelierabijoux.com';
         
         const emailFooterText = `\n\nPour toute question, vous pouvez répondre directement à cet e-mail ou contacter notre support à ${supportEmail}.`;
@@ -835,6 +843,7 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
         return { success: false, message: "Une erreur est survenue lors de la validation du code." };
     }
 }
+
 
 
 

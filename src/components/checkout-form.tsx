@@ -12,13 +12,13 @@ import { Label } from '@/components/ui/label';
 import { Loader2, AlertCircle, ArrowLeft, Home, Store, Search, CheckCircle, TicketPercent, Award } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
-import { createOrder, createPaymentIntent, validateCoupon, sendConfirmationEmail } from '@/app/actions/order.actions';
+import { createPaymentIntent } from '@/app/actions/order.actions';
 import type { CreateOrderResult, SerializableCartItem } from '@/app/actions/order.actions';
 import { useParams } from 'next/navigation';
 import { StockErrorState } from './checkout-dialog';
 import type { ShippingAddress, DeliveryMethod, PickupPoint, Coupon, User } from '@/lib/types';
 import { Progress } from './ui/progress';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
+import { Tabs, TabsList, TabsContent } from './ui/tabs';
 import { findPickupPoints, FindPickupPointsResult } from '@/lib/pickup-points';
 import { ScrollArea } from './ui/scroll-area';
 import { Card } from './ui/card';
@@ -28,6 +28,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { Separator } from './ui/separator';
 import { Slider } from './ui/slider';
 import { Skeleton } from './ui/skeleton';
+import { createOrder, validateCoupon, sendConfirmationEmail } from '@/app/actions/order.actions';
+
 
 const PaymentStep = ({
   onOrderCreated,
@@ -172,38 +174,25 @@ const PaymentStep = ({
       return;
     }
 
-    const { clientSecret, error: intentError } = await createPaymentIntent(finalTotal, email);
-
-    if (intentError || !clientSecret) {
-        setErrorMessage(intentError || t('payment_intent_error'));
-        setIsProcessing(false);
-        return;
-    }
-
-    const { error: paymentError, paymentIntent } = await stripe.confirmPayment({
+    // This URL will be used by Stripe to redirect the user after payment.
+    const returnUrl = `${window.location.origin}/${locale}/orders/confirmation`;
+    
+    const { error: paymentError } = await stripe.confirmPayment({
       elements,
-      clientSecret,
       confirmParams: {
+        return_url: returnUrl,
         receipt_email: email,
       },
-      redirect: 'if_required', 
     });
 
     if (paymentError) {
+      // This point will only be reached if there is an immediate error when
+      // confirming the payment. Otherwise, your customer will be redirected to
+      // your `return_url`.
       setErrorMessage(paymentError.message || t('payment_error_default'));
       setIsProcessing(false);
-      return;
     }
-
-    if (paymentIntent && paymentIntent.status === 'succeeded') {
-        const orderResult = await handleCreateOrderAndEmail(paymentIntent.id);
-        onOrderCreated(orderResult);
-    } else {
-        // Handle cases where redirect happened or payment is pending
-        setErrorMessage("Le paiement est en attente de confirmation. Vous serez notifié par e-mail.");
-    }
-    
-    setIsProcessing(false);
+    // The user is redirected at this point, so no further client-side code will execute.
   };
 
   const isStripeLoading = !stripe || !elements;
