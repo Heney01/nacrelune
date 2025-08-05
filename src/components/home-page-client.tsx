@@ -18,6 +18,7 @@ import { UserNav } from './user-nav';
 import { CreationsCarousel } from './creations-carousel';
 import { Separator } from './ui/separator';
 import { CreatorSearch } from './creator-search';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, charmCategories, recentCreations, locale }: {
     searchParams: { [key:string]: string | string[] | undefined };
@@ -28,6 +29,7 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
     locale: string;
 }) {
     const t = useTranslations('HomePage');
+    const isMobile = useIsMobile();
     
     const jewelryTypes = initialJewelryTypes.map(jt => {
         if (jt.id === 'necklace') return { ...jt, name: t('jewelry_types.necklace'), description: t('jewelry_types.necklace_description'), icon: Gem };
@@ -49,20 +51,39 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
     return (
       <div className="min-h-screen flex flex-col bg-stone-50">
          <header className="p-4 border-b bg-white">
-          <div className="container mx-auto flex justify-between items-center">
-            <Link href={`/${locale}`} className="flex items-center gap-2">
-              <BrandLogo className="h-8 w-auto text-foreground" />
-            </Link>
-            <div className="flex items-center gap-2">
-                <Button asChild variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
-                    <Link href={`/${locale}/orders/track`}>
-                        <Truck className="h-4 w-4 sm:h-5 sm:w-5" />
-                        <span className="sr-only">{t('track_order_link')}</span>
-                    </Link>
-                </Button>
-              <CartWidget />
-              <div className="ml-2">
-                <UserNav locale={locale} />
+          <div className="container mx-auto">
+            <div className="flex justify-between items-center">
+              <div className="flex flex-col items-start">
+                  <Link href={`/${locale}`} className="flex items-center gap-2">
+                    <BrandLogo className="h-8 w-auto text-foreground" />
+                  </Link>
+                  {isMobile && (
+                    <div className="flex items-center gap-1 -ml-2 mt-1">
+                      <Button asChild variant="ghost" size="icon" className="h-7 w-7">
+                        <Link href={`/${locale}/orders/track`}>
+                          <Truck className="h-4 w-4" />
+                          <span className="sr-only">{t('track_order_link')}</span>
+                        </Link>
+                      </Button>
+                      <CartWidget />
+                    </div>
+                  )}
+              </div>
+              <div className="flex items-center gap-2">
+                {!isMobile && (
+                   <>
+                    <Button asChild variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
+                        <Link href={`/${locale}/orders/track`}>
+                            <Truck className="h-4 w-4 sm:h-5 sm:w-5" />
+                            <span className="sr-only">{t('track_order_link')}</span>
+                        </Link>
+                    </Button>
+                    <CartWidget />
+                   </>
+                )}
+                <div className="ml-2">
+                  <UserNav locale={locale} />
+                </div>
               </div>
             </div>
           </div>
@@ -81,7 +102,7 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
                 
                 {recentCreations.length > 0 && (
                   <>
-                    <Separator className="my-8" />
+                    <Separator className="my-8 md:my-4" />
                     <CreationsCarousel creations={recentCreations} locale={locale} />
                   </>
                 )}
