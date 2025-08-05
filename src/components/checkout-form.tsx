@@ -198,7 +198,7 @@ const PaymentStep = ({
         return_url: `${baseUrl}/${locale}/orders/track?orderNumber=${orderResult.orderNumber}`,
         receipt_email: email,
       },
-      // redirect: 'if_required', // We want to redirect to the bank page
+      redirect: 'if_required', 
     });
 
     if (paymentError) {
@@ -212,9 +212,10 @@ const PaymentStep = ({
       return;
     }
     
-    // If we get here, it means we are redirecting to the bank. 
-    // The onOrderCreated callback will be handled by the return_url page logic.
-    // The button will show a spinner until the redirect happens.
+    // If no redirect was required, the payment is successful.
+    // The redirect logic in onOrderCreated will handle displaying the success dialog.
+    onOrderCreated(orderResult);
+    setIsProcessing(false);
   };
 
   const isStripeLoading = !stripe || !elements;
