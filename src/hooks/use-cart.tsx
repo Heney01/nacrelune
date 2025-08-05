@@ -1,8 +1,9 @@
 
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import type { CartItem } from '@/lib/types';
+import type { CartItem, User } from '@/lib/types';
 
 // A simple hook to interface with local storage
 function useLocalStorage<T>(key: string, initialValue: T) {

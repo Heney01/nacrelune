@@ -2,7 +2,7 @@
 'use server';
 
 /**
- * @fileOverview An AI agent to generate a title and description for a jewelry creation from a photo.
+ * @fileOverview An AI agent to generate a title for a jewelry creation from a photo.
  *
  * - generateShareContent: A function that handles the content generation process.
  * - GenerateShareContentInput: The input type for the generateShareContent function.
@@ -25,7 +25,6 @@ export type GenerateShareContentInput = z.infer<typeof GenerateShareContentInput
 
 const GenerateShareContentOutputSchema = z.object({
   title: z.string().describe('A short, catchy, and creative title for the jewelry creation (max 5 words).'),
-  description: z.string().describe('A short, appealing description for social media (1-2 sentences).'),
 });
 export type GenerateShareContentOutput = z.infer<typeof GenerateShareContentOutputSchema>;
 
@@ -36,7 +35,7 @@ const contentPrompt = ai.definePrompt({
   output: { schema: GenerateShareContentOutputSchema },
   model: googleAI.model('gemini-1.5-pro'),
   prompt: `You are a creative marketing expert for a custom jewelry workshop.
-Your task is to generate a catchy title and a short description for a user's creation, based on a photo.
+Your task is to generate a catchy title for a user's creation, based on a photo.
 This content will be used for sharing on social media.
 Your response MUST be written in the following language: {{{locale}}}.
 
@@ -45,7 +44,6 @@ Here is the photo of the user's creation:
 
 Your task:
 1.  Generate a creative and evocative title (maximum 5 words).
-2.  Generate a short and appealing description (1-2 sentences) that tells a little story about the piece.
 `,
 });
 

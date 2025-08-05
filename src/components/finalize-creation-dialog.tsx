@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -18,7 +19,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { saveCreation } from '@/app/actions/creation.actions';
-import { JewelryModel, PlacedCharm, JewelryType } from '@/lib/types';
+import { JewelryModel, PlacedCreationCharm, JewelryType } from '@/lib/types';
 
 interface FinalizeCreationDialogProps {
     isOpen: boolean;
@@ -26,7 +27,7 @@ interface FinalizeCreationDialogProps {
     getCanvasDataUri: () => Promise<string>;
     onConfirmAddToCart: (previewImage: string) => void;
     isEditing: boolean;
-    placedCharms: PlacedCharm[];
+    placedCharms: PlacedCreationCharm[];
     jewelryType: Omit<JewelryType, 'models' | 'icon'>;
     model: JewelryModel;
     locale: string;
@@ -50,7 +51,6 @@ export function FinalizeCreationDialog({
 
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [creationName, setCreationName] = useState('');
-    const [creationDescription, setDescription] = useState('');
     const [isPublishing, setIsPublishing] = useState(false);
     const [isLoadingPreview, setIsLoadingPreview] = useState(true);
 
@@ -90,7 +90,7 @@ export function FinalizeCreationDialog({
             jewelryTypeId: jewelryType.id,
             modelId: model.id,
             placedCharms: placedCharms.map(pc => ({
-                charmId: pc.charm.id,
+                charmId: pc.charmId,
                 position: pc.position,
                 rotation: pc.rotation
             })),
@@ -102,7 +102,6 @@ export function FinalizeCreationDialog({
             const result = await saveCreation(
                 idToken,
                 creationName,
-                creationDescription,
                 JSON.stringify(creationPayload)
             );
 
@@ -182,10 +181,6 @@ export function FinalizeCreationDialog({
                                     <div className="space-y-2">
                                         <Label htmlFor="creationName">{t('creation_name_label')}</Label>
                                         <Input id="creationName" value={creationName} onChange={(e) => setCreationName(e.target.value)} placeholder={t('creation_name_placeholder')} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="creationDescription">{t('creation_description_label')}</Label>
-                                        <Textarea id="creationDescription" value={creationDescription} onChange={(e) => setDescription(e.target.value)} placeholder={t('creation_description_placeholder')} />
                                     </div>
                                 </CardContent>
                                 <CardFooter>

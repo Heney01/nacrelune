@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -15,7 +16,7 @@ import { createOrder, createPaymentIntent, validateCoupon } from '@/app/actions/
 import type { CreateOrderResult, SerializableCartItem } from '@/app/actions/order.actions';
 import { useParams } from 'next/navigation';
 import { StockErrorState } from './checkout-dialog';
-import type { ShippingAddress, DeliveryMethod, PickupPoint, Coupon } from '@/lib/types';
+import type { ShippingAddress, DeliveryMethod, PickupPoint, Coupon, User } from '@/lib/types';
 import { Progress } from './ui/progress';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 import { findPickupPoints, FindPickupPointsResult } from '@/lib/pickup-points';
@@ -106,8 +107,7 @@ const PaymentStep = ({
       jewelryType: { id: item.jewelryType.id, name: item.jewelryType.name, description: item.jewelryType.description },
       placedCharms: item.placedCharms,
       previewImage: item.previewImage,
-      creatorId: item.creatorId,
-      creatorName: item.creatorName,
+      creator: item.creator,
       creationId: item.creationId,
     }));
 
@@ -187,12 +187,14 @@ const PaymentStep = ({
         return;
     }
     
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com';
+
     // 4. Confirm the payment
     const { error: paymentError } = await stripe.confirmPayment({
       elements,
       clientSecret,
       confirmParams: {
-        return_url: `${window.location.origin}/${locale}/orders/track?orderNumber=${orderResult.orderNumber}`,
+        return_url: `${baseUrl}/${locale}/orders/track?orderNumber=${orderResult.orderNumber}`,
         receipt_email: email,
       },
       // redirect: 'if_required', // We want to redirect to the bank page

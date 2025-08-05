@@ -8,6 +8,7 @@ export interface User {
   displayName: string | null;
   photoURL?: string | null;
   rewardPoints?: number;
+  searchableTerms?: string[];
 }
 
 export interface CharmCategory {
@@ -18,7 +19,7 @@ export interface CharmCategory {
 }
 
 export interface Charm {
-  id: string;
+  id:string;
   name: string;
   imageUrl: string;
   description: string;
@@ -38,8 +39,6 @@ export interface CreationCharm {
   id: string;
   name: string;
   imageUrl: string;
-  description: string;
-  categoryIds: string[];
   price?: number;
   width?: number; // in mm
   height?: number; // in mm
@@ -81,8 +80,7 @@ export interface PlacedCharm {
 
 // PlacedCharm as stored within a Creation document
 export interface PlacedCreationCharm {
-  id: string;
-  charm: CreationCharm;
+  charmId: string;
    // Position is normalized relative to the model image's dimensions.
   // (0,0) is top-left, (1,1) is bottom-right.
   position: { x: number; y: number };
@@ -98,8 +96,7 @@ export interface CartItem {
     previewImage: string; // URL to a generated preview of the final design
     // For creations bought from other users
     creationId?: string;
-    creatorId?: string;
-    creatorName?: string;
+    creator?: User;
 }
 
 export interface GeneralPreferences {
@@ -124,7 +121,6 @@ export interface OrderItem {
     // For creations bought from other users
     creationId?: string;
     creatorId?: string;
-    creatorName?: string;
 }
 
 export interface MailDelivery {
@@ -190,8 +186,7 @@ export interface Coupon {
     code: string;
     discountType: 'percentage' | 'fixed';
     value: number;
-    isActive: boolean;
-    validUntil?: Date;
+    expiresAt?: Date;
     minPurchase?: number;
 }
 
@@ -200,9 +195,7 @@ export interface Coupon {
 export interface Creation {
     id: string;
     creatorId: string;
-    creatorName: string;
     name: string;
-    description: string;
     jewelryTypeId: string;
     modelId: string;
     placedCharms: PlacedCreationCharm[];
@@ -210,4 +203,8 @@ export interface Creation {
     createdAt: Date;
     salesCount: number;
     likesCount: number;
+    // Optional: Populated at runtime
+    creator?: User;
+    // Optional: Populated at runtime after hydrating with full charm details
+    hydratedCharms?: PlacedCharm[];
 }

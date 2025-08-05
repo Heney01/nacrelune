@@ -2,7 +2,7 @@
 {
   "HomePage": {
     "title": "Begin Your Creation",
-    "subtitle": "Choose a jewelry type to start designing. Each piece is a canvas for your story, waiting to be adorned with charms that speak to you.",
+    "subtitle": "Choose a jewelry type to start designing.",
     "jewelry_types": {
       "necklace": "Necklaces",
       "necklace_description": "Graceful chains and pendants.",
@@ -28,7 +28,14 @@
     "wip_title": "Project Under Construction",
     "wip_description": "Welcome! This project is currently under development. New features and jewelry models will be added soon.",
     "profile_menu_button": "Profile menu",
-    "welcome_message": "Welcome, {name}!"
+    "welcome_message": "Welcome, {name}!",
+    "inspirations_title": "The Latest Creations",
+    "inspirations_subtitle": "Get inspired by the community.",
+    "use_as_template": "Customize",
+    "creator_search_title": "Search for a Creator",
+    "creator_search_subtitle": "Find and explore the galleries of your favorite creators.",
+    "creator_search_placeholder": "Enter a creator's name...",
+    "no_creators_found": "No creators found."
   },
   "Auth": {
     "login_button": "Login",
@@ -60,7 +67,7 @@
     "reward_points_close_button": "Got it",
     "edit_creation_button": "Edit",
     "edit_creation_title": "Edit Creation",
-    "edit_creation_description": "Update the name and description of your creation.",
+    "edit_creation_description": "Update the name of your creation.",
     "save_changes_button": "Save Changes",
     "edit_creation_success_title": "Success",
     "edit_creation_error_title": "Error"
@@ -100,8 +107,6 @@
     "share_creation_description": "Give your creation a name and share it!",
     "share_title_label": "Title of your creation",
     "share_title_placeholder": "e.g., My summer necklace",
-    "share_description_label": "Description (optional)",
-    "share_description_placeholder": "e.g., A creation that reminds me of holidays...",
     "share_error_image": "Could not load the image of your creation.",
     "share_not_supported": "Sharing is not supported by this browser.",
     "share_error_generic": "An error occurred while sharing.",
@@ -120,14 +125,12 @@
     "buy_title": "Buy For Yourself",
     "buy_description": "Add this unique creation to your cart to purchase it.",
     "publish_title": "Publish Your Creation",
-    "publish_description": "Share your design with the community. Give it a name and a description.",
+    "publish_description": "Share your design with the community. Give it a name.",
     "publish_login_required_title": "Login Required",
     "publish_login_required_desc": "You must be logged in to publish a creation.",
     "publish_login_link": "Log in or sign up",
     "creation_name_label": "Creation Name",
     "creation_name_placeholder": "e.g., My Summer Necklace",
-    "creation_description_label": "Description (optional)",
-    "creation_description_placeholder": "Tell the story behind your design...",
     "publish_button": "Publish"
   },
   "Cart": {
@@ -144,7 +147,7 @@
     "view_charms_action": "View Charms ({count})",
     "preview_title": "Preview of {modelName}",
     "preview_description": "Here is a preview of your custom creation.",
-    "checkout_button": "Checkout",
+    "checkout_button": "Buy",
     "price": "{price, number, ::currency/USD}",
     "checkout_error_title": "Order Error",
     "sold_out": "Sold Out",
@@ -309,5 +312,3 @@
     "reward_email_cta": "See my points"
   }
 }
-
-    

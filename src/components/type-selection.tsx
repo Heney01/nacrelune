@@ -4,11 +4,20 @@
 import Link from 'next/link';
 import type { JewelryType } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useTranslations } from '@/hooks/use-translations';
 import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
+import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+  type CarouselApi,
+} from "@/components/ui/carousel"
 
 interface TypeSelectionProps {
     jewelryTypes: JewelryType[];
@@ -18,6 +27,23 @@ interface TypeSelectionProps {
 export function TypeSelection({ jewelryTypes, locale }: TypeSelectionProps) {
     const [loadingTypeId, setLoadingTypeId] = useState<string | null>(null);
     const t = useTranslations('HomePage');
+    const isMobile = useIsMobile();
+    const [api, setApi] = useState<CarouselApi>()
+    const [current, setCurrent] = useState(0)
+    const [count, setCount] = useState(0)
+
+    useEffect(() => {
+        if (!api) {
+          return
+        }
+    
+        setCount(api.scrollSnapList().length)
+        setCurrent(api.selectedScrollSnap())
+    
+        api.on("select", () => {
+          setCurrent(api.selectedScrollSnap())
+        })
+    }, [api])
 
     const renderCardContent = (type: JewelryType) => (
         <>
@@ -33,42 +59,83 @@ export function TypeSelection({ jewelryTypes, locale }: TypeSelectionProps) {
             </CardContent>
         </>
     );
+    
+    const TypeCard = ({ type }: { type: JewelryType }) => {
+        const isDisabled = type.models.length === 0;
+
+        if (isDisabled) {
+            return (
+                 <Card className="relative opacity-50 cursor-not-allowed h-full">
+                    {renderCardContent(type)}
+                </Card>
+            )
+        }
+
+        return (
+            <Link 
+                href={`/${locale}/?type=${type.id}`} 
+                className="contents"
+                onClick={() => setLoadingTypeId(type.id)}
+            >
+                <Card className="cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-transform duration-300 relative h-full">
+                    {loadingTypeId === type.id && (
+                        <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10 rounded-lg">
+                            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                        </div>
+                    )}
+                    {renderCardContent(type)}
+                </Card>
+            </Link>
+        );
+    }
 
     return (
         <section className="text-center">
             <h2 className="text-3xl font-headline tracking-tight mb-4">{t('title')}</h2>
             <p className="text-muted-foreground mb-12 max-w-2xl mx-auto">{t('subtitle')}</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {jewelryTypes.map((type) => {
-                    const isDisabled = type.models.length === 0;
-
-                    if (isDisabled) {
-                        return (
-                             <Card key={type.id} className="relative opacity-50 cursor-not-allowed">
-                                {renderCardContent(type)}
-                            </Card>
-                        )
-                    }
-
-                    return (
-                        <Link 
-                            key={type.id} 
-                            href={`/${locale}/?type=${type.id}`} 
-                            className="contents"
-                            onClick={() => setLoadingTypeId(type.id)}
-                        >
-                            <Card className="cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-transform duration-300 relative">
-                                {loadingTypeId === type.id && (
-                                    <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10 rounded-lg">
-                                        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                                    </div>
-                                )}
-                                {renderCardContent(type)}
-                            </Card>
-                        </Link>
-                    );
-                })}
-            </div>
+            
+            {isMobile ? (
+                 <div>
+                    <Carousel
+                        setApi={setApi}
+                        opts={{
+                        align: "start",
+                        }}
+                        className="w-full max-w-xs mx-auto"
+                    >
+                        <CarouselContent>
+                        {jewelryTypes.map((type, index) => (
+                            <CarouselItem key={index}>
+                            <div className="p-1 h-full">
+                                <TypeCard type={type} />
+                            </div>
+                            </CarouselItem>
+                        ))}
+                        </CarouselContent>
+                        <CarouselPrevious />
+                        <CarouselNext />
+                    </Carousel>
+                     <div className="py-2 flex justify-center gap-2 mt-4">
+                        {Array.from({ length: count }).map((_, index) => (
+                        <button
+                            key={index}
+                            onClick={() => api?.scrollTo(index)}
+                            className={cn(
+                            "h-2 w-2 rounded-full transition-colors",
+                            current === index ? "bg-primary" : "bg-muted-foreground/50"
+                            )}
+                            aria-label={`Aller à la diapositive ${index + 1}`}
+                        />
+                        ))}
+                    </div>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {jewelryTypes.map((type) => (
+                        <TypeCard key={type.id} type={type} />
+                    ))}
+                </div>
+            )}
         </section>
     );
 }

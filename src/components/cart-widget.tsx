@@ -19,8 +19,8 @@ export function CartWidget() {
 
   if (!hasMounted) {
     return (
-        <Button variant="ghost" size="icon" className="relative">
-            <ShoppingCart className="h-6 w-6" />
+        <Button variant="ghost" size="icon" className="relative h-7 w-7 sm:h-8 sm:w-8">
+            <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
             <span className="sr-only">Your Cart</span>
         </Button>
     );
@@ -28,8 +28,8 @@ export function CartWidget() {
 
   return (
     <CartSheet>
-        <Button variant="ghost" size="icon" className="relative">
-            <ShoppingCart className="h-6 w-6" />
+        <Button variant="ghost" size="icon" className="relative h-7 w-7 sm:h-8 sm:w-8">
+            <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
             {itemCount > 0 && (
                 <span className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center transform translate-x-1/4 -translate-y-1/4">
                     {itemCount}

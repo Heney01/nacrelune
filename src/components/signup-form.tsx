@@ -56,6 +56,8 @@ export function SignUpForm() {
   const router = useRouter();
   const locale = params.locale as string;
   const t = useTranslations('Auth');
+  const { toast } = useToast();
+
   const { signInWithGoogle, error: googleError, isGoogleLoading } = useGoogleAuth({
       onSuccess: async (user) => {
           const idToken = await user.getIdToken();
@@ -83,7 +85,7 @@ export function SignUpForm() {
           }
       }
   });
-  const { toast } = useToast();
+
 
   useEffect(() => {
     if (state.success) {
@@ -99,9 +101,6 @@ export function SignUpForm() {
   return (
     <Card>
       <CardHeader className="text-center">
-        <div className="mx-auto mb-4">
-            <BrandLogo className="h-10 w-auto" />
-        </div>
         <CardTitle className="text-2xl">{t('user_signup_title')}</CardTitle>
         <CardDescription>
            {t('user_signup_description')}
@@ -173,5 +172,3 @@ export function SignUpForm() {
     </Card>
   );
 }
-
-    

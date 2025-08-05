@@ -31,6 +31,7 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
     const t = useTranslations('CharmsPanel');
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const isMobile = useIsMobile();
+    const descriptionId = `charm-description-${charm.id}`;
 
     const handleCardClick = (e: React.MouseEvent) => {
         if (isMobile) {
@@ -83,6 +84,7 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
                         src={charm.imageUrl}
                         alt={charm.name}
                         fill
+                        sizes="(max-width: 768px) 20vw, 10vw"
                         className={cn("object-contain pointer-events-none p-2", isOutOfStock && "grayscale opacity-50")}
                         data-ai-hint="jewelry charm"
                     />
@@ -95,14 +97,14 @@ const CharmItem = ({ charm, onAddCharm }: { charm: Charm, onAddCharm: (charm: Ch
                 )}
             </Card>
 
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md" aria-describedby={descriptionId}>
                 <DialogHeader>
                     <DialogTitle className="font-headline text-2xl">{charm.name}</DialogTitle>
-                    <DialogDescription>{charm.description}</DialogDescription>
+                    <DialogDescription id={descriptionId}>{charm.description || " "}</DialogDescription>
                 </DialogHeader>
                 <div className="mt-4 flex justify-center">
                     <div className="w-[200px] h-[200px] relative">
-                         <Image src={charm.imageUrl} alt={charm.name} fill className="rounded-lg border p-2 object-contain" />
+                         <Image src={charm.imageUrl} alt={charm.name} fill className="rounded-lg border p-2 object-contain" sizes="200px" />
                     </div>
                 </div>
                     {isOutOfStock && (

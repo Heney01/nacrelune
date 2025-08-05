@@ -8,7 +8,7 @@ import { useCart } from '@/hooks/use-cart';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, ShoppingCart, PlusCircle, Loader2, Edit, Share2, User } from 'lucide-react';
+import { Trash2, ShoppingCart, PlusCircle, Loader2, User } from 'lucide-react';
 import React, { ReactNode, useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
@@ -123,7 +123,8 @@ export function CartSheet({ children, open, onOpenChange }: {
                 {cart.map((item) => {
                   const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
                   const editUrl = `/${locale}/?type=${item.jewelryType.id}&model=${item.model.id}&cartItemId=${item.id}`;
-                  const isCreatorItem = !!item.creatorId;
+                  const isCreatorItem = !!item.creator;
+                  const descriptionId = `item-description-${item.id}`;
 
                   return (
                     <Card key={item.id} className="overflow-hidden">
@@ -141,10 +142,10 @@ export function CartSheet({ children, open, onOpenChange }: {
                                   />
                                 </div>
                               </DialogTrigger>
-                              <DialogContent className="max-w-xl">
+                              <DialogContent className="max-w-xl" aria-describedby={descriptionId}>
                                 <DialogHeader>
                                   <DialogTitle>{t('preview_title', { modelName: item.model.name })}</DialogTitle>
-                                  <DialogDescription>
+                                  <DialogDescription id={descriptionId}>
                                     {t('preview_description')}
                                   </DialogDescription>
                                 </DialogHeader>
@@ -164,10 +165,10 @@ export function CartSheet({ children, open, onOpenChange }: {
                               <p className="text-sm text-muted-foreground">
                                 {item.jewelryType.name}
                               </p>
-                              {item.creatorName && (
+                              {item.creator?.displayName && (
                                 <Badge variant="secondary" className="mt-1.5">
                                   <User className="h-3 w-3 mr-1.5"/>
-                                  {t('creator_badge', { name: item.creatorName })}
+                                  {t('creator_badge', { name: item.creator.displayName })}
                                 </Badge>
                               )}
                               <p className="text-lg font-bold mt-2">
@@ -214,14 +215,12 @@ export function CartSheet({ children, open, onOpenChange }: {
                             <SheetClose asChild>
                               <Button variant="outline" size="sm" asChild className="text-xs">
                                 <Link href={editUrl}>
-                                  <Edit />
                                   {t('edit_item_button')}
                                 </Link>
                               </Button>
                             </SheetClose>
                           )}
                            <Button variant="outline" size="sm" onClick={() => setSharingItem(item)} className="text-xs">
-                              <Share2 />
                               {tEditor('share_button')}
                           </Button>
                            <Button
@@ -231,7 +230,6 @@ export function CartSheet({ children, open, onOpenChange }: {
                             onClick={() => removeFromCart(item.id)}
                             disabled={isProcessing}
                           >
-                            <Trash2 />
                             {t('remove_item')}
                           </Button>
                         </CardFooter>
@@ -277,6 +275,17 @@ export function CartSheet({ children, open, onOpenChange }: {
             isOpen={!!sharingItem}
             onOpenChange={() => setSharingItem(null)}
             getCanvasDataUri={() => Promise.resolve(sharingItem.previewImage)}
+            creation={{
+              id: sharingItem.creationId || '',
+              creatorId: sharingItem.creator?.uid || '',
+              name: sharingItem.model.name,
+              previewImageUrl: sharingItem.previewImage,
+              placedCharms: [],
+              createdAt: new Date(),
+              salesCount: 0,
+              likesCount: 0,
+              creator: sharingItem.creator
+            }}
             t={tEditor}
         />
     )}

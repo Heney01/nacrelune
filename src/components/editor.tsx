@@ -5,7 +5,7 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory, Creation } from '@/lib/types';
+import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory, Creation, PlacedCreationCharm } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
@@ -349,12 +349,13 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     );
   }, []);
 
-  const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
     // Deselect charm if clicking on the background
-    if ((e.target as HTMLElement).closest('.charm-on-canvas') === null) {
+    const target = e.target as HTMLElement;
+    if (target.closest('.charm-on-canvas') === null) {
       setSelectedPlacedCharmId(null);
     }
-  };
+  }, []);
 
 
   useEffect(() => {
@@ -519,7 +520,10 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     if (charmToAdd) {
       addCharmToCanvas(charmToAdd, {
         source: 'suggestionsPanel',
-        position: suggestion.position
+        position: {
+          x: suggestion.position.x / 100,
+          y: suggestion.position.y / 100,
+        }
       });
     } else {
       toast({
@@ -595,7 +599,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
             getCanvasDataUri={getCanvasDataUri}
             onConfirmAddToCart={handleAddToCart}
             isEditing={isEditing}
-            placedCharms={placedCharms}
+            placedCharms={placedCharms.map(pc => ({ charmId: pc.charm.id, position: pc.position, rotation: pc.rotation }))}
             jewelryType={jewelryType}
             model={model}
             locale={locale}
@@ -628,11 +632,11 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
 
               <div className="lg:col-span-6 flex flex-col gap-4 min-h-0 order-first lg:order-none max-h-full">
-                  <div className="flex justify-between items-center gap-4 flex-shrink-0 px-4 pt-4 lg:p-0">
-                      <Button variant="ghost" asChild className="p-0 h-auto lg:h-10 lg:p-2">
+                  <div className="flex justify-between items-center gap-4 flex-shrink-0 lg:p-0">
+                      <Button variant="outline" asChild className="lg:h-10">
                           <Link href={`/${locale}/?type=${jewelryType.id}`}>
                               <ArrowLeft className="mr-2 h-4 w-4" />
-                              <span className="hidden lg:inline">{tHome('back_button')}</span>
+                              <span>{tHome('back_button')}</span>
                           </Link>
                       </Button>
                       <div className="flex items-center gap-2">
@@ -671,6 +675,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                       ref={canvasWrapperRef}
                       className="relative w-full flex-grow bg-card overflow-hidden touch-none border-2 border-dashed"
                       onMouseDown={handleCanvasClick}
+                      onTouchStart={handleCanvasClick}
                   >
                       <div
                           ref={canvasRef}

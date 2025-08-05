@@ -23,7 +23,6 @@
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
     --ring: 340 82% 52%;
-    --radius: 0.5rem;
   }
 
   .dark {
@@ -55,6 +54,11 @@
   
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Correction pour l'épaisseur des icônes Lucide */
+  .lucide {
+    stroke-width: 2;
   }
 }
 

@@ -1,11 +1,11 @@
 
 
 import { db, storage } from '@/lib/firebase';
-import { collection, getDocs, DocumentReference, getDoc, doc, Timestamp, query, orderBy, where, documentId } from 'firebase/firestore';
+import { collection, getDocs, DocumentReference, getDoc, doc, Timestamp, query, orderBy, where, documentId, limit, startAfter, QueryConstraint } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
-import type { JewelryModel, JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderItem, MailLog, MailDelivery } from '@/lib/types';
+import type { JewelryModel, JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderItem, MailLog, MailDelivery, Creation, PlacedCreationCharm, User, PlacedCharm } from '@/lib/types';
 
-const getUrl = async (path: string, fallback: string) => {
+const getUrl = async (path: string | undefined | null, fallback: string): Promise<string> => {
     if (path && (path.startsWith('http://') || path.startsWith('https://'))) {
         return path; // It's already a full URL
     }
@@ -315,7 +315,7 @@ export async function getOrders(): Promise<Order[]> {
         const orders: Order[] = await Promise.all(ordersSnapshot.docs.map(async(orderDoc) => {
             const data = orderDoc.data();
             
-            const enrichedItems: OrderItem[] = (data.items || []).map((item: OrderItem) => {
+            const enrichedItems: OrderItem[] = await Promise.all((data.items || []).map(async (item: OrderItem) => {
                 const enrichedCharms = (item.charmIds || [])
                     .map(id => charmsMap.get(id))
                     .filter((c): c is Charm => !!c); // Filter out undefined charms
@@ -323,16 +323,9 @@ export async function getOrders(): Promise<Order[]> {
                 return {
                     ...item,
                     charms: enrichedCharms,
+                    previewImageUrl: await getUrl(item.previewImageUrl, 'https://placehold.co/400x400.png'),
                 };
-            });
-            
-            const previewImageUrls = await Promise.all(
-                (data.items || []).map((item: OrderItem) => getUrl(item.previewImageUrl, 'https://placehold.co/400x400.png'))
-            );
-
-            enrichedItems.forEach((item, index) => {
-                item.previewImageUrl = previewImageUrls[index];
-            });
+            }));
             
             const orderNumber = data.orderNumber;
             const mailHistory = mailLogsByOrderNumber.get(orderNumber) || [];
@@ -363,5 +356,191 @@ export async function getOrders(): Promise<Order[]> {
     } catch (error) {
         console.error("Error fetching orders:", error);
         return [];
+    }
+}
+
+
+async function hydrateCreations(creationDocs: any[], allCharms: Charm[]): Promise<Creation[]> {
+    const charmsMap = new Map(allCharms.map(c => [c.id, c]));
+    
+    const userIds = Array.from(new Set(creationDocs.map(d => d.data().creatorId))) as string[];
+    let creatorsMap = new Map<string, User>();
+    if (userIds.length > 0) {
+        // Firestore 'in' query is limited to 30 items. If you expect more, you'll need to chunk the requests.
+        const userDocsSnapshot = await getDocs(query(collection(db, 'users'), where(documentId(), 'in', userIds.slice(0, 30))));
+        userDocsSnapshot.docs.forEach(doc => {
+            creatorsMap.set(doc.id, { uid: doc.id, ...doc.data() } as User);
+        });
+    }
+
+    const creations = await Promise.all(creationDocs.map(async (doc) => {
+        const data = doc.data();
+        const previewImageUrl = await getUrl(data.previewImageUrl, 'https://placehold.co/400x400.png');
+        
+        const hydratedCharms: PlacedCharm[] = (data.placedCharms || []).map((pc: PlacedCreationCharm, index: number) => {
+            const charmData = charmsMap.get(pc.charmId);
+            if (!charmData) return null;
+            
+            return {
+                id: `${pc.charmId}-${index}`,
+                charm: charmData,
+                position: pc.position,
+                rotation: pc.rotation,
+            };
+        }).filter((c: PlacedCharm | null): c is PlacedCharm => c !== null);
+
+        return {
+            id: doc.id,
+            ...data,
+            creator: creatorsMap.get(data.creatorId),
+            previewImageUrl,
+            hydratedCharms,
+            placedCharms: data.placedCharms,
+            createdAt: toDate(data.createdAt as any)!,
+        } as Creation;
+    }));
+    
+    return creations;
+}
+
+export async function getRecentCreations(): Promise<Creation[]> {
+    try {
+        const [creationsSnapshot, allCharms] = await Promise.all([
+            getDocs(query(collection(db, 'creations'), orderBy('createdAt', 'desc'), limit(10))),
+            getCharms()
+        ]);
+        
+        if (creationsSnapshot.empty) {
+            return [];
+        }
+        
+        return await hydrateCreations(creationsSnapshot.docs, allCharms);
+    } catch (error) {
+        console.error("Error fetching recent creations:", error);
+        return [];
+    }
+}
+
+const CREATIONS_PER_PAGE = 20;
+
+export interface PaginatedCreationsOptions {
+  sortBy: 'date' | 'likes';
+  timeFilter: 'all' | 'year' | 'month' | 'week';
+  cursor?: any;
+  cursorId?: string;
+}
+
+export async function getPaginatedCreations(options: PaginatedCreationsOptions): Promise<{ creations: Creation[], hasMore: boolean }> {
+  const { sortBy, timeFilter, cursor, cursorId } = options;
+  const constraints: QueryConstraint[] = [];
+
+  if (timeFilter !== 'all') {
+    const now = new Date();
+    let startDate;
+    switch (timeFilter) {
+      case 'week':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+        break;
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+        break;
+      case 'year':
+        startDate = new Date(now.getFullYear(), 0, 1);
+        break;
+    }
+    constraints.push(where('createdAt', '>=', startDate));
+  }
+
+  // Sorting
+  if (sortBy === 'likes') {
+    constraints.push(orderBy('likesCount', 'desc'));
+  }
+  constraints.push(orderBy('createdAt', 'desc'));
+
+  // Pagination cursor
+  if (cursor !== undefined && cursor !== null && cursorId) {
+    const cursorDoc = await getDoc(doc(db, 'creations', cursorId));
+    if (cursorDoc.exists()) {
+        constraints.push(startAfter(cursorDoc));
+    } else {
+        console.warn(`Cursor document with id ${cursorId} not found. Fetching from the beginning.`);
+    }
+  }
+
+  constraints.push(limit(CREATIONS_PER_PAGE + 1)); // Fetch one extra to check if there's a next page
+  
+  try {
+    const q = query(collection(db, 'creations'), ...constraints);
+    const [creationsSnapshot, allCharms] = await Promise.all([
+      getDocs(q),
+      getCharms()
+    ]);
+
+    const hasMore = creationsSnapshot.docs.length > CREATIONS_PER_PAGE;
+    const docsToProcess = hasMore ? creationsSnapshot.docs.slice(0, -1) : creationsSnapshot.docs;
+
+    if (docsToProcess.length === 0) {
+      return { creations: [], hasMore: false };
+    }
+    
+    const hydratedCreations = await hydrateCreations(docsToProcess, allCharms);
+    return { creations: hydratedCreations, hasMore };
+
+  } catch (error) {
+    console.error("Error fetching paginated creations:", error);
+    // This can happen if a composite index is not created yet.
+    // Firestore error messages are usually helpful here.
+    return { creations: [], hasMore: false };
+  }
+}
+
+
+export async function getAllCreations(): Promise<Creation[]> {
+    try {
+        const [creationsSnapshot, allCharms] = await Promise.all([
+            getDocs(query(collection(db, 'creations'), orderBy('createdAt', 'desc'))),
+            getCharms()
+        ]);
+        
+        if (creationsSnapshot.empty) {
+            return [];
+        }
+        
+        return await hydrateCreations(creationsSnapshot.docs, allCharms);
+    } catch (error) {
+        console.error("Error fetching all creations:", error);
+        return [];
+    }
+}
+
+
+export async function getCreatorShowcaseData(creatorId: string): Promise<{ creator: User | null, creations: Creation[] }> {
+    try {
+        const [userDoc, creationsSnapshot, allCharms] = await Promise.all([
+            getDoc(doc(db, 'users', creatorId)),
+            getDocs(query(collection(db, 'creations'), where('creatorId', '==', creatorId), orderBy('createdAt', 'desc'))),
+            getCharms()
+        ]);
+
+        let creator: User | null = null;
+        if (userDoc.exists()) {
+            const data = userDoc.data();
+            creator = {
+                uid: userDoc.id,
+                displayName: data.displayName,
+                email: data.email,
+                photoURL: data.photoURL,
+            };
+        }
+
+        const hydratedCreations = await hydrateCreations(creationsSnapshot.docs, allCharms);
+
+        // Manually assign the fetched creator to each creation to ensure consistency
+        const finalCreations = hydratedCreations.map(c => ({ ...c, creator }));
+
+        return { creator, creations: finalCreations };
+    } catch (error) {
+        console.error(`Error fetching showcase data for creator ${creatorId}:`, error);
+        return { creator: null, creations: [] };
     }
 }

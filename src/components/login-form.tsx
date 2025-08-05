@@ -56,6 +56,8 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
   const locale = params.locale as string;
   const router = useRouter();
   const t = useTranslations('Auth');
+  const { toast } = useToast();
+  
   const { signInWithGoogle, error, isGoogleLoading } = useGoogleAuth({
       onSuccess: async (user) => {
           const idToken = await user.getIdToken();
@@ -83,7 +85,7 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
           }
       }
   });
-  const { toast } = useToast();
+
 
   useEffect(() => {
     if (state.success) {
@@ -91,17 +93,14 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
         title: 'Connexion réussie',
         description: state.message,
       });
-      const redirectPath = isUserAuth ? `/${locale}` : `/${locale}/admin/dashboard`;
-      router.push(redirectPath);
+      const destination = isUserAuth ? `/${locale}` : `/${locale}/admin/dashboard`;
+      router.push(destination);
     }
-  }, [state.success, state.message, router, locale, toast, isUserAuth]);
+  }, [state.success, state.message, router, toast, locale, isUserAuth]);
 
   return (
     <Card>
       <CardHeader className="text-center">
-        <div className="mx-auto mb-4">
-            <BrandLogo className="h-10 w-auto" />
-        </div>
         <CardTitle className="text-2xl">{isUserAuth ? t('user_login_title') : t('admin_login_title')}</CardTitle>
         <CardDescription>
            {isUserAuth ? t('user_login_description') : t('admin_login_description')}

@@ -2,7 +2,7 @@
 {
   "HomePage": {
     "title": "Commencez Votre Création",
-    "subtitle": "Choisissez un type de bijou pour commencer à concevoir. Chaque pièce est une toile pour votre histoire, attendant d'être ornée de breloques qui vous parlent.",
+    "subtitle": "Choisissez un type de bijou pour commencer à concevoir.",
     "jewelry_types": {
       "necklace": "Colliers",
       "necklace_description": "Chaînes et pendentifs gracieux.",
@@ -26,7 +26,13 @@
     "support_open_mail_button": "Ouvrir l'application de messagerie",
     "coming_soon": "Bientôt disponible",
     "profile_menu_button": "Menu du profil",
-    "welcome_message": "Bienvenue, {name} !"
+    "inspirations_title": "Les dernières créations",
+    "inspirations_subtitle": "Laissez-vous inspirer par la communauté.",
+    "use_as_template": "Personnaliser",
+    "creator_search_title": "Rechercher un Créateur",
+    "creator_search_subtitle": "Trouvez et explorez les galeries de vos créateurs préférés.",
+    "creator_search_placeholder": "Entrez le nom d'un créateur...",
+    "no_creators_found": "Aucun créateur trouvé."
   },
   "Auth": {
     "login_button": "Connexion",
@@ -44,7 +50,7 @@
     "displayName_label": "Nom complet",
     "no_account_prompt": "Pas encore de compte ?",
     "has_account_prompt": "Vous avez déjà un compte ?",
-    "my_account": "Mon Compte",
+    "my_account": "Mon compte",
     "my_creations": "Mes créations",
     "google_login_button": "Continuer avec Google",
     "google_signup_button": "S'inscrire avec Google",
@@ -58,7 +64,7 @@
     "reward_points_close_button": "J'ai compris",
     "edit_creation_button": "Modifier",
     "edit_creation_title": "Modifier la création",
-    "edit_creation_description": "Mettez à jour le nom et la description de votre création.",
+    "edit_creation_description": "Mettez à jour le nom de votre création.",
     "save_changes_button": "Enregistrer",
     "edit_creation_success_title": "Succès",
     "edit_creation_error_title": "Erreur"
@@ -98,8 +104,6 @@
     "share_creation_description": "Donnez un nom à votre création et partagez-la !",
     "share_title_label": "Titre de votre création",
     "share_title_placeholder": "ex: Mon collier d'été",
-    "share_description_label": "Description (facultatif)",
-    "share_description_placeholder": "ex: Une création qui me rappelle les vacances...",
     "share_error_image": "Impossible de charger l'image de votre création.",
     "share_not_supported": "Le partage n'est pas supporté par ce navigateur.",
     "share_error_generic": "Une erreur est survenue lors du partage.",
@@ -118,14 +122,12 @@
     "buy_title": "Acheter pour vous",
     "buy_description": "Ajoutez cette création unique à votre panier pour l'acquérir.",
     "publish_title": "Publier votre création",
-    "publish_description": "Partagez votre design avec la communauté. Donnez-lui un nom et une description.",
+    "publish_description": "Partagez votre design avec la communauté. Donnez-lui un nom.",
     "publish_login_required_title": "Connexion requise",
     "publish_login_required_desc": "Vous devez être connecté pour publier une création.",
     "publish_login_link": "Connectez-vous ou inscrivez-vous",
     "creation_name_label": "Nom de la création",
     "creation_name_placeholder": "ex: Mon Collier d'Été",
-    "creation_description_label": "Description (optionnel)",
-    "creation_description_placeholder": "Racontez l'histoire de votre design...",
     "publish_button": "Publier"
   },
   "Cart": {
@@ -311,5 +313,3 @@
     "reward_email_cta": "Voir mes points"
   }
 }
-
-    

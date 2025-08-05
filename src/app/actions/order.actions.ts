@@ -93,8 +93,7 @@ export type SerializableCartItem = {
     };
     placedCharms: PlacedCharm[];
     previewImage: string;
-    creatorId?: string;
-    creatorName?: string;
+    creator?: User;
     creationId?: string;
 };
 
@@ -162,12 +161,12 @@ export async function createOrder(
                     }
                 }
                 
-                if (item.creatorId && item.creatorName) {
+                if (item.creator && item.creator.uid && item.creator.displayName) {
                     const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
                     const points = Math.floor((itemPrice * 0.05) * 10);
                     if (points > 0) {
-                        const currentAwards = creatorPointAwards.get(item.creatorId) || { points: 0, creatorName: item.creatorName, creationName: item.model.name };
-                        creatorPointAwards.set(item.creatorId, { ...currentAwards, points: currentAwards.points + points });
+                        const currentAwards = creatorPointAwards.get(item.creator.uid) || { points: 0, creatorName: item.creator.displayName, creationName: item.model.name };
+                        creatorPointAwards.set(item.creator.uid, { ...currentAwards, points: currentAwards.points + points });
                     }
                 }
             }
@@ -264,13 +263,10 @@ export async function createOrder(
                 if (item.creationId) {
                     orderItemData.creationId = item.creationId;
                 }
-                if (item.creatorId) {
-                    orderItemData.creatorId = item.creatorId;
+                if (item.creator?.uid) {
+                    orderItemData.creatorId = item.creator.uid;
                 }
-                if (item.creatorName) {
-                    orderItemData.creatorName = item.creatorName;
-                }
-
+                
                 return orderItemData;
             });
             
@@ -782,22 +778,28 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
         }
         
         const couponDoc = querySnapshot.docs[0];
-        const couponData = couponDoc.data() as Omit<Coupon, 'id'>;
+        const couponData = couponDoc.data();
         
-        if (!couponData.isActive) {
-            return { success: false, message: "Ce code promo n'est plus actif." };
-        }
+        const expiresAtDate = toDate(couponData.expiresAt as Timestamp | undefined);
 
-        const validUntilDate = toDate(couponData.validUntil as Timestamp | undefined);
-        if (validUntilDate && validUntilDate < new Date()) {
+        if (expiresAtDate && expiresAtDate < new Date()) {
             return { success: false, message: "Ce code promo a expiré." };
+        }
+        
+        const value = typeof couponData.value === 'string' ? parseFloat(couponData.value) : couponData.value;
+        if (isNaN(value)) {
+             return { success: false, message: "La valeur du code promo est invalide." };
         }
 
         const coupon: Coupon = { 
             id: couponDoc.id, 
-            ...couponData,
-            validUntil: validUntilDate || undefined
+            code: couponData.code,
+            discountType: couponData.discountType,
+            value: value,
+            expiresAt: expiresAtDate || undefined,
+            minPurchase: couponData.minPurchase,
         };
+
         return { success: true, message: 'Code promo appliqué !', coupon };
 
     } catch (error: any) {
