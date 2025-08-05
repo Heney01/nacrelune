@@ -8,7 +8,7 @@ import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory,
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Layers, Check, MoreHorizontal, Loader2 } from 'lucide-react';
+import { X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Layers, Check, MoreHorizontal, Loader2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BrandLogo } from './icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -621,7 +621,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
             />
           </div>
 
-          <div className="flex-grow flex flex-col min-w-0 min-h-0 lg:p-4">
+          <div className="flex-grow flex flex-col min-w-0 min-h-0">
              <div className="flex justify-between items-center flex-shrink-0 p-4 pb-0 lg:pb-4">
                 <Button variant="outline" asChild>
                     <Link href={`/${locale}/?type=${jewelryType.id}`}>
@@ -649,7 +649,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               <div className="w-full h-full p-0 lg:p-4 bg-card border-none lg:border lg:rounded-lg">
                 <div
                     ref={canvasWrapperRef}
-                    className="relative w-full h-full bg-card overflow-hidden touch-none border-2 border-dashed lg:border-none rounded-lg"
+                    className="relative w-full h-full bg-card overflow-hidden touch-none border-2 border-dashed rounded-lg"
                     onMouseDown={handleCanvasClick}
                     onTouchStart={handleCanvasClick}
                 >
