@@ -1,21 +1,23 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Creation } from '@/lib/types';
 import { getAllCreations } from '@/lib/data';
 import { CreationCard } from '@/components/creation-card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Clock, Heart } from 'lucide-react';
 import Loading from '../loading';
 import { BrandLogo } from '@/components/icons';
 import { CartWidget } from '@/components/cart-widget';
 import { UserNav } from '@/components/user-nav';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function AllCreationsPage({ params }: { params: { locale: string } }) {
   const [creations, setCreations] = useState<Creation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState<'date' | 'likes'>('date');
 
   useEffect(() => {
     const fetchCreations = async () => {
@@ -26,6 +28,15 @@ export default function AllCreationsPage({ params }: { params: { locale: string 
     };
     fetchCreations();
   }, []);
+
+  const sortedCreations = useMemo(() => {
+    const creationsCopy = [...creations];
+    if (sortBy === 'likes') {
+      return creationsCopy.sort((a, b) => b.likesCount - a.likesCount);
+    }
+    // Default to date sort
+    return creationsCopy.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [creations, sortBy]);
 
   if (loading) {
     return <Loading />;
@@ -54,12 +65,20 @@ export default function AllCreationsPage({ params }: { params: { locale: string 
               </Link>
             </Button>
           </div>
-          <div className="text-center mb-12">
+          <div className="text-center mb-8">
             <h1 className="text-3xl font-headline tracking-tight">Toutes les créations</h1>
             <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">Explorez l'ensemble des bijoux imaginés par notre communauté.</p>
           </div>
+          <div className="flex justify-center mb-8">
+             <Tabs value={sortBy} onValueChange={(value) => setSortBy(value as 'date' | 'likes')}>
+              <TabsList>
+                <TabsTrigger value="date"><Clock className="mr-2 h-4 w-4"/>Les plus récentes</TabsTrigger>
+                <TabsTrigger value="likes"><Heart className="mr-2 h-4 w-4"/>Les plus populaires</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {creations.map((creation) => (
+            {sortedCreations.map((creation) => (
               <CreationCard key={creation.id} creation={creation} locale={params.locale} showCreator={true} />
             ))}
           </div>
