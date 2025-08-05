@@ -238,7 +238,7 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t, creatio
 
         {error && <div className="text-destructive text-sm text-center my-2">{error}</div>}
 
-        <DialogFooter>
+        <DialogFooter className="gap-2">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             {t('close_button')}
           </Button>
