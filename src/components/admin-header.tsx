@@ -15,10 +15,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { logout } from '@/app/actions/auth.actions';
 
 function UserNav({ locale }: { locale: string }) {
-    const { user, firebaseUser } = useAuth();
+    const { user, firebaseUser, signOut } = useAuth();
 
     if (!firebaseUser) {
         return (
@@ -54,7 +53,7 @@ function UserNav({ locale }: { locale: string }) {
                     </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => logout(locale)} className="cursor-pointer">
+                <DropdownMenuItem onClick={signOut} className="cursor-pointer">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Déconnexion</span>
                 </DropdownMenuItem>

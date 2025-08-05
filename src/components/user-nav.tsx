@@ -14,12 +14,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { logout } from '@/app/actions/auth.actions';
 import { useTranslations } from '@/hooks/use-translations';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 export function UserNav({ locale }: { locale: string }) {
-    const { user, firebaseUser } = useAuth();
+    const { user, firebaseUser, signOut } = useAuth();
     const t = useTranslations('HomePage');
     const tAuth = useTranslations('Auth');
 
@@ -79,7 +78,7 @@ export function UserNav({ locale }: { locale: string }) {
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => logout(locale)} className="cursor-pointer">
+                <DropdownMenuItem onClick={signOut} className="cursor-pointer">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>{tAuth('logout_button')}</span>
                 </DropdownMenuItem>

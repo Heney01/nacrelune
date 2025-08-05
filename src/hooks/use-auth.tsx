@@ -1,17 +1,20 @@
 
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { getAuth, onAuthStateChanged, User as FirebaseUser, signOut as firebaseSignOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { app, db } from '@/lib/firebase';
 import type { User } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
+import { logout as serverLogout } from '@/app/actions/auth.actions';
+import { useParams } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
   firebaseUser: FirebaseUser | null;
   loading: boolean;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,6 +23,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const params = useParams();
+  const locale = (params.locale as string) || 'fr';
 
   useEffect(() => {
     const auth = getAuth(app);
@@ -47,6 +52,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
+  const signOut = useCallback(async () => {
+    const auth = getAuth(app);
+    try {
+      await firebaseSignOut(auth); // Sign out from Firebase on the client
+      await serverLogout(locale);   // Call server action to clear cookie and redirect
+    } catch (error) {
+      console.error("Error signing out: ", error);
+      // Even if client signout fails, try to sign out on server
+      await serverLogout(locale);
+    }
+  }, [locale]);
+
+
   if (loading) {
     return (
         <div className="flex justify-center items-center h-screen">
@@ -56,7 +74,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, loading }}>
+    <AuthContext.Provider value={{ user, firebaseUser, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );
