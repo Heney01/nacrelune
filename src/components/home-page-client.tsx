@@ -81,7 +81,7 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
                 
                 {recentCreations.length > 0 && (
                   <>
-                    <Separator className="my-12" />
+                    <Separator className="my-8" />
                     <CreationsCarousel creations={recentCreations} locale={locale} />
                   </>
                 )}
