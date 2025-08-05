@@ -8,7 +8,7 @@ import { doc, getDoc, addDoc, updateDoc, collection, getDocs, query, where, docu
 import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 import { adminApp } from '@/lib/firebase-admin';
-import type { Creation, CreationCharm, PlacedCreationCharm, User, PlacedCharm, Charm } from '@/lib/types';
+import type { Creation, PlacedCreationCharm, User, PlacedCharm, Charm } from '@/lib/types';
 import { toDate, getCharms, getPaginatedCreations, PaginatedCreationsOptions } from '@/lib/data';
 
 
@@ -114,7 +114,6 @@ export async function saveCreation(
     }
 
     try {
-        // Now we only store the reference and placement info, not the whole charm object.
         const placedCharmsForDb: PlacedCreationCharm[] = simplePlacedCharms.map(spc => {
             return {
                 charmId: spc.charmId,
@@ -419,21 +418,13 @@ export async function searchCreators(searchTerm: string): Promise<{ success: boo
 
 export async function getMoreCreations(options: PaginatedCreationsOptions): Promise<{ creations: Creation[], hasMore: boolean }> {
   const { sortBy, timeFilter, cursor, cursorId } = options;
-  const numericCursor = typeof cursor === 'number' ? cursor : undefined;
-  const dateCursor = typeof cursor === 'object' ? cursor : undefined;
-
+  
   const paginatedOptions: PaginatedCreationsOptions = {
     sortBy,
     timeFilter,
+    cursor,
+    cursorId,
   };
-
-  if (sortBy === 'date' && dateCursor) {
-    paginatedOptions.cursor = dateCursor;
-    paginatedOptions.cursorId = cursorId;
-  } else if (sortBy === 'likes' && numericCursor !== undefined) {
-    paginatedOptions.cursor = numericCursor;
-    paginatedOptions.cursorId = cursorId;
-  }
   
   return getPaginatedCreations(paginatedOptions);
 }
