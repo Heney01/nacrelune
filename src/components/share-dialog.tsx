@@ -1,6 +1,7 @@
+
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { useTranslations } from '@/hooks/use-translations';
@@ -11,6 +12,7 @@ import { Input } from './ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { generateShareContentAction } from '@/app/actions/ai.actions';
 import { Creation } from '@/lib/types';
+import html2canvas from 'html2canvas';
 
 interface ShareDialogProps {
     isOpen: boolean;
@@ -22,15 +24,13 @@ interface ShareDialogProps {
 export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDialogProps) {
     const t = useTranslations('Editor');
     const { toast } = useToast();
+    const polaroidRef = useRef<HTMLDivElement>(null);
 
     const [title, setTitle] = useState(creation.name);
     const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
     const [isSharing, setIsSharing] = useState(false);
 
     const getCanvasDataUri = useCallback(async (): Promise<string> => {
-        // This is a simplified version. In a real app, you might want to re-render
-        // the creation on a hidden canvas to get a fresh image if it's dynamic.
-        // For now, we assume the previewImageUrl is sufficient.
         return creation.previewImageUrl;
     }, [creation.previewImageUrl]);
 
@@ -52,26 +52,39 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
     };
     
     const handleShare = async () => {
+        if (!polaroidRef.current) return;
         setIsSharing(true);
         try {
-            const response = await fetch(creation.previewImageUrl);
-            const blob = await response.blob();
-            const file = new File([blob], `${title}.png`, { type: blob.type });
+            const canvas = await html2canvas(polaroidRef.current, { 
+                useCORS: true, 
+                allowTaint: true,
+                backgroundColor: null 
+            });
+            const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+            
+            if (!blob) {
+                throw new Error("Impossible de générer l'image de partage.");
+            }
+
+            const file = new File([blob], `${title.replace(/ /g, '_')}.png`, { type: 'image/png' });
+            
+            const shareUrl = `${window.location.origin}/${locale}/creators/${creation.creatorId}?creation=${creation.id}`;
 
             const shareData: ShareData = {
                 title: title || t('share_default_title'),
                 text: t('share_default_text'),
-                url: window.location.href, // Or a direct link to the creation
+                url: shareUrl,
                 files: [file],
             };
 
-            if (navigator.canShare && navigator.canShare(shareData)) {
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 await navigator.share(shareData);
             } else {
-                throw new Error(t('share_not_supported'));
+                 toast({ variant: "destructive", title: "Non supporté", description: t('share_not_supported') });
             }
         } catch (error: any) {
             if (error.name !== 'AbortError') {
+                console.error("Share error:", error);
                 toast({ variant: "destructive", title: "Erreur de partage", description: error.message || t('share_error_generic') });
             }
         } finally {
@@ -87,6 +100,28 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
                     <DialogTitle>{t('share_creation_title')}</DialogTitle>
                     <DialogDescription>{t('share_creation_description')}</DialogDescription>
                 </DialogHeader>
+
+                {/* Hidden Polaroid for screenshot */}
+                <div className="absolute left-[-9999px] top-[-9999px]">
+                    <div ref={polaroidRef} className="p-4 bg-white shadow-lg w-[400px]">
+                        <div className="bg-stone-100">
+                             <Image 
+                                src={creation.previewImageUrl} 
+                                alt={creation.name} 
+                                width={400} 
+                                height={400} 
+                                className="w-full h-auto object-contain"
+                                crossOrigin="anonymous"
+                            />
+                        </div>
+                        <div className="pt-4 text-center">
+                            <p className="font-headline text-2xl text-stone-800">{title}</p>
+                            <p className="text-sm text-stone-500 mt-1">par {creation.creator?.displayName || 'un créateur anonyme'}</p>
+                             <p className="text-xs text-stone-400 mt-4">www.nacrelune.com</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="my-4 grid place-items-center">
                      <Image src={creation.previewImageUrl} alt={t('preview_alt')} width={250} height={250} className="rounded-lg border bg-muted/50 max-w-full h-auto" />
                 </div>

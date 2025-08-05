@@ -208,3 +208,4 @@ export interface Creation {
     // Optional: Populated at runtime after hydrating with full charm details
     hydratedCharms?: PlacedCharm[];
 }
+
