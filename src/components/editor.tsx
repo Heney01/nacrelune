@@ -659,16 +659,16 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                             </DialogContent>
                         </Dialog>
                         <Button variant="outline" size="icon" className="lg:hidden" onClick={() => setIsShareOpen(true)}>
-                          <Share2 />
+                          <Share2 className="h-4 w-4" />
                           <span className="sr-only">{t('share_button')}</span>
                         </Button>
                          <div className="hidden lg:inline-flex items-center gap-2">
                             <Button variant="outline" onClick={() => setIsShareOpen(true)}>
-                                <Share2 />
+                                <Share2 className="mr-2 h-4 w-4" />
                                 {t('share_button')}
                             </Button>
                             <Button onClick={handleFinalize} disabled={hasStockIssues || placedCharms.length === 0}>
-                                <Check />
+                                <Check className="mr-2 h-4 w-4" />
                                 {isEditing ? t('update_item_button') : t('finalize_button')}
                             </Button>
                         </div>
@@ -683,12 +683,12 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                        <div
                           ref={trashZoneRef}
                           className={cn(
-                              "absolute bottom-4 left-4 h-10 w-10 bg-destructive/20 border-2 border-dashed border-destructive/50 flex items-center justify-center text-destructive rounded-full transition-all duration-300 z-20",
+                              "absolute bottom-4 left-4 h-12 w-12 bg-destructive/20 border-2 border-dashed border-destructive/50 flex items-center justify-center text-destructive rounded-full transition-all duration-300 z-20",
                               isDraggingCharm ? "opacity-100 scale-100" : "opacity-0 scale-0 pointer-events-none",
                               isOverTrash && "bg-destructive/40 scale-110"
                           )}
                         >
-                          <Trash2 className="h-5 w-5" />
+                          <Trash2 className="h-6 w-6" />
                       </div>
 
                       <div
@@ -771,7 +771,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
          {isMobile && (
             <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-2.5 z-20 space-y-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))]">
                 <Button onClick={handleFinalize} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
-                    <Check />
+                    <Check className="mr-2 h-4 w-4" />
                     {isEditing ? t('update_item_button') : t('finalize_button')}
                 </Button>
 
