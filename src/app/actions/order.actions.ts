@@ -277,7 +277,6 @@ export async function createOrder(
             const newOrderData: any = {
                 orderNumber,
                 customerEmail: email,
-                userId: userId,
                 subtotal: subtotal,
                 totalPrice: finalPrice,
                 items: orderItems,
@@ -286,6 +285,10 @@ export async function createOrder(
                 deliveryMethod: deliveryMethod,
                 createdAt: serverTimestamp()
             };
+            
+            if (userId) {
+                newOrderData.userId = userId;
+            }
 
             if (deliveryMethod === 'home' && shippingAddress) {
                 newOrderData.shippingAddress = {
@@ -552,19 +555,27 @@ export async function getOrders(): Promise<Order[]> {
         // Fetch all required charms in a single query
         let charmsMap = new Map<string, any>();
         if (uniqueCharmIds.length > 0) {
-            const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', uniqueCharmIds));
-            const charmsSnapshot = await getDocs(charmsQuery);
-            for (const charmDoc of charmsSnapshot.docs) {
-                const charmData = charmDoc.data() as Omit<any, 'id'>;
-                const imageUrl = await getUrl(charmData.imageUrl, 'https://placehold.co/100x100.png');
-                charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id, imageUrl });
+            // Firestore 'in' query is limited to 30 items, so chunk if necessary
+            const charmIdChunks = [];
+            for (let i = 0; i < uniqueCharmIds.length; i += 30) {
+                charmIdChunks.push(uniqueCharmIds.slice(i, i + 30));
+            }
+            
+            for (const chunk of charmIdChunks) {
+                const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', chunk));
+                const charmsSnapshot = await getDocs(charmsQuery);
+                for (const charmDoc of charmsSnapshot.docs) {
+                    const charmData = charmDoc.data() as Omit<any, 'id'>;
+                    const imageUrl = await getUrl(charmData.imageUrl, 'https://placehold.co/100x100.png');
+                    charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id, imageUrl });
+                }
             }
         }
         
         const orders: Order[] = await Promise.all(ordersSnapshot.docs.map(async(orderDoc) => {
             const data = orderDoc.data();
             
-            const enrichedItems: OrderItem[] = (data.items || []).map((item: OrderItem) => {
+            const enrichedItems: OrderItem[] = await Promise.all((data.items || []).map(async (item: OrderItem) => {
                 const enrichedCharms = (item.charmIds || [])
                     .map(id => charmsMap.get(id))
                     .filter((c): c is any => !!c); // Filter out undefined charms
@@ -572,16 +583,9 @@ export async function getOrders(): Promise<Order[]> {
                 return {
                     ...item,
                     charms: enrichedCharms,
+                    previewImageUrl: await getUrl(item.previewImageUrl, 'https://placehold.co/400x400.png'),
                 };
-            });
-            
-            const previewImageUrls = await Promise.all(
-                (data.items || []).map((item: OrderItem) => getUrl(item.previewImageUrl, 'https://placehold.co/400x400.png'))
-            );
-
-            enrichedItems.forEach((item, index) => {
-                item.previewImageUrl = previewImageUrls[index];
-            });
+            }));
             
             const orderNumber = data.orderNumber;
             const mailHistory = mailLogsByOrderNumber.get(orderNumber) || [];
@@ -807,3 +811,4 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
         return { success: false, message: "Une erreur est survenue lors de la validation du code." };
     }
 }
+
