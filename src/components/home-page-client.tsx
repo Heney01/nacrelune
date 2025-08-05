@@ -79,9 +79,6 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
               <>
                 <TypeSelection jewelryTypes={jewelryTypes} locale={locale} />
                 
-                <Separator className="my-12" />
-                <CreatorSearch locale={locale} />
-
                 {recentCreations.length > 0 && (
                   <>
                     <Separator className="my-12" />
