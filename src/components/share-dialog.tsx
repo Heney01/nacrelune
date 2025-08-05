@@ -5,15 +5,13 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { useTranslations } from '@/hooks/use-translations';
-import { Loader2, Share2, Sparkles, Copy } from 'lucide-react';
+import { Loader2, Share2, Copy } from 'lucide-react';
 import Image from 'next/image';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { generateShareContentAction } from '@/app/actions/ai.actions';
 import { Creation } from '@/lib/types';
 import html2canvas from 'html2canvas';
-import { BrandLogo } from './icons';
 
 interface ShareDialogProps {
     isOpen: boolean;
@@ -27,6 +25,14 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
     const { toast } = useToast();
     const polaroidRef = useRef<HTMLDivElement>(null);
     const [isSharing, setIsSharing] = useState(false);
+    const [shareUrl, setShareUrl] = useState('');
+
+    useEffect(() => {
+        if (typeof window !== 'undefined' && creation.creatorId) {
+            setShareUrl(`${window.location.origin}/${locale}/creators/${creation.creatorId}?creation=${creation.id}`);
+        }
+    }, [locale, creation]);
+
 
     const handleShare = async () => {
         if (!polaroidRef.current) return;
@@ -44,8 +50,6 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
             }
 
             const file = new File([blob], `${creation.name.replace(/ /g, '_')}.png`, { type: 'image/png' });
-            
-            const shareUrl = `${window.location.origin}/${locale}/creators/${creation.creatorId}?creation=${creation.id}`;
 
             const shareData: ShareData = {
                 title: creation.name || t('share_default_title'),
@@ -69,6 +73,13 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
         }
     };
     
+    const handleCopyLink = () => {
+        navigator.clipboard.writeText(shareUrl);
+        toast({
+            description: "Lien copié dans le presse-papiers !",
+        });
+    };
+
     const creatorDisplayName = creation.creator?.displayName || 'un créateur anonyme';
 
 
@@ -96,6 +107,16 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
                             <p className="text-sm text-stone-500 mt-1">par {creatorDisplayName}</p>
                             <p className="text-xs text-stone-400 mt-4">www.atelierabijoux.com</p>
                         </div>
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="share-link">Lien de partage direct</Label>
+                    <div className="flex gap-2">
+                        <Input id="share-link" value={shareUrl} readOnly />
+                        <Button variant="outline" size="icon" onClick={handleCopyLink}>
+                            <Copy className="h-4 w-4" />
+                        </Button>
                     </div>
                 </div>
 
