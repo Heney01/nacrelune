@@ -37,7 +37,6 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
     const handleDownloadPolaroid = useCallback(async () => {
         setIsCapturing(true);
         try {
-            // --- Create a virtual canvas ---
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             if (!ctx) {
@@ -50,11 +49,17 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
             canvas.width = width;
             canvas.height = height;
 
-            // --- Draw background ---
+            // 1. Draw white polaroid background
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, width, height);
+            
+            // 2. Draw light gray background for the image
+            const imagePadding = 20 * scale;
+            const imageContainerSize = width - 2 * imagePadding;
+            ctx.fillStyle = '#f3f4f6'; // Light gray background (e.g., Tailwind gray-100)
+            ctx.fillRect(imagePadding, imagePadding, imageContainerSize, imageContainerSize);
 
-            // --- Draw creation image ---
+            // 3. Draw creation image on top of the gray background
             const image = new window.Image();
             image.crossOrigin = 'Anonymous';
             image.src = creation.previewImageUrl;
@@ -64,11 +69,9 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
                 image.onerror = () => reject(new Error("Impossible de charger l'image de la création."));
             });
 
-            const imagePadding = 20 * scale;
-            const imageContainerSize = width - 2 * imagePadding;
             ctx.drawImage(image, imagePadding, imagePadding, imageContainerSize, imageContainerSize);
             
-            // --- Draw text ---
+            // 4. Draw text
             const textYStart = imageContainerSize + imagePadding * 1.5;
             ctx.textAlign = 'center';
 
@@ -88,7 +91,7 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
             ctx.fillText('www.atelierabijoux.com', width / 2, textYStart + 60 * scale);
 
 
-            // --- Download the canvas image ---
+            // 5. Download the canvas image
             const dataUrl = canvas.toDataURL('image/png');
             const link = document.createElement('a');
             link.href = dataUrl;
@@ -120,21 +123,19 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
 
                 <div className="flex justify-center items-center my-4">
                     {/* This is just a visual representation for the user, not what is being captured */}
-                    <div ref={polaroidDisplayRef} className="shadow-lg w-full max-w-xs bg-white">
-                        <div className="p-4">
-                            <div className="bg-white aspect-square relative">
-                                 <Image 
-                                    src={creation.previewImageUrl} 
-                                    alt={creation.name} 
-                                    fill
-                                    className="w-full h-full object-contain"
-                                />
-                            </div>
-                            <div className="pt-4 text-center">
-                                <p className="font-headline text-xl text-stone-800 break-words">{creation.name}</p>
-                                <p className="text-sm text-stone-500 mt-1">par {creatorDisplayName}</p>
-                                <p className="text-xs text-stone-400 mt-4">www.atelierabijoux.com</p>
-                            </div>
+                    <div ref={polaroidDisplayRef} className="shadow-lg w-full max-w-xs bg-white p-4">
+                         <div className="bg-gray-100 aspect-square relative">
+                            <Image 
+                                src={creation.previewImageUrl} 
+                                alt={creation.name} 
+                                fill
+                                className="w-full h-full object-contain"
+                            />
+                        </div>
+                        <div className="pt-4 text-center">
+                            <p className="font-headline text-xl text-stone-800 break-words">{creation.name}</p>
+                            <p className="text-sm text-stone-500 mt-1">par {creatorDisplayName}</p>
+                            <p className="text-xs text-stone-400 mt-4">www.atelierabijoux.com</p>
                         </div>
                     </div>
                 </div>
