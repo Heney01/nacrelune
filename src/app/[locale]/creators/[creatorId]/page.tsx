@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, Suspense, useMemo } from 'react';
@@ -112,7 +113,7 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
                   creation={creation} 
                   locale={locale}
                   openOnLoad={creation.id === creationIdFromUrl}
-                  showCreatorName={false}
+                  showCreator={false}
                 />
               ))}
             </div>

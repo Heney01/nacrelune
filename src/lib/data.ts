@@ -377,17 +377,25 @@ export async function getRecentCreations(): Promise<Creation[]> {
         if (querySnapshot.empty) {
             return [];
         }
+        
+        const creatorIds = Array.from(new Set(querySnapshot.docs.map(d => d.data().creatorId)));
+        
+        let creatorsMap = new Map<string, User>();
+        if (creatorIds.length > 0) {
+            const usersSnapshot = await getDocs(query(collection(db, 'users'), where(documentId(), 'in', creatorIds)));
+            usersSnapshot.docs.forEach(doc => {
+                 creatorsMap.set(doc.id, { uid: doc.id, ...doc.data() } as User);
+            });
+        }
 
         const creations = await Promise.all(querySnapshot.docs.map(async (doc) => {
             const data = doc.data();
             const previewImageUrl = await getUrl(data.previewImageUrl, 'https://placehold.co/400x400.png');
             
-            // Note: PlacedCharms in creations are simplified. We don't need to resolve full charm data here
-            // as the editor will handle that when it loads the template.
-
             return {
                 id: doc.id,
                 ...data,
+                creator: creatorsMap.get(data.creatorId),
                 previewImageUrl,
                 placedCharms: data.placedCharms || [], // Ensure it's always an array
                 createdAt: toDate(data.createdAt as any)!,
@@ -433,6 +441,7 @@ export async function getCreatorShowcaseData(creatorId: string): Promise<{ creat
                 previewImageUrl,
                 placedCharms: data.placedCharms || [],
                 createdAt: toDate(data.createdAt as any)!,
+                creator: creator,
             } as Creation;
         }));
 
@@ -442,4 +451,3 @@ export async function getCreatorShowcaseData(creatorId: string): Promise<{ creat
         return { creator: null, creations: [] };
     }
 }
-

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React from 'react';
@@ -47,7 +48,7 @@ export function CreationsCarousel({ creations, locale }: CreationsCarouselProps)
           {creations.map((creation) => (
             <CarouselItem key={creation.id} className="md:basis-1/2 lg:basis-1/4">
               <div className="p-1 h-full">
-                <CreationCard creation={creation} locale={locale} showCreatorName={true} />
+                <CreationCard creation={creation} locale={locale} showCreator={true} />
               </div>
             </CarouselItem>
           ))}

@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -139,9 +140,8 @@ export async function saveCreation(
             };
         });
         
-        const creationData: Omit<Creation, 'id' | 'createdAt'> = {
+        const creationData: Omit<Creation, 'id' | 'createdAt' | 'creator'> = {
             creatorId: user.uid,
-            creatorName: user.name || user.email || "Créateur anonyme",
             name,
             jewelryTypeId,
             modelId,

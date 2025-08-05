@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -15,7 +16,7 @@ import { createOrder, createPaymentIntent, validateCoupon } from '@/app/actions/
 import type { CreateOrderResult, SerializableCartItem } from '@/app/actions/order.actions';
 import { useParams } from 'next/navigation';
 import { StockErrorState } from './checkout-dialog';
-import type { ShippingAddress, DeliveryMethod, PickupPoint, Coupon } from '@/lib/types';
+import type { ShippingAddress, DeliveryMethod, PickupPoint, Coupon, User } from '@/lib/types';
 import { Progress } from './ui/progress';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 import { findPickupPoints, FindPickupPointsResult } from '@/lib/pickup-points';
@@ -106,8 +107,7 @@ const PaymentStep = ({
       jewelryType: { id: item.jewelryType.id, name: item.jewelryType.name, description: item.jewelryType.description },
       placedCharms: item.placedCharms,
       previewImage: item.previewImage,
-      creatorId: item.creatorId,
-      creatorName: item.creatorName,
+      creator: item.creator,
       creationId: item.creationId,
     }));
 

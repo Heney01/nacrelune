@@ -19,7 +19,7 @@ export interface CharmCategory {
 }
 
 export interface Charm {
-  id: string;
+  id:string;
   name: string;
   imageUrl: string;
   description: string;
@@ -97,8 +97,7 @@ export interface CartItem {
     previewImage: string; // URL to a generated preview of the final design
     // For creations bought from other users
     creationId?: string;
-    creatorId?: string;
-    creatorName?: string;
+    creator?: User;
 }
 
 export interface GeneralPreferences {
@@ -123,7 +122,6 @@ export interface OrderItem {
     // For creations bought from other users
     creationId?: string;
     creatorId?: string;
-    creatorName?: string;
 }
 
 export interface MailDelivery {
@@ -198,7 +196,6 @@ export interface Coupon {
 export interface Creation {
     id: string;
     creatorId: string;
-    creatorName: string;
     name: string;
     jewelryTypeId: string;
     modelId: string;
@@ -207,4 +204,6 @@ export interface Creation {
     createdAt: Date;
     salesCount: number;
     likesCount: number;
+    // Optional: Populated at runtime
+    creator?: User;
 }

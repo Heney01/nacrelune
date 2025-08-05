@@ -1,14 +1,15 @@
 
+
 'use client';
 
 import React, { useState, useTransition, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Creation, JewelryModel, JewelryType, PlacedCharm, Charm } from '@/lib/types';
+import { Creation, JewelryModel, JewelryType, PlacedCharm, Charm, User } from '@/lib/types';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/hooks/use-translations';
-import { Heart, User, Loader2, MoreHorizontal, Edit, Trash2, ShoppingCart, Share2 } from 'lucide-react';
+import { Heart, User as UserIcon, Loader2, MoreHorizontal, Edit, Trash2, ShoppingCart, Share2 } from 'lucide-react';
 import { toggleLikeCreation, deleteCreation, updateCreation } from '@/app/actions/creation.actions';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -106,14 +107,14 @@ export function CreationCard({
     onUpdate,
     onDelete,
     openOnLoad,
-    showCreatorName = false,
+    showCreator = false,
 }: { 
     creation: Creation; 
     locale: string;
     onUpdate?: (updatedCreation: Partial<Creation>) => void;
     onDelete?: (creationId: string) => void;
     openOnLoad?: boolean;
-    showCreatorName?: boolean;
+    showCreator?: boolean;
 }) {
   const t = useTranslations('HomePage');
   const tEditor = useTranslations('Editor');
@@ -227,8 +228,7 @@ export function CreationCard({
             placedCharms,
             previewImage: creation.previewImageUrl,
             creationId: creation.id,
-            creatorId: creation.creatorId,
-            creatorName: creation.creatorName,
+            creator: creation.creator,
         });
 
         toast({
@@ -333,10 +333,10 @@ export function CreationCard({
           <CardContent className="p-4 flex-grow flex flex-col">
             <div className="flex-grow">
                 <h3 className="font-headline text-lg truncate">{creation.name}</h3>
-                {showCreatorName && (
+                {showCreator && creation.creator && (
                     <Link href={`/${locale}/creators/${creation.creatorId}`} className="text-sm text-muted-foreground hover:underline flex items-center gap-1 mt-1">
-                        <User className="h-3 w-3" />
-                        {creation.creatorName}
+                        <UserIcon className="h-3 w-3" />
+                        {creation.creator.displayName}
                     </Link>
                 )}
             </div>
@@ -366,7 +366,7 @@ export function CreationCard({
         <DialogContent className="max-w-xl" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
               <DialogTitle className="font-headline text-2xl">{creation.name}</DialogTitle>
-              <DialogDescription>Par {creation.creatorName}</DialogDescription>
+              {creation.creator && <DialogDescription>Par {creation.creator.displayName}</DialogDescription>}
           </DialogHeader>
           <div className="mt-4 -mx-6 sm:mx-0">
             <Image
