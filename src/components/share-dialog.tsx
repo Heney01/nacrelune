@@ -32,7 +32,7 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
             setShareUrl(`https://www.atelierabijoux.com/${locale}/creators/${creation.creatorId}?creation=${creation.id}`);
         }
     }, [locale, creation]);
-
+    
     const handleDownloadPolaroid = async () => {
         if (!polaroidRef.current) return;
         setIsCapturing(true);
@@ -76,8 +76,8 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
                 </DialogHeader>
 
                 <div className="flex justify-center items-center my-4">
-                    <div ref={polaroidRef} className="p-4 bg-white shadow-lg w-full max-w-xs">
-                        <div className="bg-white aspect-square relative">
+                    <div ref={polaroidRef} className="p-4 bg-white shadow-lg w-full max-w-xs" style={{ backgroundColor: '#ffffff' }}>
+                        <div className="bg-white aspect-square relative" style={{ backgroundColor: '#ffffff' }}>
                              <Image 
                                 src={creation.previewImageUrl} 
                                 alt={creation.name} 
@@ -86,7 +86,7 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
                                 crossOrigin="anonymous"
                             />
                         </div>
-                        <div className="pt-4 text-center bg-white">
+                        <div className="pt-4 text-center bg-white" style={{ backgroundColor: '#ffffff' }}>
                             <p className="font-headline text-xl text-stone-800 break-words">{creation.name}</p>
                             <p className="text-sm text-stone-500 mt-1">par {creatorDisplayName}</p>
                             <p className="text-xs text-stone-400 mt-4">www.atelierabijoux.com</p>
