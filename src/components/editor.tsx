@@ -611,13 +611,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
             </div>
           </header>
 
-        {isMobile && (
-           <div className="fixed top-[73px] left-0 right-0 bg-white/80 backdrop-blur-sm z-10 border-b">
-              <div className="container mx-auto flex justify-end items-center p-4">
-              </div>
-           </div>
-        )}
-
         <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-8 lg:pb-4">
           <div className="container mx-auto flex-1 flex flex-col min-h-0">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0">
@@ -666,7 +659,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   </div>
                   <div
                       ref={canvasWrapperRef}
-                      className="relative w-full flex-grow bg-card overflow-hidden touch-none border-2 border-dashed pt-[72px] lg:pt-0"
+                      className="relative w-full flex-grow bg-card overflow-hidden touch-none border-2 border-dashed lg:pt-0"
                       onMouseDown={handleCanvasClick}
                       onTouchStart={handleCanvasClick}
                   >
