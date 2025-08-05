@@ -26,7 +26,7 @@
     "support_open_mail_button": "Ouvrir l'application de messagerie",
     "coming_soon": "Bientôt disponible",
     "profile_menu_button": "Menu du profil",
-    "inspirations_title": "Les dernières créations",
+    "inspirations_title": "Les Dernières Créations",
     "inspirations_subtitle": "Laissez-vous inspirer par la communauté.",
     "use_as_template": "Personnaliser",
     "creator_search_title": "Rechercher un Créateur",
@@ -313,3 +313,5 @@
     "reward_email_cta": "Voir mes points"
   }
 }
+
+    
