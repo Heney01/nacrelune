@@ -11,7 +11,6 @@ import { Label } from './ui/label';
 import { Input } from './ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Creation } from '@/lib/types';
-import html2canvas from 'html2canvas';
 
 interface ShareDialogProps {
     isOpen: boolean;
@@ -23,7 +22,7 @@ interface ShareDialogProps {
 export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDialogProps) {
     const t = useTranslations('Editor');
     const { toast } = useToast();
-    const polaroidRef = useRef<HTMLDivElement>(null);
+    const polaroidDisplayRef = useRef<HTMLDivElement>(null);
     const [isCapturing, setIsCapturing] = useState(false);
     const [shareUrl, setShareUrl] = useState('');
 
@@ -33,16 +32,63 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
         }
     }, [locale, creation]);
     
-    const handleDownloadPolaroid = async () => {
-        if (!polaroidRef.current) return;
+    const creatorDisplayName = creation.creator?.displayName || 'un créateur anonyme';
+
+    const handleDownloadPolaroid = useCallback(async () => {
         setIsCapturing(true);
         try {
-            const canvas = await html2canvas(polaroidRef.current, { 
-                useCORS: true, 
-                allowTaint: true,
-                backgroundColor: '#ffffff'
+            // --- Create a virtual canvas ---
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                throw new Error("Impossible de créer le contexte du canvas.");
+            }
+
+            const scale = 2; // For higher resolution
+            const width = 300 * scale;
+            const height = 360 * scale;
+            canvas.width = width;
+            canvas.height = height;
+
+            // --- Draw background ---
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, width, height);
+
+            // --- Draw creation image ---
+            const image = new window.Image();
+            image.crossOrigin = 'Anonymous';
+            image.src = creation.previewImageUrl;
+            
+            await new Promise((resolve, reject) => {
+                image.onload = resolve;
+                image.onerror = () => reject(new Error("Impossible de charger l'image de la création."));
             });
 
+            const imagePadding = 20 * scale;
+            const imageContainerSize = width - 2 * imagePadding;
+            ctx.drawImage(image, imagePadding, imagePadding, imageContainerSize, imageContainerSize);
+            
+            // --- Draw text ---
+            const textYStart = imageContainerSize + imagePadding * 1.5;
+            ctx.textAlign = 'center';
+
+            // Creation Name
+            ctx.fillStyle = '#1c1917'; // stone-800
+            ctx.font = `bold ${20 * scale}px "Playfair Display", serif`;
+            ctx.fillText(creation.name, width / 2, textYStart);
+
+            // Creator Name
+            ctx.fillStyle = '#78716c'; // stone-500
+            ctx.font = `${14 * scale}px "Montserrat", sans-serif`;
+            ctx.fillText(`par ${creatorDisplayName}`, width / 2, textYStart + 25 * scale);
+
+            // URL
+            ctx.fillStyle = '#a8a29e'; // stone-400
+            ctx.font = `${12 * scale}px "Montserrat", sans-serif`;
+            ctx.fillText('www.atelierabijoux.com', width / 2, textYStart + 60 * scale);
+
+
+            // --- Download the canvas image ---
             const dataUrl = canvas.toDataURL('image/png');
             const link = document.createElement('a');
             link.href = dataUrl;
@@ -55,7 +101,7 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
         } finally {
             setIsCapturing(false);
         }
-    };
+    }, [creation, creatorDisplayName, t]);
     
     const handleCopyLink = () => {
         navigator.clipboard.writeText(shareUrl);
@@ -63,9 +109,6 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
             description: "Lien copié dans le presse-papiers !",
         });
     };
-
-    const creatorDisplayName = creation.creator?.displayName || 'un créateur anonyme';
-
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange} onOpenAutoFocus={(e) => e.preventDefault()}>
@@ -76,7 +119,8 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
                 </DialogHeader>
 
                 <div className="flex justify-center items-center my-4">
-                    <div ref={polaroidRef} className="shadow-lg w-full max-w-xs relative" style={{ backgroundColor: '#ffffff' }}>
+                    {/* This is just a visual representation for the user, not what is being captured */}
+                    <div ref={polaroidDisplayRef} className="shadow-lg w-full max-w-xs bg-white">
                         <div className="p-4">
                             <div className="bg-white aspect-square relative">
                                  <Image 
@@ -84,10 +128,9 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
                                     alt={creation.name} 
                                     fill
                                     className="w-full h-full object-contain"
-                                    crossOrigin="anonymous"
                                 />
                             </div>
-                            <div className="pt-4 text-center bg-white">
+                            <div className="pt-4 text-center">
                                 <p className="font-headline text-xl text-stone-800 break-words">{creation.name}</p>
                                 <p className="text-sm text-stone-500 mt-1">par {creatorDisplayName}</p>
                                 <p className="text-xs text-stone-400 mt-4">www.atelierabijoux.com</p>
