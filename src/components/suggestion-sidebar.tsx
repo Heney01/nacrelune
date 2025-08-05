@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
-import { Lightbulb, Sparkles, WandSparkles, Loader2, PlusCircle, Scan, Pilcrow } from 'lucide-react';
+import { Lightbulb, Sparkles, WandSparkles, Loader2, PlusCircle, Scan, Pilcrow, Check } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Badge } from './ui/badge';
@@ -26,6 +26,9 @@ interface SuggestionSidebarProps {
   suggestions: Suggestion[];
   critique: string | null;
   onApplySuggestion: (suggestion: Suggestion) => void;
+  onFinalize: () => void;
+  finalizeButtonDisabled: boolean;
+  isEditing: boolean;
 }
 
 export function SuggestionSidebar({
@@ -37,6 +40,9 @@ export function SuggestionSidebar({
   suggestions,
   critique,
   onApplySuggestion,
+  onFinalize,
+  finalizeButtonDisabled,
+  isEditing
 }: SuggestionSidebarProps) {
   const [error, setError] = useState<string | null>(null);
   const t = useTranslations('Editor');
@@ -78,6 +84,14 @@ export function SuggestionSidebar({
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col gap-4 min-h-0">
+        {!isMobile && (
+          <div className="flex-shrink-0">
+             <Button onClick={onFinalize} className="w-full" disabled={finalizeButtonDisabled}>
+                <Check className="mr-2 h-4 w-4" />
+                {isEditing ? t('update_item_button') : t('finalize_button')}
+            </Button>
+          </div>
+        )}
          <Tabs defaultValue="suggestions" className="w-full flex-grow flex flex-col min-h-0">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="suggestions">Suggestions</TabsTrigger>
@@ -156,7 +170,7 @@ export function SuggestionSidebar({
                     <p className="text-sm text-muted-foreground">Obtenez un avis constructif sur votre création actuelle de la part de notre IA designer.</p>
                     <Button variant="outline" className="w-full" onClick={handleCritique} disabled={isLoading}>
                          {isLoading ? (
-                            <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analyse en cours...</>
+                            <> <Loader2 className="animate-spin mr-2" /> Analyse en cours...</>
                         ): (
                             <> <Pilcrow className="mr-2 h-4 w-4" /> Lancer l'analyse</>
                         )}

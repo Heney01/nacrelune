@@ -736,6 +736,9 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                 suggestions={suggestions}
                 critique={critique}
                 onApplySuggestion={applySuggestion}
+                onFinalize={handleFinalize}
+                finalizeButtonDisabled={hasStockIssues || placedCharms.length === 0}
+                isEditing={isEditing}
             />
           </div>
         </main>
@@ -821,6 +824,9 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                             suggestions={suggestions}
                                             critique={critique}
                                             onApplySuggestion={applySuggestion}
+                                            onFinalize={handleFinalize}
+                                            finalizeButtonDisabled={hasStockIssues || placedCharms.length === 0}
+                                            isEditing={isEditing}
                                         />
                                     </div>
                                 </div>
