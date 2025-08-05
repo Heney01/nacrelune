@@ -1,11 +1,10 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { useTranslations } from '@/hooks/use-translations';
-import { Loader2, Share2 } from 'lucide-react';
+import { Loader2, Share2, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
@@ -110,4 +109,3 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
         </Dialog>
     );
 }
-
