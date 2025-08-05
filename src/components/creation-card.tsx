@@ -209,18 +209,11 @@ export function CreationCard({
     }
 
     try {
-        const placedCharms: PlacedCharm[] = creation.placedCharms.map(pc => {
-            const fullCharm = allCharms.find(c => c.id === pc.charm.id);
-            if (!fullCharm) {
-                throw new Error(`La breloque avec l'ID ${pc.charm.id} est introuvable.`);
-            }
-            return {
-                id: pc.id,
-                charm: fullCharm,
-                position: pc.position,
-                rotation: pc.rotation,
-            };
-        });
+        const placedCharms: PlacedCharm[] | undefined = creation.hydratedCharms;
+        
+        if (!placedCharms) {
+            throw new Error("Les détails de la breloque pour cette création n'ont pas pu être chargés.");
+        }
         
         addToCart({
             model,

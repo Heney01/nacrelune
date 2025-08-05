@@ -5,7 +5,7 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory, Creation } from '@/lib/types';
+import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory, Creation, PlacedCreationCharm } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
@@ -599,7 +599,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
             getCanvasDataUri={getCanvasDataUri}
             onConfirmAddToCart={handleAddToCart}
             isEditing={isEditing}
-            placedCharms={placedCharms}
+            placedCharms={placedCharms.map(pc => ({ charmId: pc.charm.id, position: pc.position, rotation: pc.rotation }))}
             jewelryType={jewelryType}
             model={model}
             locale={locale}

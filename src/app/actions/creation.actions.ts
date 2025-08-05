@@ -8,8 +8,8 @@ import { doc, getDoc, addDoc, updateDoc, collection, getDocs, query, where, docu
 import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 import { adminApp } from '@/lib/firebase-admin';
-import type { Creation, CreationCharm, PlacedCreationCharm, User } from '@/lib/types';
-import { toDate } from '@/lib/data';
+import type { Creation, CreationCharm, PlacedCreationCharm, User, PlacedCharm, Charm } from '@/lib/types';
+import { toDate, getCharms } from '@/lib/data';
 
 
 // --- Helper Functions ---
@@ -114,38 +114,21 @@ export async function saveCreation(
     }
 
     try {
-        const charmIds = simplePlacedCharms.map(pc => pc.charmId);
-        const charmDocs = charmIds.length > 0 ? await getDocs(query(collection(db, 'charms'), where(documentId(), 'in', charmIds))) : { docs: [] };
-        
-        const charmsMap = new Map(charmDocs.docs.map(doc => [doc.id, doc.data()]));
-
-        const placedCharms: PlacedCreationCharm[] = simplePlacedCharms.map(spc => {
-            const charmData = charmsMap.get(spc.charmId);
-            if (!charmData) throw new Error(`Charm with id ${spc.charmId} not found`);
-
-            const cleanCharm: CreationCharm = {
-                id: spc.charmId,
-                name: charmData.name,
-                imageUrl: charmData.imageUrl,
-                price: charmData.price,
-                width: charmData.width,
-                height: charmData.height,
-            };
-
+        // Now we only store the reference and placement info, not the whole charm object.
+        const placedCharmsForDb: PlacedCreationCharm[] = simplePlacedCharms.map(spc => {
             return {
-                id: `${spc.charmId}-${Date.now()}-${Math.random()}`,
-                charm: cleanCharm,
+                charmId: spc.charmId,
                 position: spc.position,
                 rotation: spc.rotation,
             };
         });
         
-        const creationData: Omit<Creation, 'id' | 'createdAt' | 'creator'> = {
+        const creationData: Omit<Creation, 'id' | 'createdAt' | 'creator' | 'hydratedCharms'> = {
             creatorId: user.uid,
             name,
             jewelryTypeId,
             modelId,
-            placedCharms: placedCharms,
+            placedCharms: placedCharmsForDb,
             previewImageUrl: previewImageUrl,
             salesCount: 0,
             likesCount: 0,
@@ -174,52 +157,61 @@ export async function saveCreation(
     }
 }
 
+async function hydrateCreations(creationDocs: any[], allCharms: Charm[]): Promise<Creation[]> {
+    const charmsMap = new Map(allCharms.map(c => [c.id, c]));
+
+    const creations = await Promise.all(creationDocs.map(async (doc) => {
+        const data = doc.data();
+        const previewImageUrl = await getUrl(data.previewImageUrl, 'https://placehold.co/400x400.png');
+        
+        // Hydrate placed charms with full charm data
+        const hydratedCharms: PlacedCharm[] = (data.placedCharms || []).map((pc: PlacedCreationCharm, index: number) => {
+            const charmData = charmsMap.get(pc.charmId);
+            if (!charmData) return null; // or a placeholder
+            
+            return {
+                id: `${pc.charmId}-${index}`, // This ID is for React key prop, not for DB
+                charm: charmData,
+                position: pc.position,
+                rotation: pc.rotation,
+            };
+        }).filter((c: PlacedCharm | null): c is PlacedCharm => c !== null);
+
+        return {
+            id: doc.id,
+            ...data,
+            previewImageUrl,
+            hydratedCharms, // The new field with full data
+            placedCharms: data.placedCharms, // Keep the original lightweight data
+            createdAt: toDate(data.createdAt as any)!,
+        } as Creation;
+    }));
+    
+    return creations;
+}
+
 export async function getUserCreations(userId: string): Promise<Creation[]> {
     if (!userId) {
         return [];
     }
 
-    const creationsRef = collection(db, 'creations');
-    const q = query(creationsRef, where('creatorId', '==', userId), orderBy('createdAt', 'desc'));
-    
     try {
         console.log(`[SERVER] Fetching creations for userId: ${userId}`);
-        const querySnapshot = await getDocs(q);
+        const [creationsSnapshot, allCharms] = await Promise.all([
+             getDocs(query(collection(db, 'creations'), where('creatorId', '==', userId), orderBy('createdAt', 'desc'))),
+             getCharms() // Fetch all charms once
+        ]);
         
-        if (querySnapshot.empty) {
+        if (creationsSnapshot.empty) {
             console.log("[SERVER] No creations found.");
             return [];
         }
-        console.log(`[SERVER] Found ${querySnapshot.docs.length} creations.`);
+        console.log(`[SERVER] Found ${creationsSnapshot.docs.length} creations.`);
 
-        const creations = await Promise.all(querySnapshot.docs.map(async (doc) => {
-            const data = doc.data();
-            const previewImageUrl = await getUrl(data.previewImageUrl, 'https://placehold.co/400x400.png');
-            
-            const resolvedPlacedCharms = await Promise.all(
-                (data.placedCharms || []).map(async (pc: PlacedCreationCharm) => {
-                    const charmImageUrl = await getUrl(pc.charm.imageUrl, 'https://placehold.co/100x100.png');
-                    return {
-                        ...pc,
-                        charm: {
-                            ...pc.charm,
-                            imageUrl: charmImageUrl
-                        }
-                    };
-                })
-            );
-
-            return {
-                id: doc.id,
-                ...data,
-                previewImageUrl,
-                placedCharms: resolvedPlacedCharms,
-                createdAt: toDate(data.createdAt as any)!,
-            } as Creation;
-        }));
+        const hydratedCreations = await hydrateCreations(creationsSnapshot.docs, allCharms);
         
-        console.log(`[SERVER] Returning ${creations.length} processed creations.`);
-        return creations;
+        console.log(`[SERVER] Returning ${hydratedCreations.length} processed creations.`);
+        return hydratedCreations;
     } catch (error: any) {
         console.error("[SERVER] Error fetching user creations:", error);
         return [];
@@ -264,7 +256,7 @@ export async function toggleLikeCreation(creationId: string, idToken: string): P
                 return currentLikes - 1;
             } else {
                 // User has not liked, so like
-                transaction.set(likeRef, {}); // Store an empty document
+                transaction.set(likeRef, {}); // Store an empty document to signify a like
                 transaction.update(creationRef, { likesCount: increment(1) });
                 return currentLikes + 1;
             }
@@ -414,4 +406,3 @@ export async function searchCreators(searchTerm: string): Promise<{ success: boo
     return { success: false, error: "Une erreur est survenue lors de la recherche des créateurs." };
   }
 }
-

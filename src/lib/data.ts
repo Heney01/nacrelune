@@ -3,9 +3,9 @@
 import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, DocumentReference, getDoc, doc, Timestamp, query, orderBy, where, documentId, limit } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
-import type { JewelryModel, JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderItem, MailLog, MailDelivery, Creation, PlacedCreationCharm, User } from '@/lib/types';
+import type { JewelryModel, JewelryType, Charm, CharmCategory, GeneralPreferences, Order, OrderItem, MailLog, MailDelivery, Creation, PlacedCreationCharm, User, PlacedCharm } from '@/lib/types';
 
-const getUrl = async (path: string, fallback: string) => {
+const getUrl = async (path: string | undefined | null, fallback: string): Promise<string> => {
     if (path && (path.startsWith('http://') || path.startsWith('https://'))) {
         return path; // It's already a full URL
     }
@@ -315,24 +315,17 @@ export async function getOrders(): Promise<Order[]> {
         const orders: Order[] = await Promise.all(ordersSnapshot.docs.map(async(orderDoc) => {
             const data = orderDoc.data();
             
-            const enrichedItems: OrderItem[] = (data.items || []).map((item: OrderItem) => {
+            const enrichedItems: OrderItem[] = await Promise.all((data.items || []).map(async (item: OrderItem) => {
                 const enrichedCharms = (item.charmIds || [])
                     .map(id => charmsMap.get(id))
-                    .filter((c): c is Charm => !!c); // Filter out undefined charms
+                    .filter((c): c is Charm => !!c);
 
                 return {
                     ...item,
                     charms: enrichedCharms,
+                    previewImageUrl: await getUrl(item.previewImageUrl, 'https://placehold.co/400x400.png'),
                 };
-            });
-            
-            const previewImageUrls = await Promise.all(
-                (data.items || []).map((item: OrderItem) => getUrl(item.previewImageUrl, 'https://placehold.co/400x400.png'))
-            );
-
-            enrichedItems.forEach((item, index) => {
-                item.previewImageUrl = previewImageUrls[index];
-            });
+            }));
             
             const orderNumber = data.orderNumber;
             const mailHistory = mailLogsByOrderNumber.get(orderNumber) || [];
@@ -367,42 +360,61 @@ export async function getOrders(): Promise<Order[]> {
 }
 
 
-export async function getRecentCreations(): Promise<Creation[]> {
-    const creationsRef = collection(db, 'creations');
-    const q = query(creationsRef, orderBy('createdAt', 'desc'), limit(10));
+async function hydrateCreations(creationDocs: any[], allCharms: Charm[]): Promise<Creation[]> {
+    const charmsMap = new Map(allCharms.map(c => [c.id, c]));
     
-    try {
-        const querySnapshot = await getDocs(q);
+    const userIds = Array.from(new Set(creationDocs.map(d => d.data().creatorId))) as string[];
+    let creatorsMap = new Map<string, User>();
+    if (userIds.length > 0) {
+        // Firestore 'in' query is limited to 30 items. If you expect more, you'll need to chunk the requests.
+        const userDocsSnapshot = await getDocs(query(collection(db, 'users'), where(documentId(), 'in', userIds.slice(0, 30))));
+        userDocsSnapshot.docs.forEach(doc => {
+            creatorsMap.set(doc.id, { uid: doc.id, ...doc.data() } as User);
+        });
+    }
+
+    const creations = await Promise.all(creationDocs.map(async (doc) => {
+        const data = doc.data();
+        const previewImageUrl = await getUrl(data.previewImageUrl, 'https://placehold.co/400x400.png');
         
-        if (querySnapshot.empty) {
+        const hydratedCharms: PlacedCharm[] = (data.placedCharms || []).map((pc: PlacedCreationCharm, index: number) => {
+            const charmData = charmsMap.get(pc.charmId);
+            if (!charmData) return null;
+            
+            return {
+                id: `${pc.charmId}-${index}`,
+                charm: charmData,
+                position: pc.position,
+                rotation: pc.rotation,
+            };
+        }).filter((c: PlacedCharm | null): c is PlacedCharm => c !== null);
+
+        return {
+            id: doc.id,
+            ...data,
+            creator: creatorsMap.get(data.creatorId),
+            previewImageUrl,
+            hydratedCharms,
+            placedCharms: data.placedCharms,
+            createdAt: toDate(data.createdAt as any)!,
+        } as Creation;
+    }));
+    
+    return creations;
+}
+
+export async function getRecentCreations(): Promise<Creation[]> {
+    try {
+        const [creationsSnapshot, allCharms] = await Promise.all([
+            getDocs(query(collection(db, 'creations'), orderBy('createdAt', 'desc'), limit(10))),
+            getCharms()
+        ]);
+        
+        if (creationsSnapshot.empty) {
             return [];
         }
         
-        const creatorIds = Array.from(new Set(querySnapshot.docs.map(d => d.data().creatorId)));
-        
-        let creatorsMap = new Map<string, User>();
-        if (creatorIds.length > 0) {
-            const usersSnapshot = await getDocs(query(collection(db, 'users'), where(documentId(), 'in', creatorIds)));
-            usersSnapshot.docs.forEach(doc => {
-                 creatorsMap.set(doc.id, { uid: doc.id, ...doc.data() } as User);
-            });
-        }
-
-        const creations = await Promise.all(querySnapshot.docs.map(async (doc) => {
-            const data = doc.data();
-            const previewImageUrl = await getUrl(data.previewImageUrl, 'https://placehold.co/400x400.png');
-            
-            return {
-                id: doc.id,
-                ...data,
-                creator: creatorsMap.get(data.creatorId),
-                previewImageUrl,
-                placedCharms: data.placedCharms || [], // Ensure it's always an array
-                createdAt: toDate(data.createdAt as any)!,
-            } as Creation;
-        }));
-        
-        return creations;
+        return await hydrateCreations(creationsSnapshot.docs, allCharms);
     } catch (error) {
         console.error("Error fetching recent creations:", error);
         return [];
@@ -412,13 +424,10 @@ export async function getRecentCreations(): Promise<Creation[]> {
 
 export async function getCreatorShowcaseData(creatorId: string): Promise<{ creator: User | null, creations: Creation[] }> {
     try {
-        const userDocRef = doc(db, 'users', creatorId);
-        const creationsRef = collection(db, 'creations');
-        const q = query(creationsRef, where('creatorId', '==', creatorId), orderBy('createdAt', 'desc'));
-
-        const [userDoc, creationsSnapshot] = await Promise.all([
-            getDoc(userDocRef),
-            getDocs(q)
+        const [userDoc, creationsSnapshot, allCharms] = await Promise.all([
+            getDoc(doc(db, 'users', creatorId)),
+            getDocs(query(collection(db, 'creations'), where('creatorId', '==', creatorId), orderBy('createdAt', 'desc'))),
+            getCharms()
         ]);
 
         let creator: User | null = null;
@@ -432,20 +441,12 @@ export async function getCreatorShowcaseData(creatorId: string): Promise<{ creat
             };
         }
 
-        const creations = await Promise.all(creationsSnapshot.docs.map(async (doc) => {
-            const data = doc.data();
-            const previewImageUrl = await getUrl(data.previewImageUrl, 'https://placehold.co/400x400.png');
-            return {
-                id: doc.id,
-                ...data,
-                previewImageUrl,
-                placedCharms: data.placedCharms || [],
-                createdAt: toDate(data.createdAt as any)!,
-                creator: creator,
-            } as Creation;
-        }));
+        const hydratedCreations = await hydrateCreations(creationsSnapshot.docs, allCharms);
 
-        return { creator, creations };
+        // Manually assign the fetched creator to each creation to ensure consistency
+        const finalCreations = hydratedCreations.map(c => ({ ...c, creator }));
+
+        return { creator, creations: finalCreations };
     } catch (error) {
         console.error(`Error fetching showcase data for creator ${creatorId}:`, error);
         return { creator: null, creations: [] };

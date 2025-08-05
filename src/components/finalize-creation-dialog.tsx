@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -18,7 +19,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { saveCreation } from '@/app/actions/creation.actions';
-import { JewelryModel, PlacedCharm, JewelryType } from '@/lib/types';
+import { JewelryModel, PlacedCreationCharm, JewelryType } from '@/lib/types';
 
 interface FinalizeCreationDialogProps {
     isOpen: boolean;
@@ -26,7 +27,7 @@ interface FinalizeCreationDialogProps {
     getCanvasDataUri: () => Promise<string>;
     onConfirmAddToCart: (previewImage: string) => void;
     isEditing: boolean;
-    placedCharms: PlacedCharm[];
+    placedCharms: PlacedCreationCharm[];
     jewelryType: Omit<JewelryType, 'models' | 'icon'>;
     model: JewelryModel;
     locale: string;
@@ -89,7 +90,7 @@ export function FinalizeCreationDialog({
             jewelryTypeId: jewelryType.id,
             modelId: model.id,
             placedCharms: placedCharms.map(pc => ({
-                charmId: pc.charm.id,
+                charmId: pc.charmId,
                 position: pc.position,
                 rotation: pc.rotation
             })),

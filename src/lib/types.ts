@@ -80,8 +80,7 @@ export interface PlacedCharm {
 
 // PlacedCharm as stored within a Creation document
 export interface PlacedCreationCharm {
-  id: string;
-  charm: CreationCharm;
+  charmId: string;
    // Position is normalized relative to the model image's dimensions.
   // (0,0) is top-left, (1,1) is bottom-right.
   position: { x: number; y: number };
@@ -206,4 +205,6 @@ export interface Creation {
     likesCount: number;
     // Optional: Populated at runtime
     creator?: User;
+    // Optional: Populated at runtime after hydrating with full charm details
+    hydratedCharms?: PlacedCharm[];
 }
