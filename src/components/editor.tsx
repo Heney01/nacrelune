@@ -609,7 +609,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         />
       )}
 
-      <div className="flex flex-col min-h-screen bg-stone-50">
+      <div className="flex flex-col h-screen bg-stone-50">
         <header className="p-4 border-b flex-shrink-0 bg-white">
             <div className="container mx-auto flex justify-between items-center">
               <Link href={`/${locale}`} className="flex items-center gap-2">
@@ -779,12 +779,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
          {isMobile && (
              <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-2.5 z-20 space-y-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))]">
                 <div className="flex items-center gap-2.5">
-                    <Button variant="outline" asChild size="sm">
-                        <Link href={`/${locale}/?type=${jewelryType.id}`}>
-                            <ArrowLeft className="mr-2 h-4 w-4" />
-                            {tHome('back_button')}
-                        </Link>
-                    </Button>
                     <Button onClick={handleFinalize} className="w-full flex-grow" disabled={hasStockIssues || placedCharms.length === 0}>
                         <Check className="mr-2 h-4 w-4" />
                         {isEditing ? t('update_item_button') : t('finalize_button')}
