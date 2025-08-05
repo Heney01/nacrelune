@@ -28,8 +28,8 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
     const [shareUrl, setShareUrl] = useState('');
 
     useEffect(() => {
-        if (typeof window !== 'undefined' && creation.creatorId) {
-            setShareUrl(`${window.location.origin}/${locale}/creators/${creation.creatorId}?creation=${creation.id}`);
+        if (creation.creatorId) {
+            setShareUrl(`https://www.atelierabijoux.com/${locale}/creators/${creation.creatorId}?creation=${creation.id}`);
         }
     }, [locale, creation]);
 
@@ -85,7 +85,7 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent>
+            <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
                 <DialogHeader>
                     <DialogTitle>{t('share_creation_title')}</DialogTitle>
                     <DialogDescription>{t('share_creation_description')}</DialogDescription>
@@ -130,3 +130,4 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
         </Dialog>
     );
 }
+
