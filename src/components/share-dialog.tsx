@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { useTranslations } from '@/hooks/use-translations';
-import { Loader2, Camera, Copy, Share2 } from 'lucide-react';
+import { Loader2, Copy, Camera } from 'lucide-react';
 import Image from 'next/image';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
@@ -22,7 +22,6 @@ interface ShareDialogProps {
 
 export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDialogProps) {
     const t = useTranslations('Editor');
-    const tAuth = useTranslations('Auth');
     const { toast } = useToast();
     const polaroidRef = useRef<HTMLDivElement>(null);
     const [isCapturing, setIsCapturing] = useState(false);
@@ -33,7 +32,6 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
             setShareUrl(`https://www.atelierabijoux.com/${locale}/creators/${creation.creatorId}?creation=${creation.id}`);
         }
     }, [locale, creation]);
-
 
     const handleDownloadPolaroid = async () => {
         if (!polaroidRef.current) return;
@@ -79,7 +77,7 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
 
                 <div className="flex justify-center items-center my-4">
                     <div ref={polaroidRef} className="p-4 bg-white shadow-lg w-full max-w-xs">
-                        <div className="bg-stone-100 aspect-square relative">
+                        <div className="bg-white aspect-square relative">
                              <Image 
                                 src={creation.previewImageUrl} 
                                 alt={creation.name} 
@@ -88,7 +86,7 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
                                 crossOrigin="anonymous"
                             />
                         </div>
-                        <div className="pt-4 text-center">
+                        <div className="pt-4 text-center bg-white">
                             <p className="font-headline text-xl text-stone-800 break-words">{creation.name}</p>
                             <p className="text-sm text-stone-500 mt-1">par {creatorDisplayName}</p>
                             <p className="text-xs text-stone-400 mt-4">www.atelierabijoux.com</p>
@@ -107,7 +105,7 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
                 </div>
 
                 <DialogFooter>
-                    <Button onClick={handleDownloadPolaroid} className="w-full" disabled={isCapturing}>
+                     <Button onClick={handleDownloadPolaroid} className="w-full" disabled={isCapturing}>
                         {isCapturing ? <Loader2 className="animate-spin mr-2" /> : <Camera className="mr-2 h-4 w-4" />}
                         {t('share_polaroid_button')}
                     </Button>
