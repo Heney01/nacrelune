@@ -609,8 +609,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         />
       )}
 
-      <div className="flex flex-col h-screen">
-        <header className="p-4 border-b flex-shrink-0">
+      <div className="flex flex-col h-screen bg-stone-50">
+        <header className="p-4 border-b flex-shrink-0 bg-white">
             <div className="container mx-auto flex justify-between items-center">
               <Link href={`/${locale}`} className="flex items-center gap-2">
                 <BrandLogo className="h-8 w-auto" />
@@ -620,7 +620,25 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
             </div>
           </header>
-        <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0 pb-4 md:pb-8 lg:pb-4">
+
+        {isMobile && (
+           <div className="fixed top-[73px] left-0 right-0 bg-white/80 backdrop-blur-sm z-10 border-b">
+              <div className="container mx-auto flex justify-between items-center p-4">
+                  <Button variant="outline" asChild size="sm">
+                      <Link href={`/${locale}/?type=${jewelryType.id}`}>
+                          <ArrowLeft className="mr-2 h-4 w-4" />
+                          <span>{tHome('back_button')}</span>
+                      </Link>
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setIsShareOpen(true)}>
+                    <Share2 className="mr-2 h-4 w-4" />
+                    {t('share_button')}
+                  </Button>
+              </div>
+           </div>
+        )}
+
+        <main className="flex-grow flex flex-col p-4 md:p-8 min-h-0 pb-0 md:pb-8 lg:pb-4">
           <div className="container mx-auto flex-1 flex flex-col min-h-0">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow min-h-0">
               
@@ -635,7 +653,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
               </div>
 
               <div className="lg:col-span-6 flex flex-col gap-4 min-h-0 order-first lg:order-none max-h-full">
-                  <div className="flex justify-between items-center gap-4 flex-shrink-0 lg:p-0">
+                  <div className="hidden lg:flex justify-between items-center gap-4 flex-shrink-0 lg:p-0">
                       <Button variant="outline" asChild className="lg:h-10">
                           <Link href={`/${locale}/?type=${jewelryType.id}`}>
                               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -658,10 +676,6 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                 </p>
                             </DialogContent>
                         </Dialog>
-                        <Button variant="outline" size="icon" className="lg:hidden" onClick={() => setIsShareOpen(true)}>
-                          <Share2 className="h-4 w-4" />
-                          <span className="sr-only">{t('share_button')}</span>
-                        </Button>
                          <div className="hidden lg:inline-flex items-center gap-2">
                             <Button variant="outline" onClick={() => setIsShareOpen(true)}>
                                 <Share2 className="mr-2 h-4 w-4" />
@@ -676,7 +690,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   </div>
                   <div
                       ref={canvasWrapperRef}
-                      className="relative w-full flex-grow bg-card overflow-hidden touch-none border-2 border-dashed"
+                      className="relative w-full flex-grow bg-card overflow-hidden touch-none border-2 border-dashed pt-[72px] lg:pt-0"
                       onMouseDown={handleCanvasClick}
                       onTouchStart={handleCanvasClick}
                   >
