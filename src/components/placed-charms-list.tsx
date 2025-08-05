@@ -1,11 +1,12 @@
 
+
 'use client';
 
 import React from 'react';
 import Image from 'next/image';
 import { PlacedCharm, Charm } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { X, Layers } from 'lucide-react';
+import { Layers, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslations } from '@/hooks/use-translations';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -56,14 +57,6 @@ const CharmListItem = ({
         </Tooltip>
       </TooltipProvider>
     )}
-    <Button
-      variant="destructive"
-      size="icon"
-      className="absolute -top-2 -right-2 h-5 w-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20"
-      onClick={onDelete}
-    >
-      <X className="h-3 w-3" />
-    </Button>
   </div>
 );
 

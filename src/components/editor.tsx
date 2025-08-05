@@ -683,13 +683,12 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                        <div
                           ref={trashZoneRef}
                           className={cn(
-                              "absolute bottom-0 left-0 right-0 h-24 bg-destructive/20 border-t-2 border-dashed border-destructive/50 flex items-center justify-center text-destructive transition-all duration-300 z-20",
-                              isDraggingCharm ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full pointer-events-none",
-                              isOverTrash && "bg-destructive/40"
+                              "absolute bottom-4 left-4 h-20 w-20 bg-destructive/20 border-2 border-dashed border-destructive/50 flex items-center justify-center text-destructive rounded-full transition-all duration-300 z-20",
+                              isDraggingCharm ? "opacity-100 scale-100" : "opacity-0 scale-0 pointer-events-none",
+                              isOverTrash && "bg-destructive/40 scale-110"
                           )}
                         >
-                          <Trash2 className="h-8 w-8 mr-2" />
-                          <span className="text-lg font-bold">Supprimer la breloque</span>
+                          <Trash2 className="h-8 w-8" />
                       </div>
 
                       <div
