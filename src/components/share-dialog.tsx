@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -238,12 +237,12 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t, creatio
 
         {error && <div className="text-destructive text-sm text-center my-2">{error}</div>}
 
-        <DialogFooter className="gap-2 sm:gap-4">
+        <DialogFooter className="gap-2 sm:gap-4 flex-col-reverse sm:flex-row sm:justify-end">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             {t('close_button')}
           </Button>
           <Button onClick={handleShare} disabled={isLoading || isSharing || isGeneratingContent || !creationImage}>
-            {isSharing ? <Loader2 className="animate-spin" /> : <Camera />}
+            {isSharing ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Camera className="mr-2 h-4 w-4" />}
             {t('share_button')}
           </Button>
         </DialogFooter>
