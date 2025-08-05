@@ -623,13 +623,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
         {isMobile && (
            <div className="fixed top-[73px] left-0 right-0 bg-white/80 backdrop-blur-sm z-10 border-b">
-              <div className="container mx-auto flex justify-between items-center p-4">
-                  <Button variant="outline" asChild size="sm">
-                      <Link href={`/${locale}/?type=${jewelryType.id}`}>
-                          <ArrowLeft className="mr-2 h-4 w-4" />
-                          <span>{tHome('back_button')}</span>
-                      </Link>
-                  </Button>
+              <div className="container mx-auto flex justify-end items-center p-4">
                   <Button variant="outline" size="sm" onClick={() => setIsShareOpen(true)}>
                     <Share2 className="mr-2 h-4 w-4" />
                     {t('share_button')}
@@ -784,11 +778,18 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
          {isMobile && (
              <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-2.5 z-20 space-y-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))]">
-                <Button onClick={handleFinalize} className="w-full" disabled={hasStockIssues || placedCharms.length === 0}>
-                    <Check className="mr-2 h-4 w-4" />
-                    {isEditing ? t('update_item_button') : t('finalize_button')}
-                </Button>
-
+                <div className="flex items-center gap-2.5">
+                    <Button variant="outline" asChild size="sm">
+                        <Link href={`/${locale}/?type=${jewelryType.id}`}>
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            {tHome('back_button')}
+                        </Link>
+                    </Button>
+                    <Button onClick={handleFinalize} className="w-full flex-grow" disabled={hasStockIssues || placedCharms.length === 0}>
+                        <Check className="mr-2 h-4 w-4" />
+                        {isEditing ? t('update_item_button') : t('finalize_button')}
+                    </Button>
+                </div>
                  <div className="grid grid-cols-2 gap-2.5">
                       <Sheet open={isCharmsSheetOpen} onOpenChange={setIsCharmsSheetOpen}>
                           <SheetTrigger asChild>
