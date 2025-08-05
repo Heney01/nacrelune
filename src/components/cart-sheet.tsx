@@ -214,14 +214,12 @@ export function CartSheet({ children, open, onOpenChange }: {
                             <SheetClose asChild>
                               <Button variant="outline" size="sm" asChild className="text-xs">
                                 <Link href={editUrl}>
-                                  <Edit />
                                   {t('edit_item_button')}
                                 </Link>
                               </Button>
                             </SheetClose>
                           )}
                            <Button variant="outline" size="sm" onClick={() => setSharingItem(item)} className="text-xs">
-                              <Share2 />
                               {tEditor('share_button')}
                           </Button>
                            <Button
@@ -231,7 +229,6 @@ export function CartSheet({ children, open, onOpenChange }: {
                             onClick={() => removeFromCart(item.id)}
                             disabled={isProcessing}
                           >
-                            <Trash2 />
                             {t('remove_item')}
                           </Button>
                         </CardFooter>
