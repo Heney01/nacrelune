@@ -5,7 +5,7 @@ import Image from "next/image"
 
 export function BrandLogo(props: React.ComponentProps<"img">) {
   const { className, ...rest } = props;
-  const logoUrl = "https://firebasestorage.googleapis.com/v0/b/nacrelune.appspot.com/o/logo%2Flogo.png?alt=media&token=6cd225ee-ef09-4ec6-8e3a-7555cc56931f";
+  const logoUrl = "https://firebasestorage.googleapis.com/v0/b/nacrelune.firebasestorage.app/o/logo%2Flogo.png?alt=media&token=6cd225ee-ef09-4ec6-8e3a-7555cc56931f";
   
   return (
     <div className={cn("relative", className)} style={{ width: '130px', height: '46px' }}>
