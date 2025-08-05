@@ -10,8 +10,8 @@ export function BrandLogo(props: Omit<ImageProps, 'src' | 'alt' | 'width' | 'hei
     <Image
       src="https://firebasestorage.googleapis.com/v0/b/nacrelune.firebasestorage.app/o/logo%2Flogo.png?alt=media&token=6cd225ee-ef09-4ec6-8e3a-7555cc56931f"
       alt="Atelier à bijoux Logo"
-      width={130}
-      height={46}
+      width={195}
+      height={69}
       priority
       {...props}
     />
