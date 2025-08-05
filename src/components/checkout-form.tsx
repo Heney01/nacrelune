@@ -12,13 +12,12 @@ import { Label } from '@/components/ui/label';
 import { Loader2, AlertCircle, ArrowLeft, Home, Store, Search, CheckCircle, TicketPercent, Award } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
-import { createPaymentIntent } from '@/app/actions/order.actions';
 import type { CreateOrderResult, SerializableCartItem } from '@/app/actions/order.actions';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { StockErrorState } from './checkout-dialog';
 import type { ShippingAddress, DeliveryMethod, PickupPoint, Coupon, User } from '@/lib/types';
 import { Progress } from './ui/progress';
-import { Tabs, TabsList, TabsContent } from './ui/tabs';
+import { Tabs, TabsList, TabsContent, TabsTrigger } from './ui/tabs';
 import { findPickupPoints, FindPickupPointsResult } from '@/lib/pickup-points';
 import { ScrollArea } from './ui/scroll-area';
 import { Card } from './ui/card';
@@ -103,51 +102,30 @@ const PaymentStep = ({
     setIsApplyingCoupon(false);
   }
 
-  const handleCreateOrderAndEmail = async (paymentIntentId: string): Promise<CreateOrderResult> => {
-    const serializableCart: SerializableCartItem[] = cart.map(item => ({
-      id: item.id,
-      model: item.model,
-      jewelryType: { id: item.jewelryType.id, name: item.jewelryType.name, description: item.jewelryType.description },
-      placedCharms: item.placedCharms,
-      previewImage: item.previewImage,
-      creator: item.creator,
-      creationId: item.creationId,
-    }));
-
-    const finalShippingAddress = deliveryMethod === 'pickup' && selectedPickupPoint
-      ? {
-          name: shippingAddress?.name || '',
-          addressLine1: selectedPickupPoint.name,
-          addressLine2: `${selectedPickupPoint.address}, ${selectedPickupPoint.city}`,
-          city: selectedPickupPoint.city,
-          postalCode: selectedPickupPoint.postcode,
-          country: selectedPickupPoint.country,
-        }
-      : shippingAddress;
-
-    const orderResult = await createOrder(
-        serializableCart,
-        email,
-        paymentIntentId,
-        deliveryMethod,
-        finalShippingAddress,
-        appliedCoupon || undefined,
-        user?.uid,
-        pointsToUse
-    );
-
-    if (orderResult.success && orderResult.orderId) {
-        await sendConfirmationEmail(orderResult.orderId, locale);
-    }
-    
-    return orderResult;
-  }
-
   const handleFreeOrder = async () => {
     setIsProcessing(true);
     setErrorMessage(null);
-    const orderResult = await handleCreateOrderAndEmail('free_order');
-    onOrderCreated(orderResult);
+    // Logic for free orders is now handled on the confirmation page after redirection.
+    // We just need to ensure the client secret is passed correctly, even if the amount is 0.
+    if (!elements) return;
+
+    const { error: submitError } = await elements.submit();
+    if (submitError) {
+      setErrorMessage(submitError.message || t('payment_error_default'));
+      setIsProcessing(false);
+      return;
+    }
+
+    const returnUrl = `${window.location.origin}/${locale}/orders/confirmation`;
+    const { error: paymentError } = await stripe!.confirmPayment({
+        elements,
+        confirmParams: { return_url: returnUrl, receipt_email: email },
+    });
+
+    if (paymentError) {
+        setErrorMessage(paymentError.message || t('payment_error_default'));
+    }
+
     setIsProcessing(false);
   }
 
@@ -339,6 +317,7 @@ export const CheckoutForm = ({
   const t = useTranslations('Checkout');
   const tStatus = useTranslations('OrderStatus');
   const { user, firebaseUser } = useAuth();
+  const router = useRouter();
 
   const [currentStep, setCurrentStep] = useState<Step>('customer');
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('home');
