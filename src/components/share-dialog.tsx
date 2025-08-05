@@ -57,6 +57,8 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t, creatio
   const locale = params.locale as string;
   const { toast } = useToast();
   const [isCopied, setIsCopied] = useState(false);
+  
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com';
 
   useEffect(() => {
     if (isOpen) {
@@ -85,8 +87,8 @@ export function ShareDialog({ isOpen, onOpenChange, getCanvasDataUri, t, creatio
   }, [isOpen, getCanvasDataUri, t, creation]);
 
    const shareUrl = creation 
-      ? `${window.location.origin}/${locale}/creators/${creation.creatorId}?creation=${creation.id}`
-      : window.location.origin;
+      ? `${baseUrl}/${locale}/creators/${creation.creatorId}?creation=${creation.id}`
+      : baseUrl;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(shareUrl);

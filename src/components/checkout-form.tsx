@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -186,7 +187,7 @@ const PaymentStep = ({
         return;
     }
     
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com';
 
     // 4. Confirm the payment
     const { error: paymentError } = await stripe.confirmPayment({
