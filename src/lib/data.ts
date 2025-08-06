@@ -517,7 +517,7 @@ export async function getAllCreations(): Promise<Creation[]> {
 }
 
 
-export async function getCreatorShowcaseData(creatorId: string, likingUserId?: string): Promise<{ creator: User | null, creations: Creation[], isLikedByUser?: boolean }> {
+export async function getCreatorShowcaseData(creatorId: string, likingUserId?: string): Promise<{ creator: User | null; creations: Creation[]; isLikedByUser: boolean }> {
     try {
         const creatorDocRef = doc(db, 'users', creatorId);
 
@@ -553,10 +553,10 @@ export async function getCreatorShowcaseData(creatorId: string, likingUserId?: s
         return { 
             creator: creator || null, 
             creations: finalCreations,
-            isLikedByUser: likeDoc?.exists()
+            isLikedByUser: likeDoc?.exists() ?? false
         };
     } catch (error) {
         console.error(`Error fetching showcase data for creator ${creatorId}:`, error);
-        return { creator: null, creations: [] };
+        return { creator: null, creations: [], isLikedByUser: false };
     }
 }
