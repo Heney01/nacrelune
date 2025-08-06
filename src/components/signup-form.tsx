@@ -90,8 +90,14 @@ export function SignUpForm({ onSignupSuccess }: { onSignupSuccess: () => void })
             description: state.message,
         });
         onSignupSuccess();
+    } else if (state.error) {
+        toast({
+            variant: 'destructive',
+            title: t('signup_error_title'),
+            description: state.error,
+        });
     }
-  }, [state, toast, onSignupSuccess]);
+  }, [state, toast, onSignupSuccess, t]);
 
 
   return (

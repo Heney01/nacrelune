@@ -78,6 +78,10 @@ export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
           
           const result = await userLoginWithGoogle(formData);
           if (result.success) {
+            toast({
+                title: 'Connexion réussie',
+                description: result.message,
+            });
             onLoginSuccess();
           } else {
             toast({
@@ -94,6 +98,11 @@ export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
       const email = formRef.current?.email.value;
       const password = formRef.current?.password.value;
 
+      toast({
+        title: 'Connexion réussie',
+        description: 'Bienvenue !',
+      });
+      
       if (email && password) {
         setIsClientSigningIn(true);
         const auth = getAuth(app);
