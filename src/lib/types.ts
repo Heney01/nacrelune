@@ -1,6 +1,9 @@
 
 
 import { DocumentReference } from 'firebase/firestore';
+import type { Stripe as StripeType, StripeElements as StripeElementsType, loadStripe } from '@stripe/stripe-js';
+
+export type StripePromise = ReturnType<typeof loadStripe>;
 
 export interface User {
   uid: string;

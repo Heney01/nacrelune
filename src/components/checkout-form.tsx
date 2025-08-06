@@ -15,7 +15,7 @@ import { useStripe, useElements, PaymentElement, Elements } from '@stripe/react-
 import type { CreateOrderResult, SerializableCartItem } from '@/app/actions/order.actions';
 import { useParams, useRouter } from 'next/navigation';
 import { StockErrorState } from './checkout-dialog';
-import type { ShippingAddress, DeliveryMethod, PickupPoint, Coupon, User } from '@/lib/types';
+import type { ShippingAddress, DeliveryMethod, PickupPoint, Coupon, User, StripePromise } from '@/lib/types';
 import { Progress } from './ui/progress';
 import { Tabs, TabsList, TabsContent, TabsTrigger } from './ui/tabs';
 import { findPickupPoints, FindPickupPointsResult } from '@/lib/pickup-points';
@@ -27,6 +27,7 @@ import { Separator } from './ui/separator';
 import { Slider } from './ui/slider';
 import { Skeleton } from './ui/skeleton';
 import { createOrder, validateCoupon, sendConfirmationEmail, createPaymentIntent } from '@/app/actions/order.actions';
+import { StripeElementsOptions } from '@stripe/stripe-js';
 
 const PaymentStep = ({
   onOrderCreated,
@@ -186,12 +187,14 @@ const PaymentStep = ({
 type Step = 'customer' | 'shipping' | 'payment';
 
 export const CheckoutForm = ({
+  stripePromise,
   totalBeforeDiscount,
   onOrderCreated,
   setStockError,
   appliedCoupon,
   setAppliedCoupon,
 }: {
+  stripePromise: StripePromise;
   totalBeforeDiscount: number;
   onOrderCreated: (result: CreateOrderResult) => void;
   setStockError: (error: StockErrorState) => void;
@@ -400,16 +403,18 @@ export const CheckoutForm = ({
                     </div>
                   )}
                   {!isPreparingPayment && !paymentError && stripeOptions && (
-                    <PaymentStep
-                        onOrderCreated={onOrderCreated}
-                        email={email}
-                        deliveryMethod={deliveryMethod}
-                        shippingAddress={shippingAddress}
-                        clientSecret={clientSecret!}
-                        appliedCoupon={appliedCoupon}
-                        pointsToUse={pointsToUse}
-                        finalTotal={finalTotal}
-                    />
+                     <Elements stripe={stripePromise} options={stripeOptions}>
+                        <PaymentStep
+                            onOrderCreated={onOrderCreated}
+                            email={email}
+                            deliveryMethod={deliveryMethod}
+                            shippingAddress={shippingAddress}
+                            clientSecret={clientSecret!}
+                            appliedCoupon={appliedCoupon}
+                            pointsToUse={pointsToUse}
+                            finalTotal={finalTotal}
+                        />
+                    </Elements>
                   )}
              </div>
           </div>

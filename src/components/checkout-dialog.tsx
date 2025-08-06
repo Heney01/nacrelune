@@ -77,15 +77,14 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
       >
         <div className="flex flex-col h-full max-h-[90vh] md:max-h-none overflow-y-auto no-scrollbar">
            {stripePromise && (
-             <Elements stripe={stripePromise}>
-                <CheckoutForm 
-                    totalBeforeDiscount={subtotal}
-                    onOrderCreated={onOrderCreated}
-                    setStockError={setStockError}
-                    appliedCoupon={appliedCoupon}
-                    setAppliedCoupon={setAppliedCoupon}
-                />
-            </Elements>
+            <CheckoutForm 
+                stripePromise={stripePromise}
+                totalBeforeDiscount={subtotal}
+                onOrderCreated={onOrderCreated}
+                setStockError={setStockError}
+                appliedCoupon={appliedCoupon}
+                setAppliedCoupon={setAppliedCoupon}
+            />
            )}
         </div>
         
