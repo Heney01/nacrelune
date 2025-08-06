@@ -4,8 +4,8 @@
 import React, { useState, useReducer, useTransition, useMemo, FormEvent } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, ZoomIn, AlertTriangle, ShoppingCart, Info, Search, Gem } from "lucide-react";
-import type { JewelryType, JewelryModel, GeneralPreferences } from "@/lib/types";
+import { PlusCircle, Edit, Trash2, ZoomIn, AlertTriangle, ShoppingCart, Info, Search, Gem, Ruler, EllipsisVertical } from "lucide-react";
+import type { JewelryType, JewelryModel, GeneralPreferences, Charm } from "@/lib/types";
 import { ModelForm } from './model-form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
@@ -28,6 +28,12 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { deleteModel, markAsOrdered, markAsRestocked } from '@/app/actions/admin.actions';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -36,9 +42,11 @@ import { useTranslations } from '@/hooks/use-translations';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardTitle } from './ui/card';
+import { ModelSizingTool } from './model-sizing-tool';
 
 interface ModelsManagerProps {
     initialJewelryTypes: Omit<JewelryType, 'icon'>[];
+    allCharms: Charm[];
     locale: string;
     preferences: GeneralPreferences;
 }
@@ -99,13 +107,14 @@ function jewelryTypesReducer(state: State, action: OptimisticUpdate): State {
     });
 }
 
-function ReorderDialog({ model, jewelryTypeId, locale, onOrder, onRestock, t }: {
+function ReorderDialog({ model, jewelryTypeId, locale, onOrder, onRestock, t, children }: {
     model: JewelryModel,
     jewelryTypeId: string,
     locale: string,
     onOrder: (formData: FormData) => void,
     onRestock: (formData: FormData) => void,
-    t: (key: string, values?: any) => string
+    t: (key: string, values?: any) => string,
+    children: React.ReactNode,
 }) {
     const [restockedQuantity, setRestockedQuantity] = useState(1);
     const [isOpen, setIsOpen] = useState(false);
@@ -130,13 +139,11 @@ function ReorderDialog({ model, jewelryTypeId, locale, onOrder, onRestock, t }: 
     }
 
     return (
-        <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-            <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon">
-                    <ShoppingCart className="h-4 w-4" />
-                </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                {children}
+            </DialogTrigger>
+            <DialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>{t('reorder_dialog_title', {itemName: model.name})}</AlertDialogTitle>
                     <AlertDialogDescription>{t('reorder_dialog_description')}</AlertDialogDescription>
@@ -174,12 +181,12 @@ function ReorderDialog({ model, jewelryTypeId, locale, onOrder, onRestock, t }: 
                 <AlertDialogFooter>
                     <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
                 </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+            </DialogContent>
+        </Dialog>
     );
 }
 
-export function ModelsManager({ initialJewelryTypes, locale, preferences }: ModelsManagerProps) {
+export function ModelsManager({ initialJewelryTypes, allCharms, locale, preferences }: ModelsManagerProps) {
     const { toast } = useToast();
     const t = useTranslations('Admin');
     const [isPending, startTransition] = useTransition();
@@ -189,6 +196,8 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
     const [selectedJewelryType, setSelectedJewelryType] = useState<Omit<JewelryType, 'models'|'icon'>>(initialJewelryTypes[0]);
     const [selectedModel, setSelectedModel] = useState<JewelryModel | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isSizingToolOpen, setIsSizingToolOpen] = useState(false);
+    const [modelToSize, setModelToSize] = useState<JewelryModel | null>(null);
 
     const handleAddModelClick = (jewelryType: Omit<JewelryType, 'models'|'icon'>) => {
         setSelectedJewelryType(jewelryType);
@@ -201,6 +210,12 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
         setSelectedModel(model);
         setIsFormOpen(true);
     };
+    
+    const handleSizeModelClick = (jewelryType: Omit<JewelryType, 'models'|'icon'>, model: JewelryModel) => {
+        setSelectedJewelryType(jewelryType);
+        setModelToSize(model);
+        setIsSizingToolOpen(true);
+    }
 
     const handleSaveModel = (model: JewelryModel) => {
         const isEditing = jewelryTypes.some(jt => jt.id === selectedJewelryType.id && jt.models.some(m => m.id === model.id));
@@ -313,6 +328,8 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                 <Accordion type="multiple" className="w-full" defaultValue={jewelryTypes.map(jt => jt.id)}>
                     {filteredJewelryTypes.map((jewelryType) => {
                         const alertState = getCategoryAlertState(jewelryType.models);
+                        const titleId = `dialog-title-${jewelryType.id}`;
+                        const descriptionId = `dialog-description-${jewelryType.id}`;
                         return (
                             <AccordionItem value={jewelryType.id} key={jewelryType.id}>
                                 <AccordionTrigger className="text-xl font-headline flex-1 py-4 hover:no-underline [&>svg]:hidden">
@@ -340,7 +357,10 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                                 <TableRow>
                                                     <TableHead className="w-24">Image</TableHead>
                                                     <TableHead>Nom</TableHead>
-                                                    <TableHead>Prix</TableHead>
+                                                    <TableHead>Dimensions (mm)</TableHead>
+                                                    <TableHead>Coût Achat</TableHead>
+                                                    <TableHead>Prix Vente</TableHead>
+                                                    <TableHead>Marge</TableHead>
                                                     <TableHead>Stock</TableHead>
                                                     <TableHead className="text-right">Actions</TableHead>
                                                 </TableRow>
@@ -348,6 +368,7 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                             <TableBody>
                                                 {jewelryType.models.map((model) => {
                                                     const itemAlertState = getItemAlertState(model);
+                                                    const margin = model.price && model.purchasePrice ? model.price - model.purchasePrice : null;
                                                     return (
                                                         <TableRow key={model.id} className={isPending ? 'opacity-50' : ''}>
                                                             <TableCell>
@@ -360,14 +381,19 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                                                             </div>
                                                                         </div>
                                                                     </DialogTrigger>
-                                                                    <DialogContent>
-                                                                        <DialogHeader><DialogTitle>{model.name}</DialogTitle></DialogHeader>
+                                                                    <DialogContent aria-labelledby={titleId} aria-describedby={descriptionId}>
+                                                                        <DialogHeader><DialogTitle id={titleId}>{model.name}</DialogTitle><DialogDescription id={descriptionId}>{jewelryType.name}</DialogDescription></DialogHeader>
                                                                         <Image src={model.displayImageUrl} alt={model.name} width={400} height={400} className="w-full h-auto object-contain rounded-lg" sizes="400px"/>
                                                                     </DialogContent>
                                                                 </Dialog>
                                                             </TableCell>
                                                             <TableCell className="font-medium">{model.name}</TableCell>
-                                                            <TableCell>{model.price}€</TableCell>
+                                                             <TableCell className="font-mono text-xs">
+                                                                {model.width && model.height ? `${model.width} x ${model.height}` : 'N/A'}
+                                                            </TableCell>
+                                                            <TableCell>{model.purchasePrice ? `${model.purchasePrice.toFixed(2)}€` : '-'}</TableCell>
+                                                            <TableCell>{model.price ? `${model.price.toFixed(2)}€` : '-'}</TableCell>
+                                                            <TableCell>{margin !== null ? `${margin.toFixed(2)}€` : '-'}</TableCell>
                                                             <TableCell>
                                                                 <div className="flex items-center gap-2">
                                                                     {itemAlertState !== 'none' && (
@@ -380,42 +406,48 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                                                     {model.quantity}
                                                                 </div>
                                                             </TableCell>
-                                                            <TableCell className="text-right space-x-1">
-                                                                <ReorderDialog 
-                                                                    model={model}
-                                                                    jewelryTypeId={jewelryType.id}
-                                                                    locale={locale}
-                                                                    onOrder={handleOrderAction}
-                                                                    onRestock={handleRestockAction}
-                                                                    t={t}
-                                                                />
-                                                                <Button variant="ghost" size="icon" onClick={() => handleEditModelClick(jewelryType, model)}>
-                                                                    <Edit className="h-4 w-4" />
-                                                                </Button>
-                                                                <AlertDialog>
-                                                                    <AlertDialogTrigger asChild>
-                                                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                                                            <Trash2 className="h-4 w-4" />
+                                                            <TableCell className="text-right">
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild>
+                                                                        <Button variant="ghost" size="icon">
+                                                                            <EllipsisVertical className="h-4 w-4" />
                                                                         </Button>
-                                                                    </AlertDialogTrigger>
-                                                                    <AlertDialogContent>
-                                                                        <form action={handleDeleteAction}>
-                                                                            <input type="hidden" name="modelId" value={model.id} />
-                                                                            <input type="hidden" name="jewelryTypeId" value={jewelryType.id} />
-                                                                            <input type="hidden" name="displayImageUrl" value={model.displayImageUrl} />
-                                                                            <input type="hidden" name="editorImageUrl" value={model.editorImageUrl} />
-                                                                            <input type="hidden" name="locale" value={locale} />
-                                                                            <AlertDialogHeader>
-                                                                                <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-                                                                                <AlertDialogDescription>Cette action est irréversible. Le modèle "{model.name}" sera définitivement supprimé.</AlertDialogDescription>
-                                                                            </AlertDialogHeader>
-                                                                            <AlertDialogFooter>
-                                                                                <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
-                                                                                <AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
-                                                                            </AlertDialogFooter>
-                                                                        </form>
-                                                                    </AlertDialogContent>
-                                                                </AlertDialog>
+                                                                    </DropdownMenuTrigger>
+                                                                    <DropdownMenuContent>
+                                                                        <DropdownMenuItem onSelect={() => handleSizeModelClick(jewelryType, model)}>
+                                                                            <Ruler className="mr-2 h-4 w-4" />Calibrer
+                                                                        </DropdownMenuItem>
+                                                                        <ReorderDialog model={model} jewelryTypeId={jewelryType.id} locale={locale} onOrder={handleOrderAction} onRestock={handleRestockAction} t={t}>
+                                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                                                <ShoppingCart className="mr-2 h-4 w-4" />Gérer commande
+                                                                            </DropdownMenuItem>
+                                                                        </ReorderDialog>
+                                                                        <DropdownMenuItem onSelect={() => handleEditModelClick(jewelryType, model)}>
+                                                                            <Edit className="mr-2 h-4 w-4" />Modifier
+                                                                        </DropdownMenuItem>
+                                                                        <AlertDialog>
+                                                                            <AlertDialogTrigger asChild>
+                                                                                <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={e => e.preventDefault()}>
+                                                                                    <Trash2 className="mr-2 h-4 w-4" />Supprimer
+                                                                                </DropdownMenuItem>
+                                                                            </AlertDialogTrigger>
+                                                                            <AlertDialogContent>
+                                                                                <form action={handleDeleteAction}>
+                                                                                    <input type="hidden" name="modelId" value={model.id} />
+                                                                                    <input type="hidden" name="jewelryTypeId" value={jewelryType.id} />
+                                                                                    <input type="hidden" name="displayImageUrl" value={model.displayImageUrl} />
+                                                                                    <input type="hidden" name="editorImageUrl" value={model.editorImageUrl} />
+                                                                                    <input type="hidden" name="locale" value={locale} />
+                                                                                    <AlertDialogHeader>
+                                                                                        <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                                                                                        <AlertDialogDescription>Cette action est irréversible. Le modèle "{model.name}" sera définitivement supprimé.</AlertDialogDescription>
+                                                                                    </AlertDialogHeader>
+                                                                                    <AlertDialogFooter><AlertDialogCancel type="button">Annuler</AlertDialogCancel><AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction></AlertDialogFooter>
+                                                                                </form>
+                                                                            </AlertDialogContent>
+                                                                        </AlertDialog>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
                                                             </TableCell>
                                                         </TableRow>
                                                     )
@@ -427,6 +459,7 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                     <div className="md:hidden space-y-4">
                                          {jewelryType.models.map((model) => {
                                             const itemAlertState = getItemAlertState(model);
+                                            const margin = model.price && model.purchasePrice ? model.price - model.purchasePrice : null;
                                             return (
                                                 <Card key={model.id} className="p-4">
                                                     <div className="flex gap-4">
@@ -439,14 +472,17 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                                                     </div>
                                                                 </div>
                                                             </DialogTrigger>
-                                                            <DialogContent>
-                                                                <DialogHeader><DialogTitle>{model.name}</DialogTitle></DialogHeader>
+                                                            <DialogContent aria-labelledby={titleId} aria-describedby={descriptionId}>
+                                                                <DialogHeader><DialogTitle id={titleId}>{model.name}</DialogTitle><DialogDescription id={descriptionId}>{jewelryType.name}</DialogDescription></DialogHeader>
                                                                 <Image src={model.displayImageUrl} alt={model.name} width={400} height={400} className="w-full h-auto object-contain rounded-lg" sizes="400px"/>
                                                             </DialogContent>
                                                         </Dialog>
                                                         <div className="flex-grow space-y-1">
                                                             <h4 className="font-bold">{model.name}</h4>
-                                                            <p>Prix: {model.price}€</p>
+                                                            <p className="text-sm">Dimensions: {model.width && model.height ? `${model.width} x ${model.height}mm` : 'N/A'}</p>
+                                                            <p className="text-sm">Coût: {model.purchasePrice ? `${model.purchasePrice.toFixed(2)}€` : '-'}</p>
+                                                            <p className="text-sm">Vente: {model.price ? `${model.price.toFixed(2)}€` : '-'}</p>
+                                                            <p className="text-sm">Marge: {margin !== null ? `${margin.toFixed(2)}€` : '-'}</p>
                                                             <div className="flex items-center gap-2">
                                                                 <span>Stock:</span>
                                                                 {itemAlertState !== 'none' && (
@@ -459,43 +495,47 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                                                 <span>{model.quantity}</span>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                    <div className="flex justify-end items-center gap-1 mt-2">
-                                                        <ReorderDialog 
-                                                            model={model}
-                                                            jewelryTypeId={jewelryType.id}
-                                                            locale={locale}
-                                                            onOrder={handleOrderAction}
-                                                            onRestock={handleRestockAction}
-                                                            t={t}
-                                                        />
-                                                        <Button variant="ghost" size="icon" onClick={() => handleEditModelClick(jewelryType, model)}>
-                                                            <Edit className="h-4 w-4" />
-                                                        </Button>
-                                                        <AlertDialog>
-                                                            <AlertDialogTrigger asChild>
-                                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                                                    <Trash2 className="h-4 w-4" />
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="flex-shrink-0">
+                                                                    <EllipsisVertical className="h-4 w-4" />
                                                                 </Button>
-                                                            </AlertDialogTrigger>
-                                                            <AlertDialogContent>
-                                                                <form action={handleDeleteAction}>
-                                                                    <input type="hidden" name="modelId" value={model.id} />
-                                                                    <input type="hidden" name="jewelryTypeId" value={jewelryType.id} />
-                                                                    <input type="hidden" name="displayImageUrl" value={model.displayImageUrl} />
-                                                                    <input type="hidden" name="editorImageUrl" value={model.editorImageUrl} />
-                                                                    <input type="hidden" name="locale" value={locale} />
-                                                                    <AlertDialogHeader>
-                                                                        <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-                                                                        <AlertDialogDescription>Cette action est irréversible. Le modèle "{model.name}" sera définitivement supprimé.</AlertDialogDescription>
-                                                                    </AlertDialogHeader>
-                                                                    <AlertDialogFooter>
-                                                                        <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
-                                                                        <AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
-                                                                    </AlertDialogFooter>
-                                                                </form>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent>
+                                                                <DropdownMenuItem onSelect={() => handleSizeModelClick(jewelryType, model)}>
+                                                                    <Ruler className="mr-2 h-4 w-4" />Calibrer
+                                                                </DropdownMenuItem>
+                                                                 <ReorderDialog model={model} jewelryTypeId={jewelryType.id} locale={locale} onOrder={handleOrderAction} onRestock={handleRestockAction} t={t}>
+                                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                                        <ShoppingCart className="mr-2 h-4 w-4" />Gérer commande
+                                                                    </DropdownMenuItem>
+                                                                </ReorderDialog>
+                                                                <DropdownMenuItem onSelect={() => handleEditModelClick(jewelryType, model)}>
+                                                                    <Edit className="mr-2 h-4 w-4" />Modifier
+                                                                </DropdownMenuItem>
+                                                                <AlertDialog>
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={e => e.preventDefault()}>
+                                                                            <Trash2 className="mr-2 h-4 w-4" />Supprimer
+                                                                        </DropdownMenuItem>
+                                                                    </AlertDialogTrigger>
+                                                                    <AlertDialogContent>
+                                                                        <form action={handleDeleteAction}>
+                                                                            <input type="hidden" name="modelId" value={model.id} />
+                                                                            <input type="hidden" name="jewelryTypeId" value={jewelryType.id} />
+                                                                            <input type="hidden" name="displayImageUrl" value={model.displayImageUrl} />
+                                                                            <input type="hidden" name="editorImageUrl" value={model.editorImageUrl} />
+                                                                            <input type="hidden" name="locale" value={locale} />
+                                                                            <AlertDialogHeader>
+                                                                                <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                                                                                <AlertDialogDescription>Cette action est irréversible. Le modèle "{model.name}" sera définitivement supprimé.</AlertDialogDescription>
+                                                                            </AlertDialogHeader>
+                                                                            <AlertDialogFooter><AlertDialogCancel type="button">Annuler</AlertDialogCancel><AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction></AlertDialogFooter>
+                                                                        </form>
+                                                                    </AlertDialogContent>
+                                                                </AlertDialog>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
                                                     </div>
                                                 </Card>
                                             );
@@ -517,6 +557,17 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                     model={selectedModel}
                     onSave={handleSaveModel}
                     locale={locale}
+                />
+            )}
+             {isSizingToolOpen && modelToSize && (
+                <ModelSizingTool
+                    isOpen={isSizingToolOpen}
+                    onOpenChange={setIsSizingToolOpen}
+                    model={modelToSize}
+                    allCharms={allCharms}
+                    onSave={handleSaveModel}
+                    locale={locale}
+                    jewelryType={selectedJewelryType}
                 />
             )}
         </>

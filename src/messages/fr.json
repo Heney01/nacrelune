@@ -1,4 +1,5 @@
 
+
 {
   "HomePage": {
     "title": "Commencez Votre Création",
@@ -32,7 +33,8 @@
     "creator_search_title": "Rechercher un Créateur",
     "creator_search_subtitle": "Trouvez et explorez les galeries de vos créateurs préférés.",
     "creator_search_placeholder": "Entrez le nom d'un créateur...",
-    "no_creators_found": "Aucun créateur trouvé."
+    "no_creators_found": "Aucun créateur trouvé.",
+    "slots_label": "Emplacements"
   },
   "Auth": {
     "login_button": "Connexion",
@@ -52,13 +54,14 @@
     "has_account_prompt": "Vous avez déjà un compte ?",
     "my_account": "Mon compte",
     "my_creations": "Mes créations",
+    "my_orders": "Mes commandes",
     "google_login_button": "Continuer avec Google",
     "google_signup_button": "S'inscrire avec Google",
     "or_continue_with": "OU",
     "reward_points_title": "Vos Points Récompense",
     "reward_points_description": "Voici comment fonctionnent vos points de récompense.",
     "reward_points_explanation_1": "Gagnez des points lorsque d'autres utilisateurs achètent vos créations.",
-    "reward_points_explanation_2": "Échangez vos points contre des réductions ou des bons d'achat.",
+    "reward_points_explanation_2": "Échangez vos points contre des réductions lors du paiement d'une commande.",
     "reward_points_explanation_3": "Taux de conversion : 10 points = 1€.",
     "reward_points_explanation_4": "Limite de gain : 300€ par an.",
     "reward_points_close_button": "J'ai compris",
@@ -67,7 +70,15 @@
     "edit_creation_description": "Mettez à jour le nom de votre création.",
     "save_changes_button": "Enregistrer",
     "edit_creation_success_title": "Succès",
-    "edit_creation_error_title": "Erreur"
+    "edit_creation_error_title": "Erreur",
+    "danger_zone_title": "Zone de Danger",
+    "danger_zone_description": "Gérez les actions irréversibles pour votre compte.",
+    "delete_account_button": "Supprimer mon compte",
+    "delete_account_explanation": "Supprimez définitivement votre compte et toutes les données associées. Cette action n'est pas réversible.",
+    "delete_account_confirm_title": "Êtes-vous absolument certain(e) ?",
+    "delete_account_confirm_description": "Cette action ne peut pas être annulée. Cela supprimera définitivement votre compte et retirera vos données de nos serveurs.",
+    "delete_account_confirm_button": "Oui, supprimer mon compte",
+    "slots_tooltip": "Nombre de créations que vous pouvez publier."
   },
   "Editor": {
     "charms_title": "Breloques",
@@ -100,8 +111,9 @@
     "editor_disclaimer": "Cet éditeur est une représentation fidèle, mais les couleurs et dimensions finales peuvent légèrement varier. Certaines images de breloques peuvent être optimisées par IA pour une meilleure intégration. Pour voir la photo originale d'une breloque, cliquez sur l'icône loupe en haut à droite de sa carte dans le panneau de sélection.",
     "editor_disclaimer_title": "Avertissement de l'éditeur",
     "share_button": "Partager",
+    "share_polaroid_button": "Télécharger le polaroïd",
     "share_creation_title": "Partager votre création",
-    "share_creation_description": "Donnez un nom à votre création et partagez-la !",
+    "share_creation_description": "Partagez votre design avec vos amis !",
     "share_title_label": "Titre de votre création",
     "share_title_placeholder": "ex: Mon collier d'été",
     "share_error_image": "Impossible de charger l'image de votre création.",
@@ -121,14 +133,26 @@
     "publish_tab": "Publier",
     "buy_title": "Acheter pour vous",
     "buy_description": "Ajoutez cette création unique à votre panier pour l'acquérir.",
-    "publish_title": "Publier votre création",
-    "publish_description": "Partagez votre design avec la communauté. Donnez-lui un nom.",
+    "publish_title": "Publiez Votre Création",
+    "publish_description_new": "Partagez votre design et gagnez des récompenses.",
+    "publish_incentive_title": "Comment gagner des récompenses ?",
+    "publish_incentive_line1": "Lorsqu'un autre utilisateur achète l'une de vos créations, vous gagnez 5% du montant de la vente en points.",
+    "publish_incentive_line2": "10 points = 1€ de réduction sur vos futurs achats.",
     "publish_login_required_title": "Connexion requise",
     "publish_login_required_desc": "Vous devez être connecté pour publier une création.",
     "publish_login_link": "Connectez-vous ou inscrivez-vous",
     "creation_name_label": "Nom de la création",
     "creation_name_placeholder": "ex: Mon Collier d'Été",
-    "publish_button": "Publier"
+    "publish_button": "Publier",
+    "skip_publish_button": "Non merci, juste acheter",
+    "publish_success_message": "Votre création a été publiée avec succès ! Vous pouvez maintenant l'ajouter à votre panier.",
+    "exit_confirmation_title": "Êtes-vous sûr de vouloir quitter ?",
+    "exit_confirmation_description": "Votre création en cours sera perdue. Si vous souhaitez la conserver, veuillez l'ajouter au panier ou la publier.",
+    "exit_confirmation_cancel": "Rester",
+    "exit_confirmation_confirm": "Quitter",
+    "creation_limit_title": "Limite de créations atteinte",
+    "creation_limit_description": "Vous avez atteint le nombre maximum de créations publiées. Débloquez un nouvel emplacement pour continuer.",
+    "unlock_slot_button": "Débloquer pour 50 points"
   },
   "Cart": {
     "title": "Votre Panier",
@@ -151,7 +175,8 @@
     "checkout_error_title": "Erreur de commande",
     "sold_out": "Épuisé",
     "creator_badge": "Création de {name}",
-    "edit_disabled_tooltip": "Les créations des autres ne sont pas modifiables."
+    "edit_disabled_tooltip": "Les créations des autres ne sont pas modifiables.",
+    "clasp_label": "fermoir"
   },
   "CharmsPanel": {
     "title": "Breloques",
@@ -218,7 +243,7 @@
    "Checkout": {
     "title": "Paiement",
     "description": "Veuillez remplir vos informations pour finaliser la commande.",
-    "order_summary": "Résumé de la commande",
+    "order_summary": "Récapitulatif et réductions",
     "shipping_info": "Informations de livraison",
     "shipping_title": "Livraison",
     "payment_info": "Informations de paiement",
@@ -254,6 +279,7 @@
     "payment_intent_error": "Impossible d'initialiser le paiement. Veuillez réessayer.",
     "step_indicator": "Étape {step} sur {total}",
     "next_step_button": "Étape suivante",
+    "go_to_payment_button": "Continuer vers le paiement",
     "back_button": "Retour",
     "customer_info": "Informations client",
     "customer_info_error": "Veuillez renseigner votre nom et votre e-mail.",
@@ -313,5 +339,3 @@
     "reward_email_cta": "Voir mes points"
   }
 }
-
-    

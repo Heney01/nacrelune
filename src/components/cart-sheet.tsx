@@ -8,7 +8,7 @@ import { useCart } from '@/hooks/use-cart';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, ShoppingCart, PlusCircle, Loader2, User } from 'lucide-react';
+import { Trash2, ShoppingCart, PlusCircle, Loader2, User, Send, Edit, CheckCircle } from 'lucide-react';
 import React, { ReactNode, useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
@@ -30,6 +30,7 @@ import type { CartItem, Creation } from '@/lib/types';
 import { Badge } from './ui/badge';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { cn } from '@/lib/utils';
+import { FinalizeCreationDialog } from './finalize-creation-dialog';
 
 
 export function CartSheet({ children, open, onOpenChange }: {
@@ -37,7 +38,7 @@ export function CartSheet({ children, open, onOpenChange }: {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
-  const { cart, removeFromCart, clearCart } = useCart();
+  const { cart, removeFromCart, clearCart, updateCartItem } = useCart();
   const t = useTranslations('Cart');
   const tEditor = useTranslations('Editor');
   const params = useParams();
@@ -47,16 +48,33 @@ export function CartSheet({ children, open, onOpenChange }: {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [successData, setSuccessData] = useState<{orderNumber: string, email: string} | null>(null);
   const [stockError, setStockError] = useState<StockErrorState | null>(null);
-  const [sharingItem, setSharingItem] = useState<CartItem | null>(null);
+  const [itemToPublish, setItemToPublish] = useState<CartItem | null>(null);
 
-
+  const CLASP_PRICE = 1.20;
   const totalItems = cart.length;
   
   const totalPrice = cart.reduce((sum, item) => {
-    const modelPrice = item.model.price || 0;
-    const charmsPrice = item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
-    return sum + modelPrice + charmsPrice;
+    const basePrice = item.model.price || 9.90;
+    
+    let charmsPrice = 0;
+    const sortedCharms = [...item.placedCharms].sort((a, b) => (a.charm.price || 0) - (b.charm.price || 0));
+    
+    sortedCharms.forEach((pc, index) => {
+        const charmPrice = pc.charm.price || 4.00;
+        if (index < 5) {
+            charmsPrice += charmPrice;
+        } else {
+            charmsPrice += charmPrice / 2;
+        }
+    });
+
+    const claspsPrice = item.placedCharms.reduce((claspSum, pc) => {
+      return claspSum + (pc.withClasp ? CLASP_PRICE : 0);
+    }, 0);
+    
+    return sum + basePrice + charmsPrice + claspsPrice;
   }, 0);
+
 
   const formatPrice = (price: number) => {
     return t('price', { price });
@@ -82,6 +100,16 @@ export function CartSheet({ children, open, onOpenChange }: {
         });
       }
   }
+  
+  const handlePublishSuccess = (publishedCreationId: string) => {
+    if (itemToPublish) {
+      updateCartItem(itemToPublish.id, {
+        ...itemToPublish,
+        creationId: publishedCreationId,
+      });
+    }
+  };
+
 
   return (
     <>
@@ -120,10 +148,32 @@ export function CartSheet({ children, open, onOpenChange }: {
             <ScrollArea className="flex-grow my-4 pr-4">
               <div className="space-y-4">
                 {cart.map((item) => {
-                  const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
-                  const editUrl = `/${locale}/?type=${item.jewelryType.id}&model=${item.model.id}&cartItemId=${item.id}`;
-                  const isCreatorItem = !!item.creator;
-                  const descriptionId = `item-description-${item.id}`;
+                    const basePrice = item.model.price || 9.90;
+                    
+                    let charmsPrice = 0;
+                    const sortedCharms = [...item.placedCharms].sort((a, b) => (a.charm.price || 0) - (b.charm.price || 0));
+                    
+                    sortedCharms.forEach((pc, index) => {
+                        const charmPrice = pc.charm.price || 4.00;
+                        if (index < 5) {
+                            charmsPrice += charmPrice;
+                        } else {
+                            charmsPrice += charmPrice / 2;
+                        }
+                    });
+                    
+                    const claspsPrice = item.placedCharms.reduce((claspSum, pc) => {
+                        return claspSum + (pc.withClasp ? CLASP_PRICE : 0);
+                    }, 0);
+
+                    const itemPrice = basePrice + charmsPrice + claspsPrice;
+                    const editUrl = `/${locale}/?type=${item.jewelryType.id}&model=${item.model.id}&cartItemId=${item.id}`;
+                    
+                    const isFromAnotherCreator = !!item.creator;
+                    const isPublished = !!item.creationId;
+
+                    const descriptionId = `item-description-${item.id}`;
+                    const titleId = `item-title-${item.id}`;
 
                   return (
                     <Card key={item.id} className="overflow-hidden">
@@ -141,9 +191,9 @@ export function CartSheet({ children, open, onOpenChange }: {
                                   />
                                 </div>
                               </DialogTrigger>
-                              <DialogContent className="max-w-xl" aria-describedby={descriptionId}>
+                              <DialogContent className="max-w-xl" aria-labelledby={titleId} aria-describedby={descriptionId}>
                                 <DialogHeader>
-                                  <DialogTitle>{t('preview_title', { modelName: item.model.name })}</DialogTitle>
+                                  <DialogTitle id={titleId}>{t('preview_title', { modelName: item.model.name })}</DialogTitle>
                                   <DialogDescription id={descriptionId}>
                                     {t('preview_description')}
                                   </DialogDescription>
@@ -164,10 +214,15 @@ export function CartSheet({ children, open, onOpenChange }: {
                               <p className="text-sm text-muted-foreground">
                                 {item.jewelryType.name}
                               </p>
-                              {item.creator?.displayName && (
+                              {item.creator?.displayName ? (
                                 <Badge variant="secondary" className="mt-1.5">
                                   <User className="h-3 w-3 mr-1.5"/>
                                   {t('creator_badge', { name: item.creator.displayName })}
+                                </Badge>
+                              ) : isPublished && (
+                                <Badge variant="outline" className="mt-1.5 border-green-200 bg-green-50 text-green-700">
+                                  <CheckCircle className="h-3 w-3 mr-1.5"/>
+                                  Publiée
                                 </Badge>
                               )}
                               <p className="text-lg font-bold mt-2">
@@ -192,15 +247,15 @@ export function CartSheet({ children, open, onOpenChange }: {
                           <AccordionContent className="p-4 pt-0">
                             {item.placedCharms.length > 0 ? (
                               <ul className="space-y-2">
-                                {item.placedCharms.map(pc => (
-                                  <li key={pc.id} className="flex items-center justify-between gap-2 text-sm">
+                                {item.placedCharms.map(pc => {
+                                    return (
+                                  <li key={pc.id} className="flex items-center justify-start gap-2 text-sm">
                                     <div className="flex items-center gap-2">
                                       <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={24} height={24} className="rounded-sm border" data-ai-hint="jewelry charm" />
                                       <span>{pc.charm.name}</span>
                                     </div>
-                                    <span className="text-muted-foreground">{formatPrice(pc.charm.price || 0)}</span>
                                   </li>
-                                ))}
+                                )})}
                               </ul>
                             ) : (
                                <p className="text-sm text-muted-foreground text-center py-2">{t('no_charms_for_item')}</p>
@@ -209,24 +264,32 @@ export function CartSheet({ children, open, onOpenChange }: {
                         </AccordionItem>
                       </Accordion>
                       
-                       <CardFooter className="p-2 bg-muted/30 border-t grid gap-2 grid-cols-2">
-                          {!isCreatorItem && (
-                            <SheetClose asChild>
-                              <Button variant="outline" size="sm" asChild className="text-xs">
-                                <Link href={editUrl}>
-                                  {t('edit_item_button')}
-                                </Link>
-                              </Button>
-                            </SheetClose>
+                       <CardFooter className={cn("p-2 bg-muted/30 border-t grid gap-2", isFromAnotherCreator ? 'grid-cols-1' : (isPublished ? 'grid-cols-1' : 'grid-cols-3'))}>
+                          {!isFromAnotherCreator && !isPublished && (
+                              <>
+                                <SheetClose asChild>
+                                    <Button variant="outline" size="sm" asChild className="text-xs">
+                                        <Link href={editUrl}>
+                                            {t('edit_item_button')}
+                                        </Link>
+                                    </Button>
+                                </SheetClose>
+                                 <Button variant="outline" size="sm" className="text-xs" onClick={() => setItemToPublish(item)}>
+                                     {tEditor('publish_button')}
+                                 </Button>
+                              </>
                           )}
-                           <Button
+                          <Button
                             variant="outline"
                             size="sm"
-                            className="text-destructive hover:text-destructive text-xs"
+                            className={cn(
+                                "text-destructive hover:text-destructive text-xs",
+                                (isFromAnotherCreator || isPublished) && "col-span-full",
+                            )}
                             onClick={() => removeFromCart(item.id)}
                             disabled={isProcessing}
                           >
-                            {t('remove_item')}
+                            <Trash2 className="mr-1.5 h-3 w-3"/>{t('remove_item')}
                           </Button>
                         </CardFooter>
                     </Card>
@@ -264,6 +327,25 @@ export function CartSheet({ children, open, onOpenChange }: {
             onOpenChange={() => setSuccessData(null)}
             orderNumber={successData.orderNumber}
             email={successData.email}
+        />
+    )}
+    {itemToPublish && (
+       <FinalizeCreationDialog
+            isOpen={!!itemToPublish}
+            onOpenChange={() => setItemToPublish(null)}
+            getCanvasDataUri={() => Promise.resolve(itemToPublish.previewImage)}
+            onConfirmAddToCart={() => { /* Not used here */ }}
+            isEditing={false} // Always a new publication
+            placedCharms={itemToPublish.placedCharms.map(pc => ({
+                charmId: pc.charm.id,
+                position: pc.position,
+                rotation: pc.rotation,
+            }))}
+            jewelryType={itemToPublish.jewelryType}
+            model={itemToPublish.model}
+            locale={locale}
+            onPublishSuccess={handlePublishSuccess}
+            fromCart={true}
         />
     )}
     </>

@@ -1,6 +1,4 @@
 
-
-
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -11,6 +9,7 @@ import type { JewelryModel, PlacedCharm, OrderStatus, Order, OrderItem, Shipping
 import { toDate } from '@/lib/data';
 import Stripe from 'stripe';
 import { headers } from 'next/headers';
+import { verifyAdmin } from '@/app/actions/auth.actions';
 
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -31,6 +30,29 @@ const getUrl = async (path: string | undefined | null, fallback: string): Promis
         return fallback;
     }
 };
+
+async function refundStripePayment(paymentIntentId: string): Promise<{ success: boolean; message: string }> {
+    try {
+        // Handle both client_secret and payment_intent_id for backward compatibility
+        const idToRefund = paymentIntentId.includes('_secret_')
+            ? paymentIntentId.split('_secret_')[0]
+            : paymentIntentId;
+
+        const refund = await stripe.refunds.create({
+            payment_intent: idToRefund,
+        });
+        if (refund.status === 'succeeded' || refund.status === 'pending') {
+            return { success: true, message: `Remboursement initié avec succès (Status: ${refund.status}).` };
+        } else {
+             return { success: false, message: `Le remboursement a échoué avec le statut : ${refund.status}.` };
+        }
+    } catch (error: any) {
+        if (error.code === 'charge_already_refunded') {
+            return { success: true, message: 'La commande a été déjà remboursée sur Stripe.' };
+        }
+        return { success: false, message: error.message || "Une erreur est survenue lors du remboursement Stripe." };
+    }
+}
 
 
 // --- Order Actions ---
@@ -53,30 +75,6 @@ export async function createPaymentIntent(
     console.error('Error creating payment intent:', error);
     return { error: error.message, clientSecret: null };
   }
-}
-
-async function refundStripePayment(paymentIntentId: string): Promise<{ success: boolean; message: string }> {
-    try {
-        // Handle both client_secret and payment_intent_id for backward compatibility
-        const idToRefund = paymentIntentId.includes('_secret_')
-            ? paymentIntentId.split('_secret_')[0]
-            : paymentIntentId;
-
-        const refund = await stripe.refunds.create({
-            payment_intent: idToRefund,
-        });
-        if (refund.status === 'succeeded' || refund.status === 'pending') {
-            return { success: true, message: `Remboursement initié avec succès (Status: ${refund.status}).` };
-        } else {
-             return { success: false, message: `Le remboursement a échoué avec le statut : ${refund.status}.` };
-        }
-    } catch (error: any) {
-        console.error("Error creating Stripe refund:", error);
-         if (error.code === 'charge_already_refunded') {
-            return { success: true, message: 'La commande a déjà été remboursée sur Stripe.' };
-        }
-        return { success: false, message: error.message || "Une erreur est survenue lors du remboursement Stripe." };
-    }
 }
 
 function generateOrderNumber(): string {
@@ -122,6 +120,7 @@ export async function createOrder(
     email: string, 
     paymentIntentId: string,
     deliveryMethod: DeliveryMethod,
+    locale: string,
     shippingAddress?: ShippingAddress,
     coupon?: Coupon,
     userId?: string,
@@ -131,12 +130,17 @@ export async function createOrder(
         return { success: false, message: 'Le panier est vide.' };
     }
 
+    const CLASP_PRICE = 1.20;
+
     try {
         // First, upload all images to storage outside of the transaction
         const uploadPromises = cartItems.map(async (item) => {
-            const storageRef = ref(storage, `order_previews/${item.id}-${Date.now()}.png`);
-            const uploadResult = await uploadString(storageRef, item.previewImage, 'data_url');
-            return getDownloadURL(uploadResult.ref);
+            if (item.previewImage.startsWith('data:image')) {
+                const storageRef = ref(storage, `order_previews/${item.id}-${Date.now()}.png`);
+                const uploadResult = await uploadString(storageRef, item.previewImage, 'data_url');
+                return getDownloadURL(uploadResult.ref);
+            }
+            return item.previewImage;
         });
         const previewImageUrls = await Promise.all(uploadPromises);
 
@@ -154,7 +158,7 @@ export async function createOrder(
                 const currentModel = stockDeductions.get(modelKey) || { count: 0, name: item.model.name, type: item.jewelryType.id, id: item.model.id };
                 stockDeductions.set(modelKey, { ...currentModel, count: currentModel.count + 1 });
                 if (!itemDocsToFetch.has(modelKey)) {
-                    itemDocsToFetch.set(modelKey, doc(db, item.jewelryType.id, item.model.id));
+                    itemDocsToFetch.set(itemDocsToFetch.get(modelKey)?.path ?? modelKey, doc(db, item.jewelryType.id, item.model.id));
                 }
 
                 for (const pc of item.placedCharms) {
@@ -162,12 +166,27 @@ export async function createOrder(
                     const currentCharm = stockDeductions.get(charmKey) || { count: 0, name: pc.charm.name, type: 'charms', id: pc.charm.id };
                     stockDeductions.set(charmKey, { ...currentCharm, count: currentCharm.count + 1 });
                     if (!itemDocsToFetch.has(charmKey)) {
-                        itemDocsToFetch.set(charmKey, doc(db, 'charms', pc.charm.id));
+                         itemDocsToFetch.set(itemDocsToFetch.get(charmKey)?.path ?? charmKey, doc(db, 'charms', pc.charm.id));
                     }
                 }
                 
                 if (item.creator && item.creator.uid && item.creator.displayName) {
-                    const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+                    const basePrice = item.model.price || 9.90;
+                    let charmsPrice = 0;
+                    const sortedCharms = [...item.placedCharms].sort((a, b) => (a.charm.price || 0) - (b.charm.price || 0));
+                    
+                    sortedCharms.forEach((pc, index) => {
+                        const charmPrice = pc.charm.price || 4.00;
+                        if (index < 5) {
+                            charmsPrice += charmPrice;
+                        } else {
+                            charmsPrice += charmPrice / 2;
+                        }
+                    });
+
+                    const claspsPrice = item.placedCharms.reduce((sum, pc) => sum + (pc.withClasp ? CLASP_PRICE : 0), 0);
+                    const itemPrice = basePrice + charmsPrice + claspsPrice;
+                    
                     const points = Math.floor((itemPrice * 0.05) * 10);
                     if (points > 0) {
                         const currentAwards = creatorPointAwards.get(item.creator.uid) || { points: 0, creatorName: item.creator.displayName, creationName: item.model.name };
@@ -229,7 +248,24 @@ export async function createOrder(
                 transaction.update(ref, { quantity: update.newQuantity });
             }
 
-            let subtotal = cartItems.reduce((sum, item) => sum + (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0), 0);
+            const subtotal = cartItems.reduce((sum, item) => {
+                const basePrice = item.model.price || 9.90;
+                let charmsPrice = 0;
+                const sortedCharms = [...item.placedCharms].sort((a, b) => (a.charm.price || 0) - (b.charm.price || 0));
+                
+                sortedCharms.forEach((pc, index) => {
+                    const charmPrice = pc.charm.price || 4.00;
+                    if (index < 5) {
+                        charmsPrice += charmPrice;
+                    } else {
+                        charmsPrice += charmPrice / 2;
+                    }
+                });
+
+                const claspsPrice = item.placedCharms.reduce((claspSum, pc) => claspSum + (pc.withClasp ? CLASP_PRICE : 0), 0);
+                return sum + basePrice + charmsPrice + claspsPrice;
+            }, 0);
+            
             const couponDiscount = coupon ? coupon.discountType === 'percentage' ? subtotal * (coupon.value / 100) : coupon.value : 0;
             let totalAfterCoupon = Math.max(0, subtotal - couponDiscount);
             const pointsValue = pointsToUse ? pointsToUse / 10 : 0;
@@ -249,7 +285,22 @@ export async function createOrder(
             });
 
             const orderItems: Omit<OrderItem, 'modelImageUrl' | 'charms'>[] = cartItems.map((item, index) => {
-                const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+                 const basePrice = item.model.price || 9.90;
+                let charmsPrice = 0;
+                const sortedCharms = [...item.placedCharms].sort((a, b) => (a.charm.price || 0) - (b.charm.price || 0));
+                
+                sortedCharms.forEach((pc, index) => {
+                    const charmPrice = pc.charm.price || 4.00;
+                    if (index < 5) {
+                        charmsPrice += charmPrice;
+                    } else {
+                        charmsPrice += charmPrice / 2;
+                    }
+                });
+                
+                const claspsPrice = item.placedCharms.reduce((claspSum, pc) => claspSum + (pc.withClasp ? CLASP_PRICE : 0), 0);
+                const itemPrice = basePrice + charmsPrice + claspsPrice;
+
                 if (item.creationId) {
                     transaction.update(doc(db, 'creations', item.creationId), { salesCount: increment(1) });
                 }
@@ -259,7 +310,7 @@ export async function createOrder(
                     modelName: item.model.name,
                     jewelryTypeId: item.jewelryType.id,
                     jewelryTypeName: item.jewelryType.name,
-                    charmIds: item.placedCharms.map(pc => pc.charm.id),
+                    charms: item.placedCharms.map(pc => ({ charmId: pc.charm.id, withClasp: !!pc.withClasp })),
                     price: itemPrice,
                     previewImageUrl: previewImageUrls[index],
                     isCompleted: false,
@@ -314,6 +365,10 @@ export async function createOrder(
             return { success: true, message: 'Votre commande a été passée avec succès !', orderNumber, email, totalPrice: finalPrice, orderId: newOrderRef.id };
         });
 
+        if (orderData.success && orderData.orderId) {
+            await sendConfirmationEmail(orderData.orderId, locale);
+        }
+
         return orderData;
     } catch (error: any) {
         console.error("Error creating order:", error);
@@ -340,8 +395,8 @@ export async function sendConfirmationEmail(orderId: string, locale: string): Pr
         const baseUrl = referer ? new URL(referer).origin : (process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com');
         const trackingUrl = `${baseUrl}/${locale}/orders/track?orderNumber=${orderNumber}`;
 
-        const mailText = `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.modelName} avec ${item.charmIds?.length || 0} breloque(s)`).join('\\n')}\n\nVous pouvez suivre votre commande ici : ${trackingUrl}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
-        const mailHtml = `<h1>Merci pour votre commande !</h1><p>Bonjour,</p><p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${totalPrice.toFixed(2)}€.</p><h2>Récapitulatif :</h2><ul>${cartItems.map(item => `<li>${item.modelName} avec ${item.charmIds?.length || 0} breloque(s)</li>`).join('')}</ul><p>Vous pouvez suivre l'avancement de votre commande en cliquant sur ce lien : <a href="${trackingUrl}">${trackingUrl}</a>.</p><p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
+        const mailText = `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.modelName} avec ${item.charms?.length || 0} breloque(s)`).join('\\n')}\n\nVous pouvez suivre votre commande ici : ${trackingUrl}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
+        const mailHtml = `<h1>Merci pour votre commande !</h1><p>Bonjour,</p><p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${totalPrice.toFixed(2)}€.</p><h2>Récapitulatif :</h2><ul>${cartItems.map(item => `<li>${item.modelName} avec ${item.charms?.length || 0} breloque(s)</li>`).join('')}</ul><p>Vous pouvez suivre l'avancement de votre commande en cliquant sur ce lien : <a href="${trackingUrl}">${trackingUrl}</a>.</p><p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
         
         await addDoc(collection(db, 'mail'), {
             to: [email],
@@ -375,11 +430,11 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
         const orderData = orderDoc.data();
 
         // Get all unique charm IDs from all items in the order
-        const allCharmIds = orderData.items.flatMap((item: OrderItem) => item.charmIds);
+        const allCharmIds = orderData.items.flatMap((item: OrderItem) => (item.charms || []).map((c: any) => c.charmId));
         const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
         // Fetch all required charms in a single query
-        let charmsMap = new Map<string, any>();
+        let charmsMap = new Map();
         if (uniqueCharmIds.length > 0) {
             const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', uniqueCharmIds));
             const charmsSnapshot = await getDocs(charmsQuery);
@@ -428,9 +483,9 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
         const enrichedItems: OrderItem[] = await Promise.all(orderData.items.map(async (item: OrderItem) => {
             const model = modelsMap.get(item.modelId);
             
-            const enrichedCharms = (item.charmIds || []).map(id => {
-                const charm = charmsMap.get(id);
-                return charm;
+            const enrichedCharms = (item.charms || []).map((charmDetail: any) => {
+                const charm = charmsMap.get(charmDetail.charmId);
+                return charm ? { ...charm, withClasp: charmDetail.withClasp } : null;
             }).filter((c): c is any => !!c);
 
             return {
@@ -542,6 +597,7 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
 
 // --- Admin Order Actions ---
 
+
 export async function getOrders(): Promise<Order[]> {
     try {
         const [ordersSnapshot, mailSnapshot] = await Promise.all([
@@ -581,7 +637,7 @@ export async function getOrders(): Promise<Order[]> {
         });
 
         // Get all unique charm IDs from all orders first
-        const allCharmIds = ordersSnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => item.charmIds) || []);
+        const allCharmIds = ordersSnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => (item.charms || []).map((c: any) => c.charmId)) || []);
         const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
         // Fetch all required charms in a single query
@@ -608,9 +664,13 @@ export async function getOrders(): Promise<Order[]> {
             const data = orderDoc.data();
             
             const enrichedItems: OrderItem[] = await Promise.all((data.items || []).map(async (item: OrderItem) => {
-                const enrichedCharms = (item.charmIds || [])
-                    .map(id => charmsMap.get(id))
-                    .filter((c): c is any => !!c); // Filter out undefined charms
+                const enrichedCharms = (item.charms || [])
+                    .map((charmDetail: any) => {
+                        const charm = charmsMap.get(charmDetail.charmId);
+                         if (!charm) return null;
+                        return { ...charm, withClasp: charmDetail.withClasp };
+                    })
+                    .filter((c): c is (any & { withClasp: boolean }) => !!c); // Filter out undefined charms
 
                 return {
                     ...item,
@@ -652,17 +712,19 @@ export async function getOrders(): Promise<Order[]> {
 }
 
 export async function updateOrderStatus(formData: FormData): Promise<{ success: boolean; message: string }> {
-    const orderId = formData.get('orderId') as string;
-    const newStatus = formData.get('status') as OrderStatus;
-    const locale = formData.get('locale') as string || 'fr';
+     try {
+        const idToken = formData.get('idToken') as string;
+        await verifyAdmin(idToken);
+        const orderId = formData.get('orderId') as string;
+        const newStatus = formData.get('status') as OrderStatus;
+        const locale = formData.get('locale') as string || 'fr';
 
-    if (!orderId || !newStatus) {
-        return { success: false, message: "Informations manquantes." };
-    }
+        if (!orderId || !newStatus) {
+            return { success: false, message: "Informations manquantes." };
+        }
 
-    let cancellationReasonForEmail: string | null = null;
+        let cancellationReasonForEmail: string | null = null;
 
-    try {
         const transactionResult = await runTransaction(db, async (transaction) => {
             const orderRef = doc(db, 'orders', orderId);
             const orderDoc = await transaction.get(orderRef);
@@ -716,8 +778,8 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
                 for (const item of orderData.items) {
                     const modelPath = doc(db, item.jewelryTypeId, item.modelId).path;
                     stockToRestore.set(modelPath, (stockToRestore.get(modelPath) || 0) + 1);
-                    for (const charmId of item.charmIds) {
-                        const charmPath = doc(db, 'charms', charmId).path;
+                    for (const charmDetail of (item.charms || [])) {
+                        const charmPath = doc(db, 'charms', charmDetail.id).path;
                         stockToRestore.set(charmPath, (stockToRestore.get(charmPath) || 0) + 1);
                     }
                 }
@@ -764,15 +826,17 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
 }
 
 export async function updateOrderItemStatus(formData: FormData): Promise<{ success: boolean; message: string }> {
-    const orderId = formData.get('orderId') as string;
-    const itemIndex = parseInt(formData.get('itemIndex') as string, 10);
-    const isCompleted = formData.get('isCompleted') === 'true';
+     try {
+        const idToken = formData.get('idToken') as string;
+        await verifyAdmin(idToken);
+        const orderId = formData.get('orderId') as string;
+        const itemIndex = parseInt(formData.get('itemIndex') as string, 10);
+        const isCompleted = formData.get('isCompleted') === 'true';
 
-    if (!orderId || isNaN(itemIndex)) {
-        return { success: false, message: "Informations manquantes." };
-    }
+        if (!orderId || isNaN(itemIndex)) {
+            return { success: false, message: "Informations manquantes." };
+        }
 
-    try {
         const orderRef = doc(db, 'orders', orderId);
         
         await runTransaction(db, async (transaction) => {
@@ -843,7 +907,54 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
         return { success: false, message: "Une erreur est survenue lors de la validation du code." };
     }
 }
+async function getOrdersForUser(email: string): Promise<Order[]> {
+    if (!email) {
+        return [];
+    }
+
+    try {
+        const q = query(collection(db, 'orders'), where('customerEmail', '==', email), orderBy('createdAt', 'desc'));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            return [];
+        }
+        
+        const orders: Order[] = await Promise.all(querySnapshot.docs.map(async (orderDoc) => {
+            const data = orderDoc.data();
+            return {
+                id: orderDoc.id,
+                orderNumber: data.orderNumber,
+                createdAt: (data.createdAt as Timestamp).toDate(),
+                customerEmail: data.customerEmail,
+                subtotal: data.subtotal,
+                totalPrice: data.totalPrice,
+                items: data.items, // Note: items won't be fully hydrated here for performance.
+                status: data.status,
+                deliveryMethod: data.deliveryMethod || 'home',
+                shippingAddress: data.shippingAddress,
+            };
+        }));
+        return orders;
+
+    } catch (error) {
+        console.error(`Error fetching orders for email ${email}:`, error);
+        return [];
+    }
+}
+
+    
+
+    
+
+    
 
 
 
 
+
+
+    
+
+
+    

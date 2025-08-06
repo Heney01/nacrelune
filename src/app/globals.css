@@ -23,6 +23,8 @@
     --border: 40 20% 88%;
     --input: 40 20% 88%;
     --ring: 10 80% 60%; /* Richer Coral */
+    --h-screen-dynamic: 100vh; /* Fallback for browsers that don't support dvh */
+    --h-screen-dynamic: 100dvh;
   }
 
   .dark {

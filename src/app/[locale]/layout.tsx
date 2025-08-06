@@ -8,6 +8,8 @@ import { getMessages } from '@/lib/translations';
 import { CartProvider } from '@/hooks/use-cart';
 import type { Metadata } from 'next';
 import { AuthProvider } from '@/hooks/use-auth';
+import { AuthDialogProvider } from '@/hooks/use-auth-dialog';
+import { AuthDialog } from '@/components/auth-dialog';
 
 export const metadata: Metadata = {
   title: 'Atelier à bijoux',
@@ -26,12 +28,15 @@ export default async function LocaleLayout({
 
   return (
         <AuthProvider>
+          <AuthDialogProvider>
             <TranslationsProvider messages={messages}>
                 <CartProvider>
                     {children}
+                    <AuthDialog />
                 </CartProvider>
             </TranslationsProvider>
             <Toaster />
+          </AuthDialogProvider>
         </AuthProvider>
   );
 }

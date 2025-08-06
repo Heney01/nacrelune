@@ -4,26 +4,22 @@
 import { useFormState, useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import {
-  Card,
   CardContent,
-  CardDescription,
   CardFooter,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { BrandLogo, GoogleIcon } from '@/components/icons';
+import { GoogleIcon } from '@/components/icons';
 import { signup, userLoginWithGoogle } from '@/app/actions/auth.actions';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useTranslations } from '@/hooks/use-translations';
 import { useGoogleAuth } from '@/hooks/use-google-auth';
 import { Separator } from './ui/separator';
 import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthDialog } from '@/hooks/use-auth-dialog';
 
 
 type State = {
@@ -50,13 +46,14 @@ function SignUpButton() {
   );
 }
 
-export function SignUpForm() {
+export function SignUpForm({ onSignupSuccess }: { onSignupSuccess: () => void }) {
   const [state, formAction] = useFormState(signup, initialState);
-  const params = useParams();
   const router = useRouter();
+  const params = useParams();
   const locale = params.locale as string;
   const t = useTranslations('Auth');
   const { toast } = useToast();
+  const { setView } = useAuthDialog();
 
   const { signInWithGoogle, error: googleError, isGoogleLoading } = useGoogleAuth({
       onSuccess: async (user) => {
@@ -75,7 +72,7 @@ export function SignUpForm() {
                 title: 'Connexion réussie',
                 description: result.message,
             });
-            router.push(`/${locale}`);
+            onSignupSuccess();
           } else {
             toast({
               variant: 'destructive',
@@ -86,50 +83,46 @@ export function SignUpForm() {
       }
   });
 
-
   useEffect(() => {
     if (state.success) {
         toast({
             title: 'Inscription réussie',
             description: state.message,
         });
-        router.push(`/${locale}`);
+        onSignupSuccess();
+    } else if (state.error) {
+        toast({
+            variant: 'destructive',
+            title: t('signup_error_title'),
+            description: state.error,
+        });
     }
-  }, [state.success, state.message, toast, router, locale]);
+  }, [state, toast, onSignupSuccess, t]);
 
 
   return (
-    <Card>
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl">{t('user_signup_title')}</CardTitle>
-        <CardDescription>
-           {t('user_signup_description')}
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-          {(state?.error || googleError) && (
-            <Alert variant="destructive">
-              <AlertTitle>{t('signup_error_title')}</AlertTitle>
-              <AlertDescription>{state.error || googleError}</AlertDescription>
-            </Alert>
-          )}
-
-          <div className="space-y-4">
+    <div className="pt-2">
+      {(state?.error || googleError) && (
+        <Alert variant="destructive">
+          <AlertTitle>{t('signup_error_title')}</AlertTitle>
+          <AlertDescription>{state.error || googleError}</AlertDescription>
+        </Alert>
+      )}
+      <CardContent className="space-y-4 p-0">
+          <div className="space-y-4 my-4">
               <Button variant="outline" className="w-full" onClick={signInWithGoogle} disabled={isGoogleLoading}>
                 {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
                 {t('google_signup_button')}
             </Button>
             <div className="relative">
                 <Separator />
-                <span className="absolute left-1/2 -translate-x-1/2 top-[-10px] bg-card px-2 text-xs text-muted-foreground">
+                <span className="absolute left-1/2 -translate-x-1/2 top-[-10px] bg-background px-2 text-xs text-muted-foreground">
                     {t('or_continue_with')}
                 </span>
             </div>
           </div>
           <form action={formAction}>
               <div className="space-y-4">
-                <input type="hidden" name="locale" value={locale} />
                 <div className="space-y-2">
                   <Label htmlFor="displayName">{t('displayName_label')}</Label>
                   <Input
@@ -161,14 +154,14 @@ export function SignUpForm() {
           </form>
       </CardContent>
 
-      <CardFooter className="flex-col items-stretch gap-4">
+      <CardFooter className="flex-col items-stretch gap-4 p-0 pt-6">
           <div className="mt-4 text-center text-sm">
             {t('has_account_prompt')}{' '}
-            <Link href={`/${locale}/connexion`} className="underline">
+            <button type="button" onClick={() => setView('login')} className="underline">
               {t('login_button')}
-            </Link>
+            </button>
           </div>
       </CardFooter>
-    </Card>
+    </div>
   );
 }

@@ -71,7 +71,7 @@ export async function saveCreation(
     idToken: string,
     name: string,
     creationPayload: string
-): Promise<{ success: boolean; message: string; creationId?: string }> {
+): Promise<{ success: boolean; message: string; creationId?: string, reason?: 'limit_reached' }> {
 
     if (!idToken) {
         return { success: false, message: "Jeton d'authentification manquant." };
@@ -114,6 +114,27 @@ export async function saveCreation(
     }
 
     try {
+        // Check creation slot limit
+        const userDocRef = doc(db, 'users', user.uid);
+        const creationsQuery = query(collection(db, 'creations'), where('creatorId', '==', user.uid));
+        
+        const [userDoc, creationsSnapshot] = await Promise.all([
+            getDoc(userDocRef),
+            getDocs(creationsQuery)
+        ]);
+
+        const userData = userDoc.data();
+        const creationSlots = userData?.creationSlots || 5;
+        const currentCreationsCount = creationsSnapshot.size;
+
+        if (currentCreationsCount >= creationSlots) {
+            return {
+                success: false,
+                message: "Vous avez atteint votre limite de créations publiées.",
+                reason: 'limit_reached',
+            };
+        }
+
         const placedCharmsForDb: PlacedCreationCharm[] = simplePlacedCharms.map(spc => {
             return {
                 charmId: spc.charmId,

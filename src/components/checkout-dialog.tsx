@@ -16,11 +16,9 @@ import { loadStripe, Stripe, StripeElementsOptions } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { CreateOrderResult } from '@/app/actions/order.actions';
 import { CheckoutForm } from './checkout-form';
-import type { ShippingAddress, Coupon } from '@/lib/types';
+import type { Coupon } from '@/lib/types';
 import { Button } from './ui/button';
 import { useAuth } from '@/hooks/use-auth';
-import { useStripe, useElements } from '@stripe/react-stripe-js';
-import { StripePaymentElementOptions } from '@stripe/stripe-js';
 
 export type StockErrorState = {
   message: string;
@@ -36,45 +34,9 @@ interface CheckoutDialogProps {
   setStockError: (error: StockErrorState) => void;
 }
 
-const StripeWrapper = ({ children, total }: { children: React.ReactNode, total: number }) => {
-  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
-
-  useEffect(() => {
-    if (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
-      setStripePromise(loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY));
-    } else {
-      console.error("Stripe publishable key is not set.");
-    }
-  }, []);
-
-  const paymentElementOptions: StripePaymentElementOptions = {
-    layout: 'tabs',
-  };
-
-  const stripeOptions: StripeElementsOptions = {
-    mode: 'payment',
-    amount: Math.max(50, Math.round(total * 100)), // Stripe requires a minimum amount (e.g., 50 cents)
-    currency: 'eur',
-    appearance: { 
-        theme: 'stripe', 
-        variables: { 
-            colorPrimary: '#ef4444',
-            fontFamily: 'Montserrat, sans-serif',
-            borderRadius: '6px',
-        } 
-    },
-  };
-  
-   if (!stripePromise) {
-    return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin" /></div>;
-  }
-
-  return (
-    <Elements stripe={stripePromise} options={stripeOptions}>
-      {children}
-    </Elements>
-  )
-}
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  : null;
 
 export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockError, setStockError }: CheckoutDialogProps) {
   const t = useTranslations('Checkout');
@@ -84,10 +46,28 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
   
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
 
+  const CLASP_PRICE = 1.20;
+
   const subtotal = cart.reduce((sum, item) => {
-    const modelPrice = item.model.price || 0;
-    const charmsPrice = item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
-    return sum + modelPrice + charmsPrice;
+    const basePrice = item.model.price || 9.90;
+    
+    let charmsPrice = 0;
+    const sortedCharms = [...item.placedCharms].sort((a, b) => (a.charm.price || 0) - (b.charm.price || 0));
+    
+    sortedCharms.forEach((pc, index) => {
+        const charmPrice = pc.charm.price || 4.00;
+        if (index < 5) {
+            charmsPrice += charmPrice;
+        } else {
+            charmsPrice += charmPrice / 2;
+        }
+    });
+
+    const claspsPrice = item.placedCharms.reduce((claspSum, pc) => {
+      return claspSum + (pc.withClasp ? CLASP_PRICE : 0);
+    }, 0);
+    
+    return sum + basePrice + charmsPrice + claspsPrice;
   }, 0);
 
   const shippingCost = 0;
@@ -102,7 +82,6 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
 
   const formatPrice = (price: number) => tCart('price', { price });
 
-
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
         if (!open) {
@@ -115,15 +94,13 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <div className="flex flex-col h-full max-h-[90vh] md:max-h-none overflow-y-auto no-scrollbar">
-           <StripeWrapper total={total}>
-              <CheckoutForm 
-                  total={subtotal} // Pass subtotal to calculate discounts correctly
-                  onOrderCreated={onOrderCreated}
-                  setStockError={setStockError}
-                  appliedCoupon={appliedCoupon}
-                  setAppliedCoupon={setAppliedCoupon}
-              />
-          </StripeWrapper>
+           {stripePromise && (
+            <CheckoutForm 
+                stripePromise={stripePromise}
+                onOrderCreated={onOrderCreated}
+                setStockError={setStockError}
+            />
+           )}
         </div>
         
         <aside className="hidden md:flex flex-col bg-muted/50 p-6 overflow-y-auto no-scrollbar">
@@ -131,7 +108,24 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
             <div className="mt-6 flex-grow -mx-6 overflow-y-auto no-scrollbar">
                 <div className="space-y-4 px-6">
                     {cart.map(item => {
-                         const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+                         const basePrice = item.model.price || 9.90;
+                         let charmsPrice = 0;
+                         const sortedCharms = [...item.placedCharms].sort((a, b) => (a.charm.price || 0) - (b.charm.price || 0));
+                         
+                         sortedCharms.forEach((pc, index) => {
+                             const charmPrice = pc.charm.price || 4.00;
+                             if (index < 5) {
+                                 charmsPrice += charmPrice;
+                             } else {
+                                 charmsPrice += charmPrice / 2;
+                             }
+                         });
+                         
+                         const claspsPrice = item.placedCharms.reduce((claspSum, pc) => {
+                           return claspSum + (pc.withClasp ? CLASP_PRICE : 0);
+                         }, 0);
+
+                         const itemPrice = basePrice + charmsPrice + claspsPrice;
                          const isModelOutOfStock = stockError?.unavailableModelIds.has(item.model.id);
 
                         return (

@@ -50,7 +50,8 @@ export async function getJewelryTypesAndModels(
                     displayImageUrl: displayImageUrl,
                     editorImageUrl: editorImageUrl,
                     snapPath: data.snapPath || '',
-                    price: data.price || 0,
+                    price: data.price || 9.90,
+                    purchasePrice: data.purchasePrice || undefined,
                     quantity: data.quantity || 0,
                     width: data.width || null,
                     height: data.height || null,
@@ -87,7 +88,8 @@ export async function getCharms(): Promise<Charm[]> {
                 imageUrl: imageUrls[index],
                 description: data.description,
                 categoryIds: categoryRefs,
-                price: data.price || 0,
+                price: data.price || 4.00,
+                purchasePrice: data.purchasePrice || undefined,
                 quantity: data.quantity || 0,
                 width: data.width || null,
                 height: data.height || null,
@@ -160,7 +162,8 @@ export async function getFullCharmData(): Promise<{ charms: (Charm & { categoryN
                 imageUrl: imageUrl,
                 description: data.description,
                 categoryIds: categoryIds,
-                price: data.price || 0,
+                price: data.price || 4.00,
+                purchasePrice: data.purchasePrice || undefined,
                 quantity: data.quantity || 0,
                 width: data.width || null,
                 height: data.height || null,
@@ -297,18 +300,26 @@ export async function getOrders(): Promise<Order[]> {
         });
 
         // Get all unique charm IDs from all orders first
-        const allCharmIds = ordersSnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => item.charmIds) || []);
+        const allCharmIds = ordersSnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => (item.charms || []).map((c: any) => c.charmId)) || []);
         const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
         // Fetch all required charms in a single query
         let charmsMap = new Map<string, Charm>();
         if (uniqueCharmIds.length > 0) {
-            const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', uniqueCharmIds));
-            const charmsSnapshot = await getDocs(charmsQuery);
-            for (const charmDoc of charmsSnapshot.docs) {
-                const charmData = charmDoc.data() as Omit<Charm, 'id'>;
-                const imageUrl = await getUrl(charmData.imageUrl, 'https://placehold.co/100x100.png');
-                charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id, imageUrl });
+            // Firestore 'in' query is limited to 30 items, so chunk if necessary
+            const charmIdChunks = [];
+            for (let i = 0; i < uniqueCharmIds.length; i += 30) {
+                charmIdChunks.push(uniqueCharmIds.slice(i, i + 30));
+            }
+            
+            for (const chunk of charmIdChunks) {
+                const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', chunk));
+                const charmsSnapshot = await getDocs(charmsQuery);
+                for (const charmDoc of charmsSnapshot.docs) {
+                    const charmData = charmDoc.data() as Omit<Charm, 'id'>;
+                    const imageUrl = await getUrl(charmData.imageUrl, 'https://placehold.co/100x100.png');
+                    charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id, imageUrl });
+                }
             }
         }
         
@@ -316,13 +327,17 @@ export async function getOrders(): Promise<Order[]> {
             const data = orderDoc.data();
             
             const enrichedItems: OrderItem[] = await Promise.all((data.items || []).map(async (item: OrderItem) => {
-                const enrichedCharms = (item.charmIds || [])
-                    .map(id => charmsMap.get(id))
-                    .filter((c): c is Charm => !!c); // Filter out undefined charms
+                const enrichedCharms = (item.charms || [])
+                    .map((charmDetail: any) => {
+                        const charm = charmsMap.get(charmDetail.charmId);
+                        if (!charm) return null;
+                        return { ...charm, withClasp: charmDetail.withClasp };
+                    })
+                    .filter((c): c is (Charm & { withClasp: boolean }) => !!c); // Filter out undefined charms
 
                 return {
                     ...item,
-                    charms: enrichedCharms,
+                    charms: enrichedCharms, // Now contains full charm details + withClasp
                     previewImageUrl: await getUrl(item.previewImageUrl, 'https://placehold.co/400x400.png'),
                 };
             }));
@@ -517,10 +532,18 @@ export async function getAllCreations(): Promise<Creation[]> {
 }
 
 
-export async function getCreatorShowcaseData(creatorId: string): Promise<{ creator: User | null, creations: Creation[] }> {
+export async function getCreatorShowcaseData(creatorId: string, likingUserId?: string): Promise<{ creator: User | null; creations: Creation[]; isLikedByUser: boolean }> {
     try {
+        const creatorDocRef = doc(db, 'users', creatorId);
+
+        let likeDoc;
+        if (likingUserId) {
+            const likeDocRef = doc(db, 'users', creatorId, 'likes', likingUserId);
+            likeDoc = await getDoc(likeDocRef);
+        }
+
         const [userDoc, creationsSnapshot, allCharms] = await Promise.all([
-            getDoc(doc(db, 'users', creatorId)),
+            getDoc(creatorDocRef),
             getDocs(query(collection(db, 'creations'), where('creatorId', '==', creatorId), orderBy('createdAt', 'desc'))),
             getCharms()
         ]);
@@ -533,6 +556,7 @@ export async function getCreatorShowcaseData(creatorId: string): Promise<{ creat
                 displayName: data.displayName,
                 email: data.email,
                 photoURL: data.photoURL,
+                likesCount: data.likesCount || 0,
             };
         }
 
@@ -541,9 +565,13 @@ export async function getCreatorShowcaseData(creatorId: string): Promise<{ creat
         // Manually assign the fetched creator to each creation to ensure consistency
         const finalCreations = hydratedCreations.map(c => ({ ...c, creator }));
 
-        return { creator: creator || null, creations: finalCreations };
+        return { 
+            creator: creator || null, 
+            creations: finalCreations,
+            isLikedByUser: likeDoc?.exists() ?? false
+        };
     } catch (error) {
         console.error(`Error fetching showcase data for creator ${creatorId}:`, error);
-        return { creator: null, creations: [] };
+        return { creator: null, creations: [], isLikedByUser: false };
     }
 }

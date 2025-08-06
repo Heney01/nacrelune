@@ -1,14 +1,14 @@
+import Image from 'next/image';
+import type { ImageProps } from 'next/image';
 import type { SVGProps } from "react"
 import { cn } from "@/lib/utils"
-import Image, { ImageProps } from "next/image"
 
 export function BrandLogo(props: Omit<ImageProps, 'src' | 'alt' | 'width' | 'height' | 'priority'>) {
   // The 'priority' prop ensures the logo is loaded with high priority as it's likely part of the LCP.
   // The width and height should be the intrinsic size of your logo image for best results.
   // The className allows for additional styling, like setting a fixed height in the header.
   return (
-    <Image
-      src="https://firebasestorage.googleapis.com/v0/b/nacrelune.firebasestorage.app/o/logo%2Flogo.png?alt=media&token=6cd225ee-ef09-4ec6-8e3a-7555cc56931f"
+    <Image    src="https://firebasestorage.googleapis.com/v0/b/nacrelune.firebasestorage.app/o/logo%2Flogo.png?alt=media&token=6cd225ee-ef09-4ec6-8e3a-7555cc56931f"
       alt="Atelier à bijoux Logo"
       width={195}
       height={69}

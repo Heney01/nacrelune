@@ -1,12 +1,25 @@
 
+'use client';
 
 import { BrandLogo } from '@/components/icons';
-import { LoginForm } from '@/components/login-form';
 import { Button } from '@/components/ui/button';
 import { Truck } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuthDialog } from '@/hooks/use-auth-dialog';
+import { useEffect } from 'react';
 
 export default function LoginPage({ params }: { params: { locale: string }}) {
+  const router = useRouter();
+  const { open } = useAuthDialog();
+
+  useEffect(() => {
+    open('login', {
+      onLoginSuccess: () => router.push(`/${params.locale}/admin/dashboard`),
+      isAdminLogin: true
+    });
+  }, [open, router, params.locale]);
+
   return (
     <div className="flex min-h-screen flex-col bg-muted/40">
        <header className="p-4 border-b bg-white/50 backdrop-blur-lg sticky top-0 z-10">
@@ -23,9 +36,6 @@ export default function LoginPage({ params }: { params: { locale: string }}) {
           </div>
         </header>
         <main className="flex-grow flex items-center justify-center">
-            <div className="w-full max-w-sm p-4">
-                <LoginForm isUserAuth={false}/>
-            </div>
         </main>
     </div>
   );

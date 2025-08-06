@@ -9,7 +9,7 @@ import { Creation, JewelryModel, JewelryType, PlacedCharm, Charm, User } from '@
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/hooks/use-translations';
-import { Heart, User as UserIcon, Loader2, MoreHorizontal, Edit, Trash2, ShoppingCart } from 'lucide-react';
+import { Heart, User as UserIcon, Loader2, MoreHorizontal, Edit, Trash2, ShoppingCart, Share2 } from 'lucide-react';
 import { toggleLikeCreation, deleteCreation, updateCreation } from '@/app/actions/creation.actions';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -36,6 +36,7 @@ import { useCart } from '@/hooks/use-cart';
 import { getJewelryTypesAndModels, getCharms } from '@/lib/data';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { ShareDialog } from './share-dialog';
 
 function EditCreationDialog({ creation, onOpenChange, isOpen, onUpdate }: { 
     creation: Creation, 
@@ -131,6 +132,7 @@ export function CreationCard({
   
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
   useEffect(() => {
     if (openOnLoad) {
@@ -258,7 +260,11 @@ export function CreationCard({
   const handleShareClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    setIsShareOpen(true);
   };
+  
+  const titleId = `creation-title-${creation.id}`;
+  const descriptionId = `creation-desc-${creation.id}`;
 
   return (
     <>
@@ -331,6 +337,9 @@ export function CreationCard({
                 )}
             </div>
              <div className="flex justify-end items-center mt-auto pt-4 gap-4">
+                <Button variant="ghost" size="icon" className="h-auto p-0 text-muted-foreground hover:text-primary transition-colors" onClick={handleShareClick}>
+                    <Share2 className="h-5 w-5" />
+                </Button>
                 <Button variant="ghost" size="icon" className="h-auto p-0 text-muted-foreground hover:text-primary transition-colors disabled:cursor-not-allowed" onClick={handleAddToCart} disabled={!allCharms.length}>
                     <ShoppingCart className="h-5 w-5" />
                 </Button>
@@ -350,10 +359,10 @@ export function CreationCard({
           </CardContent>
         </Card>
 
-        <DialogContent className="max-w-xl" onOpenAutoFocus={(e) => e.preventDefault()}>
+        <DialogContent className="max-w-xl" onOpenAutoFocus={(e) => e.preventDefault()} aria-labelledby={titleId} aria-describedby={descriptionId}>
           <DialogHeader>
-              <DialogTitle className="font-headline text-2xl">{creation.name}</DialogTitle>
-              {creation.creator && <DialogDescription>Par {creation.creator.displayName}</DialogDescription>}
+              <DialogTitle id={titleId} className="font-headline text-2xl">{creation.name}</DialogTitle>
+              {creation.creator && <DialogDescription id={descriptionId}>Par {creation.creator.displayName}</DialogDescription>}
           </DialogHeader>
           <div className="mt-4 -mx-6 sm:mx-0">
             <Image
@@ -369,6 +378,10 @@ export function CreationCard({
                   <ShoppingCart className="mr-2 h-4 w-4" />
                   {tEditor('add_to_cart_button')}
               </Button>
+              <Button variant="outline" onClick={handleShareClick}>
+                  <Share2 className="mr-2 h-4 w-4" />
+                  {tEditor('share_button')}
+              </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -379,6 +392,14 @@ export function CreationCard({
             onOpenChange={setIsEditOpen}
             onUpdate={onUpdate}
            />
+      )}
+      {isShareOpen && (
+          <ShareDialog
+            creation={creation}
+            isOpen={isShareOpen}
+            onOpenChange={setIsShareOpen}
+            locale={locale}
+          />
       )}
     </>
   );

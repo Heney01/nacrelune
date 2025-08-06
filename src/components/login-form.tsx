@@ -6,36 +6,36 @@ import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { BrandLogo, GoogleIcon } from '@/components/icons';
-import { login, userLogin, userLoginWithGoogle } from '@/app/actions/auth.actions';
+import { GoogleIcon } from '@/components/icons';
+import { userLogin, userLoginWithGoogle, login } from '@/app/actions/auth.actions';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useTranslations } from '@/hooks/use-translations';
 import { Separator } from './ui/separator';
 import { useGoogleAuth } from '@/hooks/use-google-auth';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthDialog } from '@/hooks/use-auth-dialog';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { app } from '@/lib/firebase';
 
 
 type State = {
   success: boolean;
-  message?: string;
+  traces?: string[];
   error?: string;
+  message?: string;
 }
 
 const initialState: State = {
   success: false,
-  message: undefined,
   error: undefined,
+  message: undefined,
 };
 
 function LoginButton() {
@@ -50,13 +50,20 @@ function LoginButton() {
   );
 }
 
-export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
-  const [state, formAction] = useFormState(isUserAuth ? userLogin : login, initialState);
+export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
+  const { options } = useAuthDialog();
+  const action = options.isAdminLogin ? login : userLogin;
+  const [state, formAction] = useFormState(action, initialState);
+
+  const router = useRouter();
   const params = useParams();
   const locale = params.locale as string;
-  const router = useRouter();
   const t = useTranslations('Auth');
   const { toast } = useToast();
+  const { setView } = useAuthDialog();
+
+  const [isClientSigningIn, setIsClientSigningIn] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
   
   const { signInWithGoogle, error, isGoogleLoading } = useGoogleAuth({
       onSuccess: async (user) => {
@@ -75,7 +82,7 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
                 title: 'Connexion réussie',
                 description: result.message,
             });
-            router.push(`/${locale}`);
+            onLoginSuccess();
           } else {
             toast({
               variant: 'destructive',
@@ -86,51 +93,72 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
       }
   });
 
-
   useEffect(() => {
     if (state.success) {
+      const email = formRef.current?.email.value;
+      const password = formRef.current?.password.value;
+
       toast({
         title: 'Connexion réussie',
-        description: state.message,
+        description: 'Bienvenue !',
       });
-      const destination = isUserAuth ? `/${locale}` : `/${locale}/admin/dashboard`;
-      router.push(destination);
+      
+      if (email && password) {
+        setIsClientSigningIn(true);
+        const auth = getAuth(app);
+        signInWithEmailAndPassword(auth, email, password)
+          .then(() => {
+            onLoginSuccess();
+          })
+          .catch((clientError) => {
+            console.error("Client-side sign-in failed after server-side success:", clientError);
+            toast({
+              variant: 'destructive',
+              title: 'Erreur de synchronisation',
+              description: "La session n'a pas pu être établie côté client. Veuillez réessayer.",
+            });
+          })
+          .finally(() => {
+            setIsClientSigningIn(false);
+          });
+      } else {
+        onLoginSuccess();
+      }
+    } else if (state.error) {
+      toast({
+        variant: 'destructive',
+        title: 'Erreur',
+        description: state.error,
+      });
     }
-  }, [state.success, state.message, router, toast, locale, isUserAuth]);
+  }, [state, toast, onLoginSuccess]);
 
   return (
-    <Card>
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl">{isUserAuth ? t('user_login_title') : t('admin_login_title')}</CardTitle>
-        <CardDescription>
-           {isUserAuth ? t('user_login_description') : t('admin_login_description')}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {(state?.error || error) && (
-            <Alert variant="destructive">
-              <AlertTitle>{t('login_error_title')}</AlertTitle>
-              <AlertDescription>{state?.error || error}</AlertDescription>
-            </Alert>
-          )}
-
-        {isUserAuth && (
-            <div className="space-y-4">
-                 <Button variant="outline" className="w-full" onClick={signInWithGoogle} disabled={isGoogleLoading}>
-                    {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
-                    {t('google_login_button')}
-                </Button>
-                <div className="relative">
-                    <Separator />
-                    <span className="absolute left-1/2 -translate-x-1/2 top-[-10px] bg-card px-2 text-xs text-muted-foreground">
-                        {t('or_continue_with')}
-                    </span>
-                </div>
-            </div>
+    <div className="pt-2">
+      {(state?.error || error) && (
+          <Alert variant="destructive">
+            <AlertTitle>{t('login_error_title')}</AlertTitle>
+            <AlertDescription>{state?.error || error}</AlertDescription>
+          </Alert>
         )}
 
-        <form action={formAction}>
-          <input type="hidden" name="locale" value={locale} />
+      {!options.isAdminLogin && (
+        <div className="space-y-4 my-4">
+              <Button variant="outline" className="w-full" onClick={signInWithGoogle} disabled={isGoogleLoading || isClientSigningIn}>
+                  {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
+                  {t('google_login_button')}
+              </Button>
+              <div className="relative">
+                  <Separator />
+                  <span className="absolute left-1/2 -translate-x-1/2 top-[-10px] bg-background px-2 text-xs text-muted-foreground">
+                      {t('or_continue_with')}
+                  </span>
+              </div>
+        </div>
+      )}
+
+      <form action={formAction} ref={formRef}>
+        <CardContent className="space-y-4 p-0">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -145,19 +173,19 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
             <Label htmlFor="password">{t('password_label')}</Label>
             <Input id="password" name="password" type="password" required />
           </div>
-          <CardFooter className="flex-col gap-4 items-stretch p-0 pt-6">
-            <LoginButton />
-              {isUserAuth && (
-                <div className="mt-4 text-center text-sm">
-                  {t('no_account_prompt')}{' '}
-                  <Link href={`/${locale}/inscription`} className="underline">
-                    {t('signup_button')}
-                  </Link>
-                </div>
-              )}
-          </CardFooter>
-        </form>
-      </CardContent>
-    </Card>
+        </CardContent>
+        <CardFooter className="flex-col gap-4 items-stretch p-0 pt-6">
+          <LoginButton />
+          {!options.isAdminLogin && (
+            <div className="mt-4 text-center text-sm">
+              {t('no_account_prompt')}{' '}
+              <button type="button" onClick={() => setView('signup')} className="underline">
+                {t('signup_button')}
+              </button>
+            </div>
+          )}
+        </CardFooter>
+      </form>
+    </div>
   );
 }

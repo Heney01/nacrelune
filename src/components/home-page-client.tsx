@@ -1,15 +1,13 @@
-
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
 import Editor from '@/components/editor';
 import { BrandLogo } from '@/components/icons';
 import { useTranslations } from '@/hooks/use-translations';
-import { Gem, HandMetal, Ear, Truck, UserCircle, LogOut } from 'lucide-react';
+import { Gem, HandMetal, Ear, Truck } from 'lucide-react';
 import { TypeSelection } from '@/components/type-selection';
 import { ModelSelection } from '@/components/model-selection';
-import type { JewelryType, Charm, CharmCategory, Creation } from '@/lib/types';
+import type { JewelryType, Charm, CharmCategory, Creation, PlacedCharm } from '@/lib/types';
 import Link from 'next/link';
 import { CartWidget } from './cart-widget';
 import { Button } from './ui/button';
@@ -19,17 +17,28 @@ import { CreationsCarousel } from './creations-carousel';
 import { Separator } from './ui/separator';
 import { CreatorSearch } from './creator-search';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useRouter } from 'next/navigation';
 
-export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, charmCategories, recentCreations, locale }: {
+export function HomePageClient({ 
+    searchParams, 
+    jewelryTypes: initialJewelryTypes, 
+    allCharms, 
+    charmCategories, 
+    recentCreations, 
+    locale,
+    editorInitialState
+}: {
     searchParams: { [key:string]: string | string[] | undefined };
     jewelryTypes: Omit<JewelryType, 'icon'>[];
     allCharms: Charm[];
     charmCategories: CharmCategory[];
     recentCreations: Creation[];
     locale: string;
+    editorInitialState: { placedCharms: PlacedCharm[] } | null;
 }) {
     const t = useTranslations('HomePage');
     const isMobile = useIsMobile();
+    const router = useRouter();
     
     const jewelryTypes = initialJewelryTypes.map(jt => {
         if (jt.id === 'necklace') return { ...jt, name: t('jewelry_types.necklace'), description: t('jewelry_types.necklace_description'), icon: Gem };
@@ -44,13 +53,17 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
     const selectedType = selectedTypeId ? jewelryTypes.find(t => t.id === selectedTypeId) : null;
     const selectedModel = selectedType && selectedModelId ? selectedType.models.find(m => m.id === selectedModelId) : null;
     
-    if (selectedModel && selectedType) {
-      return <Editor model={selectedModel} jewelryType={selectedType} allCharms={allCharms} charmCategories={charmCategories} />;
+    useEffect(() => {
+    // If the editor is loaded via redirect, clear the URL params to avoid re-triggering.
+    if (searchParams?.type && searchParams?.model && searchParams?.charms) {
+        const newUrl = `/${locale}/?type=${searchParams.type}&model=${searchParams.model}`;
+        // Use replace to not add a new entry in the history stack
+        router.replace(newUrl, { scroll: false });
     }
-  
-    return (
-      <div className="min-h-screen flex flex-col bg-stone-50">
-         <header className="p-4 border-b bg-white">
+    }, [searchParams, locale, router]);
+    
+    const Header = () => (
+         <header className="p-4 border-b bg-white flex-shrink-0">
           <div className="container mx-auto">
             <div className="flex justify-between items-center">
               <div className="flex flex-col items-start gap-2">
@@ -73,6 +86,28 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
             </div>
           </div>
         </header>
+    );
+
+    if (selectedModel && selectedType) {
+      return (
+        <div className="h-[var(--h-screen-dynamic)] flex flex-col bg-stone-50">
+            <Header />
+            <div className="flex-grow flex flex-col min-h-0">
+                <Editor 
+                    model={selectedModel} 
+                    jewelryType={selectedType} 
+                    allCharms={allCharms} 
+                    charmCategories={charmCategories} 
+                    editorInitialState={editorInitialState}
+                />
+            </div>
+        </div>
+      );
+    }
+  
+    return (
+      <div className="min-h-screen flex flex-col bg-stone-50">
+         <Header />
 
         <main className="flex-grow p-4 md:p-8">
           <div className="container mx-auto">
@@ -98,6 +133,12 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
         
         <footer className="p-4 border-t mt-auto bg-white">
           <div className="container mx-auto text-center text-muted-foreground text-sm space-y-2">
+            <div className="flex justify-center items-center gap-x-4 gap-y-2 flex-wrap">
+                <Link href={`/${locale}/legal/mentions-legales`} className="hover:underline">Mentions Légales</Link>
+                <Link href={`/${locale}/legal/cgv`} className="hover:underline">Conditions Générales de Vente</Link>
+                <Link href={`/${locale}/legal/confidentialite`} className="hover:underline">Politique de Confidentialité</Link>
+                <Link href={`/${locale}/legal/retours`} className="hover:underline">Politique de retours</Link>
+            </div>
             <p>{t('footer_text', { year: new Date().getFullYear() })}</p>
              <div className="flex justify-center items-center gap-4 text-xs text-muted-foreground/80">
                 <SupportDialog />

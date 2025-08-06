@@ -7,7 +7,6 @@ import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBa
 import { ref, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import type { JewelryModel, CharmCategory, Charm, GeneralPreferences } from '@/lib/types';
 
-
 // --- Helper Functions ---
 
 const getFileNameFromUrl = (url: string) => {
@@ -76,17 +75,17 @@ async function uploadImage(imageDataJson: string | null, existingUrl: string, st
 // --- Model Actions ---
 
 export async function deleteModel(formData: FormData): Promise<{ success: boolean; message: string }> {
-    const modelId = formData.get('modelId') as string;
-    const jewelryTypeId = formData.get('jewelryTypeId') as string;
-    const locale = formData.get('locale') as string || 'fr';
-    const displayImageUrl = formData.get('displayImageUrl') as string;
-    const editorImageUrl = formData.get('editorImageUrl') as string;
-    
-    if (!modelId || !jewelryTypeId) {
-        return { success: false, message: "Informations manquantes pour la suppression." };
-    }
-
     try {
+        const modelId = formData.get('modelId') as string;
+        const jewelryTypeId = formData.get('jewelryTypeId') as string;
+        const locale = formData.get('locale') as string || 'fr';
+        const displayImageUrl = formData.get('displayImageUrl') as string;
+        const editorImageUrl = formData.get('editorImageUrl') as string;
+        
+        if (!modelId || !jewelryTypeId) {
+            return { success: false, message: "Informations manquantes pour la suppression." };
+        }
+
         await deleteDoc(doc(db, jewelryTypeId, modelId));
 
         await Promise.allSettled([
@@ -98,46 +97,61 @@ export async function deleteModel(formData: FormData): Promise<{ success: boolea
         return { success: true, message: "Le modèle a été supprimé avec succès." };
 
     } catch (error: any) {
-        return { success: false, message: "Une erreur est survenue lors de la suppression du modèle." };
+        return { success: false, message: error.message || "Une erreur est survenue lors de la suppression du modèle." };
     }
 }
 
 
 export async function saveModel(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; model?: JewelryModel }> {
-    const modelId = formData.get('modelId') as string | null;
-    const jewelryTypeId = formData.get('jewelryTypeId') as string;
-    const name = formData.get('name') as string;
-    const price = parseFloat(formData.get('price') as string);
-    const quantity = parseInt(formData.get('quantity') as string, 10);
-    const width = parseFloat(formData.get('width') as string) || undefined;
-    const height = parseFloat(formData.get('height') as string) || undefined;
-    const reorderUrl = formData.get('reorderUrl') as string;
-    const locale = formData.get('locale') as string || 'fr';
-
-    const displayImageData = formData.get('displayImage') as string;
-    const editorImageData = formData.get('editorImage') as string;
-    
-    const originalDisplayImageUrl = formData.get('originalDisplayImageUrl') as string || '';
-    const originalEditorImageUrl = formData.get('originalEditorImageUrl') as string || '';
-
-    if (!jewelryTypeId || !name || isNaN(price) || isNaN(quantity)) {
-        return { success: false, message: "Les champs obligatoires sont manquants ou invalides." };
-    }
-
     try {
-        const displayImageUrl = await uploadImage(displayImageData, originalDisplayImageUrl, jewelryTypeId);
-        const editorImageUrl = await uploadImage(editorImageData, originalEditorImageUrl, jewelryTypeId);
+        const modelId = formData.get('modelId') as string | null;
+        const jewelryTypeId = formData.get('jewelryTypeId') as string;
+        const locale = formData.get('locale') as string || 'fr';
+        const isDimensionUpdateOnly = formData.get('isDimensionUpdateOnly') === 'true';
 
-        const modelData: Omit<JewelryModel, 'id' | 'lastOrderedAt' | 'restockedAt'> = {
-            name,
-            price,
-            quantity,
-            width,
-            height,
-            displayImageUrl,
-            editorImageUrl,
-            reorderUrl,
-        };
+        let modelData: Partial<Omit<JewelryModel, 'id' | 'lastOrderedAt' | 'restockedAt' | 'name' | 'displayImageUrl' | 'editorImageUrl'>> & { name?: string, displayImageUrl?: string, editorImageUrl?: string } = {};
+
+        if (isDimensionUpdateOnly) {
+            const width = parseFloat(formData.get('width') as string) || undefined;
+            const height = parseFloat(formData.get('height') as string) || undefined;
+             if (!modelId || width === undefined || height === undefined) {
+                 return { success: false, message: "Informations manquantes pour la mise à jour des dimensions." };
+            }
+            modelData = { width, height };
+        } else {
+            const name = formData.get('name') as string;
+            const price = parseFloat(formData.get('price') as string);
+            const purchasePrice = parseFloat(formData.get('purchasePrice') as string) || undefined;
+            const quantity = parseInt(formData.get('quantity') as string, 10);
+            const width = parseFloat(formData.get('width') as string) || undefined;
+            const height = parseFloat(formData.get('height') as string) || undefined;
+            const reorderUrl = formData.get('reorderUrl') as string;
+
+            const displayImageData = formData.get('displayImage') as string;
+            const editorImageData = formData.get('editorImage') as string;
+            
+            const originalDisplayImageUrl = formData.get('originalDisplayImageUrl') as string || '';
+            const originalEditorImageUrl = formData.get('originalEditorImageUrl') as string || '';
+
+            if (!jewelryTypeId || !name || isNaN(price) || isNaN(quantity)) {
+                return { success: false, message: "Les champs obligatoires sont manquants ou invalides." };
+            }
+
+            const displayImageUrl = await uploadImage(displayImageData, originalDisplayImageUrl, jewelryTypeId);
+            const editorImageUrl = await uploadImage(editorImageData, originalEditorImageUrl, jewelryTypeId);
+            
+            modelData = {
+                name,
+                price,
+                purchasePrice,
+                quantity,
+                width,
+                height,
+                displayImageUrl,
+                editorImageUrl,
+                reorderUrl,
+            };
+        }
 
         let savedModel: JewelryModel;
 
@@ -149,20 +163,38 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
             savedModel = { id: modelId, ...docSnap.data() } as JewelryModel;
         } else {
             // Create
-            const docRef = await addDoc(collection(db, jewelryTypeId), modelData);
-            savedModel = { id: docRef.id, ...modelData, lastOrderedAt: null, restockedAt: null };
+            if (isDimensionUpdateOnly || !modelData.name || !modelData.displayImageUrl || !modelData.editorImageUrl) {
+                 return { success: false, message: "Impossible de créer un nouveau modèle avec des informations manquantes." };
+            }
+            const fullModelData: Omit<JewelryModel, 'id'> = {
+                name: modelData.name,
+                price: modelData.price,
+                purchasePrice: modelData.purchasePrice,
+                quantity: modelData.quantity,
+                width: modelData.width,
+                height: modelData.height,
+                displayImageUrl: modelData.displayImageUrl,
+                editorImageUrl: modelData.editorImageUrl,
+                reorderUrl: modelData.reorderUrl,
+                lastOrderedAt: null,
+                restockedAt: null,
+            };
+
+            const docRef = await addDoc(collection(db, jewelryTypeId), fullModelData);
+            savedModel = { id: docRef.id, ...fullModelData };
         }
 
         revalidatePath(`/${locale}/admin/dashboard`);
+        const messageAction = isDimensionUpdateOnly ? 'dimensions ont été mises à jour' : (modelId ? 'mis à jour' : 'créé');
         return { 
             success: true, 
-            message: `Le modèle a été ${modelId ? 'mis à jour' : 'créé'} avec succès.`,
+            message: `Le modèle a été ${messageAction} avec succès.`,
             model: savedModel
         };
 
     } catch (error: any) {
         console.error("Error saving model:", error);
-        return { success: false, message: "Une erreur est survenue lors de l'enregistrement du modèle." };
+        return { success: false, message: error.message || "Une erreur est survenue lors de l'enregistrement du modèle." };
     }
 }
 
@@ -170,18 +202,18 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
 // --- Charm Category Actions ---
 
 export async function saveCharmCategory(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; category?: CharmCategory }> {
-    const categoryId = formData.get('categoryId') as string | null;
-    const name = formData.get('name') as string;
-    const description = formData.get('description') as string;
-    const locale = formData.get('locale') as string || 'fr';
-    const imageData = formData.get('image') as string;
-    const originalImageUrl = formData.get('originalImageUrl') as string || '';
-
-    if (!name) {
-        return { success: false, message: "Le nom de la catégorie est obligatoire." };
-    }
-
     try {
+        const categoryId = formData.get('categoryId') as string | null;
+        const name = formData.get('name') as string;
+        const description = formData.get('description') as string;
+        const locale = formData.get('locale') as string || 'fr';
+        const imageData = formData.get('image') as string;
+        const originalImageUrl = formData.get('originalImageUrl') as string || '';
+
+        if (!name) {
+            return { success: false, message: "Le nom de la catégorie est obligatoire." };
+        }
+
         const imageUrl = await uploadImage(imageData, originalImageUrl, 'charmCategories');
 
         const categoryData = { name, description, imageUrl };
@@ -198,25 +230,25 @@ export async function saveCharmCategory(prevState: any, formData: FormData): Pro
 
         revalidatePath(`/${locale}/admin/dashboard`);
         return { success: true, message: `La catégorie a été ${categoryId ? 'mise à jour' : 'créée'} avec succès.`, category: savedCategory };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error saving charm category:", error);
-        return { success: false, message: "Une erreur est survenue lors de l'enregistrement de la catégorie." };
+        return { success: false, message: error.message || "Une erreur est survenue lors de l'enregistrement de la catégorie." };
     }
 }
 
 export async function deleteCharmCategory(formData: FormData): Promise<{ success: boolean; message: string }> {
-    const categoryId = formData.get('categoryId') as string;
-    const imageUrl = formData.get('imageUrl') as string;
-    const locale = formData.get('locale') as string || 'fr';
-
-    if (!categoryId) {
-        return { success: false, message: "ID de catégorie manquant." };
-    }
-
-    const batch = writeBatch(db);
-    const categoryRef = doc(db, 'charmCategories', categoryId);
-
     try {
+        const categoryId = formData.get('categoryId') as string;
+        const imageUrl = formData.get('imageUrl') as string;
+        const locale = formData.get('locale') as string || 'fr';
+
+        if (!categoryId) {
+            return { success: false, message: "ID de catégorie manquant." };
+        }
+
+        const batch = writeBatch(db);
+        const categoryRef = doc(db, 'charmCategories', categoryId);
+
         // Delete the category document itself
         batch.delete(categoryRef);
 
@@ -239,9 +271,9 @@ export async function deleteCharmCategory(formData: FormData): Promise<{ success
 
         revalidatePath(`/${locale}/admin/dashboard`);
         return { success: true, message: "La catégorie a été supprimée." };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error deleting charm category:", error);
-        return { success: false, message: "Une erreur est survenue lors de la suppression de la catégorie." };
+        return { success: false, message: error.message || "Une erreur est survenue lors de la suppression de la catégorie." };
     }
 }
 
@@ -249,38 +281,48 @@ export async function deleteCharmCategory(formData: FormData): Promise<{ success
 // --- Charm Actions ---
 
 export async function saveCharm(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; charm?: Charm & { categoryName?: string } }> {
-    const charmId = formData.get('charmId') as string | null;
-    const name = formData.get('name') as string;
-    const description = formData.get('description') as string;
-    const price = parseFloat(formData.get('price') as string);
-    const quantity = parseInt(formData.get('quantity') as string, 10);
-    const width = parseFloat(formData.get('width') as string) || undefined;
-    const height = parseFloat(formData.get('height') as string) || undefined;
-    const categoryIds = formData.getAll('categoryIds') as string[];
-    const reorderUrl = formData.get('reorderUrl') as string;
-    const locale = formData.get('locale') as string || 'fr';
-    const imageData = formData.get('image') as string;
-    const originalImageUrl = formData.get('originalImageUrl') as string || '';
-
-    if (!name || isNaN(price) || isNaN(quantity) || !categoryIds || categoryIds.length === 0) {
-        return { success: false, message: "Les champs obligatoires (nom, prix, quantité, au moins une catégorie) sont manquants ou invalides." };
-    }
-
     try {
-        const categoryRefs = categoryIds.map(id => doc(db, 'charmCategories', id));
-        const imageUrl = await uploadImage(imageData, originalImageUrl, `charms/${name.replace(/\s+/g, '_')}`);
-        
-        const charmData: Omit<Charm, 'id' | 'lastOrderedAt' | 'restockedAt'> = {
-            name,
-            description,
-            price,
-            quantity,
-            width,
-            height,
-            categoryIds: categoryIds, // Store array of string IDs
-            imageUrl,
-            reorderUrl,
-        };
+        const charmId = formData.get('charmId') as string | null;
+        const name = formData.get('name') as string;
+        const description = formData.get('description') as string;
+        const price = parseFloat(formData.get('price') as string);
+        const purchasePrice = parseFloat(formData.get('purchasePrice') as string) || undefined;
+        const quantity = parseInt(formData.get('quantity') as string, 10);
+        const width = parseFloat(formData.get('width') as string) || undefined;
+        const height = parseFloat(formData.get('height') as string) || undefined;
+        const categoryIds = formData.getAll('categoryIds') as string[];
+        const reorderUrl = formData.get('reorderUrl') as string;
+        const locale = formData.get('locale') as string || 'fr';
+        const imageData = formData.get('image') as string;
+        const originalImageUrl = formData.get('originalImageUrl') as string || '';
+        const isDimensionUpdateOnly = formData.get('isDimensionUpdateOnly') === 'true';
+
+        let charmData: Partial<Charm> = {};
+        let imageUrl = originalImageUrl;
+
+        if (isDimensionUpdateOnly) {
+            if (!charmId || width === undefined || height === undefined) {
+                 return { success: false, message: "Informations manquantes pour la mise à jour des dimensions." };
+            }
+            charmData = { width, height };
+        } else {
+             if (!name || isNaN(price) || isNaN(quantity) || !categoryIds || categoryIds.length === 0) {
+                return { success: false, message: "Les champs obligatoires (nom, prix, quantité, au moins une catégorie) sont manquants ou invalides." };
+            }
+            imageUrl = await uploadImage(imageData, originalImageUrl, `charms/${name.replace(/\s+/g, '_')}`);
+            charmData = {
+                name,
+                description,
+                price,
+                purchasePrice,
+                quantity,
+                width,
+                height,
+                categoryIds: categoryIds,
+                imageUrl,
+                reorderUrl,
+            };
+        }
         
         let savedCharmData: any;
 
@@ -290,12 +332,35 @@ export async function saveCharm(prevState: any, formData: FormData): Promise<{ s
             const docSnap = await getDoc(charmRef);
             savedCharmData = { id: charmId, ...docSnap.data() };
         } else {
-            const docRef = await addDoc(collection(db, 'charms'), charmData);
-            savedCharmData = { id: docRef.id, ...charmData, lastOrderedAt: null, restockedAt: null };
+            if (isDimensionUpdateOnly || !charmData.name || !charmData.imageUrl || !charmData.categoryIds) {
+                return { success: false, message: "Impossible de créer une nouvelle breloque avec des informations manquantes." };
+            }
+
+             const fullCharmData: Omit<Charm, 'id'> = {
+                name: charmData.name,
+                description: charmData.description || '',
+                price: charmData.price,
+                purchasePrice: charmData.purchasePrice,
+                quantity: charmData.quantity,
+                width: charmData.width,
+                height: charmData.height,
+                categoryIds: charmData.categoryIds,
+                imageUrl: charmData.imageUrl,
+                reorderUrl: charmData.reorderUrl,
+                lastOrderedAt: null,
+                restockedAt: null,
+            };
+
+            const docRef = await addDoc(collection(db, 'charms'), fullCharmData);
+            savedCharmData = { id: docRef.id, ...fullCharmData };
         }
         
-        const firstCategoryDoc = await getDoc(categoryRefs[0]);
-        const firstCategoryName = firstCategoryDoc.exists() ? firstCategoryDoc.data().name : 'Inconnue';
+        const firstCategoryId = savedCharmData.categoryIds[0];
+        let firstCategoryName = 'Inconnue';
+        if (firstCategoryId) {
+            const firstCategoryDoc = await getDoc(doc(db, 'charmCategories', firstCategoryId));
+            firstCategoryName = firstCategoryDoc.exists() ? firstCategoryDoc.data().name : 'Inconnue';
+        }
 
         const finalCharmObject = {
             ...savedCharmData,
@@ -303,40 +368,63 @@ export async function saveCharm(prevState: any, formData: FormData): Promise<{ s
         };
 
         revalidatePath(`/${locale}/admin/dashboard`);
+        const messageAction = isDimensionUpdateOnly ? 'dimensions ont été mises à jour' : (charmId ? 'mise à jour' : 'créée');
         return { 
             success: true, 
-            message: `La breloque a été ${charmId ? 'mise à jour' : 'créée'} avec succès.`,
+            message: `La breloque a été ${messageAction} avec succès.`,
             charm: finalCharmObject
         };
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error saving charm:", error);
-        return { success: false, message: "Une erreur est survenue lors de l'enregistrement de la breloque." };
+        return { success: false, message: error.message || "Une erreur est survenue lors de l'enregistrement de la breloque." };
     }
 }
 
 
 export async function deleteCharm(formData: FormData): Promise<{ success: boolean; message: string }> {
-    const charmId = formData.get('charmId') as string;
-    const imageUrl = formData.get('imageUrl') as string;
-    const locale = formData.get('locale') as string || 'fr';
-
-    if (!charmId) {
-        return { success: false, message: "ID de breloque manquant." };
-    }
-
     try {
+        const charmId = formData.get('charmId') as string;
+        const imageUrl = formData.get('imageUrl') as string;
+        const locale = formData.get('locale') as string || 'fr';
+
+        if (!charmId) {
+            return { success: false, message: "ID de breloque manquant." };
+        }
+
         await deleteDoc(doc(db, 'charms', charmId));
         await deleteFileFromStorage(imageUrl);
 
         revalidatePath(`/${locale}/admin/dashboard`);
         return { success: true, message: "La breloque a été supprimée." };
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error deleting charm:", error);
-        return { success: false, message: "Une erreur est survenue." };
+        return { success: false, message: error.message || "Une erreur est survenue." };
     }
 }
+
+// --- Mail Actions ---
+
+export async function deleteMailLog(formData: FormData): Promise<{ success: boolean; message: string }> {
+    try {
+        const mailId = formData.get('mailId') as string;
+        const locale = formData.get('locale') as string || 'fr';
+
+        if (!mailId) {
+            return { success: false, message: "ID de l'e-mail manquant." };
+        }
+
+        await deleteDoc(doc(db, 'mail', mailId));
+
+        revalidatePath(`/${locale}/admin/dashboard`);
+        return { success: true, message: "L'e-mail a été supprimé de l'historique." };
+    } catch (error: any) {
+        console.error("Error deleting mail log:", error);
+        return { success: false, message: error.message || "Une erreur est survenue lors de la suppression." };
+    }
+}
+
 
 // --- Preferences Actions ---
 
@@ -357,19 +445,19 @@ export async function getPreferences(): Promise<GeneralPreferences> {
 }
 
 export async function savePreferences(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; preferences?: GeneralPreferences }> {
-    const alertThreshold = parseInt(formData.get('alertThreshold') as string, 10);
-    const criticalThreshold = parseInt(formData.get('criticalThreshold') as string, 10);
-    const locale = formData.get('locale') as string || 'fr';
+     try {
+        const alertThreshold = parseInt(formData.get('alertThreshold') as string, 10);
+        const criticalThreshold = parseInt(formData.get('criticalThreshold') as string, 10);
+        const locale = formData.get('locale') as string || 'fr';
 
-    if (isNaN(alertThreshold) || isNaN(criticalThreshold)) {
-        return { success: false, message: "Les valeurs doivent être des nombres." };
-    }
-    
-    if (criticalThreshold >= alertThreshold) {
-        return { success: false, message: "Le seuil critique doit être inférieur au seuil d'alerte." };
-    }
+        if (isNaN(alertThreshold) || isNaN(criticalThreshold)) {
+            return { success: false, message: "Les valeurs doivent être des nombres." };
+        }
+        
+        if (criticalThreshold >= alertThreshold) {
+            return { success: false, message: "Le seuil critique doit être inférieur au seuil d'alerte." };
+        }
 
-    try {
         const preferencesData = { alertThreshold, criticalThreshold };
         const docRef = doc(db, 'preferences', 'general');
         await setDoc(docRef, preferencesData);
@@ -381,22 +469,22 @@ export async function savePreferences(prevState: any, formData: FormData): Promi
             preferences: preferencesData
         };
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error saving preferences:", error);
-        return { success: false, message: "Une erreur est survenue lors de l'enregistrement des préférences." };
+        return { success: false, message: error.message || "Une erreur est survenue lors de l'enregistrement des préférences." };
     }
 }
 
 export async function markAsOrdered(formData: FormData): Promise<{ success: boolean; message: string }> {
-    const itemId = formData.get('itemId') as string;
-    const itemType = formData.get('itemType') as string; // 'charms' or a jewelryTypeId like 'necklace'
-    const locale = formData.get('locale') as string || 'fr';
+     try {
+        const itemId = formData.get('itemId') as string;
+        const itemType = formData.get('itemType') as string; // 'charms' or a jewelryTypeId like 'necklace'
+        const locale = formData.get('locale') as string || 'fr';
 
-    if (!itemId || !itemType) {
-        return { success: false, message: "Informations manquantes." };
-    }
+        if (!itemId || !itemType) {
+            return { success: false, message: "Informations manquantes." };
+        }
 
-    try {
         const itemRef = doc(db, itemType, itemId);
         await updateDoc(itemRef, {
             lastOrderedAt: serverTimestamp(),
@@ -406,23 +494,23 @@ export async function markAsOrdered(formData: FormData): Promise<{ success: bool
         revalidatePath(`/${locale}/admin/dashboard`);
         return { success: true, message: "L'article a été marqué comme commandé." };
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error marking item as ordered:", error);
-        return { success: false, message: "Une erreur est survenue." };
+        return { success: false, message: error.message || "Une erreur est survenue." };
     }
 }
 
 export async function markAsRestocked(formData: FormData): Promise<{ success: boolean; message: string; newQuantity?: number }> {
-    const itemId = formData.get('itemId') as string;
-    const itemType = formData.get('itemType') as string;
-    const locale = formData.get('locale') as string || 'fr';
-    const restockedQuantity = parseInt(formData.get('restockedQuantity') as string, 10);
+     try {
+        const itemId = formData.get('itemId') as string;
+        const itemType = formData.get('itemType') as string;
+        const locale = formData.get('locale') as string || 'fr';
+        const restockedQuantity = parseInt(formData.get('restockedQuantity') as string, 10);
 
-    if (!itemId || !itemType || isNaN(restockedQuantity) || restockedQuantity <= 0) {
-        return { success: false, message: "Informations manquantes ou quantité invalide." };
-    }
+        if (!itemId || !itemType || isNaN(restockedQuantity) || restockedQuantity <= 0) {
+            return { success: false, message: "Informations manquantes ou quantité invalide." };
+        }
 
-    try {
         const itemRef = doc(db, itemType, itemId);
 
         const newQuantity = await runTransaction(db, async (transaction) => {
@@ -449,10 +537,9 @@ export async function markAsRestocked(formData: FormData): Promise<{ success: bo
             message: "L'article a été marqué comme réapprovisionné et le stock mis à jour.",
             newQuantity: newQuantity
         };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error marking item as restocked:", error);
-        return { success: false, message: "Une erreur est survenue." };
+        return { success: false, message: error.message || "Une erreur est survenue." };
     }
 }
 
-    

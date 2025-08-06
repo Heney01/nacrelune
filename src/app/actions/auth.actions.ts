@@ -3,11 +3,13 @@
 
 import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, getDoc, query, where, getDocs, collection, limit, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, query, where, getDocs, collection, limit, updateDoc, runTransaction, increment } from 'firebase/firestore';
 import { db, app, storage } from '@/lib/firebase';
 import { ref, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import type { User } from '@/lib/types';
 import { redirect } from 'next/navigation';
+import { getAuth as getAdminAuth } from 'firebase-admin/auth';
+import { adminApp } from '@/lib/firebase-admin';
 
 
 // --- Helper Functions ---
@@ -67,6 +69,35 @@ async function uploadProfileImage(imageDataJson: string | null, userId: string, 
 
 // --- Auth Actions ---
 
+async function verifyUser(idToken: string): Promise<{uid: string, email: string | undefined, admin?: boolean}> {
+     if (!adminApp) {
+        throw new Error("Le module d'administration Firebase n'est pas configuré.");
+    }
+    try {
+        const adminAuth = getAdminAuth(adminApp);
+        const decodedToken = await adminAuth.verifyIdToken(idToken, true);
+        
+        // Fetch user document from Firestore to check for admin field
+        const userDocRef = doc(db, 'users', decodedToken.uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        const isFirestoreAdmin = userDoc.exists() && userDoc.data().admin === true;
+
+        return { uid: decodedToken.uid, email: decodedToken.email, admin: isFirestoreAdmin };
+    } catch (error: any) {
+        throw new Error("Jeton d'authentification invalide.");
+    }
+}
+
+export async function verifyAdmin(idToken: string): Promise<{uid: string, email: string | undefined}> {
+    const user = await verifyUser(idToken);
+    if (!user.admin) {
+        throw new Error("Accès non autorisé. Vous n'avez pas les droits d'administrateur.");
+    }
+    return user;
+}
+
+
 export async function login(prevState: any, formData: FormData): Promise<{ success: boolean; message?: string; error?: string; }> {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
@@ -79,7 +110,11 @@ export async function login(prevState: any, formData: FormData): Promise<{ succe
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
+    
     const idToken = await user.getIdToken();
+    
+    // The verifyAdmin function now checks Firestore as well.
+    await verifyAdmin(idToken);
     
     cookies().set('session', idToken, {
       httpOnly: true,
@@ -92,48 +127,70 @@ export async function login(prevState: any, formData: FormData): Promise<{ succe
 
   } catch (error: any) {
     let errorMessage = "Une erreur inconnue est survenue.";
-    switch (error.code) {
-        case 'auth/invalid-email':
-            errorMessage = "L'adresse e-mail n'est pas valide.";
-            break;
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-            errorMessage = "Email ou mot de passe incorrect.";
-            break;
-        default:
-            errorMessage = "Une erreur est survenue lors de la connexion.";
-            break;
+     if (error.message.includes("Vous n'avez pas les droits d'administrateur")) {
+        errorMessage = "Accès non autorisé. Seuls les administrateurs peuvent se connecter ici.";
+        const auth = getAuth(app);
+        await auth.signOut(); // Sign out the user immediately if they are not an admin
+    } else {
+        switch (error.code) {
+            case 'auth/invalid-email':
+                errorMessage = "L'adresse e-mail n'est pas valide.";
+                break;
+            case 'auth/user-not-found':
+            case 'auth/wrong-password':
+            case 'auth/invalid-credential':
+                errorMessage = "Email ou mot de passe incorrect.";
+                break;
+            default:
+                errorMessage = "Une erreur est survenue lors de la connexion.";
+                break;
+        }
     }
     return { success: false, error: errorMessage };
   }
 }
 
-export async function userLogin(prevState: any, formData: FormData): Promise<{ success: boolean; message?: string; error?: string; }> {
-  const email = formData.get('email') as string;
-  const password = formData.get('password') as string;
-
-  if (!email || !password) {
-    return { success: false, error: 'Veuillez fournir un email et un mot de passe.' };
-  }
-
-  const auth = getAuth(app);
+export async function userLogin(prevState: any, formData: FormData): Promise<{ success: boolean; traces: string[], error?: string; }> {
+  const traces: string[] = [];
   try {
+    traces.push("[SERVER] userLogin action started.");
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    traces.push(`[SERVER] Received credentials for email: ${email}`);
+
+    if (!email || !password) {
+      traces.push("[SERVER] Error: Email or password missing.");
+      return { success: false, traces, error: 'Veuillez fournir un email et un mot de passe.' };
+    }
+
+    const auth = getAuth(app);
+    traces.push("[SERVER] Firebase Auth instance retrieved.");
+    
+    traces.push("[SERVER] Attempting signInWithEmailAndPassword...");
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-    const idToken = await user.getIdToken();
+    traces.push(`[SERVER] signInWithEmailAndPassword successful. User UID: ${user.uid}`);
     
+    traces.push("[SERVER] Getting ID token...");
+    const idToken = await user.getIdToken();
+    traces.push("[SERVER] ID token retrieved successfully.");
+    
+    traces.push("[SERVER] Setting session cookie...");
     cookies().set('session', idToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24 * 7, // 7 days for users
+      maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
     });
-    
-    return { success: true, message: `Bienvenue, ${user.displayName || user.email} !` };
+    traces.push("[SERVER] Session cookie set.");
+
+    traces.push("[SERVER] userLogin action completed successfully.");
+    return { success: true, traces };
 
   } catch (error: any) {
+    traces.push(`[SERVER] CATCH BLOCK: An error occurred.`);
     let errorMessage = "Une erreur inconnue est survenue.";
+    traces.push(`[SERVER] Raw error code: ${error.code}`);
     switch (error.code) {
         case 'auth/invalid-email':
             errorMessage = "L'adresse e-mail n'est pas valide.";
@@ -147,9 +204,12 @@ export async function userLogin(prevState: any, formData: FormData): Promise<{ s
             errorMessage = "Une erreur est survenue lors de la connexion.";
             break;
     }
-    return { success: false, error: errorMessage };
+    traces.push(`[SERVER] Formatted error message: ${errorMessage}`);
+    traces.push(`[SERVER] Raw error: ${JSON.stringify(error)}`);
+    return { success: false, traces, error: errorMessage };
   }
 }
+
 
 export async function signup(prevState: any, formData: FormData): Promise<{ success: boolean; message?: string; error?: string; }> {
     const email = formData.get('email') as string;
@@ -175,6 +235,8 @@ export async function signup(prevState: any, formData: FormData): Promise<{ succ
             photoURL: user.photoURL,
             rewardPoints: 0,
             searchableTerms,
+            likesCount: 0,
+            creationSlots: 5, // Default slots
         };
         await setDoc(doc(db, 'users', user.uid), userData);
 
@@ -232,6 +294,8 @@ export async function userLoginWithGoogle(formData: FormData): Promise<{ success
         photoURL,
         rewardPoints: 0,
         searchableTerms,
+        likesCount: 0,
+        creationSlots: 5, // Default slots
       };
       await setDoc(userDocRef, newUser);
     }
@@ -304,3 +368,45 @@ export async function updateUserProfile(prevState: any, formData: FormData): Pro
         return { success: false, error: "Une erreur est survenue lors de la mise à jour du profil." };
     }
 }
+
+export async function deleteUserAccount(idToken: string): Promise<{ success: boolean; message?: string; error?: string; }> {
+    if (!idToken) {
+        return { success: false, error: "Utilisateur non authentifié." };
+    }
+    
+    if (!adminApp) {
+        return { success: false, error: "Le module d'administration Firebase n'est pas configuré." };
+    }
+    
+    let user;
+    try {
+        user = await verifyUser(idToken);
+    } catch (error: any) {
+        return { success: false, message: "Jeton d'authentification invalide." };
+    }
+
+    try {
+        const adminAuth = getAdminAuth(adminApp);
+        const userDocRef = doc(db, 'users', user.uid);
+
+        // Mark user as deleted in Firestore
+        await updateDoc(userDocRef, {
+            deleted: true
+        });
+
+        // Delete user from Firebase Authentication
+        await adminAuth.deleteUser(user.uid);
+
+        // Clear session cookie
+        cookies().delete('session');
+        
+        return { success: true, message: "Votre compte a été supprimé avec succès." };
+
+    } catch (error: any) {
+        console.error("Error deleting user account:", error);
+        return { success: false, error: "Une erreur est survenue lors de la suppression du compte." };
+    }
+}
+    
+
+    

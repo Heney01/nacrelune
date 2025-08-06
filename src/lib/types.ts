@@ -1,6 +1,9 @@
 
 
 import { DocumentReference } from 'firebase/firestore';
+import type { Stripe as StripeType, StripeElements as StripeElementsType, loadStripe } from '@stripe/stripe-js';
+
+export type StripePromise = ReturnType<typeof loadStripe>;
 
 export interface User {
   uid: string;
@@ -9,6 +12,10 @@ export interface User {
   photoURL?: string | null;
   rewardPoints?: number;
   searchableTerms?: string[];
+  likesCount?: number;
+  creationSlots?: number;
+  deleted?: boolean;
+  admin?: boolean;
 }
 
 export interface CharmCategory {
@@ -26,6 +33,7 @@ export interface Charm {
   categoryIds: string[];
   categories?: DocumentReference[]; // Raw from firestore
   price?: number;
+  purchasePrice?: number;
   quantity?: number;
   width?: number; // in mm
   height?: number; // in mm
@@ -52,6 +60,7 @@ export interface JewelryModel {
   editorImageUrl: string;
   snapPath?: string;
   price?: number;
+  purchasePrice?: number;
   quantity?: number;
   width?: number; // in mm
   height?: number; // in mm
@@ -76,6 +85,7 @@ export interface PlacedCharm {
   position: { x: number; y: number }; 
   rotation: number;
   animation?: string;
+  withClasp?: boolean;
 }
 
 // PlacedCharm as stored within a Creation document
@@ -85,6 +95,7 @@ export interface PlacedCreationCharm {
   // (0,0) is top-left, (1,1) is bottom-right.
   position: { x: number; y: number };
   rotation: number;
+  withClasp?: boolean;
 }
 
 
@@ -112,12 +123,12 @@ export interface OrderItem {
     jewelryTypeId: string;
     jewelryTypeName: string;
     charmIds: string[];
+    charms: (Charm & { withClasp?: boolean })[];
     price: number;
     previewImageUrl: string;
     isCompleted: boolean;
     // Enriched data on the client:
     modelImageUrl?: string;
-    charms?: Charm[];
     // For creations bought from other users
     creationId?: string;
     creatorId?: string;

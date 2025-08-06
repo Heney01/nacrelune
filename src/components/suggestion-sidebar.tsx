@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
-import { Lightbulb, Sparkles, WandSparkles, Loader2, PlusCircle, Scan, Pilcrow } from 'lucide-react';
+import { Lightbulb, Sparkles, WandSparkles, Loader2, PlusCircle, Scan, Pilcrow, Check } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Badge } from './ui/badge';
@@ -156,7 +156,7 @@ export function SuggestionSidebar({
                     <p className="text-sm text-muted-foreground">Obtenez un avis constructif sur votre création actuelle de la part de notre IA designer.</p>
                     <Button variant="outline" className="w-full" onClick={handleCritique} disabled={isLoading}>
                          {isLoading ? (
-                            <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analyse en cours...</>
+                            <> <Loader2 className="animate-spin mr-2" /> Analyse en cours...</>
                         ): (
                             <> <Pilcrow className="mr-2 h-4 w-4" /> Lancer l'analyse</>
                         )}

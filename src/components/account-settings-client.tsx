@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -6,17 +7,30 @@ import Image from 'next/image';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { useFormState, useFormStatus } from 'react-dom';
-import { updateUserProfile } from '@/app/actions/auth.actions';
+import { updateUserProfile, deleteUserAccount } from '@/app/actions/auth.actions';
 import { useToast } from '@/hooks/use-toast';
 import { BrandLogo } from './icons';
 import { Button } from './ui/button';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, UserCircle, UploadCloud, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, UserCircle, UploadCloud, AlertCircle, ShieldAlert } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './ui/card';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
+import { Separator } from './ui/separator';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { useTranslations } from '@/hooks/use-translations';
 
 function SubmitButton() {
     const { pending } = useFormStatus();
@@ -31,22 +45,25 @@ function SubmitButton() {
 const initialState = { success: false, message: '' };
 
 export function AccountSettingsClient({ locale }: { locale: string }) {
-    const { user, firebaseUser, loading: authLoading } = useAuth();
+    const { user, firebaseUser, loading: authLoading, signOut } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
-    const [state, formAction] = useFormState(updateUserProfile, initialState);
-
+    const t = useTranslations('Auth');
+    
+    const [updateState, updateFormAction] = useFormState(updateUserProfile, initialState);
+    
     const [displayName, setDisplayName] = useState('');
     const [photoURL, setPhotoURL] = useState<string | null>(null);
     const [newPhoto, setNewPhoto] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     
     useEffect(() => {
-        if (state.success) {
-            toast({ title: "Profil mis à jour", description: state.message });
-        } else if (state.message) {
-            toast({ variant: 'destructive', title: "Erreur", description: state.message });
+        if (updateState.success) {
+            toast({ title: "Profil mis à jour", description: updateState.message });
+        } else if (updateState.message) {
+            toast({ variant: 'destructive', title: "Erreur", description: updateState.message });
         }
-    }, [state, toast]);
+    }, [updateState, toast]);
 
     useEffect(() => {
         if (!authLoading) {
@@ -71,6 +88,27 @@ export function AccountSettingsClient({ locale }: { locale: string }) {
             reader.readAsDataURL(file);
         }
     };
+    
+    const handleDeleteAccount = async () => {
+        if (!firebaseUser) return;
+        setIsDeleting(true);
+        try {
+            const idToken = await firebaseUser.getIdToken();
+            const result = await deleteUserAccount(idToken);
+            if (result.success) {
+                toast({ title: "Compte supprimé", description: "Votre compte a été supprimé avec succès." });
+                await signOut();
+                router.push(`/${locale}`);
+            } else {
+                toast({ variant: 'destructive', title: "Erreur", description: result.error });
+            }
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Erreur", description: "Une erreur inattendue est survenue." });
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
 
     if (authLoading || !firebaseUser) {
         return (
@@ -101,67 +139,111 @@ export function AccountSettingsClient({ locale }: { locale: string }) {
                             </Link>
                         </Button>
                     </div>
-
-                    <form action={formAction}>
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Paramètres du compte</CardTitle>
-                                <CardDescription>Gérez les informations de votre profil public.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                {state && !state.success && state.message && (
-                                    <Alert variant="destructive">
-                                        <AlertCircle className="h-4 w-4" />
-                                        <AlertTitle>Erreur</AlertTitle>
-                                        <AlertDescription>{state.message}</AlertDescription>
-                                    </Alert>
-                                )}
-                                <input type="hidden" name="uid" value={firebaseUser.uid} />
-                                <input type="hidden" name="newPhoto" value={newPhoto || ''} />
-                                <input type="hidden" name="originalPhotoURL" value={user?.photoURL || firebaseUser.photoURL || ''} />
-                                <div className="space-y-2">
-                                    <Label htmlFor="displayName">Nom d'affichage</Label>
-                                    <Input 
-                                        id="displayName" 
-                                        name="displayName"
-                                        value={displayName}
-                                        onChange={(e) => setDisplayName(e.target.value)}
-                                        required
-                                    />
-                                    <p className="text-sm text-muted-foreground">
-                                        Ce nom sera visible par les autres utilisateurs sur la plateforme.
-                                    </p>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Photo de profil</Label>
-                                    <div className="flex items-center gap-4">
-                                        <Avatar className="h-20 w-20">
-                                            <AvatarImage src={photoURL || undefined} alt="Avatar" />
-                                            <AvatarFallback className="text-3xl">{fallbackDisplayName.toUpperCase()}</AvatarFallback>
-                                        </Avatar>
-                                        <div className="relative">
-                                            <Button type="button" variant="outline" asChild>
-                                                <label htmlFor="photo-upload" className="cursor-pointer">
-                                                    <UploadCloud className="mr-2 h-4 w-4" />
-                                                    Changer de photo
-                                                </label>
-                                            </Button>
-                                            <input 
-                                                id="photo-upload" 
-                                                type="file" 
-                                                className="sr-only" 
-                                                accept="image/png, image/jpeg, image/webp"
-                                                onChange={handleFileChange}
-                                            />
+                    
+                    <div className="space-y-8">
+                        <form action={updateFormAction}>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Paramètres du compte</CardTitle>
+                                    <CardDescription>Gérez les informations de votre profil public.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-6">
+                                    {updateState && !updateState.success && updateState.message && (
+                                        <Alert variant="destructive">
+                                            <AlertCircle className="h-4 w-4" />
+                                            <AlertTitle>Erreur</AlertTitle>
+                                            <AlertDescription>{updateState.message}</AlertDescription>
+                                        </Alert>
+                                    )}
+                                    <input type="hidden" name="uid" value={firebaseUser.uid} />
+                                    <input type="hidden" name="newPhoto" value={newPhoto || ''} />
+                                    <input type="hidden" name="originalPhotoURL" value={user?.photoURL || firebaseUser.photoURL || ''} />
+                                    <div className="space-y-2">
+                                        <Label htmlFor="displayName">Nom d'affichage</Label>
+                                        <Input 
+                                            id="displayName" 
+                                            name="displayName"
+                                            value={displayName}
+                                            onChange={(e) => setDisplayName(e.target.value)}
+                                            required
+                                        />
+                                        <p className="text-sm text-muted-foreground">
+                                            Ce nom sera visible par les autres utilisateurs sur la plateforme.
+                                        </p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Photo de profil</Label>
+                                        <div className="flex items-center gap-4">
+                                            <Avatar className="h-20 w-20">
+                                                <AvatarImage src={photoURL || undefined} alt="Avatar" />
+                                                <AvatarFallback className="text-3xl">{fallbackDisplayName.toUpperCase()}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="relative">
+                                                <Button type="button" variant="outline" asChild>
+                                                    <label htmlFor="photo-upload" className="cursor-pointer">
+                                                        <UploadCloud className="mr-2 h-4 w-4" />
+                                                        Changer de photo
+                                                    </label>
+                                                </Button>
+                                                <input 
+                                                    id="photo-upload" 
+                                                    type="file" 
+                                                    className="sr-only" 
+                                                    accept="image/png, image/jpeg, image/webp"
+                                                    onChange={handleFileChange}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+                                </CardContent>
+                                <CardFooter>
+                                    <SubmitButton />
+                                </CardFooter>
+                            </Card>
+                        </form>
+                        
+                        <Separator />
+                        
+                        <Card className="border-destructive">
+                             <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-destructive">
+                                    <ShieldAlert /> {t('danger_zone_title')}
+                                </CardTitle>
+                                <CardDescription>{t('danger_zone_description')}</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-sm">
+                                   {t('delete_account_explanation')}
+                                </p>
                             </CardContent>
                             <CardFooter>
-                                <SubmitButton />
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive">
+                                            {t('delete_account_button')}
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>{t('delete_account_confirm_title')}</AlertDialogTitle>
+                                            <AlertDialogDescription>{t('delete_account_confirm_description')}</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                            <AlertDialogAction
+                                                onClick={handleDeleteAccount}
+                                                disabled={isDeleting}
+                                                className="bg-destructive hover:bg-destructive/90"
+                                            >
+                                                {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                {t('delete_account_confirm_button')}
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                             </CardFooter>
                         </Card>
-                    </form>
+                    </div>
                 </div>
             </main>
         </div>

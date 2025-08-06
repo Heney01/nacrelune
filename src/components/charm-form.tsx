@@ -124,14 +124,19 @@ export function CharmForm({ isOpen, onOpenChange, charm, allCategories, onSave, 
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="purchasePrice">Coût d'achat (€)</Label>
+                                <Input id="purchasePrice" name="purchasePrice" type="number" step="0.01" defaultValue={charm?.purchasePrice || ''} />
+                            </div>
                              <div className="space-y-2">
-                                <Label htmlFor="price">Prix (€)</Label>
+                                <Label htmlFor="price">Prix de vente (€)</Label>
                                 <Input id="price" name="price" type="number" step="0.01" defaultValue={charm?.price || ''} required />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="quantity">Quantité en stock</Label>
-                                <Input id="quantity" name="quantity" type="number" defaultValue={charm?.quantity || 0} required />
-                            </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                            <Label htmlFor="quantity">Quantité en stock</Label>
+                            <Input id="quantity" name="quantity" type="number" defaultValue={charm?.quantity || 0} required />
                         </div>
 
                          <div className="grid grid-cols-2 gap-4">
