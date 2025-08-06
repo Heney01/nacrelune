@@ -299,14 +299,11 @@ export async function getOrders(): Promise<Order[]> {
             }
         });
 
-        // Get all unique charm IDs from all orders first
         const allCharmIds = ordersSnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => (item.charms || []).map((c: any) => c.charmId)) || []);
         const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
-        // Fetch all required charms in a single query
         let charmsMap = new Map<string, Charm>();
         if (uniqueCharmIds.length > 0) {
-            // Firestore 'in' query is limited to 30 items, so chunk if necessary
             const charmIdChunks = [];
             for (let i = 0; i < uniqueCharmIds.length; i += 30) {
                 charmIdChunks.push(uniqueCharmIds.slice(i, i + 30));
@@ -330,14 +327,15 @@ export async function getOrders(): Promise<Order[]> {
                 const enrichedCharms = (item.charms || [])
                     .map((charmDetail: any) => {
                         const charm = charmsMap.get(charmDetail.charmId);
-                        if (!charm) return null;
-                        return { ...charm, withClasp: charmDetail.withClasp };
+                        // Don't filter out the item, just return null for the charm if not found
+                        // This allows the order to still be displayed even if a charm was deleted.
+                        return charm ? { ...charm, withClasp: charmDetail.withClasp } : null;
                     })
-                    .filter((c): c is (Charm & { withClasp: boolean }) => !!c); // Filter out undefined charms
+                    .filter((c): c is (Charm & { withClasp: boolean }) => !!c);
 
                 return {
                     ...item,
-                    charms: enrichedCharms, // Now contains full charm details + withClasp
+                    charms: enrichedCharms,
                     previewImageUrl: await getUrl(item.previewImageUrl, 'https://placehold.co/400x400.png'),
                 };
             }));
@@ -350,7 +348,7 @@ export async function getOrders(): Promise<Order[]> {
                 orderNumber,
                 createdAt: (data.createdAt as Timestamp).toDate(),
                 customerEmail: data.customerEmail,
-                subtotal: data.subtotal ?? data.totalPrice, // Fallback for old orders
+                subtotal: data.subtotal ?? data.totalPrice,
                 totalPrice: data.totalPrice,
                 status: data.status,
                 items: enrichedItems,
