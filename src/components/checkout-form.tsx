@@ -29,7 +29,7 @@ import { Skeleton } from './ui/skeleton';
 import { createOrder, validateCoupon, sendConfirmationEmail, createPaymentIntent } from '@/app/actions/order.actions';
 import { StripeElementsOptions } from '@stripe/stripe-js';
 
-const PaymentStep = ({
+const PaymentProcessor = ({
   onOrderCreated,
   email,
   deliveryMethod,
@@ -73,7 +73,6 @@ const PaymentStep = ({
         creationId: item.creationId,
     }));
     
-    // The payment intent ID is derived from the client secret
     const paymentIntentId = clientSecret.split('_secret_')[0];
 
     const result = await createOrder(
@@ -91,7 +90,7 @@ const PaymentStep = ({
         await sendConfirmationEmail(result.orderId, locale);
     }
 
-    onOrderCreated(result); // This will handle UI changes (show success/error dialog)
+    onOrderCreated(result);
 
     setIsProcessing(false);
   }
@@ -404,7 +403,7 @@ export const CheckoutForm = ({
                   )}
                   {!isPreparingPayment && !paymentError && stripeOptions && (
                      <Elements stripe={stripePromise} options={stripeOptions}>
-                        <PaymentStep
+                        <PaymentProcessor
                             onOrderCreated={onOrderCreated}
                             email={email}
                             deliveryMethod={deliveryMethod}
