@@ -133,7 +133,6 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
 
     const Dimension = ({ size, direction = 'horizontal' }: { size: number; direction?: 'horizontal' | 'vertical' }) => (
         <div className={cn("flex items-center gap-1 text-muted-foreground", direction === 'vertical' && "flex-col")}>
-            {direction === 'horizontal' ? <ArrowLeftRight className="h-3 w-3" /> : <ArrowUpDown className="h-3 w-3" />}
             <span className="text-xs font-mono">{size.toFixed(1)}mm</span>
         </div>
     );
