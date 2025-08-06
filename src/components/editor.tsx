@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
@@ -106,7 +107,7 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, pixe
             ref={charmRef}
             onMouseDown={(e) => onDragStart(e, placed.id)}
             className={cn(
-                "absolute group charm-on-canvas cursor-pointer select-none flex items-center justify-center",
+                "absolute group charm-on-canvas cursor-pointer select-none flex items-center justify-center border border-red-500",
                 {
                     'z-10': isSelected,
                     'outline-2 outline-primary outline-dashed': isSelected,
