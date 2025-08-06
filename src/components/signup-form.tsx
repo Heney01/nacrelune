@@ -50,13 +50,13 @@ function SignUpButton() {
   );
 }
 
-export function SignUpForm() {
+export function SignUpForm({ onSignupSuccess }: { onSignupSuccess: () => void }) {
   const [state, formAction] = useFormState(signup, initialState);
   const params = useParams();
   const locale = params.locale as string;
   const t = useTranslations('Auth');
   const { toast } = useToast();
-  const { setView, close } = useAuthDialog();
+  const { setView } = useAuthDialog();
 
   const { signInWithGoogle, error: googleError, isGoogleLoading } = useGoogleAuth({
       onSuccess: async (user) => {
@@ -75,7 +75,7 @@ export function SignUpForm() {
                 title: 'Connexion réussie',
                 description: result.message,
             });
-            close();
+            onSignupSuccess();
           } else {
             toast({
               variant: 'destructive',
@@ -92,21 +92,14 @@ export function SignUpForm() {
             title: 'Inscription réussie',
             description: state.message,
         });
-        close();
+        onSignupSuccess();
     }
-  }, [state.success, state.message, toast, close]);
+  }, [state.success, state.message, toast, onSignupSuccess]);
 
 
   return (
     <Card className="border-0 shadow-none">
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl">{t('user_signup_title')}</CardTitle>
-        <CardDescription>
-           {t('user_signup_description')}
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
+       <CardContent className="space-y-4 pt-6">
           {(state?.error || googleError) && (
             <Alert variant="destructive">
               <AlertTitle>{t('signup_error_title')}</AlertTitle>

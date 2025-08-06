@@ -50,14 +50,13 @@ function LoginButton() {
   );
 }
 
-export function LoginForm() {
+export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
   const [state, formAction] = useFormState(userLogin, initialState);
   const params = useParams();
-  const router = useRouter();
   const locale = params.locale as string;
   const t = useTranslations('Auth');
   const { toast } = useToast();
-  const { setView, close } = useAuthDialog();
+  const { setView } = useAuthDialog();
   
   const { signInWithGoogle, error, isGoogleLoading } = useGoogleAuth({
       onSuccess: async (user) => {
@@ -76,7 +75,7 @@ export function LoginForm() {
                 title: 'Connexion réussie',
                 description: result.message,
             });
-            close();
+            onLoginSuccess();
           } else {
             toast({
               variant: 'destructive',
@@ -93,20 +92,13 @@ export function LoginForm() {
         title: 'Connexion réussie',
         description: state.message,
       });
-      close();
-      router.refresh();
+      onLoginSuccess();
     }
-  }, [state, toast, close, router]);
+  }, [state, toast, onLoginSuccess]);
 
   return (
     <Card className="border-0 shadow-none">
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl">{t('user_login_title')}</CardTitle>
-        <CardDescription>
-           {t('user_login_description')}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+       <CardContent className="space-y-4 pt-6">
         {(state?.error || error) && (
             <Alert variant="destructive">
               <AlertTitle>{t('login_error_title')}</AlertTitle>
