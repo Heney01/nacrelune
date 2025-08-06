@@ -97,7 +97,7 @@ export function TrackByEmailForm() {
 
     useEffect(() => {
         // This log helps debug by showing the result of the server action in the browser console.
-        if (emailState.message) {
+        if (emailState && emailState.traces) {
              console.log("[CLIENT] Server action 'getOrdersByEmail' completed. State:", emailState);
         }
     }, [emailState]);
