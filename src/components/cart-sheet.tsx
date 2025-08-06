@@ -58,11 +58,11 @@ export function CartSheet({ children, open, onOpenChange }: {
     let charmsPrice = 0;
 
     if (charmCount > 0) {
-      if (charmCount <= 5) {
-        charmsPrice = charmCount * 4.00;
-      } else {
-        charmsPrice = (5 * 4.00) + ((charmCount - 5) * 2.50);
-      }
+        if (charmCount <= 5) {
+            charmsPrice = charmCount * 4.00;
+        } else {
+            charmsPrice = (5 * 4.00) + ((charmCount - 5) * 2.50);
+        }
     }
 
     const claspsPrice = item.placedCharms.reduce((claspSum, pc) => {
@@ -224,14 +224,12 @@ export function CartSheet({ children, open, onOpenChange }: {
                             {item.placedCharms.length > 0 ? (
                               <ul className="space-y-2">
                                 {item.placedCharms.map(pc => {
-                                    const charmPrice = (pc.charm.price || 0) + (pc.withClasp ? CLASP_PRICE : 0);
                                     return (
-                                  <li key={pc.id} className="flex items-center justify-between gap-2 text-sm">
+                                  <li key={pc.id} className="flex items-center justify-start gap-2 text-sm">
                                     <div className="flex items-center gap-2">
                                       <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={24} height={24} className="rounded-sm border" data-ai-hint="jewelry charm" />
                                       <span>{pc.charm.name} {pc.withClasp && `(+ ${t('clasp_label')})`}</span>
                                     </div>
-                                    <span className="text-muted-foreground">{formatPrice(charmPrice)}</span>
                                   </li>
                                 )})}
                               </ul>
