@@ -104,6 +104,17 @@ export async function login(prevState: any, formData: FormData): Promise<{ succe
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
+    
+    // Check for admin rights in Firestore
+    const userDocRef = doc(db, 'users', user.uid);
+    const userDoc = await getDoc(userDocRef);
+
+    if (!userDoc.exists() || userDoc.data().admin !== true) {
+        // Even if auth is correct, if not an admin, deny access.
+        await auth.signOut(); // Sign out the user immediately
+        return { success: false, error: "Accès non autorisé. Seuls les administrateurs peuvent se connecter ici." };
+    }
+    
     const idToken = await user.getIdToken();
     
     cookies().set('session', idToken, {

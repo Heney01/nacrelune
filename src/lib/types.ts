@@ -15,6 +15,7 @@ export interface User {
   likesCount?: number;
   creationSlots?: number;
   deleted?: boolean;
+  admin?: boolean;
 }
 
 export interface CharmCategory {

@@ -11,7 +11,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { GoogleIcon } from '@/components/icons';
-import { userLogin, userLoginWithGoogle } from '@/app/actions/auth.actions';
+import { userLogin, userLoginWithGoogle, login } from '@/app/actions/auth.actions';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useEffect, useState, useRef } from 'react';
@@ -27,14 +27,15 @@ import { app } from '@/lib/firebase';
 
 type State = {
   success: boolean;
-  traces: string[];
+  traces?: string[];
   error?: string;
+  message?: string;
 }
 
 const initialState: State = {
   success: false,
-  traces: [],
   error: undefined,
+  message: undefined,
 };
 
 function LoginButton() {
@@ -50,13 +51,16 @@ function LoginButton() {
 }
 
 export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
-  const [state, formAction] = useFormState(userLogin, initialState);
+  const { options } = useAuthDialog();
+  const action = options.isAdminLogin ? login : userLogin;
+  const [state, formAction] = useFormState(action, initialState);
+
   const router = useRouter();
   const params = useParams();
   const locale = params.locale as string;
   const t = useTranslations('Auth');
   const { toast } = useToast();
-  const { setView, options } = useAuthDialog();
+  const { setView } = useAuthDialog();
 
   const [isClientSigningIn, setIsClientSigningIn] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
