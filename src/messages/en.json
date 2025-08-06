@@ -61,7 +61,7 @@
     "reward_points_title": "Your Reward Points",
     "reward_points_description": "Here's how your reward points work.",
     "reward_points_explanation_1": "Earn points when other users purchase your creations.",
-    "reward_points_explanation_2": "Redeem your points for discounts or vouchers.",
+    "reward_points_explanation_2": "Redeem your points for discounts on your orders.",
     "reward_points_explanation_3": "Conversion rate: 10 points = €1.",
     "reward_points_explanation_4": "Earning limit: €300 per year.",
     "reward_points_close_button": "Got it",
@@ -137,7 +137,11 @@
     "creation_name_placeholder": "e.g., My Summer Necklace",
     "publish_button": "Publish and Continue",
     "skip_publish_button": "No thanks, just purchase",
-    "publish_success_message": "Your creation has been successfully published! You can now add it to your cart."
+    "publish_success_message": "Your creation has been successfully published! You can now add it to your cart.",
+    "exit_confirmation_title": "Are you sure you want to leave?",
+    "exit_confirmation_description": "Your current creation will be lost. If you want to keep it, please add it to your cart or publish it.",
+    "exit_confirmation_cancel": "Stay",
+    "exit_confirmation_confirm": "Leave"
   },
   "Cart": {
     "title": "Your Cart",

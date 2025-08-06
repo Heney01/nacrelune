@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
@@ -8,7 +9,7 @@ import { JewelryModel, PlacedCharm, Charm, JewelryType, CartItem, CharmCategory,
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { SuggestionSidebar } from './suggestion-sidebar';
-import { X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Layers, Check, MoreHorizontal, Loader2, Trash2 } from 'lucide-react';
+import { X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Layers, Check, MoreHorizontal, Loader2, Trash2, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -34,6 +35,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { PlacedCharmsList } from './placed-charms-list';
 import html2canvas from 'html2canvas';
 
@@ -171,6 +182,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const [isDraggingCharm, setIsDraggingCharm] = useState(false);
   const [isOverTrash, setIsOverTrash] = useState(false);
   const trashZoneRef = useRef<HTMLDivElement>(null);
+
+  const [isExitAlertOpen, setIsExitAlertOpen] = useState(false);
   
   const isEditing = cartItemId !== null;
 
@@ -579,9 +592,36 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     return { sortedPlacedCharms: charmsWithStockInfo, hasStockIssues: hasIssues };
   }, [placedCharms, allCharms]);
 
+  const handleBackClick = () => {
+    if (placedCharms.length > 0) {
+      setIsExitAlertOpen(true);
+    } else {
+      router.push(`/${locale}/?type=${jewelryType.id}`);
+    }
+  };
 
   return (
     <>
+      <AlertDialog open={isExitAlertOpen} onOpenChange={setIsExitAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <ShieldAlert className="text-destructive h-6 w-6"/>
+              {t('exit_confirmation_title')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('exit_confirmation_description')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('exit_confirmation_cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => router.push(`/${locale}/?type=${jewelryType.id}`)} className="bg-destructive hover:bg-destructive/90">
+              {t('exit_confirmation_confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <CartSheet open={isCartSheetOpen} onOpenChange={setIsCartSheetOpen} />
       {isFinalizeOpen && (
         <FinalizeCreationDialog
@@ -611,11 +651,9 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
           <div className="flex-grow flex flex-col min-w-0 min-h-0">
             <div className="flex justify-between items-center flex-shrink-0 px-4 pt-4 mb-4">
-                <Button variant="outline" asChild>
-                    <Link href={`/${locale}/?type=${jewelryType.id}`}>
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        <span>{tHome('back_button')}</span>
-                    </Link>
+                <Button variant="outline" onClick={handleBackClick}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  <span>{tHome('back_button')}</span>
                 </Button>
                  <div className="flex items-center gap-2">
                     <Dialog>
