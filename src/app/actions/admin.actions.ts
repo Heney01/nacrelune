@@ -6,6 +6,8 @@ import { db, storage } from '@/lib/firebase';
 import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { ref, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import type { JewelryModel, CharmCategory, Charm, GeneralPreferences } from '@/lib/types';
+import { verifyAdmin } from './auth.actions';
+import { cookies } from 'next/headers';
 
 
 // --- Helper Functions ---
@@ -76,17 +78,21 @@ async function uploadImage(imageDataJson: string | null, existingUrl: string, st
 // --- Model Actions ---
 
 export async function deleteModel(formData: FormData): Promise<{ success: boolean; message: string }> {
-    const modelId = formData.get('modelId') as string;
-    const jewelryTypeId = formData.get('jewelryTypeId') as string;
-    const locale = formData.get('locale') as string || 'fr';
-    const displayImageUrl = formData.get('displayImageUrl') as string;
-    const editorImageUrl = formData.get('editorImageUrl') as string;
-    
-    if (!modelId || !jewelryTypeId) {
-        return { success: false, message: "Informations manquantes pour la suppression." };
-    }
-
     try {
+        const session = cookies().get('session')?.value;
+        if (!session) throw new Error("Non autorisé");
+        await verifyAdmin(session);
+
+        const modelId = formData.get('modelId') as string;
+        const jewelryTypeId = formData.get('jewelryTypeId') as string;
+        const locale = formData.get('locale') as string || 'fr';
+        const displayImageUrl = formData.get('displayImageUrl') as string;
+        const editorImageUrl = formData.get('editorImageUrl') as string;
+        
+        if (!modelId || !jewelryTypeId) {
+            return { success: false, message: "Informations manquantes pour la suppression." };
+        }
+
         await deleteDoc(doc(db, jewelryTypeId, modelId));
 
         await Promise.allSettled([
@@ -98,33 +104,37 @@ export async function deleteModel(formData: FormData): Promise<{ success: boolea
         return { success: true, message: "Le modèle a été supprimé avec succès." };
 
     } catch (error: any) {
-        return { success: false, message: "Une erreur est survenue lors de la suppression du modèle." };
+        return { success: false, message: error.message || "Une erreur est survenue lors de la suppression du modèle." };
     }
 }
 
 
 export async function saveModel(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; model?: JewelryModel }> {
-    const modelId = formData.get('modelId') as string | null;
-    const jewelryTypeId = formData.get('jewelryTypeId') as string;
-    const name = formData.get('name') as string;
-    const price = parseFloat(formData.get('price') as string);
-    const quantity = parseInt(formData.get('quantity') as string, 10);
-    const width = parseFloat(formData.get('width') as string) || undefined;
-    const height = parseFloat(formData.get('height') as string) || undefined;
-    const reorderUrl = formData.get('reorderUrl') as string;
-    const locale = formData.get('locale') as string || 'fr';
-
-    const displayImageData = formData.get('displayImage') as string;
-    const editorImageData = formData.get('editorImage') as string;
-    
-    const originalDisplayImageUrl = formData.get('originalDisplayImageUrl') as string || '';
-    const originalEditorImageUrl = formData.get('originalEditorImageUrl') as string || '';
-
-    if (!jewelryTypeId || !name || isNaN(price) || isNaN(quantity)) {
-        return { success: false, message: "Les champs obligatoires sont manquants ou invalides." };
-    }
-
     try {
+        const session = cookies().get('session')?.value;
+        if (!session) throw new Error("Non autorisé");
+        await verifyAdmin(session);
+
+        const modelId = formData.get('modelId') as string | null;
+        const jewelryTypeId = formData.get('jewelryTypeId') as string;
+        const name = formData.get('name') as string;
+        const price = parseFloat(formData.get('price') as string);
+        const quantity = parseInt(formData.get('quantity') as string, 10);
+        const width = parseFloat(formData.get('width') as string) || undefined;
+        const height = parseFloat(formData.get('height') as string) || undefined;
+        const reorderUrl = formData.get('reorderUrl') as string;
+        const locale = formData.get('locale') as string || 'fr';
+
+        const displayImageData = formData.get('displayImage') as string;
+        const editorImageData = formData.get('editorImage') as string;
+        
+        const originalDisplayImageUrl = formData.get('originalDisplayImageUrl') as string || '';
+        const originalEditorImageUrl = formData.get('originalEditorImageUrl') as string || '';
+
+        if (!jewelryTypeId || !name || isNaN(price) || isNaN(quantity)) {
+            return { success: false, message: "Les champs obligatoires sont manquants ou invalides." };
+        }
+
         const displayImageUrl = await uploadImage(displayImageData, originalDisplayImageUrl, jewelryTypeId);
         const editorImageUrl = await uploadImage(editorImageData, originalEditorImageUrl, jewelryTypeId);
 
@@ -162,7 +172,7 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
 
     } catch (error: any) {
         console.error("Error saving model:", error);
-        return { success: false, message: "Une erreur est survenue lors de l'enregistrement du modèle." };
+        return { success: false, message: error.message || "Une erreur est survenue lors de l'enregistrement du modèle." };
     }
 }
 
@@ -170,18 +180,22 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
 // --- Charm Category Actions ---
 
 export async function saveCharmCategory(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; category?: CharmCategory }> {
-    const categoryId = formData.get('categoryId') as string | null;
-    const name = formData.get('name') as string;
-    const description = formData.get('description') as string;
-    const locale = formData.get('locale') as string || 'fr';
-    const imageData = formData.get('image') as string;
-    const originalImageUrl = formData.get('originalImageUrl') as string || '';
-
-    if (!name) {
-        return { success: false, message: "Le nom de la catégorie est obligatoire." };
-    }
-
     try {
+        const session = cookies().get('session')?.value;
+        if (!session) throw new Error("Non autorisé");
+        await verifyAdmin(session);
+
+        const categoryId = formData.get('categoryId') as string | null;
+        const name = formData.get('name') as string;
+        const description = formData.get('description') as string;
+        const locale = formData.get('locale') as string || 'fr';
+        const imageData = formData.get('image') as string;
+        const originalImageUrl = formData.get('originalImageUrl') as string || '';
+
+        if (!name) {
+            return { success: false, message: "Le nom de la catégorie est obligatoire." };
+        }
+
         const imageUrl = await uploadImage(imageData, originalImageUrl, 'charmCategories');
 
         const categoryData = { name, description, imageUrl };
@@ -200,23 +214,27 @@ export async function saveCharmCategory(prevState: any, formData: FormData): Pro
         return { success: true, message: `La catégorie a été ${categoryId ? 'mise à jour' : 'créée'} avec succès.`, category: savedCategory };
     } catch (error) {
         console.error("Error saving charm category:", error);
-        return { success: false, message: "Une erreur est survenue lors de l'enregistrement de la catégorie." };
+        return { success: false, message: error.message || "Une erreur est survenue lors de l'enregistrement de la catégorie." };
     }
 }
 
 export async function deleteCharmCategory(formData: FormData): Promise<{ success: boolean; message: string }> {
-    const categoryId = formData.get('categoryId') as string;
-    const imageUrl = formData.get('imageUrl') as string;
-    const locale = formData.get('locale') as string || 'fr';
-
-    if (!categoryId) {
-        return { success: false, message: "ID de catégorie manquant." };
-    }
-
-    const batch = writeBatch(db);
-    const categoryRef = doc(db, 'charmCategories', categoryId);
-
     try {
+        const session = cookies().get('session')?.value;
+        if (!session) throw new Error("Non autorisé");
+        await verifyAdmin(session);
+
+        const categoryId = formData.get('categoryId') as string;
+        const imageUrl = formData.get('imageUrl') as string;
+        const locale = formData.get('locale') as string || 'fr';
+
+        if (!categoryId) {
+            return { success: false, message: "ID de catégorie manquant." };
+        }
+
+        const batch = writeBatch(db);
+        const categoryRef = doc(db, 'charmCategories', categoryId);
+
         // Delete the category document itself
         batch.delete(categoryRef);
 
@@ -239,9 +257,9 @@ export async function deleteCharmCategory(formData: FormData): Promise<{ success
 
         revalidatePath(`/${locale}/admin/dashboard`);
         return { success: true, message: "La catégorie a été supprimée." };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error deleting charm category:", error);
-        return { success: false, message: "Une erreur est survenue lors de la suppression de la catégorie." };
+        return { success: false, message: error.message || "Une erreur est survenue lors de la suppression de la catégorie." };
     }
 }
 
@@ -249,24 +267,28 @@ export async function deleteCharmCategory(formData: FormData): Promise<{ success
 // --- Charm Actions ---
 
 export async function saveCharm(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; charm?: Charm & { categoryName?: string } }> {
-    const charmId = formData.get('charmId') as string | null;
-    const name = formData.get('name') as string;
-    const description = formData.get('description') as string;
-    const price = parseFloat(formData.get('price') as string);
-    const quantity = parseInt(formData.get('quantity') as string, 10);
-    const width = parseFloat(formData.get('width') as string) || undefined;
-    const height = parseFloat(formData.get('height') as string) || undefined;
-    const categoryIds = formData.getAll('categoryIds') as string[];
-    const reorderUrl = formData.get('reorderUrl') as string;
-    const locale = formData.get('locale') as string || 'fr';
-    const imageData = formData.get('image') as string;
-    const originalImageUrl = formData.get('originalImageUrl') as string || '';
-
-    if (!name || isNaN(price) || isNaN(quantity) || !categoryIds || categoryIds.length === 0) {
-        return { success: false, message: "Les champs obligatoires (nom, prix, quantité, au moins une catégorie) sont manquants ou invalides." };
-    }
-
     try {
+        const session = cookies().get('session')?.value;
+        if (!session) throw new Error("Non autorisé");
+        await verifyAdmin(session);
+
+        const charmId = formData.get('charmId') as string | null;
+        const name = formData.get('name') as string;
+        const description = formData.get('description') as string;
+        const price = parseFloat(formData.get('price') as string);
+        const quantity = parseInt(formData.get('quantity') as string, 10);
+        const width = parseFloat(formData.get('width') as string) || undefined;
+        const height = parseFloat(formData.get('height') as string) || undefined;
+        const categoryIds = formData.getAll('categoryIds') as string[];
+        const reorderUrl = formData.get('reorderUrl') as string;
+        const locale = formData.get('locale') as string || 'fr';
+        const imageData = formData.get('image') as string;
+        const originalImageUrl = formData.get('originalImageUrl') as string || '';
+
+        if (!name || isNaN(price) || isNaN(quantity) || !categoryIds || categoryIds.length === 0) {
+            return { success: false, message: "Les champs obligatoires (nom, prix, quantité, au moins une catégorie) sont manquants ou invalides." };
+        }
+
         const categoryRefs = categoryIds.map(id => doc(db, 'charmCategories', id));
         const imageUrl = await uploadImage(imageData, originalImageUrl, `charms/${name.replace(/\s+/g, '_')}`);
         
@@ -309,32 +331,35 @@ export async function saveCharm(prevState: any, formData: FormData): Promise<{ s
             charm: finalCharmObject
         };
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error saving charm:", error);
-        return { success: false, message: "Une erreur est survenue lors de l'enregistrement de la breloque." };
+        return { success: false, message: error.message || "Une erreur est survenue lors de l'enregistrement de la breloque." };
     }
 }
 
 
 export async function deleteCharm(formData: FormData): Promise<{ success: boolean; message: string }> {
-    const charmId = formData.get('charmId') as string;
-    const imageUrl = formData.get('imageUrl') as string;
-    const locale = formData.get('locale') as string || 'fr';
-
-    if (!charmId) {
-        return { success: false, message: "ID de breloque manquant." };
-    }
-
     try {
+        const session = cookies().get('session')?.value;
+        if (!session) throw new Error("Non autorisé");
+        await verifyAdmin(session);
+        const charmId = formData.get('charmId') as string;
+        const imageUrl = formData.get('imageUrl') as string;
+        const locale = formData.get('locale') as string || 'fr';
+
+        if (!charmId) {
+            return { success: false, message: "ID de breloque manquant." };
+        }
+
         await deleteDoc(doc(db, 'charms', charmId));
         await deleteFileFromStorage(imageUrl);
 
         revalidatePath(`/${locale}/admin/dashboard`);
         return { success: true, message: "La breloque a été supprimée." };
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error deleting charm:", error);
-        return { success: false, message: "Une erreur est survenue." };
+        return { success: false, message: error.message || "Une erreur est survenue." };
     }
 }
 
@@ -357,19 +382,22 @@ export async function getPreferences(): Promise<GeneralPreferences> {
 }
 
 export async function savePreferences(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; preferences?: GeneralPreferences }> {
-    const alertThreshold = parseInt(formData.get('alertThreshold') as string, 10);
-    const criticalThreshold = parseInt(formData.get('criticalThreshold') as string, 10);
-    const locale = formData.get('locale') as string || 'fr';
+     try {
+        const session = cookies().get('session')?.value;
+        if (!session) throw new Error("Non autorisé");
+        await verifyAdmin(session);
+        const alertThreshold = parseInt(formData.get('alertThreshold') as string, 10);
+        const criticalThreshold = parseInt(formData.get('criticalThreshold') as string, 10);
+        const locale = formData.get('locale') as string || 'fr';
 
-    if (isNaN(alertThreshold) || isNaN(criticalThreshold)) {
-        return { success: false, message: "Les valeurs doivent être des nombres." };
-    }
-    
-    if (criticalThreshold >= alertThreshold) {
-        return { success: false, message: "Le seuil critique doit être inférieur au seuil d'alerte." };
-    }
+        if (isNaN(alertThreshold) || isNaN(criticalThreshold)) {
+            return { success: false, message: "Les valeurs doivent être des nombres." };
+        }
+        
+        if (criticalThreshold >= alertThreshold) {
+            return { success: false, message: "Le seuil critique doit être inférieur au seuil d'alerte." };
+        }
 
-    try {
         const preferencesData = { alertThreshold, criticalThreshold };
         const docRef = doc(db, 'preferences', 'general');
         await setDoc(docRef, preferencesData);
@@ -381,22 +409,25 @@ export async function savePreferences(prevState: any, formData: FormData): Promi
             preferences: preferencesData
         };
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error saving preferences:", error);
-        return { success: false, message: "Une erreur est survenue lors de l'enregistrement des préférences." };
+        return { success: false, message: error.message || "Une erreur est survenue lors de l'enregistrement des préférences." };
     }
 }
 
 export async function markAsOrdered(formData: FormData): Promise<{ success: boolean; message: string }> {
-    const itemId = formData.get('itemId') as string;
-    const itemType = formData.get('itemType') as string; // 'charms' or a jewelryTypeId like 'necklace'
-    const locale = formData.get('locale') as string || 'fr';
+     try {
+        const session = cookies().get('session')?.value;
+        if (!session) throw new Error("Non autorisé");
+        await verifyAdmin(session);
+        const itemId = formData.get('itemId') as string;
+        const itemType = formData.get('itemType') as string; // 'charms' or a jewelryTypeId like 'necklace'
+        const locale = formData.get('locale') as string || 'fr';
 
-    if (!itemId || !itemType) {
-        return { success: false, message: "Informations manquantes." };
-    }
+        if (!itemId || !itemType) {
+            return { success: false, message: "Informations manquantes." };
+        }
 
-    try {
         const itemRef = doc(db, itemType, itemId);
         await updateDoc(itemRef, {
             lastOrderedAt: serverTimestamp(),
@@ -406,23 +437,26 @@ export async function markAsOrdered(formData: FormData): Promise<{ success: bool
         revalidatePath(`/${locale}/admin/dashboard`);
         return { success: true, message: "L'article a été marqué comme commandé." };
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error marking item as ordered:", error);
-        return { success: false, message: "Une erreur est survenue." };
+        return { success: false, message: error.message || "Une erreur est survenue." };
     }
 }
 
 export async function markAsRestocked(formData: FormData): Promise<{ success: boolean; message: string; newQuantity?: number }> {
-    const itemId = formData.get('itemId') as string;
-    const itemType = formData.get('itemType') as string;
-    const locale = formData.get('locale') as string || 'fr';
-    const restockedQuantity = parseInt(formData.get('restockedQuantity') as string, 10);
+     try {
+        const session = cookies().get('session')?.value;
+        if (!session) throw new Error("Non autorisé");
+        await verifyAdmin(session);
+        const itemId = formData.get('itemId') as string;
+        const itemType = formData.get('itemType') as string;
+        const locale = formData.get('locale') as string || 'fr';
+        const restockedQuantity = parseInt(formData.get('restockedQuantity') as string, 10);
 
-    if (!itemId || !itemType || isNaN(restockedQuantity) || restockedQuantity <= 0) {
-        return { success: false, message: "Informations manquantes ou quantité invalide." };
-    }
+        if (!itemId || !itemType || isNaN(restockedQuantity) || restockedQuantity <= 0) {
+            return { success: false, message: "Informations manquantes ou quantité invalide." };
+        }
 
-    try {
         const itemRef = doc(db, itemType, itemId);
 
         const newQuantity = await runTransaction(db, async (transaction) => {
@@ -449,9 +483,9 @@ export async function markAsRestocked(formData: FormData): Promise<{ success: bo
             message: "L'article a été marqué comme réapprovisionné et le stock mis à jour.",
             newQuantity: newQuantity
         };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error marking item as restocked:", error);
-        return { success: false, message: "Une erreur est survenue." };
+        return { success: false, message: error.message || "Une erreur est survenue." };
     }
 }
 

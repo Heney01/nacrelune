@@ -1,9 +1,27 @@
+
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+    
+    // Allow public read for most folders
+    match /{folder}/{allPaths=**} {
+        allow read: if true;
+    }
+
+    // Only authenticated users can upload profile pictures to their own folder
+    match /profile_pictures/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Only authenticated users can upload creation previews
+     match /creation_previews/{fileName} {
+      allow write: if request.auth != null && fileName.startsWith(request.auth.uid);
+    }
+
+    // Order previews can be written by anyone (during checkout process)
+    match /order_previews/{allPaths=**} {
+        allow write: if true;
     }
   }
 }

@@ -1,6 +1,7 @@
 
 
 
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -11,6 +12,8 @@ import type { JewelryModel, PlacedCharm, OrderStatus, Order, OrderItem, Shipping
 import { toDate } from '@/lib/data';
 import Stripe from 'stripe';
 import { headers } from 'next/headers';
+import { verifyAdmin } from './auth.actions';
+import { cookies } from 'next/headers';
 
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -652,17 +655,20 @@ export async function getOrders(): Promise<Order[]> {
 }
 
 export async function updateOrderStatus(formData: FormData): Promise<{ success: boolean; message: string }> {
-    const orderId = formData.get('orderId') as string;
-    const newStatus = formData.get('status') as OrderStatus;
-    const locale = formData.get('locale') as string || 'fr';
+     try {
+        const session = cookies().get('session')?.value;
+        if (!session) throw new Error("Non autorisé");
+        await verifyAdmin(session);
+        const orderId = formData.get('orderId') as string;
+        const newStatus = formData.get('status') as OrderStatus;
+        const locale = formData.get('locale') as string || 'fr';
 
-    if (!orderId || !newStatus) {
-        return { success: false, message: "Informations manquantes." };
-    }
+        if (!orderId || !newStatus) {
+            return { success: false, message: "Informations manquantes." };
+        }
 
-    let cancellationReasonForEmail: string | null = null;
+        let cancellationReasonForEmail: string | null = null;
 
-    try {
         const transactionResult = await runTransaction(db, async (transaction) => {
             const orderRef = doc(db, 'orders', orderId);
             const orderDoc = await transaction.get(orderRef);
@@ -764,15 +770,18 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
 }
 
 export async function updateOrderItemStatus(formData: FormData): Promise<{ success: boolean; message: string }> {
-    const orderId = formData.get('orderId') as string;
-    const itemIndex = parseInt(formData.get('itemIndex') as string, 10);
-    const isCompleted = formData.get('isCompleted') === 'true';
+     try {
+        const session = cookies().get('session')?.value;
+        if (!session) throw new Error("Non autorisé");
+        await verifyAdmin(session);
+        const orderId = formData.get('orderId') as string;
+        const itemIndex = parseInt(formData.get('itemIndex') as string, 10);
+        const isCompleted = formData.get('isCompleted') === 'true';
 
-    if (!orderId || isNaN(itemIndex)) {
-        return { success: false, message: "Informations manquantes." };
-    }
+        if (!orderId || isNaN(itemIndex)) {
+            return { success: false, message: "Informations manquantes." };
+        }
 
-    try {
         const orderRef = doc(db, 'orders', orderId);
         
         await runTransaction(db, async (transaction) => {
@@ -843,6 +852,7 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
         return { success: false, message: "Une erreur est survenue lors de la validation du code." };
     }
 }
+
 
 
 
