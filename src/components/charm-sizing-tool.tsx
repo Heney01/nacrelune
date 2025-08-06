@@ -43,7 +43,7 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
     
     const [referenceCharm, setReferenceCharm] = useState<Charm | null>(null);
 
-    const [charmSizePercentage, setCharmSizePercentage] = useState(50);
+    const [charmWidth, setCharmWidth] = useState<number>(charm?.width || 15);
     const [aspectRatio, setAspectRatio] = useState(1);
 
     const charmsWithDimensions = useMemo(() => {
@@ -65,26 +65,17 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
             }
         };
 
-        if (charm.width && referenceCharm?.width) {
-            const initialPercentage = (charm.width / referenceCharm.width) * 100;
-            setCharmSizePercentage(initialPercentage);
-        } else {
-            setCharmSizePercentage(50); // Default if no dimensions are set
-        }
-
-    }, [charm, referenceCharm]);
+        setCharmWidth(charm?.width || 15); // Reset width when charm changes
+    }, [charm]);
 
     const calculatedDimensions = useMemo(() => {
-        if (!referenceCharm?.width || aspectRatio === 0) {
-            return { width: 0, height: 0 };
-        }
-        const charmWidthMm = referenceCharm.width * (charmSizePercentage / 100);
-        const charmHeightMm = charmWidthMm / aspectRatio;
+        const width = charmWidth;
+        const height = width / aspectRatio;
         return {
-            width: parseFloat(charmWidthMm.toFixed(2)),
-            height: parseFloat(charmHeightMm.toFixed(2)),
+            width: parseFloat(width.toFixed(2)),
+            height: parseFloat(height.toFixed(2)),
         }
-    }, [charmSizePercentage, aspectRatio, referenceCharm]);
+    }, [charmWidth, aspectRatio]);
 
     useEffect(() => {
         if (state.success && state.charm) {
@@ -104,6 +95,8 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
             setReferenceCharm(newRef);
         }
     }
+    
+    const PIXELS_PER_MM = 5; // A fixed ratio for consistent display size in the tool
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -149,55 +142,45 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
                         
                         {referenceCharm && (
                         <>
-                            <div className="h-40 flex justify-around items-center gap-4 bg-muted/50 rounded-lg p-4 border border-dashed">
+                            <div className="h-40 flex justify-center items-center gap-8 bg-muted/50 rounded-lg p-4 border border-dashed">
                                 {/* Reference Object */}
                                 <div className="flex flex-col items-center gap-1 w-24 text-center">
-                                    <div className="h-24 w-24 relative">
+                                    <div style={{ width: `${referenceCharm.width! * PIXELS_PER_MM}px`, height: `${referenceCharm.height! * PIXELS_PER_MM}px` }} className="relative">
                                         <Image
                                             src={referenceCharm.imageUrl}
                                             alt={`Référence: ${referenceCharm.name}`}
                                             fill
                                             className="object-contain"
-                                            sizes="96px"
+                                            sizes={`${referenceCharm.width! * PIXELS_PER_MM}px`}
                                         />
                                     </div>
-                                    <p className="text-xs text-muted-foreground">{referenceCharm.width}mm</p>
+                                    <p className="text-xs text-muted-foreground mt-1">{referenceCharm.width}mm</p>
                                 </div>
                                 {/* Charm to size */}
                                 <div className="flex flex-col items-center gap-1 w-24 text-center">
-                                     <div className="h-24 w-24 relative flex items-center justify-center">
-                                         <div 
-                                            style={{ 
-                                                width: '100%',
-                                                height: '100%',
-                                                transform: `scale(${charmSizePercentage / 100})`,
-                                                transition: 'transform 0.1s ease-out'
-                                            }}
-                                            className="relative"
-                                        >
-                                            <Image
-                                                src={charm.imageUrl}
-                                                alt={charm.name}
-                                                fill
-                                                className="object-contain"
-                                                sizes="96px"
-                                            />
-                                        </div>
+                                     <div style={{ width: `${calculatedDimensions.width * PIXELS_PER_MM}px`, height: `${calculatedDimensions.height * PIXELS_PER_MM}px`, transition: 'width 0.1s, height 0.1s' }} className="relative">
+                                        <Image
+                                            src={charm.imageUrl}
+                                            alt={charm.name}
+                                            fill
+                                            className="object-contain"
+                                            sizes={`${calculatedDimensions.width * PIXELS_PER_MM}px`}
+                                        />
                                      </div>
-                                    <p className="text-xs text-muted-foreground">{calculatedDimensions.width}mm</p>
+                                    <p className="text-xs text-muted-foreground mt-1">{calculatedDimensions.width}mm</p>
                                 </div>
                             </div>
                         
                             <div className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="size-slider">Ajuster la taille ({charmSizePercentage}%)</Label>
+                                    <Label htmlFor="size-slider">Largeur de la breloque (mm)</Label>
                                     <Slider
                                         id="size-slider"
-                                        min={10}
-                                        max={200}
-                                        step={1}
-                                        value={[charmSizePercentage]}
-                                        onValueChange={(value) => setCharmSizePercentage(value[0])}
+                                        min={0}
+                                        max={30}
+                                        step={0.1}
+                                        value={[charmWidth]}
+                                        onValueChange={(value) => setCharmWidth(value[0])}
                                     />
                                 </div>
                                 <div className="flex justify-between items-center text-sm p-3 bg-muted rounded-lg">
@@ -220,4 +203,3 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
         </Dialog>
     );
 }
-
