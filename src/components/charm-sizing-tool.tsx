@@ -85,7 +85,7 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
             return { scale: 1, refWidth: 0, refHeight: 0, currentWidth: 0, currentHeight: 0 };
         }
 
-        const PIXELS_PER_MM = 5;
+        const PIXELS_PER_MM = 5; 
         const PADDING = 32;
 
         const viewerWidth = viewerRef.current.offsetWidth - PADDING;
@@ -98,10 +98,10 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
         const requiredPixelHeight = totalMMHeight * PIXELS_PER_MM;
 
         let scale = 1;
-        if (requiredPixelWidth > viewerWidth) {
+        if (requiredPixelWidth > viewerWidth && viewerWidth > 0) {
             scale = viewerWidth / requiredPixelWidth;
         }
-        if (requiredPixelHeight > viewerHeight) {
+        if (requiredPixelHeight > viewerHeight && viewerHeight > 0) {
             scale = Math.min(scale, viewerHeight / requiredPixelHeight);
         }
 
@@ -185,34 +185,40 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
                         
                         {referenceCharm && (
                         <>
-                           <div ref={viewerRef} className="relative h-48 bg-muted/50 rounded-lg p-4 border overflow-hidden flex justify-center items-center gap-8">
+                           <div ref={viewerRef} className="relative h-64 bg-muted/50 rounded-lg p-4 border overflow-hidden flex justify-center items-center gap-10">
+                                {/* Reference Charm */}
                                 <div className="flex items-center gap-2">
                                      <Dimension size={referenceCharm.height!} direction="vertical"/>
-                                    <div className="flex flex-col items-center justify-center gap-1 text-center flex-shrink-0" style={{width: `${displayScaling.refWidth}px`, height: `${displayScaling.refHeight}px`}}>
-                                        <div className="relative w-full h-full">
-                                            <Image
-                                                src={referenceCharm.imageUrl}
-                                                alt={`Référence: ${referenceCharm.name}`}
-                                                fill
-                                                className="object-contain border border-dashed border-red-500"
-                                                sizes={`${displayScaling.refWidth}px`}
-                                            />
-                                        </div>
+                                    <div className="flex flex-col items-center justify-center gap-1 text-center flex-shrink-0">
+                                        <Image
+                                            src={referenceCharm.imageUrl}
+                                            alt={`Référence: ${referenceCharm.name}`}
+                                            width={displayScaling.refWidth}
+                                            height={displayScaling.refHeight}
+                                            className="object-contain border border-dashed border-red-500"
+                                            style={{
+                                                width: `${displayScaling.refWidth}px`,
+                                                height: `${displayScaling.refHeight}px`,
+                                            }}
+                                        />
                                         <Dimension size={referenceCharm.width!} />
                                     </div>
                                 </div>
                                 
+                                {/* Charm to Size */}
                                 <div className="flex items-center gap-2">
-                                     <div className="flex flex-col items-center justify-center gap-1 text-center flex-shrink-0" style={{width: `${displayScaling.currentWidth}px`, height: `${displayScaling.currentHeight}px`}}>
-                                         <div className="relative w-full h-full">
-                                            <Image
-                                                src={charm.imageUrl}
-                                                alt={charm.name}
-                                                fill
-                                                className="object-contain border border-dashed border-red-500"
-                                                sizes={`${displayScaling.currentWidth}px`}
-                                            />
-                                         </div>
+                                     <div className="flex flex-col items-center justify-center gap-1 text-center flex-shrink-0">
+                                        <Image
+                                            src={charm.imageUrl}
+                                            alt={charm.name}
+                                            width={displayScaling.currentWidth}
+                                            height={displayScaling.currentHeight}
+                                            className="object-contain border border-dashed border-red-500"
+                                            style={{
+                                                width: `${displayScaling.currentWidth}px`,
+                                                height: `${displayScaling.currentHeight}px`,
+                                            }}
+                                        />
                                         <Dimension size={calculatedDimensions.width} />
                                     </div>
                                      <Dimension size={calculatedDimensions.height} direction="vertical"/>
