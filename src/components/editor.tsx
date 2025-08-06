@@ -599,18 +599,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         />
       )}
 
-    <div className="flex flex-col h-[100dvh] bg-stone-50">
-        <header className="p-4 border-b flex-shrink-0 bg-white z-10 lg:hidden">
-            <div className="container mx-auto flex justify-between items-center">
-              <Link href={`/${locale}`} className="flex items-center gap-2">
-                <BrandLogo className="h-8 w-auto" />
-              </Link>
-              <div className="flex items-center gap-2">
-                  <CartWidget />
-              </div>
-            </div>
-        </header>
-
+    <div className="flex flex-col h-full bg-stone-50">
         <main className="flex-grow flex flex-col lg:flex-row min-h-0">
           <div className="w-[320px] flex-shrink-0 flex-col min-h-0 hidden lg:flex">
             <CharmsPanel 

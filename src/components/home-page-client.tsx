@@ -63,18 +63,7 @@ export function HomePageClient({
     }
     }, [searchParams, locale, router]);
     
-    if (selectedModel && selectedType) {
-      return <Editor 
-                model={selectedModel} 
-                jewelryType={selectedType} 
-                allCharms={allCharms} 
-                charmCategories={charmCategories} 
-                editorInitialState={editorInitialState}
-             />;
-    }
-  
-    return (
-      <div className="min-h-screen flex flex-col bg-stone-50">
+    const Header = () => (
          <header className="p-4 border-b bg-white">
           <div className="container mx-auto">
             <div className="flex justify-between items-center">
@@ -98,6 +87,26 @@ export function HomePageClient({
             </div>
           </div>
         </header>
+    );
+
+    if (selectedModel && selectedType) {
+      return (
+        <div className="min-h-screen flex flex-col bg-stone-50">
+            <Header />
+            <Editor 
+                model={selectedModel} 
+                jewelryType={selectedType} 
+                allCharms={allCharms} 
+                charmCategories={charmCategories} 
+                editorInitialState={editorInitialState}
+             />
+        </div>
+      );
+    }
+  
+    return (
+      <div className="min-h-screen flex flex-col bg-stone-50">
+         <Header />
 
         <main className="flex-grow p-4 md:p-8">
           <div className="container mx-auto">
