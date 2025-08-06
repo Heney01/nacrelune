@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription }
 import { SuggestionSidebar } from './suggestion-sidebar';
 import { X, ArrowLeft, Gem, Sparkles, Search, PlusCircle, ZoomIn, ZoomOut, Maximize, AlertCircle, Info, Layers, Check, MoreHorizontal, Loader2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { BrandLogo } from '@/components/icons';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { CharmsPanel } from './charms-panel';
@@ -19,7 +18,6 @@ import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
 import { useSearchParams, useParams, useRouter } from 'next/navigation';
 import { CartSheet } from './cart-sheet';
-import { CartWidget } from './cart-widget';
 import { useTranslations } from '@/hooks/use-translations';
 import { getCharmSuggestionsAction, getRefreshedCharms, getCharmAnalysisSuggestionsAction, getCharmDesignCritiqueAction } from '@/app/actions/ai.actions';
 import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
@@ -599,7 +597,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         />
       )}
 
-    <div className="flex flex-col h-full bg-stone-50">
+    <div className="flex-grow flex flex-col min-h-0 bg-stone-50">
         <main className="flex-grow flex flex-col lg:flex-row min-h-0">
           <div className="w-[320px] flex-shrink-0 flex-col min-h-0 hidden lg:flex">
             <CharmsPanel 
