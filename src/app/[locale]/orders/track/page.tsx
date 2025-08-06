@@ -167,7 +167,6 @@ function OrderDetails({ order }: { order: Order }) {
                                                             <p className="text-xs text-muted-foreground">{charm.description}</p>
                                                         </div>
                                                     </div>
-                                                    <p className="text-sm text-muted-foreground">{formatPrice(charm.price || 0)}</p>
                                                 </li>
                                             ))}
                                         </ul>
