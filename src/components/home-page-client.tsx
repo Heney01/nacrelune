@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -134,6 +133,12 @@ export function HomePageClient({
         
         <footer className="p-4 border-t mt-auto bg-white">
           <div className="container mx-auto text-center text-muted-foreground text-sm space-y-2">
+            <div className="flex justify-center items-center gap-x-4 gap-y-2 flex-wrap">
+                <Link href={`/${locale}/legal/mentions-legales`} className="hover:underline">Mentions Légales</Link>
+                <Link href={`/${locale}/legal/cgv`} className="hover:underline">Conditions Générales de Vente</Link>
+                <Link href={`/${locale}/legal/confidentialite`} className="hover:underline">Politique de Confidentialité</Link>
+                <Link href={`/${locale}/legal/retours`} className="hover:underline">Politique de retours</Link>
+            </div>
             <p>{t('footer_text', { year: new Date().getFullYear() })}</p>
              <div className="flex justify-center items-center gap-4 text-xs text-muted-foreground/80">
                 <SupportDialog />
