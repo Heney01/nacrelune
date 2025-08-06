@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -19,12 +18,12 @@ export function EditorOnboardingDialog({ isOpen, onOpenChange }: EditorOnboardin
         {
             icon: Gem,
             title: "1. Choisissez vos breloques",
-            description: "Parcourez les catégories dans le panneau de gauche et cliquez sur une breloque pour la sélectionner."
+            description: "Parcourez les catégories dans le panneau des breloques et selectionnez celle que vous voulez ajouter au bijou."
         },
         {
             icon: Move,
             title: "2. Positionnez votre création",
-            description: "Glissez-déposez les breloques sur le bijou. Cliquez sur une breloque déjà placée pour la faire pivoter ou la supprimer."
+            description: "Glissez-déposez les breloques sur le bijou. Cliquez sur une breloque déjà placée pour la déplacer ou la supprimer."
         },
         {
             icon: WandSparkles,
