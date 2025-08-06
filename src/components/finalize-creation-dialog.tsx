@@ -27,7 +27,7 @@ interface FinalizeCreationDialogProps {
     onConfirmAddToCart: (previewImage: string) => void;
     isEditing: boolean;
     placedCharms: PlacedCreationCharm[];
-    jewelryType: Omit<JewelryType, 'models' | 'icon'>;
+    jewelryType: Omit<JewelryType, 'models', 'icon'>;
     model: JewelryModel;
     locale: string;
     onPublishSuccess?: (creationId: string) => void;
@@ -76,12 +76,11 @@ export function FinalizeCreationDialog({
     useEffect(() => {
         if (isOpen) {
             setIsLoadingPreview(true);
-            // If we are in the cart, the image is already a URL, no need to capture.
             if(fromCart) {
                 getCanvasDataUri().then(url => {
                     setPreviewImage(url);
                     setIsLoadingPreview(false);
-                    setStep('publish'); // Force publish step for cart items
+                    setStep('publish');
                 });
             } else {
                  getCanvasDataUri()
@@ -139,25 +138,28 @@ export function FinalizeCreationDialog({
                 
                 if (onPublishSuccess) {
                     onPublishSuccess(result.creationId);
-                    onOpenChange(false);
-                    return;
                 }
 
-                setPublishedCreation({
+                const newPublishedCreation = {
                     id: result.creationId,
                     name: creationName,
                     creatorId: firebaseUser.uid,
                     previewImageUrl: previewImage,
                     creator: user || undefined,
-                    // Add other necessary fields with default/dummy values
                     jewelryTypeId: jewelryType.id,
                     modelId: model.id,
                     placedCharms: [], 
                     createdAt: new Date(),
                     salesCount: 0,
                     likesCount: 0,
-                });
-                setStep('confirm');
+                };
+                setPublishedCreation(newPublishedCreation);
+
+                if (fromCart) {
+                    setIsShareOpen(true);
+                } else {
+                    setStep('confirm');
+                }
             } else {
                 setPublishError({message: result.message, reason: result.reason});
                 toast({ variant: 'destructive', title: "Erreur de publication", description: result.message });
@@ -177,7 +179,7 @@ export function FinalizeCreationDialog({
             const result = await purchaseCreationSlot(idToken);
             if(result.success) {
                 toast({ title: "Succès", description: "Nouvel emplacement débloqué ! Vous pouvez maintenant publier votre création."});
-                setPublishError(null); // Clear the error to allow publishing again
+                setPublishError(null);
             } else {
                 toast({ variant: 'destructive', title: "Erreur", description: result.message});
             }
@@ -191,12 +193,6 @@ export function FinalizeCreationDialog({
     const handleSkipToPurchase = () => {
         if (previewImage) {
             onConfirmAddToCart(previewImage);
-        } else {
-            toast({
-                variant: "destructive",
-                title: "Erreur",
-                description: "L'aperçu de l'image n'est pas encore prêt.",
-            });
         }
     }
     
@@ -285,7 +281,6 @@ export function FinalizeCreationDialog({
                  <DialogFooter className="flex-col gap-2 pt-4 flex-shrink-0">
                      <Button onClick={handlePublishAndContinue} className="w-full" disabled={isPublishing || !firebaseUser || !creationName.trim() || !!publishError}>
                         {isPublishing && <Loader2 className="animate-spin mr-2" />}
-                        <Send className="mr-2 h-4 w-4" />
                         {t('publish_button')}
                     </Button>
                     {!fromCart && (
@@ -335,7 +330,13 @@ export function FinalizeCreationDialog({
             {isShareOpen && publishedCreation && (
                 <ShareDialog
                     isOpen={isShareOpen}
-                    onOpenChange={setIsShareOpen}
+                    onOpenChange={(open) => {
+                        setIsShareOpen(open);
+                        // If we came from the cart, closing the share dialog should close the main dialog too.
+                        if (!open && fromCart) {
+                            onOpenChange(false);
+                        }
+                    }}
                     creation={publishedCreation}
                     locale={locale}
                 />

@@ -107,7 +107,6 @@ export function CartSheet({ children, open, onOpenChange }: {
         ...itemToPublish,
         creationId: publishedCreationId,
       });
-      setItemToPublish(null); // Close the dialog
     }
   };
 
@@ -253,7 +252,7 @@ export function CartSheet({ children, open, onOpenChange }: {
                                   <li key={pc.id} className="flex items-center justify-start gap-2 text-sm">
                                     <div className="flex items-center gap-2">
                                       <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={24} height={24} className="rounded-sm border" data-ai-hint="jewelry charm" />
-                                      <span>{pc.charm.name} {pc.withClasp && `(+ ${t('clasp_label')})`}</span>
+                                      <span>{pc.charm.name}</span>
                                     </div>
                                   </li>
                                 )})}
@@ -265,13 +264,13 @@ export function CartSheet({ children, open, onOpenChange }: {
                         </AccordionItem>
                       </Accordion>
                       
-                       <CardFooter className={cn("p-2 bg-muted/30 border-t grid gap-2", isFromAnotherCreator || isPublished ? 'grid-cols-1' : 'grid-cols-3')}>
+                       <CardFooter className={cn("p-2 bg-muted/30 border-t grid gap-2", isFromAnotherCreator ? 'grid-cols-1' : (isPublished ? 'grid-cols-1' : 'grid-cols-3'))}>
                           {!isFromAnotherCreator && !isPublished && (
                               <>
                                 <SheetClose asChild>
                                     <Button variant="outline" size="sm" asChild className="text-xs">
                                         <Link href={editUrl}>
-                                            {t('edit_item_button')}
+                                            <Edit className="mr-1 h-3 w-3"/>{t('edit_item_button')}
                                         </Link>
                                     </Button>
                                 </SheetClose>
@@ -286,7 +285,7 @@ export function CartSheet({ children, open, onOpenChange }: {
                             className={cn(
                                 "text-destructive hover:text-destructive text-xs",
                                 isFromAnotherCreator && "col-span-3",
-                                !isFromAnotherCreator && isPublished && "col-span-3"
+                                !isFromAnotherCreator && isPublished && "col-span-1"
                             )}
                             onClick={() => removeFromCart(item.id)}
                             disabled={isProcessing}
@@ -346,8 +345,8 @@ export function CartSheet({ children, open, onOpenChange }: {
             jewelryType={itemToPublish.jewelryType}
             model={itemToPublish.model}
             locale={locale}
-            onPublishSuccess={handlePublishSuccess} // New prop to handle success
-            fromCart={true} // New prop
+            onPublishSuccess={handlePublishSuccess}
+            fromCart={true}
         />
     )}
     </>
