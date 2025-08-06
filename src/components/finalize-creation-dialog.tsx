@@ -189,7 +189,15 @@ export function FinalizeCreationDialog({
     }
 
     const handleSkipToPurchase = () => {
-        setStep('confirm');
+        if (previewImage) {
+            onConfirmAddToCart(previewImage);
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Erreur",
+                description: "L'aperçu de l'image n'est pas encore prêt.",
+            });
+        }
     }
     
     const handleAddToCartClick = () => {
