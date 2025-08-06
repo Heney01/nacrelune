@@ -8,7 +8,7 @@ import { useCart } from '@/hooks/use-cart';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, ShoppingCart, PlusCircle, Loader2, User, Send, Edit } from 'lucide-react';
+import { Trash2, ShoppingCart, PlusCircle, Loader2, User, Send, Edit, CheckCircle } from 'lucide-react';
 import React, { ReactNode, useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
@@ -215,10 +215,15 @@ export function CartSheet({ children, open, onOpenChange }: {
                               <p className="text-sm text-muted-foreground">
                                 {item.jewelryType.name}
                               </p>
-                              {item.creator?.displayName && (
+                              {item.creator?.displayName ? (
                                 <Badge variant="secondary" className="mt-1.5">
                                   <User className="h-3 w-3 mr-1.5"/>
                                   {t('creator_badge', { name: item.creator.displayName })}
+                                </Badge>
+                              ) : isPublished && (
+                                <Badge variant="outline" className="mt-1.5 border-green-200 bg-green-50 text-green-700">
+                                  <CheckCircle className="h-3 w-3 mr-1.5"/>
+                                  Publiée
                                 </Badge>
                               )}
                               <p className="text-lg font-bold mt-2">
@@ -260,8 +265,8 @@ export function CartSheet({ children, open, onOpenChange }: {
                         </AccordionItem>
                       </Accordion>
                       
-                       <CardFooter className={cn("p-2 bg-muted/30 border-t grid gap-2", isFromAnotherCreator ? 'grid-cols-1' : 'grid-cols-3')}>
-                          {!isFromAnotherCreator && (
+                       <CardFooter className={cn("p-2 bg-muted/30 border-t grid gap-2", isFromAnotherCreator || isPublished ? 'grid-cols-1' : 'grid-cols-3')}>
+                          {!isFromAnotherCreator && !isPublished && (
                               <>
                                 <SheetClose asChild>
                                     <Button variant="outline" size="sm" asChild className="text-xs">
@@ -270,13 +275,9 @@ export function CartSheet({ children, open, onOpenChange }: {
                                         </Link>
                                     </Button>
                                 </SheetClose>
-                                {!isPublished ? (
-                                    <Button variant="outline" size="sm" className="text-xs" onClick={() => setItemToPublish(item)}>
-                                        <Send className="mr-1.5 h-3 w-3"/> {tEditor('publish_button')}
-                                    </Button>
-                                ) : (
-                                  <div></div> // Placeholder to keep grid alignment
-                                )}
+                                 <Button variant="outline" size="sm" className="text-xs" onClick={() => setItemToPublish(item)}>
+                                     {tEditor('publish_button')}
+                                 </Button>
                               </>
                           )}
                           <Button
@@ -285,7 +286,7 @@ export function CartSheet({ children, open, onOpenChange }: {
                             className={cn(
                                 "text-destructive hover:text-destructive text-xs",
                                 isFromAnotherCreator && "col-span-3",
-                                !isFromAnotherCreator && isPublished && "col-start-3"
+                                !isFromAnotherCreator && isPublished && "col-span-3"
                             )}
                             onClick={() => removeFromCart(item.id)}
                             disabled={isProcessing}
