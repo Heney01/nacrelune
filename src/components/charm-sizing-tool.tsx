@@ -141,7 +141,7 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-xl">
+            <DialogContent className="sm:max-w-2xl">
                  <form action={formAction}>
                     <DialogHeader>
                         <DialogTitle>Calibrer la taille de "{charm.name}"</DialogTitle>
@@ -185,16 +185,16 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
                         
                         {referenceCharm && (
                         <>
-                           <div ref={viewerRef} className="relative h-48 bg-muted/50 rounded-lg p-4 border border-dashed overflow-hidden flex justify-center items-center gap-8">
+                           <div ref={viewerRef} className="relative h-48 bg-muted/50 rounded-lg p-4 border overflow-hidden flex justify-center items-center gap-8">
                                 <div className="flex items-center gap-2">
                                      <Dimension size={referenceCharm.height!} direction="vertical"/>
                                     <div className="flex flex-col items-center justify-center gap-1 text-center flex-shrink-0" style={{width: `${displayScaling.refWidth}px`, height: `${displayScaling.refHeight}px`}}>
-                                        <div className="relative w-full h-full border border-dashed border-red-500">
+                                        <div className="relative w-full h-full">
                                             <Image
                                                 src={referenceCharm.imageUrl}
                                                 alt={`Référence: ${referenceCharm.name}`}
                                                 fill
-                                                className="object-contain"
+                                                className="object-contain border border-dashed border-red-500"
                                                 sizes={`${displayScaling.refWidth}px`}
                                             />
                                         </div>
@@ -204,12 +204,12 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
                                 
                                 <div className="flex items-center gap-2">
                                      <div className="flex flex-col items-center justify-center gap-1 text-center flex-shrink-0" style={{width: `${displayScaling.currentWidth}px`, height: `${displayScaling.currentHeight}px`}}>
-                                         <div className="relative w-full h-full border border-dashed border-red-500">
+                                         <div className="relative w-full h-full">
                                             <Image
                                                 src={charm.imageUrl}
                                                 alt={charm.name}
                                                 fill
-                                                className="object-contain"
+                                                className="object-contain border border-dashed border-red-500"
                                                 sizes={`${displayScaling.currentWidth}px`}
                                             />
                                          </div>
