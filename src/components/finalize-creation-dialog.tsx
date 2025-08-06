@@ -166,11 +166,11 @@ export function FinalizeCreationDialog({
                     <DialogTitle>{t('publish_title')}</DialogTitle>
                     <DialogDescription>{t('publish_description_new')}</DialogDescription>
                 </DialogHeader>
-                <div className="flex-grow my-4 space-y-4">
+                <div className="flex-grow my-4 space-y-4 overflow-y-auto no-scrollbar">
                     <div className="w-full max-w-[200px] mx-auto flex-shrink-0">
                         <Image src={previewImage} alt={t('preview_alt')} width={240} height={240} className="rounded-lg border bg-muted/50 w-full h-auto" />
                     </div>
-                    <div className="w-full space-y-4">
+                     <div className="w-full space-y-4">
                         <Accordion type="single" collapsible className="w-full">
                             <AccordionItem value="item-1" className="border-b-0">
                                 <AccordionTrigger className="text-sm font-semibold text-primary hover:no-underline [&>svg]:ml-1">
@@ -188,7 +188,7 @@ export function FinalizeCreationDialog({
                             </AccordionItem>
                         </Accordion>
                         {!firebaseUser ? (
-                            <Alert>
+                             <Alert>
                                 <AlertCircle className="h-4 w-4" />
                                 <AlertTitle>{t('publish_login_required_title')}</AlertTitle>
                                 <AlertDescription>
@@ -208,7 +208,7 @@ export function FinalizeCreationDialog({
                     </div>
                 </div>
 
-                 <DialogFooter className="flex-col gap-2 pt-4 flex-shrink-0">
+                 <DialogFooter className="flex-col gap-2 pt-0 flex-shrink-0">
                     {firebaseUser ? (
                         <>
                             <Button onClick={handlePublishAndContinue} className="w-full" disabled={isPublishing || !creationName.trim()}>
@@ -216,12 +216,12 @@ export function FinalizeCreationDialog({
                                 <Send className="mr-2 h-4 w-4" />
                                 {t('publish_button')}
                             </Button>
-                            <Button variant="outline" onClick={handleSkipToPurchase} className="w-full">
+                             <Button variant="outline" onClick={handleSkipToPurchase} className="w-full">
                                 {t('skip_publish_button')}
                             </Button>
                         </>
                     ) : (
-                        <Button variant="outline" onClick={handleSkipToPurchase} className="w-full">
+                         <Button variant="outline" onClick={handleSkipToPurchase} className="w-full">
                             {t('skip_publish_button')}
                         </Button>
                     )}
