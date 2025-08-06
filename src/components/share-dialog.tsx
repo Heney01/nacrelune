@@ -27,7 +27,7 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
 
     useEffect(() => {
         if (creation.creatorId) {
-            setShareUrl(`${window.location.origin}/${locale}/creators/${creation.creatorId}?creation=${creation.id}`);
+            setShareUrl(`https://www.atelierabijoux.com/${locale}/creators/${creation.creatorId}?creation=${creation.id}`);
         }
     }, [locale, creation]);
     
@@ -76,18 +76,18 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
 
             // Creation Name
             ctx.fillStyle = '#1c1917'; // stone-800
-            ctx.font = `bold ${20 * scale}px "Playfair Display", serif`;
+            ctx.font = `bold ${18 * scale}px "Playfair Display", serif`;
             ctx.fillText(creation.name, width / 2, textYStart);
 
             // Creator Name
             ctx.fillStyle = '#78716c'; // stone-500
-            ctx.font = `${14 * scale}px "Montserrat", sans-serif`;
-            ctx.fillText(`par ${creatorDisplayName}`, width / 2, textYStart + 25 * scale);
+            ctx.font = `${12 * scale}px "Montserrat", sans-serif`;
+            ctx.fillText(`par ${creatorDisplayName}`, width / 2, textYStart + 22 * scale);
 
             // URL
             ctx.fillStyle = '#a8a29e'; // stone-400
-            ctx.font = `${12 * scale}px "Montserrat", sans-serif`;
-            ctx.fillText('www.atelierabijoux.com', width / 2, textYStart + 60 * scale);
+            ctx.font = `${10 * scale}px "Montserrat", sans-serif`;
+            ctx.fillText('www.atelierabijoux.com', width / 2, textYStart + 55 * scale);
 
 
             // 5. Download the canvas image
@@ -121,7 +121,7 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
                 </DialogHeader>
 
                 <div className="flex justify-center items-center my-4">
-                     <div className="shadow-lg w-full max-w-[250px] bg-white">
+                     <div className="shadow-lg w-full max-w-xs bg-white">
                         <div className="p-4">
                             <div className="bg-gray-100 aspect-square relative">
                                 <Image 
