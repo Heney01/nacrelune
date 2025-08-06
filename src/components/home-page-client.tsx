@@ -91,7 +91,7 @@ export function HomePageClient({
 
     if (selectedModel && selectedType) {
       return (
-        <div className="h-screen flex flex-col bg-stone-50">
+        <div className="h-[var(--h-screen-dynamic)] flex flex-col bg-stone-50">
             <Header />
             <div className="flex-grow flex flex-col min-h-0">
                 <Editor 
