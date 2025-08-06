@@ -18,7 +18,7 @@ import { userLogin, userLoginWithGoogle } from '@/app/actions/auth.actions';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from '@/hooks/use-translations';
 import { Separator } from './ui/separator';
 import { useGoogleAuth } from '@/hooks/use-google-auth';
@@ -53,6 +53,7 @@ function LoginButton() {
 export function LoginForm() {
   const [state, formAction] = useFormState(userLogin, initialState);
   const params = useParams();
+  const router = useRouter();
   const locale = params.locale as string;
   const t = useTranslations('Auth');
   const { toast } = useToast();
@@ -93,8 +94,9 @@ export function LoginForm() {
         description: state.message,
       });
       close();
+      router.refresh();
     }
-  }, [state.success, state.message, toast, close]);
+  }, [state, toast, close, router]);
 
   return (
     <Card className="border-0 shadow-none">
