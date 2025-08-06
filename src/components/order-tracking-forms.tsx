@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useEffect } from 'react';
@@ -14,7 +15,7 @@ import type { Order } from '@/lib/types';
 import { useParams, useSearchParams } from 'next/navigation';
 
 const initialOrderState: { success: boolean; message: string; order?: Order | null } = { success: false, message: '', order: null };
-const initialEmailState: { success: boolean; message: string } = { success: false, message: '' };
+const initialEmailState: { success: boolean; message: string; traces?: string[] } = { success: false, message: '' };
 
 const SubmitButton = ({ children }: { children: React.ReactNode }) => {
     const { pending } = useFormStatus();
@@ -120,7 +121,7 @@ export function TrackByEmailForm() {
                     />
                     <SubmitButton>{tStatus('find_orders_button')}</SubmitButton>
                 </CardContent>
-                <CardFooter className="flex-col items-start">
+                <CardFooter className="flex-col items-start gap-4">
                     {emailState && !emailState.success && emailState.message && (
                         <Alert variant="destructive" className="w-full">
                             <AlertCircle className="h-4 w-4" />
@@ -139,6 +140,16 @@ export function TrackByEmailForm() {
                                 }
                             </AlertDescription>
                         </Alert>
+                    )}
+                    {emailState.traces && emailState.traces.length > 0 && (
+                        <div className="w-full mt-4">
+                            <p className="font-bold text-sm mb-2">Traces de débogage du serveur :</p>
+                            <div className="bg-muted p-2 rounded-md text-xs font-mono max-h-40 overflow-auto">
+                                {emailState.traces.map((trace, index) => (
+                                    <p key={index}>{trace}</p>
+                                ))}
+                            </div>
+                        </div>
                     )}
                 </CardFooter>
             </form>

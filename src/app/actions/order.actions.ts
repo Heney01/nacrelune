@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -519,19 +520,23 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
     }
 }
 
-export async function getOrdersByEmail(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; }> {
+export async function getOrdersByEmail(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; traces?: string[] }> {
+    const traces: string[] = [];
     const email = formData.get('email') as string;
     const locale = formData.get('locale') as string || 'fr';
     
+    traces.push(`[SERVER] Action getOrdersByEmail started for email: ${email} and locale: ${locale}`);
+
     if (!email) {
-        return { success: false, message: "Veuillez fournir une adresse e-mail." };
+        traces.push('[SERVER] Email not provided.');
+        return { success: false, message: "Veuillez fournir une adresse e-mail.", traces };
     }
     
     try {
-        console.log(`[SERVER] Searching for orders with email: ${email}`);
+        traces.push(`[SERVER] Searching for orders with email: ${email.trim()}`);
         const q = query(collection(db, 'orders'), where('customerEmail', '==', email.trim()));
         const querySnapshot = await getDocs(q);
-        console.log(`[SERVER] Found ${querySnapshot.docs.length} orders for ${email}`);
+        traces.push(`[SERVER] Found ${querySnapshot.docs.length} orders for ${email}`);
 
         const orders = querySnapshot.docs.map(doc => {
             const data = doc.data();
@@ -554,7 +559,7 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
         let returnMessage: string;
         
         if (orders.length > 0) {
-            console.log('[SERVER] Orders found, preparing email.');
+            traces.push('[SERVER] Orders found, preparing email.');
             returnMessage = `Email sent. ${orders.length} order(s) found.`;
             const ordersListText = orders.map(o => 
                 `- Commande ${o.orderNumber} (du ${o.createdAt}) - Statut : ${o.status}`
@@ -566,7 +571,7 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
             mailText = `Bonjour,\n\nVoici la liste de vos commandes récentes passées avec cette adresse e-mail :\n\n${ordersListText}\n\nVous pouvez cliquer sur le lien de chaque commande pour voir son statut.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
             mailHtml = `<h1>Vos commandes Atelier à bijoux</h1><p>Bonjour,</p><p>Voici la liste de vos commandes récentes passées avec cette adresse e-mail :</p><ul>${ordersListHtml}</ul><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
         } else {
-            console.log('[SERVER] No orders found, preparing notification email.');
+            traces.push('[SERVER] No orders found, preparing notification email.');
             returnMessage = "Email sent. No orders found.";
             mailText = `Bonjour,\n\nVous avez récemment demandé à retrouver vos commandes. Aucune commande n'est associée à cette adresse e-mail (${email}).\n\nSi vous pensez qu'il s'agit d'une erreur, veuillez vérifier l'adresse e-mail ou contacter notre support.${emailFooterText}`;
             mailHtml = `<h1>Vos commandes Atelier à bijoux</h1><p>Bonjour,</p><p>Vous avez récemment demandé à retrouver vos commandes. Aucune commande n'est associée à cette adresse e-mail (${email}).</p><p>Si vous pensez qu'il s'agit d'une erreur, veuillez vérifier l'adresse e-mail ou contacter notre support.</p>${emailFooterHtml}`;
@@ -581,16 +586,17 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
             },
         };
         
-        console.log('[SERVER] Creating mail document in Firestore.');
+        traces.push('[SERVER] Creating mail document in Firestore.');
         const mailRef = doc(collection(db, 'mail'));
         await setDoc(mailRef, mailDocData);
-        console.log('[SERVER] Mail document created successfully.');
+        traces.push(`[SERVER] Mail document created successfully. ID: ${mailRef.id}`);
         
-        return { success: true, message: returnMessage };
+        return { success: true, message: returnMessage, traces };
 
     } catch (error: any) {
+        traces.push(`[SERVER] Error in getOrdersByEmail for ${email}: ${error.message}`);
         console.error(`[SERVER] Error in getOrdersByEmail for ${email}:`, error);
-        return { success: false, message: error.message };
+        return { success: false, message: error.message, traces };
     }
 }
 
