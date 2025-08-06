@@ -13,6 +13,8 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Slider } from './ui/slider';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface CharmSizingToolProps {
     isOpen: boolean;
@@ -46,19 +48,24 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
 
     const [charmSizePercentage, setCharmSizePercentage] = useState(50);
     const [aspectRatio, setAspectRatio] = useState(1);
+
+    const charmsWithDimensions = useMemo(() => {
+        return allCharms.filter(c => c.width && c.height && c.id !== charm.id);
+    }, [allCharms, charm.id]);
     
     useEffect(() => {
-        if (allCharms.length > 0) {
-            const firstCharmWithDimensions = allCharms.find(c => c.width && c.height);
-            setReferenceCharm(firstCharmWithDimensions || allCharms[0]);
+        if (charmsWithDimensions.length > 0 && !referenceCharm) {
+            setReferenceCharm(charmsWithDimensions[0]);
         }
-    }, [allCharms]);
+    }, [charmsWithDimensions, referenceCharm]);
 
     useEffect(() => {
         const img = new window.Image();
         img.src = charm.imageUrl;
         img.onload = () => {
-            setAspectRatio(img.width / img.height);
+            if (img.width > 0 && img.height > 0) {
+              setAspectRatio(img.width / img.height);
+            }
         };
 
         if (charm.width && referenceCharm?.width) {
@@ -71,7 +78,7 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
     }, [charm, referenceCharm]);
 
     const calculatedDimensions = useMemo(() => {
-        if (!referenceCharm?.width) {
+        if (!referenceCharm?.width || aspectRatio === 0) {
             return { width: 0, height: 0 };
         }
         const charmWidthMm = referenceCharm.width * (charmSizePercentage / 100);
@@ -87,17 +94,24 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
             toast({ title: 'Succès', description: state.message });
             onSave(state.charm);
             onOpenChange(false);
-        } else if (state.message) {
+        } else if (state.message && !state.success) {
             toast({ variant: 'destructive', title: 'Erreur', description: state.message });
         }
     }, [state, onSave, onOpenChange, toast]);
 
-    if (!charm || !referenceCharm) return null;
+    if (!charm) return null;
 
     const referenceWidthPx = REFERENCE_IMAGE_WIDTH_PX;
-    const referenceHeightPx = referenceCharm.height && referenceCharm.width 
+    const referenceHeightPx = referenceCharm?.height && referenceCharm?.width 
         ? (referenceCharm.height / referenceCharm.width) * referenceWidthPx 
         : referenceWidthPx;
+        
+    const handleReferenceChange = (charmId: string) => {
+        const newRef = allCharms.find(c => c.id === charmId);
+        if (newRef) {
+            setReferenceCharm(newRef);
+        }
+    }
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -106,7 +120,7 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
                     <DialogHeader>
                         <DialogTitle>Calibrer la taille de "{charm.name}"</DialogTitle>
                         <DialogDescription>
-                            Ajustez la taille de la breloque par rapport à la breloque de référence "{referenceCharm.name}" ({referenceCharm.width || '?'}mm).
+                            Ajustez la taille de la breloque par rapport à une breloque de référence.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -124,63 +138,87 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
                         <input type="hidden" name="locale" value={locale} />
                         <input type="hidden" name="width" value={calculatedDimensions.width} />
                         <input type="hidden" name="height" value={calculatedDimensions.height} />
-
-                        <div className="h-40 flex justify-center items-center gap-4 bg-muted/50 rounded-lg p-4 border border-dashed">
-                             {/* Reference Object */}
-                            <div 
-                                style={{ 
-                                    width: `${referenceWidthPx}px`,
-                                    height: `${referenceHeightPx}px`
-                                }} 
-                                className="relative flex-shrink-0"
-                                title={`Référence: ${referenceCharm.name}`}
-                            >
-                                 <Image
-                                    src={referenceCharm.imageUrl}
-                                    alt={`Référence: ${referenceCharm.name}`}
-                                    fill
-                                    className="object-contain"
-                                    sizes={`${referenceWidthPx}px`}
-                                />
-                            </div>
-
-                             {/* Charm to size */}
-                            <div 
-                                style={{ 
-                                    width: `${REFERENCE_IMAGE_WIDTH_PX * (charmSizePercentage / 100)}px`,
-                                    height: `${(REFERENCE_IMAGE_WIDTH_PX * (charmSizePercentage / 100)) / aspectRatio}px`,
-                                }}
-                                className="relative transition-all"
-                            >
-                                <Image
-                                    src={charm.imageUrl}
-                                    alt={charm.name}
-                                    fill
-                                    className="object-contain"
-                                    sizes={`${REFERENCE_IMAGE_WIDTH_PX * (charmSizePercentage / 100)}px`}
-                                />
-                            </div>
+                        
+                         <div className="space-y-2">
+                            <Label htmlFor="reference-charm">Breloque de référence</Label>
+                            <Select onValueChange={handleReferenceChange} value={referenceCharm?.id}>
+                                <SelectTrigger id="reference-charm">
+                                    <SelectValue placeholder="Choisir une référence..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {charmsWithDimensions.map(refCharm => (
+                                        <SelectItem key={refCharm.id} value={refCharm.id}>
+                                            {refCharm.name} ({refCharm.width}mm)
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <label htmlFor="size-slider" className="text-sm font-medium">Ajuster la taille</label>
-                                <Slider
-                                    id="size-slider"
-                                    min={10}
-                                    max={200}
-                                    step={1}
-                                    value={[charmSizePercentage]}
-                                    onValueChange={(value) => setCharmSizePercentage(value[0])}
-                                />
-                            </div>
-                            <div className="flex justify-between items-center text-sm p-3 bg-muted rounded-lg">
-                                <div className="font-medium">Dimensions calculées :</div>
-                                <div>
-                                    <span className="font-mono">{calculatedDimensions.width}mm</span> (L) x <span className="font-mono">{calculatedDimensions.height}mm</span> (H)
+                        {referenceCharm && (
+                        <>
+                            <div className="h-40 flex justify-center items-center gap-4 bg-muted/50 rounded-lg p-4 border border-dashed">
+                                {/* Reference Object */}
+                                <div className="flex flex-col items-center gap-1 w-24 text-center">
+                                    <div 
+                                        style={{ 
+                                            width: `${referenceWidthPx}px`,
+                                            height: `${referenceHeightPx}px`
+                                        }} 
+                                        className="relative flex-shrink-0"
+                                    >
+                                        <Image
+                                            src={referenceCharm.imageUrl}
+                                            alt={`Référence: ${referenceCharm.name}`}
+                                            fill
+                                            className="object-contain"
+                                            sizes={`${referenceWidthPx}px`}
+                                        />
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">{referenceCharm.width}mm</p>
+                                </div>
+                                {/* Charm to size */}
+                                <div className="flex flex-col items-center gap-1 w-24 text-center">
+                                    <div 
+                                        style={{ 
+                                            width: `${REFERENCE_IMAGE_WIDTH_PX * (charmSizePercentage / 100)}px`,
+                                            height: `${(REFERENCE_IMAGE_WIDTH_PX * (charmSizePercentage / 100)) / (aspectRatio || 1)}px`,
+                                        }}
+                                        className="relative transition-all"
+                                    >
+                                        <Image
+                                            src={charm.imageUrl}
+                                            alt={charm.name}
+                                            fill
+                                            className="object-contain"
+                                            sizes={`${REFERENCE_IMAGE_WIDTH_PX * (charmSizePercentage / 100)}px`}
+                                        />
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">{calculatedDimensions.width}mm</p>
                                 </div>
                             </div>
-                        </div>
+                        
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="size-slider">Ajuster la taille</Label>
+                                    <Slider
+                                        id="size-slider"
+                                        min={10}
+                                        max={200}
+                                        step={1}
+                                        value={[charmSizePercentage]}
+                                        onValueChange={(value) => setCharmSizePercentage(value[0])}
+                                    />
+                                </div>
+                                <div className="flex justify-between items-center text-sm p-3 bg-muted rounded-lg">
+                                    <div className="font-medium">Dimensions calculées :</div>
+                                    <div>
+                                        <span className="font-mono">{calculatedDimensions.width}mm</span> (L) x <span className="font-mono">{calculatedDimensions.height}mm</span> (H)
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                        )}
 
                     </div>
                     <DialogFooter>
