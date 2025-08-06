@@ -171,24 +171,6 @@ export function FinalizeCreationDialog({
                         <Image src={previewImage} alt={t('preview_alt')} width={240} height={240} className="rounded-lg border bg-muted/50 w-full h-auto" />
                     </div>
                     <div className="w-full space-y-4">
-                        {!firebaseUser ? (
-                             <Alert>
-                                <AlertCircle className="h-4 w-4" />
-                                <AlertTitle>{t('publish_login_required_title')}</AlertTitle>
-                                <AlertDescription>
-                                    {t('publish_login_required_desc')}{' '}
-                                    <Link href={getLoginRedirectUrl()} className="font-bold underline">
-                                        {t('publish_login_link')}
-                                    </Link>
-                                    .
-                                </AlertDescription>
-                            </Alert>
-                        ) : (
-                            <div className="space-y-2">
-                                <Label htmlFor="creationName">{t('creation_name_label')}</Label>
-                                <Input id="creationName" value={creationName} onChange={(e) => setCreationName(e.target.value)} placeholder={t('creation_name_placeholder')} />
-                            </div>
-                        )}
                         <Accordion type="single" collapsible className="w-full">
                             <AccordionItem value="item-1" className="border-b-0">
                                 <AccordionTrigger className="text-sm font-semibold text-primary hover:no-underline [&>svg]:ml-1">
@@ -205,6 +187,24 @@ export function FinalizeCreationDialog({
                                 </AccordionContent>
                             </AccordionItem>
                         </Accordion>
+                        {!firebaseUser ? (
+                            <Alert>
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertTitle>{t('publish_login_required_title')}</AlertTitle>
+                                <AlertDescription>
+                                    {t('publish_login_required_desc')}{' '}
+                                    <Link href={getLoginRedirectUrl()} className="font-bold underline">
+                                        {t('publish_login_link')}
+                                    </Link>
+                                    .
+                                </AlertDescription>
+                            </Alert>
+                        ) : (
+                            <div className="space-y-2">
+                                <Label htmlFor="creationName">{t('creation_name_label')}</Label>
+                                <Input id="creationName" value={creationName} onChange={(e) => setCreationName(e.target.value)} placeholder={t('creation_name_placeholder')} />
+                            </div>
+                        )}
                     </div>
                 </div>
 
