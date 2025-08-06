@@ -31,29 +31,6 @@ const getUrl = async (path: string | undefined | null, fallback: string): Promis
     }
 };
 
-
-// --- Order Actions ---
-
-export async function createPaymentIntent(
-  amount: number,
-  email: string
-): Promise<{ clientSecret: string | null; error?: string }> {
-  if (amount <= 0) {
-    return { error: 'Invalid amount.', clientSecret: null };
-  }
-  try {
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Amount in cents
-      currency: 'eur',
-      receipt_email: email,
-    });
-    return { clientSecret: paymentIntent.client_secret };
-  } catch (error: any) {
-    console.error('Error creating payment intent:', error);
-    return { error: error.message, clientSecret: null };
-  }
-}
-
 async function refundStripePayment(paymentIntentId: string): Promise<{ success: boolean; message: string }> {
     try {
         // Handle both client_secret and payment_intent_id for backward compatibility
@@ -75,6 +52,29 @@ async function refundStripePayment(paymentIntentId: string): Promise<{ success: 
         }
         return { success: false, message: error.message || "Une erreur est survenue lors du remboursement Stripe." };
     }
+}
+
+
+// --- Order Actions ---
+
+export async function createPaymentIntent(
+  amount: number,
+  email: string
+): Promise<{ clientSecret: string | null; error?: string }> {
+  if (amount <= 0) {
+    return { error: 'Invalid amount.', clientSecret: null };
+  }
+  try {
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount * 100), // Amount in cents
+      currency: 'eur',
+      receipt_email: email,
+    });
+    return { clientSecret: paymentIntent.client_secret };
+  } catch (error: any) {
+    console.error('Error creating payment intent:', error);
+    return { error: error.message, clientSecret: null };
+  }
 }
 
 function generateOrderNumber(): string {
@@ -705,42 +705,6 @@ export async function getOrders(): Promise<Order[]> {
         return [];
     }
 }
-
-export async function getOrdersByEmailForUser(email: string): Promise<Order[]> {
-    if (!email) {
-        return [];
-    }
-    
-    try {
-        const q = query(collection(db, 'orders'), where('customerEmail', '==', email), orderBy('createdAt', 'desc'));
-        const ordersSnapshot = await getDocs(q);
-
-        if (ordersSnapshot.empty) {
-            return [];
-        }
-
-        const orders: Order[] = await Promise.all(ordersSnapshot.docs.map(async(orderDoc) => {
-            const data = orderDoc.data();
-            return {
-                id: orderDoc.id,
-                orderNumber: data.orderNumber,
-                createdAt: (data.createdAt as Timestamp).toDate(),
-                customerEmail: data.customerEmail,
-                subtotal: data.subtotal ?? data.totalPrice,
-                totalPrice: data.totalPrice,
-                status: data.status,
-                items: data.items,
-                deliveryMethod: data.deliveryMethod || 'home',
-            } as Order;
-        }));
-
-        return orders;
-    } catch (error: any) {
-        console.error(`Error fetching orders for email ${email}:`, error);
-        return [];
-    }
-}
-
 
 export async function updateOrderStatus(formData: FormData): Promise<{ success: boolean; message: string }> {
      try {

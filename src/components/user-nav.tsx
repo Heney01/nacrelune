@@ -1,8 +1,7 @@
-
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { UserCircle, LogOut, User, Settings, Package } from 'lucide-react';
+import { UserCircle, LogOut, User, Settings } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -69,12 +68,6 @@ export function UserNav({ locale }: { locale: string }) {
                      <Link href={`/${locale}/creators/${firebaseUser.uid}`}>
                         <User className="mr-2 h-4 w-4" />
                         <span>{tAuth('my_creations')}</span>
-                    </Link>
-                </DropdownMenuItem>
-                 <DropdownMenuItem asChild>
-                     <Link href={`/${locale}/profil/commandes`}>
-                        <Package className="mr-2 h-4 w-4" />
-                        <span>{tAuth('my_orders')}</span>
                     </Link>
                 </DropdownMenuItem>
                  <DropdownMenuItem asChild>

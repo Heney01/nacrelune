@@ -1,11 +1,7 @@
 
-import { MyOrdersClient } from '@/components/my-orders-client';
-import { getStaticParams } from '@/lib/translations';
+'use client';
 
-export async function generateStaticParams() {
-    return getStaticParams();
-}
-
-export default async function MyOrdersPage({ params }: { params: { locale: string }}) {
-  return <MyOrdersClient locale={params.locale} />;
+// This file is intentionally left blank to remove the page.
+export default function MyOrdersPage() {
+  return null;
 }
