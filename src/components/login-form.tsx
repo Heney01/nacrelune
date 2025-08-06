@@ -6,10 +6,7 @@ import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,13 +26,13 @@ import { DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/di
 
 type State = {
   success: boolean;
-  message?: string;
+  traces: string[];
   error?: string;
 }
 
 const initialState: State = {
   success: false,
-  message: undefined,
+  traces: [],
   error: undefined,
 };
 
@@ -73,10 +70,6 @@ export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
           
           const result = await userLoginWithGoogle(formData);
           if (result.success) {
-            toast({
-                title: 'Connexion réussie',
-                description: result.message,
-            });
             onLoginSuccess();
           } else {
             toast({
@@ -89,15 +82,14 @@ export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
   });
 
   useEffect(() => {
-    if (state.success && state.message) {
-      console.log(state.message); // Log debug message to console
-      toast({
-        title: 'Info de débogage',
-        description: "La chaîne de caractères du serveur a été affichée dans la console.",
-      });
-      // We don't call onLoginSuccess() here for the debug test
+    if (state.traces && state.traces.length > 0) {
+      console.log("--- Login Attempt Traces ---");
+      state.traces.forEach(trace => console.log(trace));
+      console.log("--------------------------");
     }
-    if (!state.success && state.error) {
+    if (state.success) {
+        onLoginSuccess();
+    } else if (state.error) {
       toast({
         variant: 'destructive',
         title: 'Erreur',
@@ -162,3 +154,5 @@ export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
     </Card>
   );
 }
+
+    

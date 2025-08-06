@@ -109,18 +109,66 @@ export async function login(prevState: any, formData: FormData): Promise<{ succe
   }
 }
 
-export async function userLogin(prevState: any, formData: FormData): Promise<{ success: boolean; message?: string; error?: string; }> {
-  const email = formData.get('email') as string;
-  const password = formData.get('password') as string;
+export async function userLogin(prevState: any, formData: FormData): Promise<{ success: boolean; traces: string[], error?: string; }> {
+  const traces: string[] = [];
+  try {
+    traces.push("[SERVER] userLogin action started.");
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    traces.push(`[SERVER] Received credentials for email: ${email}`);
 
-  if (!email || !password) {
-    return { success: false, error: 'Veuillez fournir un email et un mot de passe.' };
+    if (!email || !password) {
+      traces.push("[SERVER] Error: Email or password missing.");
+      return { success: false, traces, error: 'Veuillez fournir un email et un mot de passe.' };
+    }
+
+    const auth = getAuth(app);
+    traces.push("[SERVER] Firebase Auth instance retrieved.");
+    
+    traces.push("[SERVER] Attempting signInWithEmailAndPassword...");
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    traces.push(`[SERVER] signInWithEmailAndPassword successful. User UID: ${user.uid}`);
+    
+    traces.push("[SERVER] Getting ID token...");
+    const idToken = await user.getIdToken();
+    traces.push("[SERVER] ID token retrieved successfully.");
+    
+    traces.push("[SERVER] Setting session cookie...");
+    cookies().set('session', idToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    });
+    traces.push("[SERVER] Session cookie set.");
+
+    traces.push("[SERVER] userLogin action completed successfully.");
+    return { success: true, traces };
+
+  } catch (error: any) {
+    traces.push(`[SERVER] CATCH BLOCK: An error occurred.`);
+    let errorMessage = "Une erreur inconnue est survenue.";
+    traces.push(`[SERVER] Raw error code: ${error.code}`);
+    switch (error.code) {
+        case 'auth/invalid-email':
+            errorMessage = "L'adresse e-mail n'est pas valide.";
+            break;
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+            errorMessage = "Email ou mot de passe incorrect.";
+            break;
+        default:
+            errorMessage = "Une erreur est survenue lors de la connexion.";
+            break;
+    }
+    traces.push(`[SERVER] Formatted error message: ${errorMessage}`);
+    traces.push(`[SERVER] Raw error: ${JSON.stringify(error)}`);
+    return { success: false, traces, error: errorMessage };
   }
-
-  // For debugging purposes, as requested by the user.
-  console.log(`[SERVER ACTION userLogin] Received login attempt for email: ${email}`);
-  return { success: true, message: `[DEBUG] Server action 'userLogin' was called for email: ${email}` };
 }
+
 
 export async function signup(prevState: any, formData: FormData): Promise<{ success: boolean; message?: string; error?: string; }> {
     const email = formData.get('email') as string;
@@ -275,3 +323,5 @@ export async function updateUserProfile(prevState: any, formData: FormData): Pro
         return { success: false, error: "Une erreur est survenue lors de la mise à jour du profil." };
     }
 }
+
+    
