@@ -8,15 +8,14 @@ import { useTranslations } from '@/hooks/use-translations';
 import { Loader2, Check, Send, ShoppingCart, AlertCircle, Award } from 'lucide-react';
 import Image from 'next/image';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import Link from 'next/link';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
 import { saveCreation } from '@/app/actions/creation.actions';
 import { JewelryModel, PlacedCreationCharm, JewelryType } from '@/lib/types';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { useAuthDialog } from '@/hooks/use-auth-dialog';
 
 interface FinalizeCreationDialogProps {
     isOpen: boolean;
@@ -43,8 +42,8 @@ export function FinalizeCreationDialog({
 }: FinalizeCreationDialogProps) {
     const t = useTranslations('Editor');
     const { firebaseUser } = useAuth();
+    const { open: openAuthDialog } = useAuthDialog();
     const { toast } = useToast();
-    const router = useRouter();
 
     const [step, setStep] = useState<'publish' | 'confirm'>(isEditing ? 'confirm' : 'publish');
     const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -78,14 +77,13 @@ export function FinalizeCreationDialog({
                 })
                 .finally(() => setIsLoadingPreview(false));
         } else {
-           // Reset state when closing the dialog
            setTimeout(resetState, 300);
         }
     }, [isOpen, getCanvasDataUri, onOpenChange, toast, isEditing]);
 
     const handlePublishAndContinue = async () => {
         if (!previewImage || !firebaseUser) {
-            toast({ variant: 'destructive', title: "Non connecté", description: "Vous devez être connecté pour publier." });
+            openAuthDialog('login');
             return;
         }
         if (!creationName.trim()) {
@@ -117,7 +115,7 @@ export function FinalizeCreationDialog({
             if (result.success) {
                 toast({ title: "Publication réussie !", description: result.message });
                 setWasPublished(true);
-                setStep('confirm'); // Move to next step
+                setStep('confirm');
             } else {
                 toast({ variant: 'destructive', title: "Erreur de publication", description: result.message });
             }
@@ -138,13 +136,6 @@ export function FinalizeCreationDialog({
         }
     }
     
-    const getLoginRedirectUrl = () => {
-        const serializedCharms = encodeURIComponent(JSON.stringify(
-            placedCharms.map(pc => ({ id: pc.charmId, x: pc.position.x, y: pc.position.y, r: pc.rotation }))
-        ));
-        return `/${locale}/connexion?redirect=/&type=${jewelryType.id}&model=${model.id}&charms=${serializedCharms}`;
-    }
-
     const renderContent = () => {
         if (isLoadingPreview || !previewImage) {
              return (
@@ -166,11 +157,11 @@ export function FinalizeCreationDialog({
                     <DialogTitle>{t('publish_title')}</DialogTitle>
                     <DialogDescription>{t('publish_description_new')}</DialogDescription>
                 </DialogHeader>
-                <div className="flex-grow my-4 space-y-4 overflow-y-auto no-scrollbar">
+                <div className="flex-grow my-4 space-y-4 flex flex-col min-h-0">
                     <div className="w-full max-w-[200px] mx-auto flex-shrink-0">
-                        <Image src={previewImage} alt={t('preview_alt')} width={240} height={240} className="rounded-lg border bg-muted/50 w-full h-auto" />
+                        <Image src={previewImage} alt={t('preview_alt')} width={200} height={200} className="rounded-lg border bg-muted/50 w-full h-auto" />
                     </div>
-                     <div className="w-full space-y-4">
+                     <div className="w-full space-y-4 flex-grow flex flex-col justify-end">
                         <Accordion type="single" collapsible className="w-full">
                             <AccordionItem value="item-1" className="border-b-0">
                                 <AccordionTrigger className="text-sm font-semibold text-primary hover:no-underline [&>svg]:ml-1">
@@ -183,6 +174,8 @@ export function FinalizeCreationDialog({
                                     <ul className="list-disc pl-5 mt-2 space-y-1 text-xs text-muted-foreground">
                                         <li>{t('publish_incentive_line1')}</li>
                                         <li>{t('publish_incentive_line2')}</li>
+                                        <li>{t('publish_incentive_line3')}</li>
+                                        <li>{t('publish_incentive_line4')}</li>
                                     </ul>
                                 </AccordionContent>
                             </AccordionItem>
@@ -193,9 +186,9 @@ export function FinalizeCreationDialog({
                                 <AlertTitle>{t('publish_login_required_title')}</AlertTitle>
                                 <AlertDescription>
                                     {t('publish_login_required_desc')}{' '}
-                                    <Link href={getLoginRedirectUrl()} className="font-bold underline">
+                                    <button type="button" onClick={() => openAuthDialog('signup')} className="font-bold underline">
                                         {t('publish_login_link')}
-                                    </Link>
+                                    </button>
                                     .
                                 </AlertDescription>
                             </Alert>
@@ -207,24 +200,15 @@ export function FinalizeCreationDialog({
                         )}
                     </div>
                 </div>
-
                  <DialogFooter className="flex-col gap-2 pt-0 flex-shrink-0">
-                    {firebaseUser ? (
-                        <>
-                            <Button onClick={handlePublishAndContinue} className="w-full" disabled={isPublishing || !creationName.trim()}>
-                                {isPublishing && <Loader2 className="animate-spin mr-2" />}
-                                <Send className="mr-2 h-4 w-4" />
-                                {t('publish_button')}
-                            </Button>
-                             <Button variant="outline" onClick={handleSkipToPurchase} className="w-full">
-                                {t('skip_publish_button')}
-                            </Button>
-                        </>
-                    ) : (
-                         <Button variant="outline" onClick={handleSkipToPurchase} className="w-full">
-                            {t('skip_publish_button')}
-                        </Button>
-                    )}
+                     <Button onClick={handlePublishAndContinue} className="w-full" disabled={isPublishing || (!firebaseUser && !creationName.trim())}>
+                        {isPublishing && <Loader2 className="animate-spin mr-2" />}
+                        <Send className="mr-2 h-4 w-4" />
+                        {t('publish_button')}
+                    </Button>
+                    <Button variant="outline" onClick={handleSkipToPurchase} className="w-full">
+                       {t('skip_publish_button')}
+                   </Button>
                 </DialogFooter>
                 </>
             )

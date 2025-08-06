@@ -13,17 +13,17 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { BrandLogo, GoogleIcon } from '@/components/icons';
+import { GoogleIcon } from '@/components/icons';
 import { signup, userLoginWithGoogle } from '@/app/actions/auth.actions';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { useTranslations } from '@/hooks/use-translations';
 import { useGoogleAuth } from '@/hooks/use-google-auth';
 import { Separator } from './ui/separator';
 import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthDialog } from '@/hooks/use-auth-dialog';
 
 
 type State = {
@@ -53,23 +53,10 @@ function SignUpButton() {
 export function SignUpForm() {
   const [state, formAction] = useFormState(signup, initialState);
   const params = useParams();
-  const searchParams = useSearchParams();
-  const router = useRouter();
   const locale = params.locale as string;
   const t = useTranslations('Auth');
   const { toast } = useToast();
-
-   const getRedirectUrl = () => {
-    const redirectPath = searchParams.get('redirect') || `/${locale}`;
-    const redirectParams = new URLSearchParams();
-    searchParams.forEach((value, key) => {
-        if (key !== 'redirect') {
-            redirectParams.append(key, value);
-        }
-    });
-    const queryString = redirectParams.toString();
-    return queryString ? `${redirectPath}?${queryString}` : redirectPath;
-  }
+  const { setView, close } = useAuthDialog();
 
   const { signInWithGoogle, error: googleError, isGoogleLoading } = useGoogleAuth({
       onSuccess: async (user) => {
@@ -88,7 +75,7 @@ export function SignUpForm() {
                 title: 'Connexion réussie',
                 description: result.message,
             });
-            router.push(getRedirectUrl());
+            close();
           } else {
             toast({
               variant: 'destructive',
@@ -99,20 +86,19 @@ export function SignUpForm() {
       }
   });
 
-
   useEffect(() => {
     if (state.success) {
         toast({
             title: 'Inscription réussie',
             description: state.message,
         });
-        router.push(getRedirectUrl());
+        close();
     }
-  }, [state.success, state.message, toast, router, locale, getRedirectUrl]);
+  }, [state.success, state.message, toast, close]);
 
 
   return (
-    <Card>
+    <Card className="border-0 shadow-none">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">{t('user_signup_title')}</CardTitle>
         <CardDescription>
@@ -142,7 +128,6 @@ export function SignUpForm() {
           </div>
           <form action={formAction}>
               <div className="space-y-4">
-                <input type="hidden" name="locale" value={locale} />
                 <div className="space-y-2">
                   <Label htmlFor="displayName">{t('displayName_label')}</Label>
                   <Input
@@ -177,9 +162,9 @@ export function SignUpForm() {
       <CardFooter className="flex-col items-stretch gap-4">
           <div className="mt-4 text-center text-sm">
             {t('has_account_prompt')}{' '}
-            <Link href={`/${locale}/connexion`} className="underline">
+            <button type="button" onClick={() => setView('login')} className="underline">
               {t('login_button')}
-            </Link>
+            </button>
           </div>
       </CardFooter>
     </Card>
