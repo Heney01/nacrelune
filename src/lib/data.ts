@@ -299,7 +299,12 @@ export async function getOrders(): Promise<Order[]> {
             }
         });
 
-        const allCharmIds = ordersSnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => (item.charms || []).map((c: any) => c.charmId)) || []);
+        // Corrected logic for getting all charm IDs from all orders
+        const allCharmIds = ordersSnapshot.docs.flatMap(doc => 
+            (doc.data().items || []).flatMap((item: any) => 
+                (item.charms || []).map((c: any) => c.charmId)
+            )
+        );
         const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
         let charmsMap = new Map<string, Charm>();
