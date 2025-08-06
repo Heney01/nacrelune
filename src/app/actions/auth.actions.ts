@@ -83,24 +83,6 @@ async function verifyUser(idToken: string): Promise<{uid: string, email: string 
     }
 }
 
-export async function verifyAdmin(idToken: string): Promise<{uid: string, email: string | undefined}> {
-    if (!adminApp) {
-        throw new Error("Le module d'administration Firebase n'est pas configuré.");
-    }
-    try {
-        const adminAuth = getAdminAuth(adminApp);
-        const decodedToken = await adminAuth.verifyIdToken(idToken, true);
-        
-        if (decodedToken.admin !== true) {
-            throw new Error("Accès refusé. Droits administrateur requis.");
-        }
-        
-        return { uid: decodedToken.uid, email: decodedToken.email };
-    } catch (error: any) {
-         throw new Error(error.message || "Jeton d'authentification invalide ou droits insuffisants.");
-    }
-}
-
 
 export async function login(prevState: any, formData: FormData): Promise<{ success: boolean; message?: string; error?: string; }> {
   const email = formData.get('email') as string;

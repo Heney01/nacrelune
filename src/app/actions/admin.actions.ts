@@ -6,9 +6,6 @@ import { db, storage } from '@/lib/firebase';
 import { doc, deleteDoc, addDoc, updateDoc, collection, getDoc, getDocs, writeBatch, query, where, setDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { ref, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import type { JewelryModel, CharmCategory, Charm, GeneralPreferences } from '@/lib/types';
-import { verifyAdmin } from './auth.actions';
-import { cookies } from 'next/headers';
-
 
 // --- Helper Functions ---
 
@@ -79,10 +76,6 @@ async function uploadImage(imageDataJson: string | null, existingUrl: string, st
 
 export async function deleteModel(formData: FormData): Promise<{ success: boolean; message: string }> {
     try {
-        const session = cookies().get('session')?.value;
-        if (!session) throw new Error("Non autorisé");
-        await verifyAdmin(session);
-
         const modelId = formData.get('modelId') as string;
         const jewelryTypeId = formData.get('jewelryTypeId') as string;
         const locale = formData.get('locale') as string || 'fr';
@@ -111,10 +104,6 @@ export async function deleteModel(formData: FormData): Promise<{ success: boolea
 
 export async function saveModel(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; model?: JewelryModel }> {
     try {
-        const session = cookies().get('session')?.value;
-        if (!session) throw new Error("Non autorisé");
-        await verifyAdmin(session);
-
         const modelId = formData.get('modelId') as string | null;
         const jewelryTypeId = formData.get('jewelryTypeId') as string;
         const name = formData.get('name') as string;
@@ -181,10 +170,6 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
 
 export async function saveCharmCategory(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; category?: CharmCategory }> {
     try {
-        const session = cookies().get('session')?.value;
-        if (!session) throw new Error("Non autorisé");
-        await verifyAdmin(session);
-
         const categoryId = formData.get('categoryId') as string | null;
         const name = formData.get('name') as string;
         const description = formData.get('description') as string;
@@ -212,7 +197,7 @@ export async function saveCharmCategory(prevState: any, formData: FormData): Pro
 
         revalidatePath(`/${locale}/admin/dashboard`);
         return { success: true, message: `La catégorie a été ${categoryId ? 'mise à jour' : 'créée'} avec succès.`, category: savedCategory };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error saving charm category:", error);
         return { success: false, message: error.message || "Une erreur est survenue lors de l'enregistrement de la catégorie." };
     }
@@ -220,10 +205,6 @@ export async function saveCharmCategory(prevState: any, formData: FormData): Pro
 
 export async function deleteCharmCategory(formData: FormData): Promise<{ success: boolean; message: string }> {
     try {
-        const session = cookies().get('session')?.value;
-        if (!session) throw new Error("Non autorisé");
-        await verifyAdmin(session);
-
         const categoryId = formData.get('categoryId') as string;
         const imageUrl = formData.get('imageUrl') as string;
         const locale = formData.get('locale') as string || 'fr';
@@ -268,10 +249,6 @@ export async function deleteCharmCategory(formData: FormData): Promise<{ success
 
 export async function saveCharm(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; charm?: Charm & { categoryName?: string } }> {
     try {
-        const session = cookies().get('session')?.value;
-        if (!session) throw new Error("Non autorisé");
-        await verifyAdmin(session);
-
         const charmId = formData.get('charmId') as string | null;
         const name = formData.get('name') as string;
         const description = formData.get('description') as string;
@@ -340,9 +317,6 @@ export async function saveCharm(prevState: any, formData: FormData): Promise<{ s
 
 export async function deleteCharm(formData: FormData): Promise<{ success: boolean; message: string }> {
     try {
-        const session = cookies().get('session')?.value;
-        if (!session) throw new Error("Non autorisé");
-        await verifyAdmin(session);
         const charmId = formData.get('charmId') as string;
         const imageUrl = formData.get('imageUrl') as string;
         const locale = formData.get('locale') as string || 'fr';
@@ -383,9 +357,6 @@ export async function getPreferences(): Promise<GeneralPreferences> {
 
 export async function savePreferences(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; preferences?: GeneralPreferences }> {
      try {
-        const session = cookies().get('session')?.value;
-        if (!session) throw new Error("Non autorisé");
-        await verifyAdmin(session);
         const alertThreshold = parseInt(formData.get('alertThreshold') as string, 10);
         const criticalThreshold = parseInt(formData.get('criticalThreshold') as string, 10);
         const locale = formData.get('locale') as string || 'fr';
@@ -417,9 +388,6 @@ export async function savePreferences(prevState: any, formData: FormData): Promi
 
 export async function markAsOrdered(formData: FormData): Promise<{ success: boolean; message: string }> {
      try {
-        const session = cookies().get('session')?.value;
-        if (!session) throw new Error("Non autorisé");
-        await verifyAdmin(session);
         const itemId = formData.get('itemId') as string;
         const itemType = formData.get('itemType') as string; // 'charms' or a jewelryTypeId like 'necklace'
         const locale = formData.get('locale') as string || 'fr';
@@ -445,9 +413,6 @@ export async function markAsOrdered(formData: FormData): Promise<{ success: bool
 
 export async function markAsRestocked(formData: FormData): Promise<{ success: boolean; message: string; newQuantity?: number }> {
      try {
-        const session = cookies().get('session')?.value;
-        if (!session) throw new Error("Non autorisé");
-        await verifyAdmin(session);
         const itemId = formData.get('itemId') as string;
         const itemType = formData.get('itemType') as string;
         const locale = formData.get('locale') as string || 'fr';
