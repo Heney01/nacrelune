@@ -164,32 +164,15 @@ export function FinalizeCreationDialog({
                 <>
                 <DialogHeader>
                     <DialogTitle>{t('publish_title')}</DialogTitle>
-                    <DialogDescription>{t('publish_description')}</DialogDescription>
+                    <DialogDescription>{t('publish_description_new')}</DialogDescription>
                 </DialogHeader>
-                <div className="flex-grow my-4 min-h-0 overflow-y-auto no-scrollbar pr-2 -mr-2">
+                <div className="flex-grow my-4 min-h-0">
                     <div className="flex flex-col items-center gap-4">
-                        <div className="w-full max-w-xs flex-shrink-0">
+                        <div className="w-full max-w-[240px] flex-shrink-0">
                             <Image src={previewImage} alt={t('preview_alt')} width={300} height={300} className="rounded-lg border bg-muted/50 w-full h-auto" />
                         </div>
                         <div className="w-full space-y-4">
-                           <Accordion type="single" collapsible className="w-full">
-                                <AccordionItem value="item-1" className="border-b-0">
-                                    <AccordionTrigger className="text-sm font-semibold text-primary hover:no-underline [&>svg]:ml-1">
-                                        <div className="flex items-center gap-2">
-                                            <Award className="h-4 w-4"/>
-                                            {t('publish_incentive_title')}
-                                        </div>
-                                    </AccordionTrigger>
-                                    <AccordionContent>
-                                        <ul className="list-disc pl-5 mt-2 space-y-1 text-xs text-muted-foreground">
-                                            <li>{t('publish_incentive_line1')}</li>
-                                            <li>{t('publish_incentive_line2')}</li>
-                                        </ul>
-                                    </AccordionContent>
-                                </AccordionItem>
-                            </Accordion>
-
-                            {!firebaseUser ? (
+                           {!firebaseUser ? (
                                 <Alert>
                                     <AlertCircle className="h-4 w-4" />
                                     <AlertTitle>{t('publish_login_required_title')}</AlertTitle>
@@ -207,22 +190,41 @@ export function FinalizeCreationDialog({
                                     <Input id="creationName" value={creationName} onChange={(e) => setCreationName(e.target.value)} placeholder={t('creation_name_placeholder')} />
                                 </div>
                             )}
+                            <Accordion type="single" collapsible className="w-full">
+                                <AccordionItem value="item-1" className="border-b-0">
+                                    <AccordionTrigger className="text-sm font-semibold text-primary hover:no-underline [&>svg]:ml-1">
+                                        <div className="flex items-center gap-2">
+                                            <Award className="h-4 w-4"/>
+                                            {t('publish_incentive_title')}
+                                        </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent>
+                                        <ul className="list-disc pl-5 mt-2 space-y-1 text-xs text-muted-foreground">
+                                            <li>{t('publish_incentive_line1')}</li>
+                                            <li>{t('publish_incentive_line2')}</li>
+                                        </ul>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            </Accordion>
                         </div>
                     </div>
                 </div>
 
                  <DialogFooter className="flex-col gap-2 pt-4 flex-shrink-0">
-                     {firebaseUser ? (
+                    {firebaseUser ? (
                         <Button onClick={handlePublishAndContinue} className="w-full" disabled={isPublishing || !creationName.trim()}>
                             {isPublishing && <Loader2 className="animate-spin mr-2" />}
                             <Send className="mr-2 h-4 w-4" />
                             {t('publish_button')}
                         </Button>
-                     ) : (
-                        <Button variant="outline" onClick={handleSkipToPurchase} className="w-full">
-                            {t('skip_publish_button')}
+                    ) : (
+                        <Button asChild className="w-full">
+                            <Link href={getLoginRedirectUrl()}>
+                                <Send className="mr-2 h-4 w-4" />
+                                {t('publish_login_link')}
+                            </Link>
                         </Button>
-                     )}
+                    )}
                      <Button variant="outline" onClick={handleSkipToPurchase} className="w-full">
                         {t('skip_publish_button')}
                     </Button>
