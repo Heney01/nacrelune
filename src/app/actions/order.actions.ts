@@ -1,5 +1,3 @@
-
-
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -140,7 +138,6 @@ export async function createOrder(
                 const uploadResult = await uploadString(storageRef, item.previewImage, 'data_url');
                 return getDownloadURL(uploadResult.ref);
             }
-            // If it's already a URL, just return it.
             return item.previewImage;
         });
         const previewImageUrls = await Promise.all(uploadPromises);
@@ -159,7 +156,7 @@ export async function createOrder(
                 const currentModel = stockDeductions.get(modelKey) || { count: 0, name: item.model.name, type: item.jewelryType.id, id: item.model.id };
                 stockDeductions.set(modelKey, { ...currentModel, count: currentModel.count + 1 });
                 if (!itemDocsToFetch.has(modelKey)) {
-                    itemDocsToFetch.set(modelKey, doc(db, item.jewelryType.id, item.model.id));
+                    itemDocsToFetch.set(itemDocsToFetch.get(modelKey)?.path ?? modelKey, doc(db, item.jewelryType.id, item.model.id));
                 }
 
                 for (const pc of item.placedCharms) {
@@ -167,7 +164,7 @@ export async function createOrder(
                     const currentCharm = stockDeductions.get(charmKey) || { count: 0, name: pc.charm.name, type: 'charms', id: pc.charm.id };
                     stockDeductions.set(charmKey, { ...currentCharm, count: currentCharm.count + 1 });
                     if (!itemDocsToFetch.has(charmKey)) {
-                        itemDocsToFetch.set(charmKey, doc(db, 'charms', pc.charm.id));
+                         itemDocsToFetch.set(itemDocsToFetch.get(charmKey)?.path ?? charmKey, doc(db, 'charms', pc.charm.id));
                     }
                 }
                 
@@ -708,13 +705,13 @@ export async function getOrders(): Promise<Order[]> {
     }
 }
 
-export async function getOrdersForUser(email: string): Promise<Order[]> {
-    if (!email) {
+export async function getOrdersForUser(userId: string): Promise<Order[]> {
+    if (!userId) {
         return [];
     }
     
     try {
-        const q = query(collection(db, 'orders'), where('customerEmail', '==', email), orderBy('createdAt', 'desc'));
+        const q = query(collection(db, 'orders'), where('userId', '==', userId), orderBy('createdAt', 'desc'));
         const ordersSnapshot = await getDocs(q);
 
         if (ordersSnapshot.empty) {
@@ -737,8 +734,8 @@ export async function getOrdersForUser(email: string): Promise<Order[]> {
         }));
 
         return orders;
-    } catch (error) {
-        console.error(`Error fetching orders for user ${email}:`, error);
+    } catch (error: any) {
+        console.error(`Error fetching orders for user ${userId}:`, error);
         return [];
     }
 }
@@ -951,3 +948,6 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
 
 
 
+
+
+    

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -34,8 +33,8 @@ export function MyOrdersClient({ locale }: { locale: string }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (firebaseUser?.email) {
-      getOrdersForUser(firebaseUser.email)
+    if (firebaseUser?.uid) {
+      getOrdersForUser(firebaseUser.uid)
         .then(setOrders)
         .finally(() => setLoading(false));
     } else if (!authLoading) {
@@ -156,3 +155,5 @@ export function MyOrdersClient({ locale }: { locale: string }) {
     </div>
   );
 }
+
+    
