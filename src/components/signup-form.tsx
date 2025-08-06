@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useFormState, useFormStatus } from 'react-dom';
@@ -24,7 +23,7 @@ import { Separator } from './ui/separator';
 import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthDialog } from '@/hooks/use-auth-dialog';
-import { DialogHeader } from './ui/dialog';
+import { DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 
 
 type State = {
@@ -101,7 +100,7 @@ export function SignUpForm({ onSignupSuccess }: { onSignupSuccess: () => void })
 
   return (
     <Card className="border-0 shadow-none">
-       <DialogHeader>
+       <DialogHeader className="text-center pt-6">
         <DialogTitle>{t('user_signup_title')}</DialogTitle>
         <DialogDescription>{t('user_signup_description')}</DialogDescription>
       </DialogHeader>
