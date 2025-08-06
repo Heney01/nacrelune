@@ -7,7 +7,7 @@ import { CreationCard } from '@/components/creation-card';
 import { notFound, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Heart, Clock, Settings, Award, Loader2, Layers, PlusCircle } from 'lucide-react';
+import { ArrowLeft, User, Heart, Clock, Settings, Award, Loader2, Layers, PlusCircle, Copy } from 'lucide-react';
 import { BrandLogo } from '@/components/icons';
 import { CartWidget } from '@/components/cart-widget';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -24,6 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import { toggleLikeCreator } from '@/app/actions/user.actions';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 
 function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: string }) {
   const [data, setData] = useState<{ creator: Creator | null; creations: Creation[], isLikedByUser: boolean } | null>(null);
@@ -38,6 +39,13 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
   const [isLikePending, startLikeTransition] = useTransition();
 
   const isOwner = firebaseUser?.uid === creatorId;
+  const [showcaseUrl, setShowcaseUrl] = useState('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setShowcaseUrl(`${window.location.origin}/${locale}/creators/${creatorId}`);
+    }
+  }, [locale, creatorId]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -130,6 +138,13 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
         }
     });
   };
+  
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(showcaseUrl);
+    toast({
+        description: "Lien de la vitrine copié !",
+    });
+  };
 
   if (loading) {
     return <Loading />;
@@ -176,24 +191,32 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
               <AvatarImage src={creator.photoURL || undefined} alt={creator.displayName || 'Avatar'} />
               <AvatarFallback className="text-3xl">{fallbackDisplayName.toUpperCase()}</AvatarFallback>
             </Avatar>
-            <div className="flex-grow text-center sm:text-left">
-              <p className="text-sm text-muted-foreground">{isOwner ? "Votre vitrine publique" : `Vitrine de`}</p>
-              <div className="flex items-center gap-4 justify-center sm:justify-start">
-                  <h1 className="text-3xl font-headline">{creator.displayName}</h1>
-                  {!isOwner && (
-                       <button
-                          onClick={handleLikeCreator}
-                          disabled={isLikePending || !firebaseUser}
-                          className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors disabled:cursor-not-allowed"
-                      >
-                          {isLikePending ? (
-                              <Loader2 className="h-5 w-5 animate-spin" />
-                          ) : (
-                              <Heart className={cn("h-6 w-6", isLikedByUser && "text-primary fill-current")} />
-                          )}
-                          <span className="text-base font-medium">{creator.likesCount ?? 0}</span>
-                      </button>
-                  )}
+            <div className="flex-grow text-center sm:text-left space-y-2">
+              <div>
+                <p className="text-sm text-muted-foreground">{isOwner ? "Votre vitrine publique" : `Vitrine de`}</p>
+                <div className="flex items-center gap-4 justify-center sm:justify-start">
+                    <h1 className="text-3xl font-headline">{creator.displayName}</h1>
+                    {!isOwner && (
+                         <button
+                            onClick={handleLikeCreator}
+                            disabled={isLikePending || !firebaseUser}
+                            className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors disabled:cursor-not-allowed"
+                        >
+                            {isLikePending ? (
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                            ) : (
+                                <Heart className={cn("h-6 w-6", isLikedByUser && "text-primary fill-current")} />
+                            )}
+                            <span className="text-base font-medium">{creator.likesCount ?? 0}</span>
+                        </button>
+                    )}
+                </div>
+              </div>
+              <div className="flex gap-2 items-center justify-center sm:justify-start max-w-sm mx-auto sm:mx-0">
+                  <Input value={showcaseUrl} readOnly className="text-xs h-8" />
+                  <Button variant="outline" size="icon" className="h-8 w-8 flex-shrink-0" onClick={handleCopyLink}>
+                      <Copy className="h-4 w-4" />
+                  </Button>
               </div>
             </div>
              {isOwner && (
@@ -299,5 +322,7 @@ export default function CreatorShowcasePage({ params }: { params: { creatorId: s
     </Suspense>
   )
 }
+
+    
 
     
