@@ -42,9 +42,7 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
   const [showcaseUrl, setShowcaseUrl] = useState('');
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setShowcaseUrl(`${window.location.origin}/${locale}/creators/${creatorId}`);
-    }
+    setShowcaseUrl(`https://www.atelierabijoux.com/${locale}/creators/${creatorId}`);
   }, [locale, creatorId]);
 
   useEffect(() => {
@@ -322,6 +320,8 @@ export default function CreatorShowcasePage({ params }: { params: { creatorId: s
     </Suspense>
   )
 }
+
+    
 
     
 
