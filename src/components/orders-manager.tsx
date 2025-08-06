@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useReducer, useTransition, Fragment, useMemo } from 'react';
@@ -570,7 +569,7 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
     const [orders, dispatch] = useReducer(ordersReducer, initialOrders);
 
     const [searchTerm, setSearchTerm] = useState('');
-    const [tab, setTab] = useState<'active' | 'archived'>('active');
+    const [statusFilter, setStatusFilter] = useState<'active' | 'archived'>('active');
     const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
     const [openOrders, setOpenOrders] = useState<Set<string>>(new Set());
 
@@ -655,16 +654,16 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
             });
         });
     }
-    
-    const processedOrders = useMemo(() => {
+
+    const filteredOrders = useMemo(() => {
         const activeStatuses: OrderStatus[] = ['commandée', 'en cours de préparation', 'expédiée'];
         const archivedStatuses: OrderStatus[] = ['livrée', 'annulée'];
         
-        const statusFilter = tab === 'active' ? activeStatuses : archivedStatuses;
+        const currentStatusFilter = statusFilter === 'active' ? activeStatuses : archivedStatuses;
         
         return orders
             .filter(order => {
-                if (!statusFilter.includes(order.status)) {
+                if (!currentStatusFilter.includes(order.status)) {
                     return false;
                 }
                 if (searchTerm && !order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) && !order.customerEmail.toLowerCase().includes(searchTerm.toLowerCase())) {
@@ -677,7 +676,7 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
                 const dateB = new Date(b.createdAt).getTime();
                 return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
             });
-    }, [orders, searchTerm, tab, sortOrder]);
+    }, [orders, searchTerm, statusFilter, sortOrder]);
     
     const handleCopyEmail = (email: string) => {
         navigator.clipboard.writeText(email);
@@ -697,69 +696,8 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
         setSelectedOrderForShipping(order);
         setIsShipDialogOpen(true);
     };
-
-    return (
-        <>
-            <Card>
-                <CardHeader>
-                     <CardTitle className="text-xl font-headline flex items-center gap-2">
-                        <Package /> {t('orders_title')}
-                    </CardTitle>
-                    <CardDescription>
-                        {t('orders_description')}
-                    </CardDescription>
-                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 pt-4">
-                        <div className="relative w-full md:w-auto md:flex-grow md:max-w-xs">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder={t('search_placeholder')}
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-9"
-                            />
-                        </div>
-                        <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as any)}>
-                            <SelectTrigger className="w-full sm:w-[180px]">
-                                <SelectValue placeholder={t('sort_by_date')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="desc">{t('sort_newest')}</SelectItem>
-                                <SelectItem value="asc">{t('sort_oldest')}</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <Tabs value={tab} onValueChange={(value) => setTab(value as any)} className="w-full">
-                        <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="active">Commandes Actives</TabsTrigger>
-                            <TabsTrigger value="archived">Commandes Terminées</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="active">
-                            <OrderTableContent orders={processedOrders} />
-                        </TabsContent>
-                         <TabsContent value="archived">
-                            <OrderTableContent orders={processedOrders} />
-                        </TabsContent>
-                    </Tabs>
-
-                </CardContent>
-            </Card>
-            {selectedOrderForShipping && (
-                <ShipOrderDialog
-                    order={selectedOrderForShipping}
-                    onConfirm={handleShipConfirm}
-                    t={t}
-                    isOpen={isShipDialogOpen}
-                    onOpenChange={setIsShipDialogOpen}
-                >
-                    <button className="hidden"></button>
-                </ShipOrderDialog>
-            )}
-        </>
-    );
-
-    function OrderTableContent({ orders }: { orders: Order[] }) {
+    
+    const OrderTableContent = ({ orders }: { orders: Order[] }) => {
         return (
             <>
                 {/* Desktop Table View */}
@@ -886,4 +824,68 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
             </>
         )
     }
+
+    return (
+        <>
+            <Card>
+                <CardHeader>
+                     <CardTitle className="text-xl font-headline flex items-center gap-2">
+                        <Package /> {t('orders_title')}
+                    </CardTitle>
+                    <CardDescription>
+                        {t('orders_description')}
+                    </CardDescription>
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 pt-4">
+                        <div className="relative w-full md:w-auto md:flex-grow md:max-w-xs">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder={t('search_placeholder')}
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-9"
+                            />
+                        </div>
+                        <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as any)}>
+                            <SelectTrigger className="w-full sm:w-[180px]">
+                                <SelectValue placeholder={t('sort_by_date')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="desc">{t('sort_newest')}</SelectItem>
+                                <SelectItem value="asc">{t('sort_oldest')}</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <Tabs value={statusFilter} onValueChange={(value) => setStatusFilter(value as any)} className="w-full">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="active">Commandes Actives</TabsTrigger>
+                            <TabsTrigger value="archived">Commandes Terminées</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="active">
+                            <OrderTableContent orders={filteredOrders} />
+                        </TabsContent>
+                         <TabsContent value="archived">
+                            <OrderTableContent orders={filteredOrders} />
+                        </TabsContent>
+                    </Tabs>
+
+                </CardContent>
+            </Card>
+            {selectedOrderForShipping && (
+                <ShipOrderDialog
+                    order={selectedOrderForShipping}
+                    onConfirm={handleShipConfirm}
+                    t={t}
+                    isOpen={isShipDialogOpen}
+                    onOpenChange={setIsShipDialogOpen}
+                >
+                    <button className="hidden"></button>
+                </ShipOrderDialog>
+            )}
+        </>
+    );
+
 }
+
+    
