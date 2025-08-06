@@ -1,12 +1,12 @@
 
 'use client';
 
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { useFormState, useFormStatus } from 'react-dom';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Ruler, AlertCircle } from 'lucide-react';
+import { Loader2, Ruler, AlertCircle, Move } from 'lucide-react';
 import type { Charm, JewelryModel, JewelryType } from '@/lib/types';
 import { saveModel } from '@/app/actions/admin.actions';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
@@ -14,6 +14,7 @@ import { Slider } from './ui/slider';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { cn } from '@/lib/utils';
 
 interface ModelSizingToolProps {
     isOpen: boolean;
@@ -44,8 +45,10 @@ export function ModelSizingTool({ isOpen, onOpenChange, model, allCharms, onSave
     const [referenceCharm, setReferenceCharm] = useState<Charm | null>(null);
     const [modelWidth, setModelWidth] = useState<number>(model?.width || 100);
     const [aspectRatio, setAspectRatio] = useState(1);
+    const [charmPosition, setCharmPosition] = useState({ x: 50, y: 50 }); // in pixels
 
     const viewerRef = useRef<HTMLDivElement>(null);
+    const dragState = useRef({ isDragging: false, initialX: 0, initialY: 0, charmStartX: 0, charmStartY: 0 });
 
     const charmsWithDimensions = useMemo(() => {
         return allCharms.filter(c => c.width && c.height);
@@ -77,9 +80,9 @@ export function ModelSizingTool({ isOpen, onOpenChange, model, allCharms, onSave
         }
     }, [modelWidth, aspectRatio]);
     
-     const displayScaling = useMemo(() => {
-        if (!referenceCharm || !viewerRef.current) {
-            return { scale: 1, refWidth: 0, refHeight: 0, currentWidth: 0, currentHeight: 0 };
+    const displayScaling = useMemo(() => {
+        if (!viewerRef.current) {
+            return { scale: 1, modelWidth: 0, modelHeight: 0, refWidth: 0, refHeight: 0 };
         }
 
         const PIXELS_PER_MM = 3;
@@ -88,11 +91,8 @@ export function ModelSizingTool({ isOpen, onOpenChange, model, allCharms, onSave
         const viewerWidth = viewerRef.current.offsetWidth - PADDING;
         const viewerHeight = viewerRef.current.offsetHeight - PADDING;
 
-        const totalMMWidth = referenceCharm.width! + calculatedDimensions.width;
-        const totalMMHeight = Math.max(referenceCharm.height!, calculatedDimensions.height);
-
-        const requiredPixelWidth = totalMMWidth * PIXELS_PER_MM + 40; // Add some gap
-        const requiredPixelHeight = totalMMHeight * PIXELS_PER_MM;
+        const requiredPixelWidth = calculatedDimensions.width * PIXELS_PER_MM;
+        const requiredPixelHeight = calculatedDimensions.height * PIXELS_PER_MM;
 
         let scale = 1;
         if (requiredPixelWidth > viewerWidth && viewerWidth > 0) {
@@ -101,14 +101,51 @@ export function ModelSizingTool({ isOpen, onOpenChange, model, allCharms, onSave
         if (requiredPixelHeight > viewerHeight && viewerHeight > 0) {
             scale = Math.min(scale, viewerHeight / requiredPixelHeight);
         }
+        
+        const refWidth = referenceCharm ? referenceCharm.width! * PIXELS_PER_MM * scale : 0;
+        const refHeight = referenceCharm ? referenceCharm.height! * PIXELS_PER_MM * scale : 0;
 
         return {
-            refWidth: referenceCharm.width! * PIXELS_PER_MM * scale,
-            refHeight: referenceCharm.height! * PIXELS_PER_MM * scale,
-            currentWidth: calculatedDimensions.width * PIXELS_PER_MM * scale,
-            currentHeight: calculatedDimensions.height * PIXELS_PER_MM * scale,
+            scale,
+            modelWidth: calculatedDimensions.width * PIXELS_PER_MM * scale,
+            modelHeight: calculatedDimensions.height * PIXELS_PER_MM * scale,
+            refWidth,
+            refHeight,
         };
     }, [referenceCharm, calculatedDimensions, viewerRef]);
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        dragState.current = {
+            isDragging: true,
+            initialX: e.clientX,
+            initialY: e.clientY,
+            charmStartX: charmPosition.x,
+            charmStartY: charmPosition.y,
+        };
+    };
+
+    const handleMouseMove = useCallback((e: MouseEvent) => {
+        if (!dragState.current.isDragging) return;
+        const dx = e.clientX - dragState.current.initialX;
+        const dy = e.clientY - dragState.current.initialY;
+        setCharmPosition({
+            x: dragState.current.charmStartX + dx,
+            y: dragState.current.charmStartY + dy,
+        });
+    }, []);
+
+    const handleMouseUp = useCallback(() => {
+        dragState.current.isDragging = false;
+    }, []);
+
+    useEffect(() => {
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [handleMouseMove, handleMouseUp]);
 
 
     useEffect(() => {
@@ -130,12 +167,6 @@ export function ModelSizingTool({ isOpen, onOpenChange, model, allCharms, onSave
         }
     }
 
-    const Dimension = ({ size, direction = 'horizontal' }: { size: number; direction?: 'horizontal' | 'vertical' }) => (
-        <div className="text-xs font-mono text-muted-foreground">
-           {size.toFixed(1)}mm
-        </div>
-    );
-
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-2xl">
@@ -143,7 +174,7 @@ export function ModelSizingTool({ isOpen, onOpenChange, model, allCharms, onSave
                     <DialogHeader>
                         <DialogTitle>Calibrer la taille de "{model.name}"</DialogTitle>
                         <DialogDescription>
-                            Ajustez la taille du bijou par rapport à une breloque de référence.
+                            Déplacez la breloque de référence sur le bijou pour comparer les tailles.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -183,43 +214,45 @@ export function ModelSizingTool({ isOpen, onOpenChange, model, allCharms, onSave
                         
                         {referenceCharm && (
                         <>
-                           <div ref={viewerRef} className="relative h-64 bg-muted/50 rounded-lg p-4 border overflow-hidden flex justify-center items-center gap-10">
-                                {/* Reference Charm */}
-                                <div className="flex items-center gap-2">
-                                     <Dimension size={referenceCharm.height!} direction="vertical"/>
-                                    <div className="flex flex-col items-center justify-center gap-1 text-center flex-shrink-0">
-                                         <Image
-                                            src={referenceCharm.imageUrl}
-                                            alt={`Référence: ${referenceCharm.name}`}
-                                            className="object-contain border border-dashed border-red-500"
-                                            style={{
-                                                width: `${displayScaling.refWidth}px`,
-                                                height: 'auto',
-                                            }}
-                                            width={displayScaling.refWidth || 1}
-                                            height={displayScaling.refHeight || 1}
-                                        />
-                                        <Dimension size={referenceCharm.width!} />
-                                    </div>
+                           <div ref={viewerRef} className="relative h-64 bg-muted/50 rounded-lg p-4 border overflow-hidden flex justify-center items-center">
+                                {/* Model */}
+                                <div className="flex flex-col items-center gap-1">
+                                    <Image
+                                        src={model.displayImageUrl}
+                                        alt={model.name}
+                                        className="object-contain"
+                                        style={{
+                                            width: `${displayScaling.modelWidth}px`,
+                                            height: `${displayScaling.modelHeight}px`,
+                                        }}
+                                        width={displayScaling.modelWidth || 1}
+                                        height={displayScaling.modelHeight || 1}
+                                    />
+                                    <span className="text-xs font-mono text-muted-foreground">{calculatedDimensions.width.toFixed(1)}mm</span>
                                 </div>
                                 
-                                {/* Model to Size */}
-                                <div className="flex items-center gap-2">
-                                     <div className="flex flex-col items-center justify-center gap-1 text-center flex-shrink-0">
-                                          <Image
-                                            src={model.displayImageUrl}
-                                            alt={model.name}
-                                            className="object-contain border border-dashed border-red-500"
-                                            style={{
-                                                width: `${displayScaling.currentWidth}px`,
-                                                height: 'auto',
-                                            }}
-                                            width={displayScaling.currentWidth || 1}
-                                            height={displayScaling.currentHeight || 1}
-                                        />
-                                        <Dimension size={calculatedDimensions.width} />
-                                    </div>
-                                     <Dimension size={calculatedDimensions.height} direction="vertical"/>
+                                 {/* Draggable Reference Charm */}
+                                <div
+                                    className="absolute cursor-move"
+                                    style={{
+                                        left: `${charmPosition.x}px`,
+                                        top: `${charmPosition.y}px`,
+                                        width: `${displayScaling.refWidth}px`,
+                                        height: `${displayScaling.refHeight}px`,
+                                    }}
+                                    onMouseDown={handleMouseDown}
+                                >
+                                     <Image
+                                        src={referenceCharm.imageUrl}
+                                        alt={`Référence: ${referenceCharm.name}`}
+                                        className="object-contain border-2 border-dashed border-primary"
+                                        width={displayScaling.refWidth || 1}
+                                        height={displayScaling.refHeight || 1}
+                                    />
+                                </div>
+                                <div className="absolute bottom-2 left-2 flex items-center gap-2 bg-background/80 px-2 py-1 rounded-md text-xs text-muted-foreground">
+                                    <Move className="h-3 w-3" />
+                                    <span>Déplacez la breloque</span>
                                 </div>
                             </div>
                         
