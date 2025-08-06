@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
@@ -157,6 +156,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const { toast } = useToast();
   const t = useTranslations('Editor');
   const tHome = useTranslations('HomePage');
+  const tCart = useTranslations('Cart');
   const tCharm = useTranslations('CharmsPanel');
   
   const searchParams = useSearchParams();
@@ -201,6 +201,22 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     handleManualZoom,
     resetZoomAndPan,
   } = useEditorCanvas({ model });
+  
+  const CLASP_PRICE = 1.20;
+
+  const totalPrice = useMemo(() => {
+    const basePrice = model.price || 0;
+    const charmsPrice = placedCharms.reduce((sum, pc) => {
+        const charmPrice = pc.charm.price || 0;
+        const claspPrice = pc.withClasp ? CLASP_PRICE : 0;
+        return sum + charmPrice + claspPrice;
+    }, 0);
+    return basePrice + charmsPrice;
+  }, [placedCharms, model.price]);
+
+  const formatPrice = (price: number) => {
+    return tCart('price', { price });
+  };
   
   useEffect(() => {
     // Show onboarding dialog only once per session
@@ -674,7 +690,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   <span>{tHome('back_button')}</span>
                 </Button>
-                 <div className="flex items-center gap-2">
+                 <div className="flex items-center gap-4">
                     <Dialog>
                         <DialogTrigger asChild>
                             <Button variant="ghost" size="icon" className="text-muted-foreground">
@@ -691,10 +707,16 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                         </DialogContent>
                     </Dialog>
                     {!isMobile && (
-                        <Button onClick={handleFinalize} disabled={hasStockIssues || placedCharms.length === 0}>
-                            <Check className="mr-2 h-4 w-4" />
-                            {isEditing ? t('update_item_button') : t('finalize_button')}
-                        </Button>
+                        <div className="flex items-center gap-4">
+                            <div className="text-right">
+                                <p className="text-sm text-muted-foreground">Prix Total</p>
+                                <p className="font-bold text-xl">{formatPrice(totalPrice)}</p>
+                            </div>
+                            <Button onClick={handleFinalize} disabled={hasStockIssues || placedCharms.length === 0}>
+                                <Check className="mr-2 h-4 w-4" />
+                                {isEditing ? t('update_item_button') : t('finalize_button')}
+                            </Button>
+                        </div>
                     )}
                 </div>
             </div>
@@ -796,6 +818,10 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
         
         <div className="lg:hidden flex-shrink-0 bg-background border-t z-20">
              <div className="p-2.5 pb-[calc(1rem+env(safe-area-inset-bottom))] flex flex-col gap-2.5">
+                <div className="px-1.5 pb-1 text-center">
+                     <p className="text-sm text-muted-foreground">Prix Total</p>
+                     <p className="font-bold text-xl">{formatPrice(totalPrice)}</p>
+                </div>
                  <Button onClick={handleFinalize} className="w-full flex-grow" disabled={hasStockIssues || placedCharms.length === 0}>
                     <Check className="mr-2 h-4 w-4" />
                     {isEditing ? t('update_item_button') : t('finalize_button')}
@@ -888,3 +914,5 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
+
+    
