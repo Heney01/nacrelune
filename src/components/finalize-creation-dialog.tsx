@@ -161,7 +161,7 @@ export function FinalizeCreationDialog({
                     <div className="w-full max-w-[200px] mx-auto flex-shrink-0">
                         <Image src={previewImage} alt={t('preview_alt')} width={200} height={200} className="rounded-lg border bg-muted/50 w-full h-auto" />
                     </div>
-                     <div className="w-full space-y-4 flex-grow flex flex-col justify-end">
+                     <div className="w-full space-y-4 flex-grow flex flex-col justify-center">
                         <Accordion type="single" collapsible className="w-full">
                             <AccordionItem value="item-1" className="border-b-0">
                                 <AccordionTrigger className="text-sm font-semibold text-primary hover:no-underline [&>svg]:ml-1">
@@ -174,8 +174,6 @@ export function FinalizeCreationDialog({
                                     <ul className="list-disc pl-5 mt-2 space-y-1 text-xs text-muted-foreground">
                                         <li>{t('publish_incentive_line1')}</li>
                                         <li>{t('publish_incentive_line2')}</li>
-                                        <li>{t('publish_incentive_line3')}</li>
-                                        <li>{t('publish_incentive_line4')}</li>
                                     </ul>
                                 </AccordionContent>
                             </AccordionItem>
@@ -186,7 +184,7 @@ export function FinalizeCreationDialog({
                                 <AlertTitle>{t('publish_login_required_title')}</AlertTitle>
                                 <AlertDescription>
                                     {t('publish_login_required_desc')}{' '}
-                                    <button type="button" onClick={() => openAuthDialog('signup')} className="font-bold underline">
+                                    <button type="button" onClick={() => openAuthDialog('login')} className="font-bold underline">
                                         {t('publish_login_link')}
                                     </button>
                                     .
