@@ -30,7 +30,7 @@ async function restoreCreationFromUrl(searchParams: { [key: string]: string | st
                 position: { x: pc.x, y: pc.y },
                 rotation: pc.r,
             };
-        }).filter(Boolean);
+        }).filter((c): c is PlacedCharm => c !== null);
 
         return restoredPlacedCharms;
     } catch (e) {
