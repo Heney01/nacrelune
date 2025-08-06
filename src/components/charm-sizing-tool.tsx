@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import { useFormState, useFormStatus } from 'react-dom';
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,8 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
     const [charmWidth, setCharmWidth] = useState<number>(charm?.width || 15);
     const [aspectRatio, setAspectRatio] = useState(1);
 
+    const viewerRef = useRef<HTMLDivElement>(null);
+
     const charmsWithDimensions = useMemo(() => {
         return allCharms.filter(c => c.width && c.height && c.id !== charm.id);
     }, [allCharms, charm.id]);
@@ -76,6 +78,38 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
             height: parseFloat(height.toFixed(2)),
         }
     }, [charmWidth, aspectRatio]);
+    
+    const displayScaling = useMemo(() => {
+        if (!referenceCharm || !viewerRef.current) {
+            return { scale: 1, refWidth: 0, refHeight: 0, currentWidth: 0, currentHeight: 0 };
+        }
+        
+        const PIXELS_PER_MM_BASE = 5;
+        const PADDING = 32; // 2rem total padding
+        
+        const viewerWidth = viewerRef.current.offsetWidth - PADDING;
+        const viewerHeight = viewerRef.current.offsetHeight - PADDING;
+        
+        const requiredWidth = (referenceCharm.width! + calculatedDimensions.width) * PIXELS_PER_MM_BASE;
+        const requiredHeight = Math.max(referenceCharm.height!, calculatedDimensions.height) * PIXELS_PER_MM_BASE;
+
+        let scale = 1;
+        if (requiredWidth > viewerWidth) {
+            scale = Math.min(scale, viewerWidth / requiredWidth);
+        }
+        if (requiredHeight > viewerHeight) {
+            scale = Math.min(scale, viewerHeight / requiredHeight);
+        }
+
+        return {
+            scale: scale,
+            refWidth: referenceCharm.width! * PIXELS_PER_MM_BASE * scale,
+            refHeight: referenceCharm.height! * PIXELS_PER_MM_BASE * scale,
+            currentWidth: calculatedDimensions.width * PIXELS_PER_MM_BASE * scale,
+            currentHeight: calculatedDimensions.height * PIXELS_PER_MM_BASE * scale,
+        };
+
+    }, [referenceCharm, calculatedDimensions, viewerRef.current]);
 
     useEffect(() => {
         if (state.success && state.charm) {
@@ -95,8 +129,6 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
             setReferenceCharm(newRef);
         }
     }
-    
-    const PIXELS_PER_MM = 5; // A fixed ratio for consistent display size in the tool
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -142,29 +174,28 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
                         
                         {referenceCharm && (
                         <>
-                            <div className="h-40 flex justify-center items-center gap-8 bg-muted/50 rounded-lg p-4 border border-dashed">
-                                {/* Reference Object */}
-                                <div className="flex flex-col items-center gap-1 w-24 text-center">
-                                    <div style={{ width: `${referenceCharm.width! * PIXELS_PER_MM}px`, height: `${referenceCharm.height! * PIXELS_PER_MM}px` }} className="relative">
+                            <div ref={viewerRef} className="h-40 flex justify-center items-center gap-8 bg-muted/50 rounded-lg p-4 border border-dashed overflow-hidden">
+                                <div className="flex flex-col items-center justify-center gap-1 text-center flex-shrink-0">
+                                    <div style={{ width: `${displayScaling.refWidth}px`, height: `${displayScaling.refHeight}px` }} className="relative transition-all duration-100 ease-linear">
                                         <Image
                                             src={referenceCharm.imageUrl}
                                             alt={`Référence: ${referenceCharm.name}`}
                                             fill
                                             className="object-contain"
-                                            sizes={`${referenceCharm.width! * PIXELS_PER_MM}px`}
+                                            sizes={`${displayScaling.refWidth}px`}
                                         />
                                     </div>
                                     <p className="text-xs text-muted-foreground mt-1">{referenceCharm.width}mm</p>
                                 </div>
-                                {/* Charm to size */}
-                                <div className="flex flex-col items-center gap-1 w-24 text-center">
-                                     <div style={{ width: `${calculatedDimensions.width * PIXELS_PER_MM}px`, height: `${calculatedDimensions.height * PIXELS_PER_MM}px`, transition: 'width 0.1s, height 0.1s' }} className="relative">
+                                
+                                <div className="flex flex-col items-center justify-center gap-1 text-center flex-shrink-0">
+                                     <div style={{ width: `${displayScaling.currentWidth}px`, height: `${displayScaling.currentHeight}px` }} className="relative transition-all duration-100 ease-linear">
                                         <Image
                                             src={charm.imageUrl}
                                             alt={charm.name}
                                             fill
                                             className="object-contain"
-                                            sizes={`${calculatedDimensions.width * PIXELS_PER_MM}px`}
+                                            sizes={`${displayScaling.currentWidth}px`}
                                         />
                                      </div>
                                     <p className="text-xs text-muted-foreground mt-1">{calculatedDimensions.width}mm</p>
@@ -176,7 +207,7 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
                                     <Label htmlFor="size-slider">Largeur de la breloque (mm)</Label>
                                     <Slider
                                         id="size-slider"
-                                        min={0}
+                                        min={1}
                                         max={30}
                                         step={0.1}
                                         value={[charmWidth]}
