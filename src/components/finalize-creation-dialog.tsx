@@ -128,7 +128,7 @@ export function FinalizeCreationDialog({
                     name: creationName,
                     creatorId: firebaseUser.uid,
                     previewImageUrl: previewImage,
-                    creator: user,
+                    creator: user || undefined,
                     // Add other necessary fields with default/dummy values
                     jewelryTypeId: jewelryType.id,
                     modelId: model.id,
