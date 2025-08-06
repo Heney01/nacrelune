@@ -241,13 +241,23 @@ export const CheckoutForm = ({
   }, [user]);
 
   const totalBeforeDiscount = cart.reduce((sum, item) => {
-    const modelPrice = item.model.price || 0;
-    const charmsPrice = item.placedCharms.reduce((charmSum, pc) => {
-        const charmPrice = pc.charm.price || 0;
-        const claspPrice = pc.withClasp ? CLASP_PRICE : 0;
-        return charmSum + charmPrice + claspPrice;
+    const basePrice = 9.90;
+    const charmCount = item.placedCharms.length;
+    let charmsPrice = 0;
+
+    if (charmCount > 0) {
+      if (charmCount <= 5) {
+        charmsPrice = charmCount * 4.00;
+      } else {
+        charmsPrice = (5 * 4.00) + ((charmCount - 5) * 2.50);
+      }
+    }
+
+    const claspsPrice = item.placedCharms.reduce((claspSum, pc) => {
+      return claspSum + (pc.withClasp ? CLASP_PRICE : 0);
     }, 0);
-    return sum + modelPrice + charmsPrice;
+    
+    return sum + basePrice + charmsPrice + claspsPrice;
   }, 0);
 
   const discountAmount = appliedCoupon

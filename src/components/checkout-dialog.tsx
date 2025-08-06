@@ -49,13 +49,23 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
   const CLASP_PRICE = 1.20;
 
   const subtotal = cart.reduce((sum, item) => {
-    const modelPrice = item.model.price || 0;
-    const charmsPrice = item.placedCharms.reduce((charmSum, pc) => {
-        const charmPrice = pc.charm.price || 0;
-        const claspPrice = pc.withClasp ? CLASP_PRICE : 0;
-        return charmSum + charmPrice + claspPrice;
+    const basePrice = 9.90;
+    const charmCount = item.placedCharms.length;
+    let charmsPrice = 0;
+
+    if (charmCount > 0) {
+      if (charmCount <= 5) {
+        charmsPrice = charmCount * 4.00;
+      } else {
+        charmsPrice = (5 * 4.00) + ((charmCount - 5) * 2.50);
+      }
+    }
+
+    const claspsPrice = item.placedCharms.reduce((claspSum, pc) => {
+      return claspSum + (pc.withClasp ? CLASP_PRICE : 0);
     }, 0);
-    return sum + modelPrice + charmsPrice;
+    
+    return sum + basePrice + charmsPrice + claspsPrice;
   }, 0);
 
   const shippingCost = 0;
@@ -96,11 +106,23 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
             <div className="mt-6 flex-grow -mx-6 overflow-y-auto no-scrollbar">
                 <div className="space-y-4 px-6">
                     {cart.map(item => {
-                         const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => {
-                            const charmPrice = pc.charm.price || 0;
-                            const claspPrice = pc.withClasp ? CLASP_PRICE : 0;
-                            return charmSum + charmPrice + claspPrice;
-                        }, 0);
+                         const basePrice = 9.90;
+                         const charmCount = item.placedCharms.length;
+                         let charmsPrice = 0;
+
+                         if (charmCount > 0) {
+                           if (charmCount <= 5) {
+                             charmsPrice = charmCount * 4.00;
+                           } else {
+                             charmsPrice = (5 * 4.00) + ((charmCount - 5) * 2.50);
+                           }
+                         }
+                         
+                         const claspsPrice = item.placedCharms.reduce((claspSum, pc) => {
+                           return claspSum + (pc.withClasp ? CLASP_PRICE : 0);
+                         }, 0);
+
+                         const itemPrice = basePrice + charmsPrice + claspsPrice;
                          const isModelOutOfStock = stockError?.unavailableModelIds.has(item.model.id);
 
                         return (

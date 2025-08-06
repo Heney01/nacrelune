@@ -205,14 +205,26 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const CLASP_PRICE = 1.20;
 
   const totalPrice = useMemo(() => {
-    const basePrice = model.price || 0;
-    const charmsPrice = placedCharms.reduce((sum, pc) => {
-        const charmPrice = pc.charm.price || 0;
-        const claspPrice = pc.withClasp ? CLASP_PRICE : 0;
-        return sum + charmPrice + claspPrice;
+    const basePrice = 9.90; // Fixed base price
+    const charmCount = placedCharms.length;
+    let charmsPrice = 0;
+
+    if (charmCount > 0) {
+      if (charmCount <= 5) {
+        charmsPrice = charmCount * 4.00;
+      } else {
+        // Price for the first 5 charms is 5 * 4.00 = 20.00
+        // Price for additional charms is 2.50 each
+        charmsPrice = (5 * 4.00) + ((charmCount - 5) * 2.50);
+      }
+    }
+    
+    const claspsPrice = placedCharms.reduce((sum, pc) => {
+      return sum + (pc.withClasp ? CLASP_PRICE : 0);
     }, 0);
-    return basePrice + charmsPrice;
-  }, [placedCharms, model.price]);
+
+    return basePrice + charmsPrice + claspsPrice;
+  }, [placedCharms]);
 
   const formatPrice = (price: number) => {
     return tCart('price', { price });
@@ -914,5 +926,3 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     </>
   );
 }
-
-    

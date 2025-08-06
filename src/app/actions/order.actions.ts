@@ -1,7 +1,5 @@
 
 
-
-
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -134,6 +132,8 @@ export async function createOrder(
         return { success: false, message: 'Le panier est vide.' };
     }
 
+    const CLASP_PRICE = 1.20;
+
     try {
         // First, upload all images to storage outside of the transaction
         const uploadPromises = cartItems.map(async (item) => {
@@ -170,7 +170,19 @@ export async function createOrder(
                 }
                 
                 if (item.creator && item.creator.uid && item.creator.displayName) {
-                    const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+                    const basePrice = 9.90;
+                    const charmCount = item.placedCharms.length;
+                    let charmsPrice = 0;
+                    if (charmCount > 0) {
+                        if (charmCount <= 5) {
+                            charmsPrice = charmCount * 4.00;
+                        } else {
+                            charmsPrice = (5 * 4.00) + ((charmCount - 5) * 2.50);
+                        }
+                    }
+                    const claspsPrice = item.placedCharms.reduce((sum, pc) => sum + (pc.withClasp ? CLASP_PRICE : 0), 0);
+                    const itemPrice = basePrice + charmsPrice + claspsPrice;
+                    
                     const points = Math.floor((itemPrice * 0.05) * 10);
                     if (points > 0) {
                         const currentAwards = creatorPointAwards.get(item.creator.uid) || { points: 0, creatorName: item.creator.displayName, creationName: item.model.name };
@@ -232,7 +244,21 @@ export async function createOrder(
                 transaction.update(ref, { quantity: update.newQuantity });
             }
 
-            let subtotal = cartItems.reduce((sum, item) => sum + (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0), 0);
+            const subtotal = cartItems.reduce((sum, item) => {
+                const basePrice = 9.90;
+                const charmCount = item.placedCharms.length;
+                let charmsPrice = 0;
+                if (charmCount > 0) {
+                    if (charmCount <= 5) {
+                        charmsPrice = charmCount * 4.00;
+                    } else {
+                        charmsPrice = (5 * 4.00) + ((charmCount - 5) * 2.50);
+                    }
+                }
+                const claspsPrice = item.placedCharms.reduce((claspSum, pc) => claspSum + (pc.withClasp ? CLASP_PRICE : 0), 0);
+                return sum + basePrice + charmsPrice + claspsPrice;
+            }, 0);
+            
             const couponDiscount = coupon ? coupon.discountType === 'percentage' ? subtotal * (coupon.value / 100) : coupon.value : 0;
             let totalAfterCoupon = Math.max(0, subtotal - couponDiscount);
             const pointsValue = pointsToUse ? pointsToUse / 10 : 0;
@@ -252,7 +278,19 @@ export async function createOrder(
             });
 
             const orderItems: Omit<OrderItem, 'modelImageUrl' | 'charms'>[] = cartItems.map((item, index) => {
-                const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+                const basePrice = 9.90;
+                const charmCount = item.placedCharms.length;
+                let charmsPrice = 0;
+                if (charmCount > 0) {
+                    if (charmCount <= 5) {
+                        charmsPrice = charmCount * 4.00;
+                    } else {
+                        charmsPrice = (5 * 4.00) + ((charmCount - 5) * 2.50);
+                    }
+                }
+                const claspsPrice = item.placedCharms.reduce((claspSum, pc) => claspSum + (pc.withClasp ? CLASP_PRICE : 0), 0);
+                const itemPrice = basePrice + charmsPrice + claspsPrice;
+
                 if (item.creationId) {
                     transaction.update(doc(db, 'creations', item.creationId), { salesCount: increment(1) });
                 }
@@ -852,8 +890,3 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
         return { success: false, message: "Une erreur est survenue lors de la validation du code." };
     }
 }
-
-
-
-
-

@@ -53,13 +53,23 @@ export function CartSheet({ children, open, onOpenChange }: {
   const totalItems = cart.length;
   
   const totalPrice = cart.reduce((sum, item) => {
-    const modelPrice = item.model.price || 0;
-    const charmsPrice = item.placedCharms.reduce((charmSum, pc) => {
-      const charmPrice = pc.charm.price || 0;
-      const claspPrice = pc.withClasp ? CLASP_PRICE : 0;
-      return charmSum + charmPrice + claspPrice;
+    const basePrice = 9.90;
+    const charmCount = item.placedCharms.length;
+    let charmsPrice = 0;
+
+    if (charmCount > 0) {
+      if (charmCount <= 5) {
+        charmsPrice = charmCount * 4.00;
+      } else {
+        charmsPrice = (5 * 4.00) + ((charmCount - 5) * 2.50);
+      }
+    }
+
+    const claspsPrice = item.placedCharms.reduce((claspSum, pc) => {
+      return claspSum + (pc.withClasp ? CLASP_PRICE : 0);
     }, 0);
-    return sum + modelPrice + charmsPrice;
+    
+    return sum + basePrice + charmsPrice + claspsPrice;
   }, 0);
 
   const formatPrice = (price: number) => {
@@ -124,15 +134,27 @@ export function CartSheet({ children, open, onOpenChange }: {
             <ScrollArea className="flex-grow my-4 pr-4">
               <div className="space-y-4">
                 {cart.map((item) => {
-                   const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => {
-                        const charmPrice = pc.charm.price || 0;
-                        const claspPrice = pc.withClasp ? CLASP_PRICE : 0;
-                        return charmSum + charmPrice + claspPrice;
+                    const basePrice = 9.90;
+                    const charmCount = item.placedCharms.length;
+                    let charmsPrice = 0;
+
+                    if (charmCount > 0) {
+                        if (charmCount <= 5) {
+                            charmsPrice = charmCount * 4.00;
+                        } else {
+                            charmsPrice = (5 * 4.00) + ((charmCount - 5) * 2.50);
+                        }
+                    }
+                    
+                    const claspsPrice = item.placedCharms.reduce((claspSum, pc) => {
+                        return claspSum + (pc.withClasp ? CLASP_PRICE : 0);
                     }, 0);
-                  const editUrl = `/${locale}/?type=${item.jewelryType.id}&model=${item.model.id}&cartItemId=${item.id}`;
-                  const isCreatorItem = !!item.creator;
-                  const descriptionId = `item-description-${item.id}`;
-                  const titleId = `item-title-${item.id}`;
+
+                    const itemPrice = basePrice + charmsPrice + claspsPrice;
+                    const editUrl = `/${locale}/?type=${item.jewelryType.id}&model=${item.model.id}&cartItemId=${item.id}`;
+                    const isCreatorItem = !!item.creator;
+                    const descriptionId = `item-description-${item.id}`;
+                    const titleId = `item-title-${item.id}`;
 
                   return (
                     <Card key={item.id} className="overflow-hidden">
