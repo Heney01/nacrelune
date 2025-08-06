@@ -85,14 +85,14 @@ export function ModelSizingTool({ isOpen, onOpenChange, model, allCharms, onSave
             return { scale: 1, modelWidth: 0, modelHeight: 0, refWidth: 0, refHeight: 0 };
         }
 
-        const PIXELS_PER_MM = 3;
+        const PIXELS_PER_MM_BASE = 3;
         const PADDING = 32;
 
         const viewerWidth = viewerRef.current.offsetWidth - PADDING;
         const viewerHeight = viewerRef.current.offsetHeight - PADDING;
 
-        const requiredPixelWidth = calculatedDimensions.width * PIXELS_PER_MM;
-        const requiredPixelHeight = calculatedDimensions.height * PIXELS_PER_MM;
+        const requiredPixelWidth = calculatedDimensions.width * PIXELS_PER_MM_BASE;
+        const requiredPixelHeight = calculatedDimensions.height * PIXELS_PER_MM_BASE;
 
         let scale = 1;
         if (requiredPixelWidth > viewerWidth && viewerWidth > 0) {
@@ -102,13 +102,13 @@ export function ModelSizingTool({ isOpen, onOpenChange, model, allCharms, onSave
             scale = Math.min(scale, viewerHeight / requiredPixelHeight);
         }
         
-        const refWidth = referenceCharm ? referenceCharm.width! * PIXELS_PER_MM * scale : 0;
-        const refHeight = referenceCharm ? referenceCharm.height! * PIXELS_PER_MM * scale : 0;
+        const refWidth = referenceCharm ? referenceCharm.width! * PIXELS_PER_MM_BASE * scale : 0;
+        const refHeight = referenceCharm ? referenceCharm.height! * PIXELS_PER_MM_BASE * scale : 0;
 
         return {
             scale,
-            modelWidth: calculatedDimensions.width * PIXELS_PER_MM * scale,
-            modelHeight: calculatedDimensions.height * PIXELS_PER_MM * scale,
+            modelWidth: calculatedDimensions.width * PIXELS_PER_MM_BASE * scale,
+            modelHeight: calculatedDimensions.height * PIXELS_PER_MM_BASE * scale,
             refWidth,
             refHeight,
         };
@@ -141,11 +141,14 @@ export function ModelSizingTool({ isOpen, onOpenChange, model, allCharms, onSave
     }, []);
 
     useEffect(() => {
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('mouseup', handleMouseUp);
+        const move = (e: MouseEvent) => handleMouseMove(e);
+        const up = () => handleMouseUp();
+        
+        window.addEventListener('mousemove', move);
+        window.addEventListener('mouseup', up);
         return () => {
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('mouseup', handleMouseUp);
+            window.removeEventListener('mousemove', move);
+            window.removeEventListener('mouseup', up);
         };
     }, [handleMouseMove, handleMouseUp]);
 
@@ -217,32 +220,16 @@ export function ModelSizingTool({ isOpen, onOpenChange, model, allCharms, onSave
                         {referenceCharm && (
                         <>
                            <div ref={viewerRef} className="relative h-64 bg-muted/50 rounded-lg p-4 border overflow-hidden flex justify-center items-center">
-                                {/* Model */}
-                                <div className="flex flex-col items-center gap-1">
-                                    <Image
-                                        src={model.displayImageUrl}
-                                        alt={model.name}
-                                        className="object-contain"
-                                        style={{
-                                            width: `${displayScaling.modelWidth}px`,
-                                            height: `${displayScaling.modelHeight}px`,
-                                        }}
-                                        width={displayScaling.modelWidth || 1}
-                                        height={displayScaling.modelHeight || 1}
-                                    />
-                                    <span className="text-xs font-mono text-muted-foreground">{calculatedDimensions.width.toFixed(1)}mm</span>
-                                </div>
-                                
-                                 {/* Draggable Reference Charm */}
+                                {/* Draggable Reference Charm - z-10 */}
                                 <div
-                                    className="absolute cursor-move"
+                                    className="absolute cursor-move z-10"
                                     style={{
                                         left: `${charmPosition.x}px`,
                                         top: `${charmPosition.y}px`,
                                     }}
                                     onMouseDown={handleMouseDown}
                                 >
-                                     <Image
+                                        <Image
                                         src={referenceCharm.imageUrl}
                                         alt={`Référence: ${referenceCharm.name}`}
                                         className="object-contain border-2 border-dashed border-primary"
@@ -254,6 +241,22 @@ export function ModelSizingTool({ isOpen, onOpenChange, model, allCharms, onSave
                                         height={displayScaling.refHeight || 1}
                                     />
                                 </div>
+                                {/* Model - z-20 */}
+                                <div className="flex flex-col items-center gap-1 relative z-20">
+                                    <Image
+                                        src={model.displayImageUrl}
+                                        alt={model.name}
+                                        className="object-contain pointer-events-none"
+                                        style={{
+                                            width: `${displayScaling.modelWidth}px`,
+                                            height: `${displayScaling.modelHeight}px`,
+                                        }}
+                                        width={displayScaling.modelWidth || 1}
+                                        height={displayScaling.modelHeight || 1}
+                                    />
+                                    <span className="text-xs font-mono text-muted-foreground">{calculatedDimensions.width.toFixed(1)}mm</span>
+                                </div>
+                                
                                 <div className="absolute bottom-2 left-2 flex items-center gap-2 bg-background/80 px-2 py-1 rounded-md text-xs text-muted-foreground">
                                     <Move className="h-3 w-3" />
                                     <span>Déplacez la breloque</span>
@@ -286,3 +289,4 @@ export function ModelSizingTool({ isOpen, onOpenChange, model, allCharms, onSave
         </Dialog>
     );
 }
+
