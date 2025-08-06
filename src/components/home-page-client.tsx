@@ -57,14 +57,14 @@ export function HomePageClient({
     useEffect(() => {
     // If the editor is loaded via redirect, clear the URL params to avoid re-triggering.
     if (searchParams?.type && searchParams?.model && searchParams?.charms) {
-        const newUrl = `/${locale}?type=${searchParams.type}&model=${searchParams.model}`;
+        const newUrl = `/${locale}/?type=${searchParams.type}&model=${searchParams.model}`;
         // Use replace to not add a new entry in the history stack
         router.replace(newUrl, { scroll: false });
     }
     }, [searchParams, locale, router]);
     
     const Header = () => (
-         <header className="p-4 border-b bg-white">
+         <header className="p-4 border-b bg-white flex-shrink-0">
           <div className="container mx-auto">
             <div className="flex justify-between items-center">
               <div className="flex flex-col items-start gap-2">
@@ -93,13 +93,15 @@ export function HomePageClient({
       return (
         <div className="min-h-screen flex flex-col bg-stone-50">
             <Header />
-            <Editor 
-                model={selectedModel} 
-                jewelryType={selectedType} 
-                allCharms={allCharms} 
-                charmCategories={charmCategories} 
-                editorInitialState={editorInitialState}
-             />
+            <div className="flex-grow flex flex-col min-h-0">
+                <Editor 
+                    model={selectedModel} 
+                    jewelryType={selectedType} 
+                    allCharms={allCharms} 
+                    charmCategories={charmCategories} 
+                    editorInitialState={editorInitialState}
+                />
+            </div>
         </div>
       );
     }
