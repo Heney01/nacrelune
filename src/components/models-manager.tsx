@@ -343,7 +343,9 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                                 <TableRow>
                                                     <TableHead className="w-24">Image</TableHead>
                                                     <TableHead>Nom</TableHead>
-                                                    <TableHead>Prix</TableHead>
+                                                    <TableHead>Coût Achat</TableHead>
+                                                    <TableHead>Prix Vente</TableHead>
+                                                    <TableHead>Marge</TableHead>
                                                     <TableHead>Stock</TableHead>
                                                     <TableHead className="text-right">Actions</TableHead>
                                                 </TableRow>
@@ -351,6 +353,7 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                             <TableBody>
                                                 {jewelryType.models.map((model) => {
                                                     const itemAlertState = getItemAlertState(model);
+                                                    const margin = model.price && model.purchasePrice ? model.price - model.purchasePrice : null;
                                                     return (
                                                         <TableRow key={model.id} className={isPending ? 'opacity-50' : ''}>
                                                             <TableCell>
@@ -370,7 +373,9 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                                                 </Dialog>
                                                             </TableCell>
                                                             <TableCell className="font-medium">{model.name}</TableCell>
-                                                            <TableCell>{model.price}€</TableCell>
+                                                            <TableCell>{model.purchasePrice ? `${model.purchasePrice.toFixed(2)}€` : '-'}</TableCell>
+                                                            <TableCell>{model.price ? `${model.price.toFixed(2)}€` : '-'}</TableCell>
+                                                            <TableCell>{margin !== null ? `${margin.toFixed(2)}€` : '-'}</TableCell>
                                                             <TableCell>
                                                                 <div className="flex items-center gap-2">
                                                                     {itemAlertState !== 'none' && (
@@ -430,6 +435,7 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                     <div className="md:hidden space-y-4">
                                          {jewelryType.models.map((model) => {
                                             const itemAlertState = getItemAlertState(model);
+                                            const margin = model.price && model.purchasePrice ? model.price - model.purchasePrice : null;
                                             return (
                                                 <Card key={model.id} className="p-4">
                                                     <div className="flex gap-4">
@@ -449,7 +455,9 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                                         </Dialog>
                                                         <div className="flex-grow space-y-1">
                                                             <h4 className="font-bold">{model.name}</h4>
-                                                            <p>Prix: {model.price}€</p>
+                                                            <p className="text-sm">Coût: {model.purchasePrice ? `${model.purchasePrice.toFixed(2)}€` : '-'}</p>
+                                                            <p className="text-sm">Vente: {model.price ? `${model.price.toFixed(2)}€` : '-'}</p>
+                                                            <p className="text-sm">Marge: {margin !== null ? `${margin.toFixed(2)}€` : '-'}</p>
                                                             <div className="flex items-center gap-2">
                                                                 <span>Stock:</span>
                                                                 {itemAlertState !== 'none' && (

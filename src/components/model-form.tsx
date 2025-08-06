@@ -127,16 +127,21 @@ export function ModelForm({ isOpen, onOpenChange, jewelryType, model, onSave, lo
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="price">Prix (€)</Label>
-                                <Input id="price" name="price" type="number" step="0.01" defaultValue={model?.price || ''} required />
-                            </div>
                              <div className="space-y-2">
-                                <Label htmlFor="quantity">Quantité en stock</Label>
-                                <Input id="quantity" name="quantity" type="number" defaultValue={model?.quantity || 0} required />
+                                <Label htmlFor="purchasePrice">Coût d'achat (€)</Label>
+                                <Input id="purchasePrice" name="purchasePrice" type="number" step="0.01" defaultValue={model?.purchasePrice || ''} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="price">Prix de vente (€)</Label>
+                                <Input id="price" name="price" type="number" step="0.01" defaultValue={model?.price || ''} required />
                             </div>
                         </div>
 
+                        <div className="space-y-2">
+                            <Label htmlFor="quantity">Quantité en stock</Label>
+                            <Input id="quantity" name="quantity" type="number" defaultValue={model?.quantity || 0} required />
+                        </div>
+                        
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="width">Largeur (mm)</Label>

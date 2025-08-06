@@ -51,6 +51,7 @@ export async function getJewelryTypesAndModels(
                     editorImageUrl: editorImageUrl,
                     snapPath: data.snapPath || '',
                     price: data.price || 0,
+                    purchasePrice: data.purchasePrice || undefined,
                     quantity: data.quantity || 0,
                     width: data.width || null,
                     height: data.height || null,
@@ -88,6 +89,7 @@ export async function getCharms(): Promise<Charm[]> {
                 description: data.description,
                 categoryIds: categoryRefs,
                 price: data.price || 0,
+                purchasePrice: data.purchasePrice || undefined,
                 quantity: data.quantity || 0,
                 width: data.width || null,
                 height: data.height || null,
@@ -161,6 +163,7 @@ export async function getFullCharmData(): Promise<{ charms: (Charm & { categoryN
                 description: data.description,
                 categoryIds: categoryIds,
                 price: data.price || 0,
+                purchasePrice: data.purchasePrice || undefined,
                 quantity: data.quantity || 0,
                 width: data.width || null,
                 height: data.height || null,
@@ -297,18 +300,26 @@ export async function getOrders(): Promise<Order[]> {
         });
 
         // Get all unique charm IDs from all orders first
-        const allCharmIds = ordersSnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => item.charmIds) || []);
+        const allCharmIds = ordersSnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => item.charms.map(c => c.charmId)) || []);
         const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
         // Fetch all required charms in a single query
         let charmsMap = new Map<string, Charm>();
         if (uniqueCharmIds.length > 0) {
-            const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', uniqueCharmIds));
-            const charmsSnapshot = await getDocs(charmsQuery);
-            for (const charmDoc of charmsSnapshot.docs) {
-                const charmData = charmDoc.data() as Omit<Charm, 'id'>;
-                const imageUrl = await getUrl(charmData.imageUrl, 'https://placehold.co/100x100.png');
-                charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id, imageUrl });
+            // Firestore 'in' query is limited to 30 items, so chunk if necessary
+            const charmIdChunks = [];
+            for (let i = 0; i < uniqueCharmIds.length; i += 30) {
+                charmIdChunks.push(uniqueCharmIds.slice(i, i + 30));
+            }
+            
+            for (const chunk of charmIdChunks) {
+                const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', chunk));
+                const charmsSnapshot = await getDocs(charmsQuery);
+                for (const charmDoc of charmsSnapshot.docs) {
+                    const charmData = charmDoc.data() as Omit<Charm, 'id'>;
+                    const imageUrl = await getUrl(charmData.imageUrl, 'https://placehold.co/100x100.png');
+                    charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id, imageUrl });
+                }
             }
         }
         
@@ -316,13 +327,17 @@ export async function getOrders(): Promise<Order[]> {
             const data = orderDoc.data();
             
             const enrichedItems: OrderItem[] = await Promise.all((data.items || []).map(async (item: OrderItem) => {
-                const enrichedCharms = (item.charmIds || [])
-                    .map(id => charmsMap.get(id))
-                    .filter((c): c is Charm => !!c); // Filter out undefined charms
+                const enrichedCharms = (item.charms || [])
+                    .map(charmDetail => {
+                        const charm = charmsMap.get(charmDetail.charmId);
+                        if (!charm) return null;
+                        return { ...charm, withClasp: charmDetail.withClasp };
+                    })
+                    .filter((c): c is (Charm & { withClasp: boolean }) => !!c);
 
                 return {
                     ...item,
-                    charms: enrichedCharms,
+                    charms: enrichedCharms, // Now contains full charm details + withClasp
                     previewImageUrl: await getUrl(item.previewImageUrl, 'https://placehold.co/400x400.png'),
                 };
             }));

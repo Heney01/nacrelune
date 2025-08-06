@@ -32,6 +32,7 @@ export interface Charm {
   categoryIds: string[];
   categories?: DocumentReference[]; // Raw from firestore
   price?: number;
+  purchasePrice?: number;
   quantity?: number;
   width?: number; // in mm
   height?: number; // in mm
@@ -58,6 +59,7 @@ export interface JewelryModel {
   editorImageUrl: string;
   snapPath?: string;
   price?: number;
+  purchasePrice?: number;
   quantity?: number;
   width?: number; // in mm
   height?: number; // in mm
@@ -114,22 +116,18 @@ export interface GeneralPreferences {
 
 export type OrderStatus = 'commandée' | 'en cours de préparation' | 'expédiée' | 'livrée' | 'annulée';
 
-export interface OrderCharmDetail {
-    charmId: string;
-    withClasp: boolean;
-}
 export interface OrderItem {
     modelId: string;
     modelName: string;
     jewelryTypeId: string;
     jewelryTypeName: string;
-    charms: OrderCharmDetail[];
+    charmIds: string[];
+    charms: (Charm & { withClasp?: boolean })[];
     price: number;
     previewImageUrl: string;
     isCompleted: boolean;
     // Enriched data on the client:
     modelImageUrl?: string;
-    hydratedCharms?: (Charm & { withClasp: boolean })[];
     // For creations bought from other users
     creationId?: string;
     creatorId?: string;

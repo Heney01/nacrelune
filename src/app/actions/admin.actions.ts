@@ -108,6 +108,7 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
         const jewelryTypeId = formData.get('jewelryTypeId') as string;
         const name = formData.get('name') as string;
         const price = parseFloat(formData.get('price') as string);
+        const purchasePrice = parseFloat(formData.get('purchasePrice') as string) || undefined;
         const quantity = parseInt(formData.get('quantity') as string, 10);
         const width = parseFloat(formData.get('width') as string) || undefined;
         const height = parseFloat(formData.get('height') as string) || undefined;
@@ -130,6 +131,7 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
         const modelData: Omit<JewelryModel, 'id' | 'lastOrderedAt' | 'restockedAt'> = {
             name,
             price,
+            purchasePrice,
             quantity,
             width,
             height,
@@ -253,6 +255,7 @@ export async function saveCharm(prevState: any, formData: FormData): Promise<{ s
         const name = formData.get('name') as string;
         const description = formData.get('description') as string;
         const price = parseFloat(formData.get('price') as string);
+        const purchasePrice = parseFloat(formData.get('purchasePrice') as string) || undefined;
         const quantity = parseInt(formData.get('quantity') as string, 10);
         const width = parseFloat(formData.get('width') as string) || undefined;
         const height = parseFloat(formData.get('height') as string) || undefined;
@@ -273,6 +276,7 @@ export async function saveCharm(prevState: any, formData: FormData): Promise<{ s
             name,
             description,
             price,
+            purchasePrice,
             quantity,
             width,
             height,
@@ -453,5 +457,3 @@ export async function markAsRestocked(formData: FormData): Promise<{ success: bo
         return { success: false, message: error.message || "Une erreur est survenue." };
     }
 }
-
-    

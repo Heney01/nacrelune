@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useReducer, useTransition, useMemo, FormEvent } from 'react';
@@ -415,11 +416,12 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                         <div className="hidden md:block">
                                             <Table>
                                                 <TableHeader><TableRow>
-                                                    <TableHead className="w-24">Image</TableHead><TableHead>Nom</TableHead><TableHead>Prix</TableHead><TableHead>Stock</TableHead><TableHead className="text-right">Actions</TableHead>
+                                                    <TableHead className="w-24">Image</TableHead><TableHead>Nom</TableHead><TableHead>Coût Achat</TableHead><TableHead>Prix Vente</TableHead><TableHead>Marge</TableHead><TableHead>Stock</TableHead><TableHead className="text-right">Actions</TableHead>
                                                 </TableRow></TableHeader>
                                                 <TableBody>
                                                     {categoryCharms.map((charm) => {
                                                         const itemAlertState = getItemAlertState(charm);
+                                                        const margin = charm.price && charm.purchasePrice ? charm.price - charm.purchasePrice : null;
                                                         return (
                                                             <TableRow key={charm.id}>
                                                                 <TableCell>
@@ -434,7 +436,9 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                                                     </DialogContent></Dialog>
                                                                 </TableCell>
                                                                 <TableCell className="font-medium">{charm.name}</TableCell>
-                                                                <TableCell>{charm.price}€</TableCell>
+                                                                <TableCell>{charm.purchasePrice ? `${charm.purchasePrice.toFixed(2)}€` : '-'}</TableCell>
+                                                                <TableCell>{charm.price ? `${charm.price.toFixed(2)}€` : '-'}</TableCell>
+                                                                <TableCell>{margin !== null ? `${margin.toFixed(2)}€` : '-'}</TableCell>
                                                                 <TableCell>
                                                                     <div className="flex items-center gap-2">
                                                                         {itemAlertState !== 'none' && (
@@ -483,6 +487,7 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                         <div className="md:hidden space-y-4">
                                             {categoryCharms.map((charm) => {
                                                 const itemAlertState = getItemAlertState(charm);
+                                                const margin = charm.price && charm.purchasePrice ? charm.price - charm.purchasePrice : null;
                                                 return (
                                                     <Card key={charm.id} className="p-4">
                                                         <div className="flex gap-4">
@@ -499,7 +504,9 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                                             </DialogContent></Dialog>
                                                             <div className="flex-grow space-y-1">
                                                                 <h4 className="font-bold">{charm.name}</h4>
-                                                                <p>Prix: {charm.price}€</p>
+                                                                <p className="text-sm">Coût: {charm.purchasePrice ? `${charm.purchasePrice.toFixed(2)}€` : '-'}</p>
+                                                                <p className="text-sm">Vente: {charm.price ? `${charm.price.toFixed(2)}€` : '-'}</p>
+                                                                <p className="text-sm">Marge: {margin !== null ? `${margin.toFixed(2)}€` : '-'}</p>
                                                                 <div className="flex items-center gap-2">
                                                                     <span>Stock:</span>
                                                                     {itemAlertState !== 'none' && (
