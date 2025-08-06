@@ -84,33 +84,35 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
         if (!referenceCharm || !viewerRef.current) {
             return { scale: 1, refWidth: 0, refHeight: 0, currentWidth: 0, currentHeight: 0 };
         }
-        
-        const PIXELS_PER_MM_BASE = 5;
-        const PADDING = 32; // ~2rem total padding
-        
+
+        const PIXELS_PER_MM = 5;
+        const PADDING = 32;
+
         const viewerWidth = viewerRef.current.offsetWidth - PADDING;
         const viewerHeight = viewerRef.current.offsetHeight - PADDING;
-        
-        const requiredWidth = (referenceCharm.width! + calculatedDimensions.width + 40) * PIXELS_PER_MM_BASE;
-        const requiredHeight = Math.max(referenceCharm.height!, calculatedDimensions.height) * PIXELS_PER_MM_BASE;
+
+        const totalMMWidth = referenceCharm.width! + calculatedDimensions.width;
+        const totalMMHeight = Math.max(referenceCharm.height!, calculatedDimensions.height);
+
+        const requiredPixelWidth = totalMMWidth * PIXELS_PER_MM + 40;
+        const requiredPixelHeight = totalMMHeight * PIXELS_PER_MM;
 
         let scale = 1;
-        if (requiredWidth > viewerWidth) {
-            scale = Math.min(scale, viewerWidth / requiredWidth);
+        if (requiredPixelWidth > viewerWidth) {
+            scale = viewerWidth / requiredPixelWidth;
         }
-        if (requiredHeight > viewerHeight) {
-            scale = Math.min(scale, viewerHeight / requiredHeight);
+        if (requiredPixelHeight > viewerHeight) {
+            scale = Math.min(scale, viewerHeight / requiredPixelHeight);
         }
 
         return {
-            scale: scale,
-            refWidth: referenceCharm.width! * PIXELS_PER_MM_BASE * scale,
-            refHeight: referenceCharm.height! * PIXELS_PER_MM_BASE * scale,
-            currentWidth: calculatedDimensions.width * PIXELS_PER_MM_BASE * scale,
-            currentHeight: calculatedDimensions.height * PIXELS_PER_MM_BASE * scale,
+            refWidth: referenceCharm.width! * PIXELS_PER_MM * scale,
+            refHeight: referenceCharm.height! * PIXELS_PER_MM * scale,
+            currentWidth: calculatedDimensions.width * PIXELS_PER_MM * scale,
+            currentHeight: calculatedDimensions.height * PIXELS_PER_MM * scale,
         };
+    }, [referenceCharm, calculatedDimensions, viewerRef]);
 
-    }, [referenceCharm, calculatedDimensions, viewerRef.current]);
 
     useEffect(() => {
         if (state.success && state.charm) {
@@ -185,7 +187,7 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
                         <>
                            <div ref={viewerRef} className="relative h-48 bg-muted/50 rounded-lg p-4 border border-dashed overflow-hidden flex justify-center items-center gap-8">
                                 <div className="flex items-center gap-2">
-                                    <Dimension size={referenceCharm.height!} direction="vertical"/>
+                                     <Dimension size={referenceCharm.height!} direction="vertical"/>
                                     <div className="flex flex-col items-center justify-center gap-1 text-center flex-shrink-0" style={{width: `${displayScaling.refWidth}px`, height: `${displayScaling.refHeight}px`}}>
                                         <div className="relative w-full h-full">
                                             <Image
@@ -213,7 +215,7 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
                                          </div>
                                         <Dimension size={calculatedDimensions.width} />
                                     </div>
-                                    <Dimension size={calculatedDimensions.height} direction="vertical"/>
+                                     <Dimension size={calculatedDimensions.height} direction="vertical"/>
                                 </div>
                             </div>
                         
