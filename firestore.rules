@@ -1,0 +1,70 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allows reading public user data (for creator showcases), but only the user themselves can update their data.
+    match /users/{userId} {
+      allow read;
+      allow create: request.auth != null && request.auth.uid == userId;
+      allow update: request.auth != null && request.auth.uid == userId;
+      
+      // Users can like/unlike other creators
+      match /likes/{likerId} {
+        allow read;
+        allow write: request.auth != null && request.auth.uid == likerId;
+      }
+    }
+
+    // Creations are public, but can only be modified by their creator.
+    match /creations/{creationId} {
+      allow read;
+      allow create: request.auth != null && request.resource.data.creatorId == request.auth.uid;
+      allow update: request.auth != null && request.resource.data.creatorId == request.auth.uid;
+      allow delete: request.auth != null && resource.data.creatorId == request.auth.uid;
+
+      // Logged-in users can like/unlike creations.
+      match /likes/{userId} {
+        allow read;
+        allow write: request.auth != null && request.auth.uid == userId;
+      }
+    }
+    
+    // Public data, readable by everyone.
+    match /necklace/{modelId} {
+      allow read;
+    }
+    match /bracelet/{modelId} {
+      allow read;
+    }
+    match /earring/{modelId} {
+      allow read;
+    }
+    match /charms/{charmId} {
+      allow read;
+    }
+    match /charmCategories/{categoryId} {
+      allow read;
+    }
+
+    // Orders are private and can only be read by admins or the user who placed them.
+    match /orders/{orderId} {
+      allow read: request.auth != null && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin == true || resource.data.userId == request.auth.uid);
+      allow create: request.auth != null; // Created via server-side action
+    }
+
+    // Coupons can be read by clients to validate them. Writing is admin-only.
+    match /coupons/{couponId} {
+        allow read;
+    }
+
+    // Mail collection is write-only for clients (used by Firebase Trigger Email extension)
+    match /mail/{mailId} {
+      allow write;
+    }
+
+    // Preferences and all other collections should be admin-only for writes.
+    // The rules below deny all client-side writes by default to any other path.
+    // Admin operations are performed via server-side actions with an admin SDK, which bypasses these rules.
+  }
+}
