@@ -14,7 +14,7 @@ import { GoogleIcon } from '@/components/icons';
 import { userLogin, userLoginWithGoogle } from '@/app/actions/auth.actions';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from '@/hooks/use-translations';
 import { Separator } from './ui/separator';
@@ -22,6 +22,8 @@ import { useGoogleAuth } from '@/hooks/use-google-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthDialog } from '@/hooks/use-auth-dialog';
 import { DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { app } from '@/lib/firebase';
 
 
 type State = {
@@ -56,6 +58,9 @@ export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
   const t = useTranslations('Auth');
   const { toast } = useToast();
   const { setView } = useAuthDialog();
+
+  const [isClientSigningIn, setIsClientSigningIn] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
   
   const { signInWithGoogle, error, isGoogleLoading } = useGoogleAuth({
       onSuccess: async (user) => {
@@ -82,13 +87,33 @@ export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
   });
 
   useEffect(() => {
-    if (state.traces && state.traces.length > 0) {
-      console.log("--- Login Attempt Traces ---");
-      state.traces.forEach(trace => console.log(trace));
-      console.log("--------------------------");
-    }
     if (state.success) {
+      const email = formRef.current?.email.value;
+      const password = formRef.current?.password.value;
+
+      if (email && password) {
+        setIsClientSigningIn(true);
+        const auth = getAuth(app);
+        signInWithEmailAndPassword(auth, email, password)
+          .then(() => {
+            onLoginSuccess();
+          })
+          .catch((clientError) => {
+            // This should rarely happen if server-side login succeeded
+            console.error("Client-side sign-in failed after server-side success:", clientError);
+            toast({
+              variant: 'destructive',
+              title: 'Erreur de synchronisation',
+              description: "La session n'a pas pu être établie côté client. Veuillez réessayer.",
+            });
+          })
+          .finally(() => {
+            setIsClientSigningIn(false);
+          });
+      } else {
+        // Fallback in case formRef is not available, though unlikely.
         onLoginSuccess();
+      }
     } else if (state.error) {
       toast({
         variant: 'destructive',
@@ -113,7 +138,7 @@ export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
           )}
 
         <div className="space-y-4">
-             <Button variant="outline" className="w-full" onClick={signInWithGoogle} disabled={isGoogleLoading}>
+             <Button variant="outline" className="w-full" onClick={signInWithGoogle} disabled={isGoogleLoading || isClientSigningIn}>
                 {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
                 {t('google_login_button')}
             </Button>
@@ -125,7 +150,7 @@ export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
             </div>
         </div>
 
-        <form action={formAction}>
+        <form action={formAction} ref={formRef}>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -154,5 +179,3 @@ export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
     </Card>
   );
 }
-
-    
