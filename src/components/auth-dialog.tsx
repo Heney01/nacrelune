@@ -2,26 +2,27 @@
 'use client';
 
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useAuthDialog } from '@/hooks/use-auth-dialog';
 import { LoginForm } from './login-form';
 import { SignUpForm } from './signup-form';
-import { useTranslations } from '@/hooks/use-translations';
-import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 
 export function AuthDialog() {
-  const { isOpen, close, view, setView } = useAuthDialog();
+  const { isOpen, close, view } = useAuthDialog();
   const router = useRouter();
 
   const handleLoginSuccess = () => {
     close();
+    // Force a full page reload to ensure auth state is re-evaluated correctly.
     router.refresh();
+    window.location.reload();
   }
   
   const handleSignupSuccess = () => {
     close();
     router.refresh();
+    window.location.reload();
   }
 
   return (
