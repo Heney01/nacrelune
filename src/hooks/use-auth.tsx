@@ -58,12 +58,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await firebaseSignOut(auth);
       await serverLogout(locale);
-      router.push(`/${locale}`);
       router.refresh();
     } catch (error) {
       console.error("Error signing out: ", error);
       await serverLogout(locale);
-      router.push(`/${locale}`);
       router.refresh();
     }
   }, [locale, router]);
