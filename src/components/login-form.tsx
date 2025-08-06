@@ -62,11 +62,11 @@ export function LoginForm({ isUserAuth = false }: { isUserAuth?: boolean }) {
   const getRedirectUrl = () => {
     const redirectPath = searchParams.get('redirect') || `/${locale}`;
     const redirectParams = new URLSearchParams();
-    for (const [key, value] of searchParams.entries()) {
+    searchParams.forEach((value, key) => {
         if (key !== 'redirect') {
             redirectParams.append(key, value);
         }
-    }
+    });
     const queryString = redirectParams.toString();
     return queryString ? `${redirectPath}?${queryString}` : redirectPath;
   }
