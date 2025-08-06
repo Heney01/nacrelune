@@ -7,7 +7,7 @@ import { CreationCard } from '@/components/creation-card';
 import { notFound, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Heart, Clock, Settings, Award, Loader2, Layers, PlusCircle, Copy } from 'lucide-react';
+import { ArrowLeft, User, Heart, Clock, Settings, Award, Loader2, Layers, PlusCircle, Copy, ShoppingCart } from 'lucide-react';
 import { BrandLogo } from '@/components/icons';
 import { CartWidget } from '@/components/cart-widget';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -18,10 +18,20 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from '@/hooks/use-auth';
 import { UserNav } from '@/components/user-nav';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useTranslations } from '@/hooks/use-translations';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { toggleLikeCreator } from '@/app/actions/user.actions';
+import { toggleLikeCreator, purchaseCreationSlot } from '@/app/actions/user.actions';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -32,11 +42,12 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
   const [sortBy, setSortBy] = useState<'date' | 'likes'>('date');
   const searchParams = useSearchParams();
   const creationIdFromUrl = searchParams.get('creation');
-  const { user, firebaseUser } = useAuth();
+  const { user, firebaseUser, setUser } = useAuth();
   const tAuth = useTranslations('Auth');
   const t = useTranslations('HomePage');
   const { toast } = useToast();
   const [isLikePending, startLikeTransition] = useTransition();
+  const [isBuyingSlot, startSlotPurchaseTransition] = useTransition();
 
   const isOwner = firebaseUser?.uid === creatorId;
   const [showcaseUrl, setShowcaseUrl] = useState('');
@@ -137,6 +148,22 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
     });
   };
   
+    const handlePurchaseSlot = () => {
+        if (!firebaseUser) return;
+        startSlotPurchaseTransition(async () => {
+            const idToken = await firebaseUser.getIdToken();
+            const result = await purchaseCreationSlot(idToken);
+            if(result.success && result.newSlotCount !== undefined) {
+                toast({ title: "Succès", description: "Nouvel emplacement débloqué ! Vous pouvez maintenant publier votre création."});
+                if(setUser) {
+                    setUser(prevUser => prevUser ? ({...prevUser, creationSlots: result.newSlotCount, rewardPoints: (prevUser.rewardPoints || 0) - 50 }) : null);
+                }
+            } else {
+                toast({ variant: 'destructive', title: "Erreur", description: result.message});
+            }
+        });
+    };
+
   const handleCopyLink = () => {
     navigator.clipboard.writeText(showcaseUrl);
     toast({
@@ -158,6 +185,7 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
   const creationSlotsUsed = creations.length;
   const totalCreationSlots = user?.creationSlots || 0;
   const emptySlots = isOwner ? Math.max(0, totalCreationSlots - creationSlotsUsed) : 0;
+  const canBuySlot = (user?.rewardPoints || 0) >= 50;
 
   return (
     <div className="flex flex-col min-h-screen bg-stone-50">
@@ -264,7 +292,7 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
             </Tabs>
           </div>
 
-          {sortedCreations.length > 0 || emptySlots > 0 ? (
+          {sortedCreations.length > 0 || emptySlots > 0 || isOwner ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {sortedCreations.map(creation => (
                 <CreationCard 
@@ -297,6 +325,40 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
                       </Card>
                   </Link>
               ))}
+               {isOwner && (
+                 <Card className="overflow-hidden group flex flex-col h-full bg-muted/20">
+                    <div className="bg-muted/50 aspect-square relative overflow-hidden flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-t-lg">
+                        <ShoppingCart className="h-10 w-10" />
+                         <p className="mt-2 font-medium text-sm px-2 text-center">Acheter un emplacement</p>
+                    </div>
+                     <CardContent className="p-4 flex-grow flex flex-col items-center justify-center">
+                       <div className="text-center">
+                            <p className="font-bold text-lg">50 Points</p>
+                            <p className="text-xs text-muted-foreground">Débloquez un nouvel emplacement de création.</p>
+                       </div>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                 <Button size="sm" className="mt-3 w-full" disabled={!canBuySlot || isBuyingSlot}>
+                                    {isBuyingSlot && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                    Acheter
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Confirmer l'achat ?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Voulez-vous vraiment dépenser 50 points pour débloquer un nouvel emplacement de création ? Le montant sera déduit de votre solde de {user?.rewardPoints || 0} points.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handlePurchaseSlot}>Confirmer</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </CardContent>
+                  </Card>
+              )}
             </div>
           ) : (
             <div className="text-center py-16 border border-dashed rounded-lg">
@@ -320,9 +382,5 @@ export default function CreatorShowcasePage({ params }: { params: { creatorId: s
     </Suspense>
   )
 }
-
-    
-
-    
 
     

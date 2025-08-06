@@ -12,6 +12,7 @@ import { useParams, useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
+  setUser: React.Dispatch<React.SetStateAction<User | null>> | null;
   firebaseUser: FirebaseUser | null;
   loading: boolean;
   signOut: () => Promise<void>;
@@ -76,7 +77,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, loading, signOut }}>
+    <AuthContext.Provider value={{ user, setUser, firebaseUser, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );
