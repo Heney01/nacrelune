@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { GoogleIcon } from '@/components/icons';
+import { GoogleIcon, BrandLogo } from '@/components/icons';
 import { userLogin, userLoginWithGoogle } from '@/app/actions/auth.actions';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -125,7 +125,10 @@ export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
 
   return (
     <Card className="border-0 shadow-none">
-      <DialogHeader className="text-center">
+       <div className="flex justify-center pt-6">
+        <BrandLogo className="h-10 w-auto" />
+      </div>
+      <DialogHeader className="text-center pt-4">
         <DialogTitle>{t('user_login_title')}</DialogTitle>
         <DialogDescription>{t('user_login_description')}</DialogDescription>
       </DialogHeader>
