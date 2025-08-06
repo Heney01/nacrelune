@@ -109,7 +109,7 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
         const locale = formData.get('locale') as string || 'fr';
         const isDimensionUpdateOnly = formData.get('isDimensionUpdateOnly') === 'true';
 
-        let modelData: Partial<Omit<JewelryModel, 'id' | 'lastOrderedAt' | 'restockedAt'>> = {};
+        let modelData: Partial<Omit<JewelryModel, 'id' | 'lastOrderedAt' | 'restockedAt' | 'name' | 'displayImageUrl' | 'editorImageUrl'>> & { name?: string, displayImageUrl?: string, editorImageUrl?: string } = {};
 
         if (isDimensionUpdateOnly) {
             const width = parseFloat(formData.get('width') as string) || undefined;
@@ -163,11 +163,25 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
             savedModel = { id: modelId, ...docSnap.data() } as JewelryModel;
         } else {
             // Create
-            if (isDimensionUpdateOnly) {
-                 return { success: false, message: "Impossible de mettre à jour les dimensions d'un nouveau modèle." };
+            if (isDimensionUpdateOnly || !modelData.name || !modelData.displayImageUrl || !modelData.editorImageUrl) {
+                 return { success: false, message: "Impossible de créer un nouveau modèle avec des informations manquantes." };
             }
-            const docRef = await addDoc(collection(db, jewelryTypeId), modelData);
-            savedModel = { id: docRef.id, ...modelData, lastOrderedAt: null, restockedAt: null };
+            const fullModelData: Omit<JewelryModel, 'id'> = {
+                name: modelData.name,
+                price: modelData.price,
+                purchasePrice: modelData.purchasePrice,
+                quantity: modelData.quantity,
+                width: modelData.width,
+                height: modelData.height,
+                displayImageUrl: modelData.displayImageUrl,
+                editorImageUrl: modelData.editorImageUrl,
+                reorderUrl: modelData.reorderUrl,
+                lastOrderedAt: null,
+                restockedAt: null,
+            };
+
+            const docRef = await addDoc(collection(db, jewelryTypeId), fullModelData);
+            savedModel = { id: docRef.id, ...fullModelData };
         }
 
         revalidatePath(`/${locale}/admin/dashboard`);
@@ -318,8 +332,27 @@ export async function saveCharm(prevState: any, formData: FormData): Promise<{ s
             const docSnap = await getDoc(charmRef);
             savedCharmData = { id: charmId, ...docSnap.data() };
         } else {
-            const docRef = await addDoc(collection(db, 'charms'), charmData);
-            savedCharmData = { id: docRef.id, ...charmData, lastOrderedAt: null, restockedAt: null };
+            if (isDimensionUpdateOnly || !charmData.name || !charmData.imageUrl || !charmData.categoryIds) {
+                return { success: false, message: "Impossible de créer une nouvelle breloque avec des informations manquantes." };
+            }
+
+             const fullCharmData: Omit<Charm, 'id'> = {
+                name: charmData.name,
+                description: charmData.description || '',
+                price: charmData.price,
+                purchasePrice: charmData.purchasePrice,
+                quantity: charmData.quantity,
+                width: charmData.width,
+                height: charmData.height,
+                categoryIds: charmData.categoryIds,
+                imageUrl: charmData.imageUrl,
+                reorderUrl: charmData.reorderUrl,
+                lastOrderedAt: null,
+                restockedAt: null,
+            };
+
+            const docRef = await addDoc(collection(db, 'charms'), fullCharmData);
+            savedCharmData = { id: docRef.id, ...fullCharmData };
         }
         
         const firstCategoryId = savedCharmData.categoryIds[0];
@@ -509,3 +542,4 @@ export async function markAsRestocked(formData: FormData): Promise<{ success: bo
         return { success: false, message: error.message || "Une erreur est survenue." };
     }
 }
+
