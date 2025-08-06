@@ -8,7 +8,7 @@ import { CreationCard } from '@/components/creation-card';
 import { notFound, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Heart, Clock, Settings, Award, Loader2, Layers } from 'lucide-react';
+import { ArrowLeft, User, Heart, Clock, Settings, Award, Loader2, Layers, PlusCircle } from 'lucide-react';
 import { BrandLogo } from '@/components/icons';
 import { CartWidget } from '@/components/cart-widget';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -144,6 +144,7 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
   
   const creationSlotsUsed = creations.length;
   const totalCreationSlots = user?.creationSlots || 0;
+  const emptySlots = isOwner ? Math.max(0, totalCreationSlots - creationSlotsUsed) : 0;
 
   return (
     <div className="flex flex-col min-h-screen bg-stone-50">
@@ -198,20 +199,6 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
              {isOwner && (
                 <div className="flex flex-col sm:flex-row items-center gap-4 self-center">
                     <div className="flex items-center gap-2">
-                         <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger>
-                                     <div className="flex items-center gap-2 text-muted-foreground font-bold bg-muted/60 px-3 py-1.5 rounded-full">
-                                        <Layers className="h-5 w-5"/>
-                                        <span>{creationSlotsUsed} / {totalCreationSlots} {t('slots_label')}</span>
-                                    </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>{tAuth('slots_tooltip')}</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-
                         <Dialog>
                             <DialogTrigger asChild>
                                 <div className="flex items-center gap-2 text-primary font-bold bg-primary/10 px-3 py-1.5 rounded-full cursor-pointer hover:bg-primary/20 transition-colors">
@@ -257,7 +244,7 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
             </Tabs>
           </div>
 
-          {sortedCreations.length > 0 ? (
+          {sortedCreations.length > 0 || emptySlots > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {sortedCreations.map(creation => (
                 <CreationCard 
@@ -269,6 +256,14 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
                   onUpdate={isOwner ? handleUpdateCreation : undefined}
                   onDelete={isOwner ? handleDeleteCreation : undefined}
                 />
+              ))}
+              {isOwner && Array.from({ length: emptySlots }).map((_, index) => (
+                  <Link href={`/${locale}`} key={`empty-${index}`}>
+                      <div className="aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center text-muted-foreground hover:bg-muted hover:border-primary hover:text-primary transition-colors">
+                          <PlusCircle className="h-10 w-10" />
+                          <p className="mt-2 font-medium text-sm">Créer</p>
+                      </div>
+                  </Link>
               ))}
             </div>
           ) : (
