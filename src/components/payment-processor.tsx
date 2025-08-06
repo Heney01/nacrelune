@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState } from 'react';
@@ -16,7 +15,7 @@ import type { ShippingAddress, DeliveryMethod, Coupon } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
-import { createOrder, sendConfirmationEmail } from '@/app/actions/order.actions';
+import { createOrder } from '@/app/actions/order.actions';
 
 export const PaymentProcessor = ({
   onOrderCreated,
@@ -74,15 +73,12 @@ export const PaymentProcessor = ({
         email,
         paymentIntentId,
         deliveryMethod,
+        locale,
         shippingAddress,
         appliedCoupon || undefined,
         user?.uid,
         pointsToUse
     );
-
-    if (result.success && result.orderId) {
-        await sendConfirmationEmail(result.orderId, locale);
-    }
 
     onOrderCreated(result);
 
@@ -189,3 +185,5 @@ export const PaymentProcessor = ({
     </form>
   )
 };
+
+    

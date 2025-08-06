@@ -120,6 +120,7 @@ export async function createOrder(
     email: string, 
     paymentIntentId: string,
     deliveryMethod: DeliveryMethod,
+    locale: string,
     shippingAddress?: ShippingAddress,
     coupon?: Coupon,
     userId?: string,
@@ -363,6 +364,10 @@ export async function createOrder(
             
             return { success: true, message: 'Votre commande a été passée avec succès !', orderNumber, email, totalPrice: finalPrice, orderId: newOrderRef.id };
         });
+
+        if (orderData.success && orderData.orderId) {
+            await sendConfirmationEmail(orderData.orderId, locale);
+        }
 
         return orderData;
     } catch (error: any) {
@@ -913,6 +918,9 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
 
 
 
+
+
+    
 
 
     

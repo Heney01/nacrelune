@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -26,7 +25,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { Separator } from './ui/separator';
 import { Slider } from './ui/slider';
 import { Skeleton } from './ui/skeleton';
-import { createOrder, validateCoupon, sendConfirmationEmail, createPaymentIntent } from '@/app/actions/order.actions';
+import { createPaymentIntent, validateCoupon } from '@/app/actions/order.actions';
 import { PaymentProcessor } from './payment-processor';
 
 
@@ -467,3 +466,5 @@ export const CheckoutForm = ({
     </form>
   );
 };
+
+    
