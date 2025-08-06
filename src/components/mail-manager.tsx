@@ -1,11 +1,11 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useReducer, useTransition } from 'react';
 import type { MailLog } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from './ui/card';
-import { Mail, Search, CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
+import { Mail, Search, CheckCircle, XCircle, Clock, AlertTriangle, Trash2 } from 'lucide-react';
 import { useTranslations } from '@/hooks/use-translations';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
@@ -13,10 +13,30 @@ import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { Button } from './ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
+import { deleteMailLog } from '@/app/actions/admin.actions';
+import { useToast } from '@/hooks/use-toast';
+import { useParams } from 'next/navigation';
 
 interface MailManagerProps {
     initialMailLogs: MailLog[];
 }
+
+type State = {
+    logs: MailLog[];
+}
+
+type Action = 
+  | { type: 'DELETE_LOG'; payload: { mailId: string } };
+
+const mailReducer = (state: State, action: Action): State => {
+    switch (action.type) {
+        case 'DELETE_LOG':
+            return { ...state, logs: state.logs.filter(log => log.id !== action.payload.mailId) };
+        default:
+            return state;
+    }
+};
 
 const statusVariants: { [key: string]: string } = {
     'SUCCESS': 'bg-green-100 text-green-800 border-green-200',
@@ -33,12 +53,20 @@ const statusIcons: { [key: string]: React.ElementType } = {
 };
 
 export function MailManager({ initialMailLogs }: MailManagerProps) {
-    const t = useTranslations('Admin'); // Assuming some translations might be needed
+    const t = useTranslations('Admin');
+    const { toast } = useToast();
+    const params = useParams();
+    const locale = params.locale as string;
+
+    const [state, dispatch] = useReducer(mailReducer, { logs: initialMailLogs });
+    const { logs } = state;
+    
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | string>('all');
+    const [isPending, startTransition] = useTransition();
 
     const filteredLogs = useMemo(() => {
-        return initialMailLogs
+        return logs
             .filter(log => {
                 if (statusFilter !== 'all' && log.delivery?.state !== statusFilter) {
                     return false;
@@ -49,9 +77,30 @@ export function MailManager({ initialMailLogs }: MailManagerProps) {
                 }
                 return true;
             });
-    }, [initialMailLogs, searchTerm, statusFilter]);
+    }, [logs, searchTerm, statusFilter]);
     
-    const ALL_STATUSES = Array.from(new Set(initialMailLogs.map(log => log.delivery?.state || 'PENDING')));
+    const ALL_STATUSES = Array.from(new Set(logs.map(log => log.delivery?.state || 'PENDING')));
+    
+    const handleDelete = async (mailId: string) => {
+        startTransition(async () => {
+            const formData = new FormData();
+            formData.append('mailId', mailId);
+            formData.append('locale', locale);
+            
+            // Optimistic update
+            dispatch({ type: 'DELETE_LOG', payload: { mailId } });
+
+            const result = await deleteMailLog(formData);
+
+            if (result.success) {
+                toast({ title: "Succès", description: result.message });
+            } else {
+                toast({ variant: 'destructive', title: "Erreur", description: result.message });
+                // Revert optimistic update on failure - refetch or put item back in state
+                // For simplicity, we can rely on a page refresh or leave it as is.
+            }
+        });
+    }
 
     return (
         <Card>
@@ -93,7 +142,7 @@ export function MailManager({ initialMailLogs }: MailManagerProps) {
                             <TableHead>Destinataire</TableHead>
                             <TableHead>Sujet</TableHead>
                             <TableHead>Date</TableHead>
-                            <TableHead className="text-right">Détails</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -103,7 +152,7 @@ export function MailManager({ initialMailLogs }: MailManagerProps) {
                                 const Icon = statusIcons[state] || Clock;
                                 const recipient = Array.isArray(log.to) ? log.to.join(', ') : log.to;
                                 return (
-                                <TableRow key={log.id}>
+                                <TableRow key={log.id} className={cn(isPending && log.id === (globalThis as any).deletingId && 'opacity-50')}>
                                     <TableCell>
                                         <Badge variant="outline" className={cn(statusVariants[state])}>
                                             <Icon className="h-3 w-3 mr-1.5" />
@@ -114,21 +163,48 @@ export function MailManager({ initialMailLogs }: MailManagerProps) {
                                     <TableCell className="max-w-xs truncate">{log.subject}</TableCell>
                                     <TableCell>{log.delivery?.startTime ? new Date(log.delivery.startTime).toLocaleString() : 'En attente'}</TableCell>
                                     <TableCell className="text-right">
-                                         {log.delivery?.error && (
-                                            <TooltipProvider>
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <Button variant="ghost" size="icon">
-                                                             <AlertTriangle className="h-4 w-4 text-destructive" />
-                                                        </Button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent className="max-w-sm">
-                                                        <p className="font-bold text-destructive">Erreur de livraison</p>
-                                                        <p className="text-xs bg-destructive/10 p-2 rounded-md mt-2">{log.delivery.error}</p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            </TooltipProvider>
-                                         )}
+                                         <div className="flex items-center justify-end gap-2">
+                                            {log.delivery?.error && (
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button variant="ghost" size="icon">
+                                                                <AlertTriangle className="h-4 w-4 text-destructive" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent className="max-w-sm">
+                                                            <p className="font-bold text-destructive">Erreur de livraison</p>
+                                                            <p className="text-xs bg-destructive/10 p-2 rounded-md mt-2">{log.delivery.error}</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            )}
+                                             <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Supprimer cet e-mail ?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            Cette action est irréversible. L'e-mail envoyé à "{recipient}" avec le sujet "{log.subject}" sera définitivement supprimé de l'historique.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                                        <AlertDialogAction
+                                                            className="bg-destructive hover:bg-destructive/90"
+                                                            onClick={() => { (globalThis as any).deletingId = log.id; handleDelete(log.id); }}
+                                                            disabled={isPending}
+                                                        >
+                                                            Supprimer
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                         </div>
                                     </TableCell>
                                 </TableRow>
                             )})

@@ -341,6 +341,28 @@ export async function deleteCharm(formData: FormData): Promise<{ success: boolea
     }
 }
 
+// --- Mail Actions ---
+
+export async function deleteMailLog(formData: FormData): Promise<{ success: boolean; message: string }> {
+    try {
+        const mailId = formData.get('mailId') as string;
+        const locale = formData.get('locale') as string || 'fr';
+
+        if (!mailId) {
+            return { success: false, message: "ID de l'e-mail manquant." };
+        }
+
+        await deleteDoc(doc(db, 'mail', mailId));
+
+        revalidatePath(`/${locale}/admin/dashboard`);
+        return { success: true, message: "L'e-mail a été supprimé de l'historique." };
+    } catch (error: any) {
+        console.error("Error deleting mail log:", error);
+        return { success: false, message: error.message || "Une erreur est survenue lors de la suppression." };
+    }
+}
+
+
 // --- Preferences Actions ---
 
 export async function getPreferences(): Promise<GeneralPreferences> {
