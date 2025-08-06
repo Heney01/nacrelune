@@ -227,7 +227,7 @@ export function FinalizeCreationDialog({
                     <DialogTitle>{t('publish_title')}</DialogTitle>
                     <DialogDescription>{t('publish_description_new')}</DialogDescription>
                 </DialogHeader>
-                <div className="flex-grow my-4 space-y-4 flex flex-col min-h-0">
+                <div className="flex-grow my-4 space-y-4 flex flex-col min-h-0 overflow-y-auto">
                     <div className="w-full max-w-[200px] mx-auto flex-shrink-0">
                         <Image src={previewImage} alt={t('preview_alt')} width={200} height={200} className="rounded-lg border bg-muted/50 w-full h-auto" />
                     </div>
@@ -282,7 +282,7 @@ export function FinalizeCreationDialog({
                         )}
                     </div>
                 </div>
-                 <DialogFooter className="flex-col gap-2 pt-0 flex-shrink-0">
+                 <DialogFooter className="flex-col gap-2 pt-4 flex-shrink-0">
                      <Button onClick={handlePublishAndContinue} className="w-full" disabled={isPublishing || !firebaseUser || !creationName.trim() || !!publishError}>
                         {isPublishing && <Loader2 className="animate-spin mr-2" />}
                         <Send className="mr-2 h-4 w-4" />
