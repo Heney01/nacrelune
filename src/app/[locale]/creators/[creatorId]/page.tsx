@@ -8,7 +8,7 @@ import { CreationCard } from '@/components/creation-card';
 import { notFound, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Heart, Clock, Settings, Award, Loader2 } from 'lucide-react';
+import { ArrowLeft, User, Heart, Clock, Settings, Award, Loader2, Layers } from 'lucide-react';
 import { BrandLogo } from '@/components/icons';
 import { CartWidget } from '@/components/cart-widget';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -23,6 +23,7 @@ import { useTranslations } from '@/hooks/use-translations';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { toggleLikeCreator } from '@/app/actions/user.actions';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: string }) {
   const [data, setData] = useState<{ creator: Creator | null; creations: Creation[], isLikedByUser: boolean } | null>(null);
@@ -32,6 +33,7 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
   const creationIdFromUrl = searchParams.get('creation');
   const { user, firebaseUser } = useAuth();
   const tAuth = useTranslations('Auth');
+  const t = useTranslations('HomePage');
   const { toast } = useToast();
   const [isLikePending, startLikeTransition] = useTransition();
 
@@ -139,6 +141,9 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
 
   const { creator, creations, isLikedByUser } = data;
   const fallbackDisplayName = creator.displayName?.charAt(0) || creator.email?.charAt(0) || '?';
+  
+  const creationSlotsUsed = creations.length;
+  const totalCreationSlots = user?.creationSlots || 0;
 
   return (
     <div className="flex flex-col min-h-screen bg-stone-50">
@@ -191,30 +196,46 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
               </div>
             </div>
              {isOwner && (
-                <div className="flex items-center gap-4 self-center">
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <div className="flex items-center gap-2 text-primary font-bold bg-primary/10 px-3 py-1.5 rounded-full cursor-pointer hover:bg-primary/20 transition-colors">
-                                <Award className="h-5 w-5"/>
-                                <span>{user?.rewardPoints || 0} Points</span>
-                            </div>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>{tAuth('reward_points_title')}</DialogTitle>
-                                <DialogDescription>{tAuth('reward_points_description')}</DialogDescription>
-                            </DialogHeader>
-                            <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground mt-4">
-                                <li>{tAuth('reward_points_explanation_1')}</li>
-                                <li>{tAuth('reward_points_explanation_2')}</li>
-                                <li>{tAuth('reward_points_explanation_3')}</li>
-                                <li>{tAuth('reward_points_explanation_4')}</li>
-                            </ul>
-                            <DialogFooter>
-                                <Button type="button" variant="outline" asChild><DialogTrigger>Fermer</DialogTrigger></Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
+                <div className="flex flex-col sm:flex-row items-center gap-4 self-center">
+                    <div className="flex items-center gap-2">
+                         <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger>
+                                     <div className="flex items-center gap-2 text-muted-foreground font-bold bg-muted/60 px-3 py-1.5 rounded-full">
+                                        <Layers className="h-5 w-5"/>
+                                        <span>{creationSlotsUsed} / {totalCreationSlots} {t('slots_label')}</span>
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>{tAuth('slots_tooltip')}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <div className="flex items-center gap-2 text-primary font-bold bg-primary/10 px-3 py-1.5 rounded-full cursor-pointer hover:bg-primary/20 transition-colors">
+                                    <Award className="h-5 w-5"/>
+                                    <span>{user?.rewardPoints || 0} Points</span>
+                                </div>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>{tAuth('reward_points_title')}</DialogTitle>
+                                    <DialogDescription>{tAuth('reward_points_description')}</DialogDescription>
+                                </DialogHeader>
+                                <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground mt-4">
+                                    <li>{tAuth('reward_points_explanation_1')}</li>
+                                    <li>{tAuth('reward_points_explanation_2')}</li>
+                                    <li>{tAuth('reward_points_explanation_3')}</li>
+                                    <li>{tAuth('reward_points_explanation_4')}</li>
+                                </ul>
+                                <DialogFooter>
+                                    <Button type="button" variant="outline" asChild><DialogTrigger>Fermer</DialogTrigger></Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
                     <Button asChild variant="outline">
                         <Link href={`/${locale}/profil/parametres`}>
                             <Settings className="mr-2 h-4 w-4" />
@@ -253,7 +274,7 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
           ) : (
             <div className="text-center py-16 border border-dashed rounded-lg">
               <h3 className="text-xl font-semibold">{isOwner ? "Vous n'avez pas encore publié de création." : `${creator.displayName} n'a pas encore publié de création.`}</h3>
-              <p className="text-muted-foreground mt-2">{isOwner ? "Commencez à créer pour la partager ici !" : "Revenez bientôt !"}</p>
+              <p className="text-muted-foreground mt-2">{isOwner ? "Commencez à créer pour la partager ici !" : "Revenez bientôt !"} </p>
             </div>
           )}
         </div>

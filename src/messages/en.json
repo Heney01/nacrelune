@@ -35,7 +35,8 @@
     "creator_search_title": "Search for a Creator",
     "creator_search_subtitle": "Find and explore the galleries of your favorite creators.",
     "creator_search_placeholder": "Enter a creator's name...",
-    "no_creators_found": "No creators found."
+    "no_creators_found": "No creators found.",
+    "slots_label": "Slots"
   },
   "Auth": {
     "login_button": "Login",
@@ -77,7 +78,8 @@
     "delete_account_explanation": "Permanently delete your account and all associated data. This action is not reversible.",
     "delete_account_confirm_title": "Are you absolutely sure?",
     "delete_account_confirm_description": "This action cannot be undone. This will permanently delete your account and remove your data from our servers.",
-    "delete_account_confirm_button": "Yes, delete my account"
+    "delete_account_confirm_button": "Yes, delete my account",
+    "slots_tooltip": "Number of creations you can publish."
   },
   "Editor": {
     "charms_title": "Charms",

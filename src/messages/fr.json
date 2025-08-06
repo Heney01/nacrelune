@@ -32,7 +32,8 @@
     "creator_search_title": "Rechercher un Créateur",
     "creator_search_subtitle": "Trouvez et explorez les galeries de vos créateurs préférés.",
     "creator_search_placeholder": "Entrez le nom d'un créateur...",
-    "no_creators_found": "Aucun créateur trouvé."
+    "no_creators_found": "Aucun créateur trouvé.",
+    "slots_label": "Emplacements"
   },
   "Auth": {
     "login_button": "Connexion",
@@ -74,7 +75,8 @@
     "delete_account_explanation": "Supprimez définitivement votre compte et toutes les données associées. Cette action n'est pas réversible.",
     "delete_account_confirm_title": "Êtes-vous absolument certain(e) ?",
     "delete_account_confirm_description": "Cette action ne peut pas être annulée. Cela supprimera définitivement votre compte et retirera vos données de nos serveurs.",
-    "delete_account_confirm_button": "Oui, supprimer mon compte"
+    "delete_account_confirm_button": "Oui, supprimer mon compte",
+    "slots_tooltip": "Nombre de créations que vous pouvez publier."
   },
   "Editor": {
     "charms_title": "Breloques",
