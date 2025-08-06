@@ -6,13 +6,12 @@ import Image from 'next/image';
 import { useFormState, useFormStatus } from 'react-dom';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Ruler, AlertCircle, Layers } from 'lucide-react';
+import { Loader2, Ruler, AlertCircle, Layers, ArrowLeftRight, ArrowUpDown } from 'lucide-react';
 import type { Charm } from '@/lib/types';
 import { saveCharm } from '@/app/actions/admin.actions';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Slider } from './ui/slider';
 import { useToast } from '@/hooks/use-toast';
-import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { cn } from '@/lib/utils';
@@ -44,7 +43,6 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
     const [state, formAction] = useFormState(saveCharm, initialState);
     
     const [referenceCharm, setReferenceCharm] = useState<Charm | null>(null);
-    const [isOverlayed, setIsOverlayed] = useState(false);
 
     const [charmWidth, setCharmWidth] = useState<number>(charm?.width || 15);
     const [aspectRatio, setAspectRatio] = useState(1);
@@ -88,15 +86,12 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
         }
         
         const PIXELS_PER_MM_BASE = 5;
-        const PADDING = 32; // 2rem total padding
+        const PADDING = 32; // ~2rem total padding
         
         const viewerWidth = viewerRef.current.offsetWidth - PADDING;
         const viewerHeight = viewerRef.current.offsetHeight - PADDING;
         
-        const requiredWidth = isOverlayed 
-            ? Math.max(referenceCharm.width!, calculatedDimensions.width) * PIXELS_PER_MM_BASE
-            : (referenceCharm.width! + calculatedDimensions.width) * PIXELS_PER_MM_BASE;
-            
+        const requiredWidth = (referenceCharm.width! + calculatedDimensions.width + 40) * PIXELS_PER_MM_BASE;
         const requiredHeight = Math.max(referenceCharm.height!, calculatedDimensions.height) * PIXELS_PER_MM_BASE;
 
         let scale = 1;
@@ -115,7 +110,7 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
             currentHeight: calculatedDimensions.height * PIXELS_PER_MM_BASE * scale,
         };
 
-    }, [referenceCharm, calculatedDimensions, isOverlayed, viewerRef.current]);
+    }, [referenceCharm, calculatedDimensions, viewerRef.current]);
 
     useEffect(() => {
         if (state.success && state.charm) {
@@ -136,9 +131,16 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
         }
     }
 
+    const Dimension = ({ size, direction = 'horizontal' }: { size: number; direction?: 'horizontal' | 'vertical' }) => (
+        <div className={cn("flex items-center gap-1 text-muted-foreground", direction === 'vertical' && "flex-col")}>
+            {direction === 'horizontal' ? <ArrowLeftRight className="h-3 w-3" /> : <ArrowUpDown className="h-3 w-3" />}
+            <span className="text-xs font-mono">{size.toFixed(1)}mm</span>
+        </div>
+    );
+
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-xl">
                  <form action={formAction}>
                     <DialogHeader>
                         <DialogTitle>Calibrer la taille de "{charm.name}"</DialogTitle>
@@ -172,63 +174,53 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
                                     <SelectContent>
                                         {charmsWithDimensions.map(refCharm => (
                                             <SelectItem key={refCharm.id} value={refCharm.id}>
-                                                {refCharm.name} ({refCharm.width}mm)
+                                                {refCharm.name} ({refCharm.width}mm x {refCharm.height}mm)
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="flex items-center space-x-2">
-                                <Switch id="overlay-switch" checked={isOverlayed} onCheckedChange={setIsOverlayed} />
-                                <Label htmlFor="overlay-switch" className="flex items-center gap-1.5"><Layers className="h-4 w-4"/> Superposer</Label>
-                            </div>
                         </div>
                         
                         {referenceCharm && (
                         <>
-                           <div 
-                                ref={viewerRef} 
-                                className={cn(
-                                    "relative h-40 bg-muted/50 rounded-lg p-4 border border-dashed overflow-hidden transition-all",
-                                    isOverlayed ? "grid place-items-center" : "flex justify-center items-center gap-8"
-                                )}
-                            >
-                                <div className="flex flex-col items-center justify-center gap-1 text-center flex-shrink-0 transition-all" style={{width: `${displayScaling.refWidth}px`, height: `${displayScaling.refHeight}px`}}>
-                                    <div className="relative w-full h-full">
-                                        <Image
-                                            src={referenceCharm.imageUrl}
-                                            alt={`Référence: ${referenceCharm.name}`}
-                                            fill
-                                            className="object-contain"
-                                            sizes={`${displayScaling.refWidth}px`}
-                                        />
+                           <div ref={viewerRef} className="relative h-48 bg-muted/50 rounded-lg p-4 border border-dashed overflow-hidden flex justify-center items-center gap-8">
+                                <div className="flex items-center gap-2">
+                                    <Dimension size={referenceCharm.height!} direction="vertical"/>
+                                    <div className="flex flex-col items-center justify-center gap-1 text-center flex-shrink-0" style={{width: `${displayScaling.refWidth}px`, height: `${displayScaling.refHeight}px`}}>
+                                        <div className="relative w-full h-full">
+                                            <Image
+                                                src={referenceCharm.imageUrl}
+                                                alt={`Référence: ${referenceCharm.name}`}
+                                                fill
+                                                className="object-contain"
+                                                sizes={`${displayScaling.refWidth}px`}
+                                            />
+                                        </div>
+                                        <Dimension size={referenceCharm.width!} />
                                     </div>
-                                    <p className="text-xs text-muted-foreground mt-1">{referenceCharm.width}mm x {referenceCharm.height}mm</p>
                                 </div>
                                 
-                                <div 
-                                    className={cn(
-                                        "flex flex-col items-center justify-center gap-1 text-center flex-shrink-0 transition-all",
-                                        isOverlayed && "absolute inset-0 grid place-items-center opacity-75"
-                                    )}
-                                    style={{width: `${displayScaling.currentWidth}px`, height: `${displayScaling.currentHeight}px`}}
-                                >
-                                     <div className="relative w-full h-full">
-                                        <Image
-                                            src={charm.imageUrl}
-                                            alt={charm.name}
-                                            fill
-                                            className="object-contain"
-                                            sizes={`${displayScaling.currentWidth}px`}
-                                        />
-                                     </div>
-                                    <p className="text-xs text-muted-foreground mt-1">{calculatedDimensions.width}mm x {calculatedDimensions.height}mm</p>
+                                <div className="flex items-center gap-2">
+                                     <div className="flex flex-col items-center justify-center gap-1 text-center flex-shrink-0" style={{width: `${displayScaling.currentWidth}px`, height: `${displayScaling.currentHeight}px`}}>
+                                         <div className="relative w-full h-full">
+                                            <Image
+                                                src={charm.imageUrl}
+                                                alt={charm.name}
+                                                fill
+                                                className="object-contain"
+                                                sizes={`${displayScaling.currentWidth}px`}
+                                            />
+                                         </div>
+                                        <Dimension size={calculatedDimensions.width} />
+                                    </div>
+                                    <Dimension size={calculatedDimensions.height} direction="vertical"/>
                                 </div>
                             </div>
                         
-                            <div className="space-y-4">
+                            <div className="space-y-4 pt-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="size-slider">Largeur de la breloque (mm)</Label>
+                                    <Label htmlFor="size-slider">Ajuster la largeur de "{charm.name}"</Label>
                                     <Slider
                                         id="size-slider"
                                         min={1}
@@ -237,12 +229,6 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
                                         value={[charmWidth]}
                                         onValueChange={(value) => setCharmWidth(value[0])}
                                     />
-                                </div>
-                                <div className="flex justify-between items-center text-sm p-3 bg-muted rounded-lg">
-                                    <div className="font-medium">Dimensions calculées :</div>
-                                    <div>
-                                        <span className="font-mono">{calculatedDimensions.width}mm</span> (L) x <span className="font-mono">{calculatedDimensions.height}mm</span> (H)
-                                    </div>
                                 </div>
                             </div>
                         </>
