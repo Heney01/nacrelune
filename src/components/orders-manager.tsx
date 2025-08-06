@@ -31,6 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Textarea } from './ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { useAuth } from '@/hooks/use-auth';
 
 interface OrdersManagerProps {
     initialOrders: Order[];
@@ -564,6 +565,7 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
     const tStatus = useTranslations('OrderStatus');
     const { toast } = useToast();
     const [isPending, startTransition] = useTransition();
+    const { firebaseUser } = useAuth();
 
     const [state, dispatch] = useReducer(ordersReducer, initialOrders);
     const { orders } = { orders: state };
@@ -594,48 +596,64 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
     };
 
     const handleStatusChange = (orderId: string, status: OrderStatus, options?: { shippingInfo?: { carrier: string; trackingNumber: string; }, cancellationReason?: string}) => {
-        const formData = new FormData();
-        formData.append('orderId', orderId);
-        formData.append('status', status);
-        formData.append('locale', locale);
-        if (options?.shippingInfo) {
-            formData.append('shippingCarrier', options.shippingInfo.carrier);
-            formData.append('trackingNumber', options.shippingInfo.trackingNumber);
-        }
-        if (options?.cancellationReason) {
-            formData.append('cancellationReason', options.cancellationReason);
+        if (!firebaseUser) {
+            toast({ title: 'Erreur', description: 'Vous devez être connecté.', variant: 'destructive' });
+            return;
         }
 
-        startTransition(async () => {
-            const result = await updateOrderStatus(formData);
-            if (result.success) {
-                dispatch({ type: 'UPDATE_STATUS', payload: { 
-                    orderId,
-                    newStatus: status, 
-                    shippingInfo: options?.shippingInfo,
-                    cancellationReason: options?.cancellationReason 
-                }});
-                toast({ title: 'Succès', description: result.message });
-            } else {
-                toast({ title: 'Erreur', description: result.message, variant: 'destructive' });
+        firebaseUser.getIdToken().then(idToken => {
+            const formData = new FormData();
+            formData.append('idToken', idToken);
+            formData.append('orderId', orderId);
+            formData.append('status', status);
+            formData.append('locale', locale);
+            if (options?.shippingInfo) {
+                formData.append('shippingCarrier', options.shippingInfo.carrier);
+                formData.append('trackingNumber', options.shippingInfo.trackingNumber);
             }
+            if (options?.cancellationReason) {
+                formData.append('cancellationReason', options.cancellationReason);
+            }
+
+            startTransition(async () => {
+                const result = await updateOrderStatus(formData);
+                if (result.success) {
+                    dispatch({ type: 'UPDATE_STATUS', payload: { 
+                        orderId,
+                        newStatus: status, 
+                        shippingInfo: options?.shippingInfo,
+                        cancellationReason: options?.cancellationReason 
+                    }});
+                    toast({ title: 'Succès', description: result.message });
+                } else {
+                    toast({ title: 'Erreur', description: result.message, variant: 'destructive' });
+                }
+            });
         });
     }
 
     const handleItemStatusChange = (orderId: string, itemIndex: number, isCompleted: boolean) => {
-         const formData = new FormData();
-        formData.append('orderId', orderId);
-        formData.append('itemIndex', itemIndex.toString());
-        formData.append('isCompleted', isCompleted.toString());
+         if (!firebaseUser) {
+            toast({ title: 'Erreur', description: 'Vous devez être connecté.', variant: 'destructive' });
+            return;
+        }
 
-        startTransition(async () => {
-            const result = await updateOrderItemStatus(formData);
-             if (result.success) {
-                dispatch({ type: 'UPDATE_ITEM_STATUS', payload: { orderId, itemIndex, isCompleted }});
-                toast({ description: result.message });
-            } else {
-                toast({ title: 'Erreur', description: result.message, variant: 'destructive' });
-            }
+        firebaseUser.getIdToken().then(idToken => {
+            const formData = new FormData();
+            formData.append('idToken', idToken);
+            formData.append('orderId', orderId);
+            formData.append('itemIndex', itemIndex.toString());
+            formData.append('isCompleted', isCompleted.toString());
+
+            startTransition(async () => {
+                const result = await updateOrderItemStatus(formData);
+                 if (result.success) {
+                    dispatch({ type: 'UPDATE_ITEM_STATUS', payload: { orderId, itemIndex, isCompleted }});
+                    toast({ description: result.message });
+                } else {
+                    toast({ title: 'Erreur', description: result.message, variant: 'destructive' });
+                }
+            });
         });
     }
     

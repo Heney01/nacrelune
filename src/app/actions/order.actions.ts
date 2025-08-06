@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -10,7 +11,6 @@ import { toDate } from '@/lib/data';
 import Stripe from 'stripe';
 import { headers } from 'next/headers';
 import { verifyAdmin } from '@/app/actions/auth.actions';
-import { cookies } from 'next/headers';
 
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -136,9 +136,13 @@ export async function createOrder(
     try {
         // First, upload all images to storage outside of the transaction
         const uploadPromises = cartItems.map(async (item) => {
-            const storageRef = ref(storage, `order_previews/${item.id}-${Date.now()}.png`);
-            const uploadResult = await uploadString(storageRef, item.previewImage, 'data_url');
-            return getDownloadURL(uploadResult.ref);
+            if (item.previewImage.startsWith('data:image')) {
+                const storageRef = ref(storage, `order_previews/${item.id}-${Date.now()}.png`);
+                const uploadResult = await uploadString(storageRef, item.previewImage, 'data_url');
+                return getDownloadURL(uploadResult.ref);
+            }
+            // If it's already a URL, just return it.
+            return item.previewImage;
         });
         const previewImageUrls = await Promise.all(uploadPromises);
 
@@ -424,11 +428,11 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
         const orderData = orderDoc.data();
 
         // Get all unique charm IDs from all items in the order
-        const allCharmIds = orderData.items.flatMap((item: OrderItem) => item.charms.map((c: any) => c.charmId));
+        const allCharmIds = orderData.items.flatMap((item: OrderItem) => (item.charms || []).map((c: any) => c.charmId));
         const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
         // Fetch all required charms in a single query
-        let charmsMap = new Map<string, any>();
+        let charmsMap = new Map<string, Charm>();
         if (uniqueCharmIds.length > 0) {
             const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', uniqueCharmIds));
             const charmsSnapshot = await getDocs(charmsQuery);
@@ -630,7 +634,7 @@ export async function getOrders(): Promise<Order[]> {
         });
 
         // Get all unique charm IDs from all orders first
-        const allCharmIds = ordersSnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => (item.charms || []).map((c: any) => c.id)) || []);
+        const allCharmIds = ordersSnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => (item.charms || []).map((c: any) => c.charmId)) || []);
         const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
         // Fetch all required charms in a single query
@@ -706,9 +710,8 @@ export async function getOrders(): Promise<Order[]> {
 
 export async function updateOrderStatus(formData: FormData): Promise<{ success: boolean; message: string }> {
      try {
-        const session = cookies().get('session')?.value;
-        if (!session) throw new Error("Non autorisé");
-        await verifyAdmin(session);
+        const idToken = formData.get('idToken') as string;
+        await verifyAdmin(idToken);
         const orderId = formData.get('orderId') as string;
         const newStatus = formData.get('status') as OrderStatus;
         const locale = formData.get('locale') as string || 'fr';
@@ -821,9 +824,8 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
 
 export async function updateOrderItemStatus(formData: FormData): Promise<{ success: boolean; message: string }> {
      try {
-        const session = cookies().get('session')?.value;
-        if (!session) throw new Error("Non autorisé");
-        await verifyAdmin(session);
+        const idToken = formData.get('idToken') as string;
+        await verifyAdmin(idToken);
         const orderId = formData.get('orderId') as string;
         const itemIndex = parseInt(formData.get('itemIndex') as string, 10);
         const isCompleted = formData.get('isCompleted') === 'true';
@@ -903,6 +905,8 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
     }
 }
 
+
+    
 
     
 
