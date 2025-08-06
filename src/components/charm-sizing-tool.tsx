@@ -193,13 +193,13 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
                                         <Image
                                             src={referenceCharm.imageUrl}
                                             alt={`Référence: ${referenceCharm.name}`}
-                                            width={displayScaling.refWidth}
-                                            height={displayScaling.refHeight}
                                             className="object-contain border border-dashed border-red-500"
                                             style={{
                                                 width: `${displayScaling.refWidth}px`,
-                                                height: `${displayScaling.refHeight}px`,
+                                                height: `auto`,
                                             }}
+                                            width={displayScaling.refWidth || 1}
+                                            height={displayScaling.refHeight || 1}
                                         />
                                         <Dimension size={referenceCharm.width!} />
                                     </div>
@@ -211,13 +211,13 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
                                         <Image
                                             src={charm.imageUrl}
                                             alt={charm.name}
-                                            width={displayScaling.currentWidth}
-                                            height={displayScaling.currentHeight}
                                             className="object-contain border border-dashed border-red-500"
                                             style={{
                                                 width: `${displayScaling.currentWidth}px`,
-                                                height: `${displayScaling.currentHeight}px`,
+                                                height: 'auto',
                                             }}
+                                            width={displayScaling.currentWidth || 1}
+                                            height={displayScaling.currentHeight || 1}
                                         />
                                         <Dimension size={calculatedDimensions.width} />
                                     </div>
