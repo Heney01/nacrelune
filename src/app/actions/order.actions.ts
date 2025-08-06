@@ -1,12 +1,11 @@
 
-
 'use server';
 
 import { revalidatePath } from 'next/cache';
 import { db, storage } from '@/lib/firebase';
 import { doc, addDoc, updateDoc, collection, getDoc, getDocs, runTransaction, query, where, setDoc, serverTimestamp, collectionGroup, documentId, orderBy, DocumentReference, DocumentSnapshot, Timestamp, increment } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
-import type { JewelryModel, PlacedCharm, OrderStatus, Order, OrderItem, ShippingAddress, DeliveryMethod, MailLog, Coupon, User } from '@/lib/types';
+import type { JewelryModel, PlacedCharm, OrderStatus, Order, OrderItem, ShippingAddress, DeliveryMethod, MailLog, Coupon, User, Charm } from '@/lib/types';
 import { toDate } from '@/lib/data';
 import Stripe from 'stripe';
 import { headers } from 'next/headers';
@@ -74,7 +73,7 @@ async function refundStripePayment(paymentIntentId: string): Promise<{ success: 
     } catch (error: any) {
         console.error("Error creating Stripe refund:", error);
          if (error.code === 'charge_already_refunded') {
-            return { success: true, message: 'La commande a déjà été remboursée sur Stripe.' };
+            return { success: true, message: 'La commande a été déjà remboursée sur Stripe.' };
         }
         return { success: false, message: error.message || "Une erreur est survenue lors du remboursement Stripe." };
     }
@@ -904,5 +903,7 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
     }
 }
 
+
+    
 
     
