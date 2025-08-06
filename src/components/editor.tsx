@@ -47,6 +47,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { PlacedCharmsList } from './placed-charms-list';
 import html2canvas from 'html2canvas';
+import { EditorOnboardingDialog } from './editor-onboarding-dialog';
 
 
 interface PlacedCharmComponentProps {
@@ -184,6 +185,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
   const trashZoneRef = useRef<HTMLDivElement>(null);
 
   const [isExitAlertOpen, setIsExitAlertOpen] = useState(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   
   const isEditing = cartItemId !== null;
 
@@ -199,6 +201,15 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
     handleManualZoom,
     resetZoomAndPan,
   } = useEditorCanvas({ model });
+  
+  useEffect(() => {
+    // Show onboarding dialog only once per session
+    const hasSeenOnboarding = sessionStorage.getItem('hasSeenEditorOnboarding');
+    if (!hasSeenOnboarding) {
+      setIsOnboardingOpen(true);
+      sessionStorage.setItem('hasSeenEditorOnboarding', 'true');
+    }
+  }, []);
   
   useEffect(() => {
     if (isEditing) {
@@ -608,6 +619,8 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
 
   return (
     <>
+      <EditorOnboardingDialog isOpen={isOnboardingOpen} onOpenChange={setIsOnboardingOpen} />
+
       <AlertDialog open={isExitAlertOpen} onOpenChange={setIsExitAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
