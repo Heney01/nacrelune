@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, Suspense, useMemo, useCallback, useTransition } from 'react';
@@ -27,6 +26,7 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
+    AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useTranslations } from '@/hooks/use-translations';
 import { cn } from '@/lib/utils';
@@ -382,5 +382,3 @@ export default function CreatorShowcasePage({ params }: { params: { creatorId: s
     </Suspense>
   )
 }
-
-    
