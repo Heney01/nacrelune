@@ -10,8 +10,7 @@ import type { JewelryModel, PlacedCharm, OrderStatus, Order, OrderItem, Shipping
 import { toDate } from '@/lib/data';
 import Stripe from 'stripe';
 import { headers } from 'next/headers';
-import { getAuth as getAdminAuth } from 'firebase-admin/auth';
-import { adminApp } from '@/lib/firebase-admin';
+import { verifyAdmin } from '@/app/actions/auth.actions';
 
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -595,21 +594,6 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
 
 // --- Admin Order Actions ---
 
-async function verifyAdmin(idToken: string): Promise<{uid: string, email: string | undefined}> {
-    if (!adminApp) {
-        throw new Error("Le module d'administration Firebase n'est pas configuré.");
-    }
-    try {
-        const adminAuth = getAdminAuth(adminApp);
-        const decodedToken = await adminAuth.verifyIdToken(idToken, true);
-        if (decodedToken.admin !== true) {
-            throw new Error("Accès non autorisé. Vous n'avez pas les droits d'administrateur.");
-        }
-        return { uid: decodedToken.uid, email: decodedToken.email };
-    } catch (error: any) {
-        throw new Error(error.message || "Jeton d'authentification invalide.");
-    }
-}
 
 export async function getOrders(): Promise<Order[]> {
     try {
@@ -959,4 +943,5 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
     
 
     
+
 

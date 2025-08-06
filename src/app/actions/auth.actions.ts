@@ -77,7 +77,14 @@ async function verifyUser(idToken: string): Promise<{uid: string, email: string 
     try {
         const adminAuth = getAdminAuth(adminApp);
         const decodedToken = await adminAuth.verifyIdToken(idToken, true);
-        return { uid: decodedToken.uid, email: decodedToken.email, admin: decodedToken.admin === true };
+        
+        // Fetch user document from Firestore to check for admin field
+        const userDocRef = doc(db, 'users', decodedToken.uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        const isFirestoreAdmin = userDoc.exists() && userDoc.data().admin === true;
+
+        return { uid: decodedToken.uid, email: decodedToken.email, admin: isFirestoreAdmin };
     } catch (error: any) {
         throw new Error("Jeton d'authentification invalide.");
     }
@@ -105,17 +112,10 @@ export async function login(prevState: any, formData: FormData): Promise<{ succe
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
     
-    // Check for admin rights in Firestore
-    const userDocRef = doc(db, 'users', user.uid);
-    const userDoc = await getDoc(userDocRef);
-
-    if (!userDoc.exists() || userDoc.data().admin !== true) {
-        // Even if auth is correct, if not an admin, deny access.
-        await auth.signOut(); // Sign out the user immediately
-        return { success: false, error: "Accès non autorisé. Seuls les administrateurs peuvent se connecter ici." };
-    }
-    
     const idToken = await user.getIdToken();
+    
+    // The verifyAdmin function now checks Firestore as well.
+    await verifyAdmin(idToken);
     
     cookies().set('session', idToken, {
       httpOnly: true,
@@ -128,18 +128,24 @@ export async function login(prevState: any, formData: FormData): Promise<{ succe
 
   } catch (error: any) {
     let errorMessage = "Une erreur inconnue est survenue.";
-    switch (error.code) {
-        case 'auth/invalid-email':
-            errorMessage = "L'adresse e-mail n'est pas valide.";
-            break;
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-            errorMessage = "Email ou mot de passe incorrect.";
-            break;
-        default:
-            errorMessage = "Une erreur est survenue lors de la connexion.";
-            break;
+     if (error.message.includes("Vous n'avez pas les droits d'administrateur")) {
+        errorMessage = "Accès non autorisé. Seuls les administrateurs peuvent se connecter ici.";
+        const auth = getAuth(app);
+        await auth.signOut(); // Sign out the user immediately if they are not an admin
+    } else {
+        switch (error.code) {
+            case 'auth/invalid-email':
+                errorMessage = "L'adresse e-mail n'est pas valide.";
+                break;
+            case 'auth/user-not-found':
+            case 'auth/wrong-password':
+            case 'auth/invalid-credential':
+                errorMessage = "Email ou mot de passe incorrect.";
+                break;
+            default:
+                errorMessage = "Une erreur est survenue lors de la connexion.";
+                break;
+        }
     }
     return { success: false, error: errorMessage };
   }
