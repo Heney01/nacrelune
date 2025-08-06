@@ -19,7 +19,7 @@ export default function ReturnsPolicyPage() {
       <p>Les frais de retour du produit resteront à la charge du client.</p>
 
       <h2>Produits défectueux ou non-conformes</h2>
-      <p>En cas de réception d'un article défectueux ou non-conforme à votre commande, veuillez nous contacter immédiatement à l'adresse [Votre adresse email de contact] avec une photo du problème. Nous trouverons une solution appropriée, qui pourra être un remplacement ou un remboursement, au cas par cas.</p>
+      <p>En cas de réception d'un article défectueux ou non-conforme à votre commande, veuillez nous contacter immédiatement à l'adresse support@atelierabijoux.com avec une photo du problème. Nous trouverons une solution appropriée, qui pourra être un remplacement ou un remboursement, au cas par cas.</p>
     </article>
   );
 }

@@ -9,19 +9,19 @@ export default function LegalNoticePage() {
 
       <h2>Édition du site</h2>
       <p>Le présent site, accessible à l’URL www.atelierabijoux.com (le « Site »), est édité par :</p>
-      <p><strong>[Nom de votre entreprise ou votre nom complet]</strong>, société [Forme juridique de la société] au capital de [Montant du capital social] euros, inscrite au R.C.S. de [Ville d’immatriculation] sous le numéro [Numéro RCS], dont le siège social est situé au [Adresse de votre siège social].</p>
-      <p>Le numéro individuel TVA est : [Numéro de TVA].</p>
+      <p><strong>Hugo Andreu</strong>, entreprise individuelle (Micro-entreprise), dont le siège social est situé au 33 avenue de la Martheline 13009 Marseille.</p>
+      <p>Le numéro individuel TVA est : FR34920861424.</p>
       
       <h2>Hébergement</h2>
       <p>Le Site est hébergé par Firebase (Google), situé à Gordon House, Barrow Street, Dublin 4, Irlande.</p>
       
       <h2>Directeur de publication</h2>
-      <p>Le Directeur de la publication du Site est <strong>[Votre nom ou nom du responsable]</strong>.</p>
+      <p>Le Directeur de la publication du Site est <strong>Hugo Andreu</strong>.</p>
       
       <h2>Nous contacter</h2>
       <ul>
-        <li>Par email : [Votre adresse email de contact]</li>
-        <li>Par courrier : [Votre adresse postale]</li>
+        <li>Par email : support@atelierabijoux.com</li>
+        <li>Par courrier : 33 avenue de la Martheline 13009 Marseille</li>
       </ul>
 
       <h2>Données personnelles</h2>

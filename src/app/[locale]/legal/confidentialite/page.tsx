@@ -36,7 +36,7 @@ export default function PrivacyPolicyPage() {
       <p>Nous pouvons mettre à jour cette politique de confidentialité de temps à autre afin de refléter, par exemple, des changements dans nos pratiques ou pour d'autres raisons opérationnelles, légales ou réglementaires.</p>
 
       <h2>Contactez-nous</h2>
-      <p>Pour plus d'informations sur nos pratiques de confidentialité, si vous avez des questions, ou si vous souhaitez déposer une réclamation, veuillez nous contacter par e-mail à [Votre adresse email de contact] ou par courrier en utilisant les détails fournis dans nos mentions légales.</p>
+      <p>Pour plus d'informations sur nos pratiques de confidentialité, si vous avez des questions, ou si vous souhaitez déposer une réclamation, veuillez nous contacter par e-mail à support@atelierabijoux.com ou par courrier en utilisant les détails fournis dans nos mentions légales.</p>
     </article>
   );
 }

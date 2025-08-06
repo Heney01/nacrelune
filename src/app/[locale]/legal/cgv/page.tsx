@@ -9,7 +9,7 @@ export default function TermsOfServicePage() {
       <p><strong>VEUILLEZ LIRE ATTENTIVEMENT CES CONDITIONS. ELLES CONTIENNENT DES INFORMATIONS IMPORTANTES CONCERNANT VOS DROITS, RECOURS ET OBLIGATIONS.</strong></p>
 
       <h2>1. Objet</h2>
-      <p>Les présentes conditions générales de vente (CGV) régissent les relations contractuelles entre la société [Nom de votre entreprise] (ci-après « le Vendeur ») et toute personne physique ou morale (ci-après « le Client ») souhaitant procéder à un achat via le site internet www.atelierabijoux.com (le « Site »).</p>
+      <p>Les présentes conditions générales de vente (CGV) régissent les relations contractuelles entre l'entreprise Hugo Andreu (ci-après « le Vendeur ») et toute personne physique ou morale (ci-après « le Client ») souhaitant procéder à un achat via le site internet www.atelierabijoux.com (le « Site »).</p>
       <p>L'acquisition d'un produit à travers le présent site implique une acceptation sans réserve par le Client des présentes conditions de vente dont le Client reconnaît avoir pris connaissance préalablement à sa commande.</p>
 
       <h2>2. Produits</h2>
@@ -34,7 +34,7 @@ export default function TermsOfServicePage() {
       <p>Tous les éléments du Site sont et restent la propriété intellectuelle et exclusive du Vendeur. Personne n'est autorisé à reproduire, exploiter, ou utiliser à quelque titre que ce soit, même partiellement, des éléments du site qu’ils soient sous forme de photo, logo, visuel ou texte.</p>
 
       <h2>9. Droit applicable et litiges</h2>
-      <p>Les présentes conditions de vente à distance sont soumises à la loi française. Pour tous les litiges ou contentieux, le Tribunal compétent sera celui de [Ville de votre tribunal de commerce].</p>
+      <p>Les présentes conditions de vente à distance sont soumises à la loi française. Pour tous les litiges ou contentieux, le Tribunal compétent sera celui de Marseille.</p>
 
     </article>
   );
