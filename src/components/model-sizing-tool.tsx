@@ -135,7 +135,9 @@ export function ModelSizingTool({ isOpen, onOpenChange, model, allCharms, onSave
     }, []);
 
     const handleMouseUp = useCallback(() => {
-        dragState.current.isDragging = false;
+        if (dragState.current.isDragging) {
+            dragState.current.isDragging = false;
+        }
     }, []);
 
     useEffect(() => {
