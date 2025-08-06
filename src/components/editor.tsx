@@ -54,11 +54,11 @@ interface PlacedCharmComponentProps {
     placed: PlacedCharm;
     isSelected: boolean;
     onDragStart: (e: React.MouseEvent<HTMLDivElement> | TouchEvent, charmId: string) => void;
-    pixelSize: { width: number; height: number; };
+    pixelWidth: number;
     modelImageRect: DOMRect | null;
 }
   
-const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, pixelSize, modelImageRect }: PlacedCharmComponentProps) => {
+const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, pixelWidth, modelImageRect }: PlacedCharmComponentProps) => {
     const charmRef = useRef<HTMLDivElement>(null);
     const [isImageLoading, setIsImageLoading] = useState(true);
     
@@ -92,14 +92,14 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, pixe
         return {
             left: `${left}px`,
             top: `${top}px`,
-            width: `${pixelSize.width}px`,
-            height: `${pixelSize.height}px`,
+            width: `${pixelWidth}px`,
+            height: 'auto', // Let height adjust automatically to maintain aspect ratio
             transform: `translate(-50%, -50%) rotate(${placed.rotation}deg)`,
             animation: placed.animation,
             touchAction: 'none',
         };
 
-    }, [placed.position, placed.rotation, placed.animation, pixelSize, modelImageRect]);
+    }, [placed.position, placed.rotation, placed.animation, pixelWidth, modelImageRect]);
 
 
     return (
@@ -130,8 +130,9 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, pixe
                 )}
                 data-ai-hint="jewelry charm"
                 draggable="false"
-                width={pixelSize.width}
-                height={pixelSize.height}
+                width={pixelWidth}
+                height={100} // Height is initially arbitrary, will be adjusted by CSS
+                style={{ height: 'auto' }}
                 crossOrigin="anonymous"
                 onLoad={() => setIsImageLoading(false)}
             />
@@ -778,17 +779,14 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                         </div>
                         
                         {pixelsPerMm && modelImageRect && sortedPlacedCharms.map((placed) => {
-                             const pixelSize = {
-                                width: (placed.charm.width ?? 20) * pixelsPerMm,
-                                height: (placed.charm.height ?? 20) * pixelsPerMm,
-                            };
+                             const pixelWidth = (placed.charm.width ?? 20) * pixelsPerMm;
                             return (
                             <PlacedCharmComponent
                                 key={placed.id}
                                 placed={placed}
                                 isSelected={selectedPlacedCharmId === placed.id}
                                 onDragStart={handleDragStart}
-                                pixelSize={pixelSize}
+                                pixelWidth={pixelWidth}
                                 modelImageRect={modelImageRect}
                             />
                             )
