@@ -1,11 +1,10 @@
 
-
 'use client';
 
 import React, { useState, useReducer, useTransition, useMemo, FormEvent } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Tag, WandSparkles, ZoomIn, AlertTriangle, ShoppingCart, Info, Search } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Tag, WandSparkles, ZoomIn, AlertTriangle, ShoppingCart, Info, Search, Ruler } from "lucide-react";
 import type { Charm, CharmCategory, GeneralPreferences } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
@@ -38,6 +37,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 import { useTranslations } from '@/hooks/use-translations';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { CharmSizingTool } from './charm-sizing-tool';
 
 interface CharmsManagerProps {
     initialCharms: (Charm & { categoryName?: string })[];
@@ -224,6 +224,9 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
     const [isCharmFormOpen, setIsCharmFormOpen] = useState(false);
     const [selectedCharm, setSelectedCharm] = useState<Charm | null>(null);
 
+    const [isSizingToolOpen, setIsSizingToolOpen] = useState(false);
+    const [charmToSize, setCharmToSize] = useState<Charm | null>(null);
+
     const handleAddCategoryClick = () => {
         setSelectedCategory(null);
         setIsCategoryFormOpen(true);
@@ -244,6 +247,11 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
         setIsCharmFormOpen(true);
     };
     
+    const handleSizeCharmClick = (charm: Charm) => {
+        setCharmToSize(charm);
+        setIsSizingToolOpen(true);
+    }
+
     const handleSaveCategory = (category: CharmCategory) => {
         const isEditing = categories.some(c => c.id === category.id);
         startTransition(() => { dispatch({ type: isEditing ? 'UPDATE_CATEGORY' : 'ADD_CATEGORY', payload: category }); });
@@ -416,12 +424,11 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                         <div className="hidden md:block">
                                             <Table>
                                                 <TableHeader><TableRow>
-                                                    <TableHead className="w-24">Image</TableHead><TableHead>Nom</TableHead><TableHead>Coût Achat</TableHead><TableHead>Prix Vente</TableHead><TableHead>Marge</TableHead><TableHead>Stock</TableHead><TableHead className="text-right">Actions</TableHead>
+                                                    <TableHead className="w-24">Image</TableHead><TableHead>Nom</TableHead><TableHead>Dimensions (mm)</TableHead><TableHead>Stock</TableHead><TableHead className="text-right">Actions</TableHead>
                                                 </TableRow></TableHeader>
                                                 <TableBody>
                                                     {categoryCharms.map((charm) => {
                                                         const itemAlertState = getItemAlertState(charm);
-                                                        const margin = charm.price && charm.purchasePrice ? charm.price - charm.purchasePrice : null;
                                                         return (
                                                             <TableRow key={charm.id}>
                                                                 <TableCell>
@@ -436,9 +443,9 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                                                     </DialogContent></Dialog>
                                                                 </TableCell>
                                                                 <TableCell className="font-medium">{charm.name}</TableCell>
-                                                                <TableCell>{charm.purchasePrice ? `${charm.purchasePrice.toFixed(2)}€` : '-'}</TableCell>
-                                                                <TableCell>{charm.price ? `${charm.price.toFixed(2)}€` : '-'}</TableCell>
-                                                                <TableCell>{margin !== null ? `${margin.toFixed(2)}€` : '-'}</TableCell>
+                                                                <TableCell className="font-mono text-xs">
+                                                                    {charm.width && charm.height ? `${charm.width} x ${charm.height}` : 'N/A'}
+                                                                </TableCell>
                                                                 <TableCell>
                                                                     <div className="flex items-center gap-2">
                                                                         {itemAlertState !== 'none' && (
@@ -459,6 +466,7 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                                                         onRestock={handleRestockAction}
                                                                         t={t}
                                                                     />
+                                                                    <Button variant="ghost" size="icon" onClick={() => handleSizeCharmClick(charm)}><Ruler className="h-4 w-4" /></Button>
                                                                     <Button variant="ghost" size="icon" onClick={() => handleEditCharmClick(charm)}><Edit className="h-4 w-4" /></Button>
                                                                     <AlertDialog>
                                                                         <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
@@ -487,7 +495,6 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                         <div className="md:hidden space-y-4">
                                             {categoryCharms.map((charm) => {
                                                 const itemAlertState = getItemAlertState(charm);
-                                                const margin = charm.price && charm.purchasePrice ? charm.price - charm.purchasePrice : null;
                                                 return (
                                                     <Card key={charm.id} className="p-4">
                                                         <div className="flex gap-4">
@@ -504,9 +511,7 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                                             </DialogContent></Dialog>
                                                             <div className="flex-grow space-y-1">
                                                                 <h4 className="font-bold">{charm.name}</h4>
-                                                                <p className="text-sm">Coût: {charm.purchasePrice ? `${charm.purchasePrice.toFixed(2)}€` : '-'}</p>
-                                                                <p className="text-sm">Vente: {charm.price ? `${charm.price.toFixed(2)}€` : '-'}</p>
-                                                                <p className="text-sm">Marge: {margin !== null ? `${margin.toFixed(2)}€` : '-'}</p>
+                                                                <p className="text-sm">Dimensions: {charm.width && charm.height ? `${charm.width} x ${charm.height}mm` : 'N/A'}</p>
                                                                 <div className="flex items-center gap-2">
                                                                     <span>Stock:</span>
                                                                     {itemAlertState !== 'none' && (
@@ -528,6 +533,7 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                                                 onRestock={handleRestockAction}
                                                                 t={t}
                                                             />
+                                                            <Button variant="ghost" size="icon" onClick={() => handleSizeCharmClick(charm)}><Ruler className="h-4 w-4" /></Button>
                                                             <Button variant="ghost" size="icon" onClick={() => handleEditCharmClick(charm)}><Edit className="h-4 w-4" /></Button>
                                                             <AlertDialog>
                                                                 <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
@@ -579,6 +585,15 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                     onOpenChange={setIsCharmFormOpen}
                     charm={selectedCharm}
                     allCategories={categories}
+                    onSave={handleSaveCharm}
+                    locale={locale}
+                />
+            )}
+            {isSizingToolOpen && charmToSize && (
+                <CharmSizingTool
+                    isOpen={isSizingToolOpen}
+                    onOpenChange={setIsSizingToolOpen}
+                    charm={charmToSize}
                     onSave={handleSaveCharm}
                     locale={locale}
                 />

@@ -264,26 +264,34 @@ export async function saveCharm(prevState: any, formData: FormData): Promise<{ s
         const locale = formData.get('locale') as string || 'fr';
         const imageData = formData.get('image') as string;
         const originalImageUrl = formData.get('originalImageUrl') as string || '';
+        const isDimensionUpdateOnly = formData.get('isDimensionUpdateOnly') === 'true';
 
-        if (!name || isNaN(price) || isNaN(quantity) || !categoryIds || categoryIds.length === 0) {
-            return { success: false, message: "Les champs obligatoires (nom, prix, quantité, au moins une catégorie) sont manquants ou invalides." };
+        let charmData: Partial<Charm> = {};
+        let imageUrl = originalImageUrl;
+
+        if (isDimensionUpdateOnly) {
+            if (!charmId || width === undefined || height === undefined) {
+                 return { success: false, message: "Informations manquantes pour la mise à jour des dimensions." };
+            }
+            charmData = { width, height };
+        } else {
+             if (!name || isNaN(price) || isNaN(quantity) || !categoryIds || categoryIds.length === 0) {
+                return { success: false, message: "Les champs obligatoires (nom, prix, quantité, au moins une catégorie) sont manquants ou invalides." };
+            }
+            imageUrl = await uploadImage(imageData, originalImageUrl, `charms/${name.replace(/\s+/g, '_')}`);
+            charmData = {
+                name,
+                description,
+                price,
+                purchasePrice,
+                quantity,
+                width,
+                height,
+                categoryIds: categoryIds,
+                imageUrl,
+                reorderUrl,
+            };
         }
-
-        const categoryRefs = categoryIds.map(id => doc(db, 'charmCategories', id));
-        const imageUrl = await uploadImage(imageData, originalImageUrl, `charms/${name.replace(/\s+/g, '_')}`);
-        
-        const charmData: Omit<Charm, 'id' | 'lastOrderedAt' | 'restockedAt'> = {
-            name,
-            description,
-            price,
-            purchasePrice,
-            quantity,
-            width,
-            height,
-            categoryIds: categoryIds, // Store array of string IDs
-            imageUrl,
-            reorderUrl,
-        };
         
         let savedCharmData: any;
 
@@ -297,8 +305,12 @@ export async function saveCharm(prevState: any, formData: FormData): Promise<{ s
             savedCharmData = { id: docRef.id, ...charmData, lastOrderedAt: null, restockedAt: null };
         }
         
-        const firstCategoryDoc = await getDoc(categoryRefs[0]);
-        const firstCategoryName = firstCategoryDoc.exists() ? firstCategoryDoc.data().name : 'Inconnue';
+        const firstCategoryId = savedCharmData.categoryIds[0];
+        let firstCategoryName = 'Inconnue';
+        if (firstCategoryId) {
+            const firstCategoryDoc = await getDoc(doc(db, 'charmCategories', firstCategoryId));
+            firstCategoryName = firstCategoryDoc.exists() ? firstCategoryDoc.data().name : 'Inconnue';
+        }
 
         const finalCharmObject = {
             ...savedCharmData,
@@ -306,9 +318,10 @@ export async function saveCharm(prevState: any, formData: FormData): Promise<{ s
         };
 
         revalidatePath(`/${locale}/admin/dashboard`);
+        const messageAction = isDimensionUpdateOnly ? 'dimensions ont été mises à jour' : (charmId ? 'mise à jour' : 'créée');
         return { 
             success: true, 
-            message: `La breloque a été ${charmId ? 'mise à jour' : 'créée'} avec succès.`,
+            message: `La breloque a été ${messageAction} avec succès.`,
             charm: finalCharmObject
         };
 
