@@ -4,8 +4,8 @@
 import React, { useState, useReducer, useTransition, useMemo, FormEvent } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, ZoomIn, AlertTriangle, ShoppingCart, Info, Search, Gem } from "lucide-react";
-import type { JewelryType, JewelryModel, GeneralPreferences } from "@/lib/types";
+import { PlusCircle, Edit, Trash2, ZoomIn, AlertTriangle, ShoppingCart, Info, Search, Gem, Ruler } from "lucide-react";
+import type { JewelryType, JewelryModel, GeneralPreferences, Charm } from "@/lib/types";
 import { ModelForm } from './model-form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
@@ -36,9 +36,11 @@ import { useTranslations } from '@/hooks/use-translations';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardTitle } from './ui/card';
+import { ModelSizingTool } from './model-sizing-tool';
 
 interface ModelsManagerProps {
     initialJewelryTypes: Omit<JewelryType, 'icon'>[];
+    allCharms: Charm[];
     locale: string;
     preferences: GeneralPreferences;
 }
@@ -179,7 +181,7 @@ function ReorderDialog({ model, jewelryTypeId, locale, onOrder, onRestock, t }: 
     );
 }
 
-export function ModelsManager({ initialJewelryTypes, locale, preferences }: ModelsManagerProps) {
+export function ModelsManager({ initialJewelryTypes, allCharms, locale, preferences }: ModelsManagerProps) {
     const { toast } = useToast();
     const t = useTranslations('Admin');
     const [isPending, startTransition] = useTransition();
@@ -189,6 +191,8 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
     const [selectedJewelryType, setSelectedJewelryType] = useState<Omit<JewelryType, 'models'|'icon'>>(initialJewelryTypes[0]);
     const [selectedModel, setSelectedModel] = useState<JewelryModel | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isSizingToolOpen, setIsSizingToolOpen] = useState(false);
+    const [modelToSize, setModelToSize] = useState<JewelryModel | null>(null);
 
     const handleAddModelClick = (jewelryType: Omit<JewelryType, 'models'|'icon'>) => {
         setSelectedJewelryType(jewelryType);
@@ -201,6 +205,12 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
         setSelectedModel(model);
         setIsFormOpen(true);
     };
+    
+    const handleSizeModelClick = (jewelryType: Omit<JewelryType, 'models'|'icon'>, model: JewelryModel) => {
+        setSelectedJewelryType(jewelryType);
+        setModelToSize(model);
+        setIsSizingToolOpen(true);
+    }
 
     const handleSaveModel = (model: JewelryModel) => {
         const isEditing = jewelryTypes.some(jt => jt.id === selectedJewelryType.id && jt.models.some(m => m.id === model.id));
@@ -342,6 +352,7 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                                 <TableRow>
                                                     <TableHead className="w-24">Image</TableHead>
                                                     <TableHead>Nom</TableHead>
+                                                    <TableHead>Dimensions (mm)</TableHead>
                                                     <TableHead>Coût Achat</TableHead>
                                                     <TableHead>Prix Vente</TableHead>
                                                     <TableHead>Marge</TableHead>
@@ -372,6 +383,9 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                                                 </Dialog>
                                                             </TableCell>
                                                             <TableCell className="font-medium">{model.name}</TableCell>
+                                                             <TableCell className="font-mono text-xs">
+                                                                {model.width && model.height ? `${model.width} x ${model.height}` : 'N/A'}
+                                                            </TableCell>
                                                             <TableCell>{model.purchasePrice ? `${model.purchasePrice.toFixed(2)}€` : '-'}</TableCell>
                                                             <TableCell>{model.price ? `${model.price.toFixed(2)}€` : '-'}</TableCell>
                                                             <TableCell>{margin !== null ? `${margin.toFixed(2)}€` : '-'}</TableCell>
@@ -388,6 +402,7 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                                                 </div>
                                                             </TableCell>
                                                             <TableCell className="text-right space-x-1">
+                                                                 <Button variant="ghost" size="icon" onClick={() => handleSizeModelClick(jewelryType, model)}><Ruler className="h-4 w-4" /></Button>
                                                                 <ReorderDialog 
                                                                     model={model}
                                                                     jewelryTypeId={jewelryType.id}
@@ -454,6 +469,7 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                                         </Dialog>
                                                         <div className="flex-grow space-y-1">
                                                             <h4 className="font-bold">{model.name}</h4>
+                                                            <p className="text-sm">Dimensions: {model.width && model.height ? `${model.width} x ${model.height}mm` : 'N/A'}</p>
                                                             <p className="text-sm">Coût: {model.purchasePrice ? `${model.purchasePrice.toFixed(2)}€` : '-'}</p>
                                                             <p className="text-sm">Vente: {model.price ? `${model.price.toFixed(2)}€` : '-'}</p>
                                                             <p className="text-sm">Marge: {margin !== null ? `${margin.toFixed(2)}€` : '-'}</p>
@@ -471,6 +487,7 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                                         </div>
                                                     </div>
                                                     <div className="flex justify-end items-center gap-1 mt-2">
+                                                         <Button variant="ghost" size="icon" onClick={() => handleSizeModelClick(jewelryType, model)}><Ruler className="h-4 w-4" /></Button>
                                                         <ReorderDialog 
                                                             model={model}
                                                             jewelryTypeId={jewelryType.id}
@@ -527,6 +544,17 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                     model={selectedModel}
                     onSave={handleSaveModel}
                     locale={locale}
+                />
+            )}
+             {isSizingToolOpen && modelToSize && (
+                <ModelSizingTool
+                    isOpen={isSizingToolOpen}
+                    onOpenChange={setIsSizingToolOpen}
+                    model={modelToSize}
+                    allCharms={allCharms}
+                    onSave={handleSaveModel}
+                    locale={locale}
+                    jewelryType={selectedJewelryType}
                 />
             )}
         </>

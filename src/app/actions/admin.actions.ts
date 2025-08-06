@@ -106,39 +106,52 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
     try {
         const modelId = formData.get('modelId') as string | null;
         const jewelryTypeId = formData.get('jewelryTypeId') as string;
-        const name = formData.get('name') as string;
-        const price = parseFloat(formData.get('price') as string);
-        const purchasePrice = parseFloat(formData.get('purchasePrice') as string) || undefined;
-        const quantity = parseInt(formData.get('quantity') as string, 10);
-        const width = parseFloat(formData.get('width') as string) || undefined;
-        const height = parseFloat(formData.get('height') as string) || undefined;
-        const reorderUrl = formData.get('reorderUrl') as string;
         const locale = formData.get('locale') as string || 'fr';
+        const isDimensionUpdateOnly = formData.get('isDimensionUpdateOnly') === 'true';
 
-        const displayImageData = formData.get('displayImage') as string;
-        const editorImageData = formData.get('editorImage') as string;
-        
-        const originalDisplayImageUrl = formData.get('originalDisplayImageUrl') as string || '';
-        const originalEditorImageUrl = formData.get('originalEditorImageUrl') as string || '';
+        let modelData: Partial<Omit<JewelryModel, 'id' | 'lastOrderedAt' | 'restockedAt'>> = {};
 
-        if (!jewelryTypeId || !name || isNaN(price) || isNaN(quantity)) {
-            return { success: false, message: "Les champs obligatoires sont manquants ou invalides." };
+        if (isDimensionUpdateOnly) {
+            const width = parseFloat(formData.get('width') as string) || undefined;
+            const height = parseFloat(formData.get('height') as string) || undefined;
+             if (!modelId || width === undefined || height === undefined) {
+                 return { success: false, message: "Informations manquantes pour la mise à jour des dimensions." };
+            }
+            modelData = { width, height };
+        } else {
+            const name = formData.get('name') as string;
+            const price = parseFloat(formData.get('price') as string);
+            const purchasePrice = parseFloat(formData.get('purchasePrice') as string) || undefined;
+            const quantity = parseInt(formData.get('quantity') as string, 10);
+            const width = parseFloat(formData.get('width') as string) || undefined;
+            const height = parseFloat(formData.get('height') as string) || undefined;
+            const reorderUrl = formData.get('reorderUrl') as string;
+
+            const displayImageData = formData.get('displayImage') as string;
+            const editorImageData = formData.get('editorImage') as string;
+            
+            const originalDisplayImageUrl = formData.get('originalDisplayImageUrl') as string || '';
+            const originalEditorImageUrl = formData.get('originalEditorImageUrl') as string || '';
+
+            if (!jewelryTypeId || !name || isNaN(price) || isNaN(quantity)) {
+                return { success: false, message: "Les champs obligatoires sont manquants ou invalides." };
+            }
+
+            const displayImageUrl = await uploadImage(displayImageData, originalDisplayImageUrl, jewelryTypeId);
+            const editorImageUrl = await uploadImage(editorImageData, originalEditorImageUrl, jewelryTypeId);
+            
+            modelData = {
+                name,
+                price,
+                purchasePrice,
+                quantity,
+                width,
+                height,
+                displayImageUrl,
+                editorImageUrl,
+                reorderUrl,
+            };
         }
-
-        const displayImageUrl = await uploadImage(displayImageData, originalDisplayImageUrl, jewelryTypeId);
-        const editorImageUrl = await uploadImage(editorImageData, originalEditorImageUrl, jewelryTypeId);
-
-        const modelData: Omit<JewelryModel, 'id' | 'lastOrderedAt' | 'restockedAt'> = {
-            name,
-            price,
-            purchasePrice,
-            quantity,
-            width,
-            height,
-            displayImageUrl,
-            editorImageUrl,
-            reorderUrl,
-        };
 
         let savedModel: JewelryModel;
 
@@ -150,14 +163,18 @@ export async function saveModel(prevState: any, formData: FormData): Promise<{ s
             savedModel = { id: modelId, ...docSnap.data() } as JewelryModel;
         } else {
             // Create
+            if (isDimensionUpdateOnly) {
+                 return { success: false, message: "Impossible de mettre à jour les dimensions d'un nouveau modèle." };
+            }
             const docRef = await addDoc(collection(db, jewelryTypeId), modelData);
             savedModel = { id: docRef.id, ...modelData, lastOrderedAt: null, restockedAt: null };
         }
 
         revalidatePath(`/${locale}/admin/dashboard`);
+        const messageAction = isDimensionUpdateOnly ? 'dimensions ont été mises à jour' : (modelId ? 'mis à jour' : 'créé');
         return { 
             success: true, 
-            message: `Le modèle a été ${modelId ? 'mis à jour' : 'créé'} avec succès.`,
+            message: `Le modèle a été ${messageAction} avec succès.`,
             model: savedModel
         };
 

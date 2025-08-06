@@ -119,7 +119,7 @@ export default function AdminDashboardPage({ params }: { params: { locale: strin
                                 </div>
                             );
                         case 'models':
-                            return <ModelsManager initialJewelryTypes={data.jewelryTypes} locale={params.locale} preferences={data.preferences} />;
+                            return <ModelsManager initialJewelryTypes={data.jewelryTypes} allCharms={data.charms} locale={params.locale} preferences={data.preferences} />;
                         case 'charms':
                              return <CharmsManager initialCharms={data.charms} initialCharmCategories={data.charmCategories} locale={params.locale} preferences={data.preferences} />;
                         case 'preferences':
