@@ -270,7 +270,7 @@ export function CartSheet({ children, open, onOpenChange }: {
                                 <SheetClose asChild>
                                     <Button variant="outline" size="sm" asChild className="text-xs">
                                         <Link href={editUrl}>
-                                            <Edit className="mr-1 h-3 w-3"/>{t('edit_item_button')}
+                                            {t('edit_item_button')}
                                         </Link>
                                     </Button>
                                 </SheetClose>
@@ -284,8 +284,7 @@ export function CartSheet({ children, open, onOpenChange }: {
                             size="sm"
                             className={cn(
                                 "text-destructive hover:text-destructive text-xs",
-                                isFromAnotherCreator && "col-span-3",
-                                !isFromAnotherCreator && isPublished && "col-span-1"
+                                (isFromAnotherCreator || isPublished) && "col-span-full",
                             )}
                             onClick={() => removeFromCart(item.id)}
                             disabled={isProcessing}
