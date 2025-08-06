@@ -189,7 +189,7 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
                                 <div className="flex items-center gap-2">
                                      <Dimension size={referenceCharm.height!} direction="vertical"/>
                                     <div className="flex flex-col items-center justify-center gap-1 text-center flex-shrink-0" style={{width: `${displayScaling.refWidth}px`, height: `${displayScaling.refHeight}px`}}>
-                                        <div className="relative w-full h-full">
+                                        <div className="relative w-full h-full border border-dashed border-red-500">
                                             <Image
                                                 src={referenceCharm.imageUrl}
                                                 alt={`Référence: ${referenceCharm.name}`}
@@ -204,7 +204,7 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
                                 
                                 <div className="flex items-center gap-2">
                                      <div className="flex flex-col items-center justify-center gap-1 text-center flex-shrink-0" style={{width: `${displayScaling.currentWidth}px`, height: `${displayScaling.currentHeight}px`}}>
-                                         <div className="relative w-full h-full">
+                                         <div className="relative w-full h-full border border-dashed border-red-500">
                                             <Image
                                                 src={charm.imageUrl}
                                                 alt={charm.name}
