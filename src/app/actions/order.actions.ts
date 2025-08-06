@@ -1,3 +1,4 @@
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -635,7 +636,7 @@ export async function getOrders(): Promise<Order[]> {
         const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
         // Fetch all required charms in a single query
-        let charmsMap = new Map();
+        let charmsMap = new Map<string, any>();
         if (uniqueCharmIds.length > 0) {
             // Firestore 'in' query is limited to 30 items, so chunk if necessary
             const charmIdChunks = [];
@@ -647,7 +648,7 @@ export async function getOrders(): Promise<Order[]> {
                 const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', chunk));
                 const charmsSnapshot = await getDocs(charmsQuery);
                 for (const charmDoc of charmsSnapshot.docs) {
-                    const charmData = charmDoc.data() as Omit<Charm, 'id'>;
+                    const charmData = charmDoc.data() as Omit<any, 'id'>;
                     const imageUrl = await getUrl(charmData.imageUrl, 'https://placehold.co/100x100.png');
                     charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id, imageUrl });
                 }
@@ -664,7 +665,7 @@ export async function getOrders(): Promise<Order[]> {
                          if (!charm) return null;
                         return { ...charm, withClasp: charmDetail.withClasp };
                     })
-                    .filter((c): c is (Charm & { withClasp: boolean }) => !!c); // Filter out undefined charms
+                    .filter((c): c is (any & { withClasp: boolean }) => !!c); // Filter out undefined charms
 
                 return {
                     ...item,

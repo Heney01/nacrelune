@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -24,7 +25,7 @@ const statusVariants: { [key in Order['status']]: string } = {
 };
 
 export function MyOrdersClient({ locale }: { locale: string }) {
-  const { firebaseUser, loading: authLoading } = useAuth();
+  const { user, firebaseUser, loading: authLoading } = useAuth();
   const t = useTranslations('Auth');
   const tStatus = useTranslations('OrderStatus');
   const tCart = useTranslations('Cart');
@@ -126,7 +127,6 @@ export function MyOrdersClient({ locale }: { locale: string }) {
                                 <li key={index} className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="w-12 h-12 rounded-md border bg-white p-1 flex-shrink-0">
-                                            {/* We don't have the preview image here, so we show a placeholder */}
                                             <Package className="w-full h-full text-muted-foreground" />
                                         </div>
                                         <div>
