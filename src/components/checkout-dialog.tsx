@@ -14,13 +14,11 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { loadStripe, Stripe, StripeElementsOptions } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
-import { CreateOrderResult } from '@/app/actions/order.actions';
+import { CreateOrderResult, createPaymentIntent } from '@/app/actions/order.actions';
 import { CheckoutForm } from './checkout-form';
 import type { ShippingAddress, Coupon } from '@/lib/types';
 import { Button } from './ui/button';
 import { useAuth } from '@/hooks/use-auth';
-import { useStripe, useElements } from '@stripe/react-stripe-js';
-import { StripePaymentElementOptions } from '@stripe/stripe-js';
 
 export type StockErrorState = {
   message: string;
@@ -36,45 +34,9 @@ interface CheckoutDialogProps {
   setStockError: (error: StockErrorState) => void;
 }
 
-const StripeWrapper = ({ children, total }: { children: React.ReactNode, total: number }) => {
-  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
-
-  useEffect(() => {
-    if (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
-      setStripePromise(loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY));
-    } else {
-      console.error("Stripe publishable key is not set.");
-    }
-  }, []);
-
-  const paymentElementOptions: StripePaymentElementOptions = {
-    layout: 'tabs',
-  };
-
-  const stripeOptions: StripeElementsOptions = {
-    mode: 'payment',
-    amount: Math.max(50, Math.round(total * 100)), // Stripe requires a minimum amount (e.g., 50 cents)
-    currency: 'eur',
-    appearance: { 
-        theme: 'stripe', 
-        variables: { 
-            colorPrimary: '#ef4444',
-            fontFamily: 'Montserrat, sans-serif',
-            borderRadius: '6px',
-        } 
-    },
-  };
-  
-   if (!stripePromise) {
-    return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin" /></div>;
-  }
-
-  return (
-    <Elements stripe={stripePromise} options={stripeOptions}>
-      {children}
-    </Elements>
-  )
-}
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  : null;
 
 export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockError, setStockError }: CheckoutDialogProps) {
   const t = useTranslations('Checkout');
@@ -83,6 +45,9 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
   const { user } = useAuth();
   
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [isPreparingPayment, setIsPreparingPayment] = useState(true);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   const subtotal = cart.reduce((sum, item) => {
     const modelPrice = item.model.price || 0;
@@ -100,13 +65,54 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
   
   const total = Math.max(0, subtotal - discountAmount + shippingCost);
 
-  const formatPrice = (price: number) => tCart('price', { price });
+  useEffect(() => {
+    if (isOpen && total > 0) {
+      setIsPreparingPayment(true);
+      setPaymentError(null);
+      
+      const email = user?.email || 'customer@example.com';
 
+      createPaymentIntent(total, email)
+        .then(data => {
+          if (data.clientSecret) {
+            setClientSecret(data.clientSecret);
+          } else {
+            setPaymentError(data.error || t('payment_intent_error'));
+          }
+        })
+        .catch(() => {
+          setPaymentError(t('payment_intent_error'));
+        })
+        .finally(() => {
+          setIsPreparingPayment(false);
+        });
+    } else if (isOpen && total <= 0) {
+        setIsPreparingPayment(false);
+        setClientSecret('free_order'); // Special case for free orders
+    }
+  }, [isOpen, total, user, t]);
+
+  const stripeOptions: StripeElementsOptions | undefined = clientSecret
+    ? {
+        clientSecret,
+        appearance: {
+          theme: 'stripe',
+          variables: {
+            colorPrimary: '#ef4444',
+            fontFamily: 'Montserrat, sans-serif',
+            borderRadius: '6px',
+          },
+        },
+      }
+    : undefined;
+
+  const formatPrice = (price: number) => tCart('price', { price });
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
         if (!open) {
           setAppliedCoupon(null);
+          setClientSecret(null);
         }
         onOpenChange(open);
     }}>
@@ -115,15 +121,36 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <div className="flex flex-col h-full max-h-[90vh] md:max-h-none overflow-y-auto no-scrollbar">
-           <StripeWrapper total={total}>
-              <CheckoutForm 
-                  total={subtotal} // Pass subtotal to calculate discounts correctly
-                  onOrderCreated={onOrderCreated}
-                  setStockError={setStockError}
-                  appliedCoupon={appliedCoupon}
-                  setAppliedCoupon={setAppliedCoupon}
-              />
-          </StripeWrapper>
+           {isPreparingPayment && (
+             <div className="flex flex-col items-center justify-center h-full">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <p className="mt-4 text-sm text-muted-foreground">{t('processing_button')}</p>
+             </div>
+           )}
+           {paymentError && (
+             <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+                 <Alert variant="destructive">
+                     <AlertCircle className="h-4 w-4" />
+                     <AlertTitle>{t('payment_error_title')}</AlertTitle>
+                     <AlertDescription>{paymentError}</AlertDescription>
+                 </Alert>
+                  <Button variant="outline" onClick={() => onOpenChange(false)} className="mt-4">
+                      {tCart('close_button')}
+                  </Button>
+             </div>
+           )}
+           {!isPreparingPayment && !paymentError && stripePromise && stripeOptions && (
+             <Elements stripe={stripePromise} options={stripeOptions}>
+                <CheckoutForm 
+                    total={subtotal}
+                    onOrderCreated={onOrderCreated}
+                    setStockError={setStockError}
+                    appliedCoupon={appliedCoupon}
+                    setAppliedCoupon={setAppliedCoupon}
+                    clientSecret={clientSecret!}
+                />
+            </Elements>
+           )}
         </div>
         
         <aside className="hidden md:flex flex-col bg-muted/50 p-6 overflow-y-auto no-scrollbar">

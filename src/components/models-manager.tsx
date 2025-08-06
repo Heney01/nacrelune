@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useReducer, useTransition, useMemo, FormEvent } from 'react';
@@ -313,6 +314,8 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                 <Accordion type="multiple" className="w-full" defaultValue={jewelryTypes.map(jt => jt.id)}>
                     {filteredJewelryTypes.map((jewelryType) => {
                         const alertState = getCategoryAlertState(jewelryType.models);
+                        const titleId = `dialog-title-${jewelryType.id}`;
+                        const descriptionId = `dialog-description-${jewelryType.id}`;
                         return (
                             <AccordionItem value={jewelryType.id} key={jewelryType.id}>
                                 <AccordionTrigger className="text-xl font-headline flex-1 py-4 hover:no-underline [&>svg]:hidden">
@@ -360,8 +363,8 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                                                             </div>
                                                                         </div>
                                                                     </DialogTrigger>
-                                                                    <DialogContent>
-                                                                        <DialogHeader><DialogTitle>{model.name}</DialogTitle></DialogHeader>
+                                                                    <DialogContent aria-labelledby={titleId} aria-describedby={descriptionId}>
+                                                                        <DialogHeader><DialogTitle id={titleId}>{model.name}</DialogTitle><DialogDescription id={descriptionId}>{jewelryType.name}</DialogDescription></DialogHeader>
                                                                         <Image src={model.displayImageUrl} alt={model.name} width={400} height={400} className="w-full h-auto object-contain rounded-lg" sizes="400px"/>
                                                                     </DialogContent>
                                                                 </Dialog>
@@ -439,8 +442,8 @@ export function ModelsManager({ initialJewelryTypes, locale, preferences }: Mode
                                                                     </div>
                                                                 </div>
                                                             </DialogTrigger>
-                                                            <DialogContent>
-                                                                <DialogHeader><DialogTitle>{model.name}</DialogTitle></DialogHeader>
+                                                            <DialogContent aria-labelledby={titleId} aria-describedby={descriptionId}>
+                                                                <DialogHeader><DialogTitle id={titleId}>{model.name}</DialogTitle><DialogDescription id={descriptionId}>{jewelryType.name}</DialogDescription></DialogHeader>
                                                                 <Image src={model.displayImageUrl} alt={model.name} width={400} height={400} className="w-full h-auto object-contain rounded-lg" sizes="400px"/>
                                                             </DialogContent>
                                                         </Dialog>

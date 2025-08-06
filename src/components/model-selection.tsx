@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from 'react';
@@ -40,59 +41,64 @@ export function ModelSelection({ selectedType, locale }: ModelSelectionProps) {
                 <p className="text-muted-foreground mb-12 max-w-2xl mx-auto text-center">{t('model_selection_subtitle', { jewelryTypeName: selectedType.name.toLowerCase() })}</p>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                    {selectedType.models.map((model, index) => (
-                        <Card key={model.id} className="overflow-hidden group flex flex-col">
-                           <div className="overflow-hidden relative">
-                                <Link 
-                                    href={`/${locale}/?type=${selectedType.id}&model=${model.id}`} 
-                                    onClick={() => handleModelClick(model.id)}
-                                    className="block relative w-full h-64"
-                                >
-                                    <Image 
-                                        src={model.displayImageUrl} 
-                                        alt={model.name} 
-                                        fill
-                                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                                        className="object-contain group-hover:scale-105 transition-transform duration-300" 
-                                        data-ai-hint="jewelry"
-                                        priority={index < 4}
-                                    />
-                                     {loadingModelId === model.id && (
-                                        <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-                                            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                                        </div>
-                                    )}
-                                </Link>
-                                <Dialog>
-                                    <DialogTrigger asChild>
-                                        <Button variant="secondary" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <ZoomIn className="h-5 w-5" />
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent className="max-w-3xl" aria-describedby={`model-description-${model.id}`}>
-                                        <DialogHeader>
-                                            <DialogTitle>{model.name}</DialogTitle>
-                                            <DialogDescription id={`model-description-${model.id}`}>{selectedType.name}</DialogDescription>
-                                        </DialogHeader>
-                                        <div className="mt-4 grid place-items-center">
-                                            <Image src={model.displayImageUrl} alt={model.name} width={800} height={800} className="w-full h-auto object-contain rounded-lg max-w-full max-h-[80vh]" data-ai-hint="jewelry model" sizes="100vw"/>
-                                        </div>
-                                    </DialogContent>
-                                </Dialog>
-                            </div>
-                            <CardContent className="p-4 flex-grow flex flex-col justify-between">
-                                <h3 className="text-lg font-headline flex-grow">{model.name}</h3>
-                                <Button asChild variant="outline" size="sm" className="w-full mt-4" disabled={!!loadingModelId}>
+                    {selectedType.models.map((model, index) => {
+                        const titleId = `model-title-${model.id}`;
+                        const descriptionId = `model-description-${model.id}`;
+
+                        return (
+                            <Card key={model.id} className="overflow-hidden group flex flex-col">
+                               <div className="overflow-hidden relative">
                                     <Link 
                                         href={`/${locale}/?type=${selectedType.id}&model=${model.id}`} 
                                         onClick={() => handleModelClick(model.id)}
+                                        className="block relative w-full h-64"
                                     >
-                                        {loadingModelId === model.id ? <Loader2 className="animate-spin" /> : t('select_button')}
+                                        <Image 
+                                            src={model.displayImageUrl} 
+                                            alt={model.name} 
+                                            fill
+                                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                            className="object-contain group-hover:scale-105 transition-transform duration-300" 
+                                            data-ai-hint="jewelry"
+                                            priority={index < 4}
+                                        />
+                                         {loadingModelId === model.id && (
+                                            <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                                                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                                            </div>
+                                        )}
                                     </Link>
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    ))}
+                                    <Dialog>
+                                        <DialogTrigger asChild>
+                                            <Button variant="secondary" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <ZoomIn className="h-5 w-5" />
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="max-w-3xl" aria-labelledby={titleId} aria-describedby={descriptionId}>
+                                            <DialogHeader>
+                                                <DialogTitle id={titleId}>{model.name}</DialogTitle>
+                                                <DialogDescription id={descriptionId}>{selectedType.name}</DialogDescription>
+                                            </DialogHeader>
+                                            <div className="mt-4 grid place-items-center">
+                                                <Image src={model.displayImageUrl} alt={model.name} width={800} height={800} className="w-full h-auto object-contain rounded-lg max-w-full max-h-[80vh]" data-ai-hint="jewelry model" sizes="100vw"/>
+                                            </div>
+                                        </DialogContent>
+                                    </Dialog>
+                                </div>
+                                <CardContent className="p-4 flex-grow flex flex-col justify-between">
+                                    <h3 className="text-lg font-headline flex-grow">{model.name}</h3>
+                                    <Button asChild variant="outline" size="sm" className="w-full mt-4" disabled={!!loadingModelId}>
+                                        <Link 
+                                            href={`/${locale}/?type=${selectedType.id}&model=${model.id}`} 
+                                            onClick={() => handleModelClick(model.id)}
+                                        >
+                                            {loadingModelId === model.id ? <Loader2 className="animate-spin" /> : t('select_button')}
+                                        </Link>
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        )
+                    })}
                 </div>
             </section>
         </>

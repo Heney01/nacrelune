@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useTransition, useEffect } from 'react';
@@ -261,6 +262,9 @@ export function CreationCard({
     e.stopPropagation();
     setIsShareOpen(true);
   };
+  
+  const titleId = `creation-title-${creation.id}`;
+  const descriptionId = `creation-desc-${creation.id}`;
 
   return (
     <>
@@ -355,10 +359,10 @@ export function CreationCard({
           </CardContent>
         </Card>
 
-        <DialogContent className="max-w-xl" onOpenAutoFocus={(e) => e.preventDefault()}>
+        <DialogContent className="max-w-xl" onOpenAutoFocus={(e) => e.preventDefault()} aria-labelledby={titleId} aria-describedby={descriptionId}>
           <DialogHeader>
-              <DialogTitle className="font-headline text-2xl">{creation.name}</DialogTitle>
-              {creation.creator && <DialogDescription>Par {creation.creator.displayName}</DialogDescription>}
+              <DialogTitle id={titleId} className="font-headline text-2xl">{creation.name}</DialogTitle>
+              {creation.creator && <DialogDescription id={descriptionId}>Par {creation.creator.displayName}</DialogDescription>}
           </DialogHeader>
           <div className="mt-4 -mx-6 sm:mx-0">
             <Image

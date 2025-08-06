@@ -19,7 +19,6 @@ import type { ShippingAddress, DeliveryMethod, PickupPoint, Coupon, User } from 
 import { Progress } from './ui/progress';
 import { Tabs, TabsList, TabsContent, TabsTrigger } from './ui/tabs';
 import { findPickupPoints, FindPickupPointsResult } from '@/lib/pickup-points';
-import { ScrollArea } from './ui/scroll-area';
 import { Card } from './ui/card';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -36,7 +35,7 @@ const PaymentStep = ({
   email,
   deliveryMethod,
   shippingAddress,
-  selectedPickupPoint,
+  clientSecret,
   appliedCoupon,
   setAppliedCoupon,
 }: {
@@ -45,7 +44,7 @@ const PaymentStep = ({
   email: string;
   deliveryMethod: DeliveryMethod;
   shippingAddress?: ShippingAddress;
-  selectedPickupPoint?: PickupPoint;
+  clientSecret: string;
   appliedCoupon: Coupon | null;
   setAppliedCoupon: (coupon: Coupon | null) => void;
 }) => {
@@ -91,40 +90,54 @@ const PaymentStep = ({
 
     const result = await validateCoupon(couponCode);
     if (result.success && result.coupon) {
-        setAppliedCoupon(result.coupon);
-        toast({
-            title: t('coupon_applied_title'),
-            description: t('coupon_applied_description', {code: result.coupon.code}),
-        })
+        if (result.coupon.minPurchase && totalBeforeCoupon < result.coupon.minPurchase) {
+            setCouponError(`Le total de la commande doit être d'au moins ${formatPrice(result.coupon.minPurchase)} pour utiliser ce coupon.`);
+        } else {
+            setAppliedCoupon(result.coupon);
+            toast({
+                title: t('coupon_applied_title'),
+                description: t('coupon_applied_description', {code: result.coupon.code}),
+            })
+        }
     } else {
         setCouponError(result.message);
     }
     setIsApplyingCoupon(false);
   }
 
-  const handleFreeOrder = async () => {
+  const handleConfirmOrder = async () => {
     setIsProcessing(true);
     setErrorMessage(null);
-    // Logic for free orders is now handled on the confirmation page after redirection.
-    // We just need to ensure the client secret is passed correctly, even if the amount is 0.
-    if (!elements) return;
 
-    const { error: submitError } = await elements.submit();
-    if (submitError) {
-      setErrorMessage(submitError.message || t('payment_error_default'));
-      setIsProcessing(false);
-      return;
+    const serializableCart: SerializableCartItem[] = cart.map(item => ({
+        id: item.id,
+        model: item.model,
+        jewelryType: { id: item.jewelryType.id, name: item.jewelryType.name, description: item.jewelryType.description },
+        placedCharms: item.placedCharms,
+        previewImage: item.previewImage,
+        creator: item.creator,
+        creationId: item.creationId,
+    }));
+    
+    // The payment intent ID is derived from the client secret
+    const paymentIntentId = clientSecret.split('_secret_')[0];
+
+    const result = await createOrder(
+        serializableCart,
+        email,
+        paymentIntentId,
+        deliveryMethod,
+        shippingAddress,
+        appliedCoupon || undefined,
+        user?.uid,
+        pointsToUse
+    );
+
+    if (result.success && result.orderId) {
+        await sendConfirmationEmail(result.orderId, locale);
     }
 
-    const returnUrl = `${window.location.origin}/${locale}/orders/confirmation`;
-    const { error: paymentError } = await stripe!.confirmPayment({
-        elements,
-        confirmParams: { return_url: returnUrl, receipt_email: email },
-    });
-
-    if (paymentError) {
-        setErrorMessage(paymentError.message || t('payment_error_default'));
-    }
+    onOrderCreated(result); // This will handle UI changes (show success/error dialog)
 
     setIsProcessing(false);
   }
@@ -132,14 +145,14 @@ const PaymentStep = ({
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (finalTotal <= 0) {
-        handleFreeOrder();
-        return;
-    }
-
     if (!stripe || !elements) {
       setErrorMessage(t('payment_error_default'));
       return;
+    }
+
+    if (finalTotal <= 0) {
+        await handleConfirmOrder();
+        return;
     }
 
     setIsProcessing(true);
@@ -152,25 +165,22 @@ const PaymentStep = ({
       return;
     }
 
-    // This URL will be used by Stripe to redirect the user after payment.
-    const returnUrl = `${window.location.origin}/${locale}/orders/confirmation`;
-    
-    const { error: paymentError } = await stripe.confirmPayment({
+    const { error } = await stripe.confirmPayment({
       elements,
+      clientSecret,
       confirmParams: {
-        return_url: returnUrl,
+        return_url: `${window.location.origin}/${locale}/orders/confirmation`,
         receipt_email: email,
       },
+      redirect: "if_required" 
     });
 
-    if (paymentError) {
-      // This point will only be reached if there is an immediate error when
-      // confirming the payment. Otherwise, your customer will be redirected to
-      // your `return_url`.
-      setErrorMessage(paymentError.message || t('payment_error_default'));
+    if (error) {
+      setErrorMessage(error.message || t('payment_error_default'));
       setIsProcessing(false);
+    } else {
+      await handleConfirmOrder();
     }
-    // The user is redirected at this point, so no further client-side code will execute.
   };
 
   const isStripeLoading = !stripe || !elements;
@@ -307,12 +317,14 @@ export const CheckoutForm = ({
   setStockError,
   appliedCoupon,
   setAppliedCoupon,
+  clientSecret,
 }: {
   total: number;
   onOrderCreated: (result: CreateOrderResult) => void;
   setStockError: (error: StockErrorState) => void;
   appliedCoupon: Coupon | null;
   setAppliedCoupon: (coupon: Coupon | null) => void;
+  clientSecret: string;
 }) => {
   const t = useTranslations('Checkout');
   const tStatus = useTranslations('OrderStatus');
@@ -414,7 +426,7 @@ export const CheckoutForm = ({
                       email={email}
                       deliveryMethod={deliveryMethod}
                       shippingAddress={shippingAddress}
-                      selectedPickupPoint={selectedPickupPoint || undefined}
+                      clientSecret={clientSecret}
                       appliedCoupon={appliedCoupon}
                       setAppliedCoupon={setAppliedCoupon}
                   />
