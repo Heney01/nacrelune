@@ -140,6 +140,7 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
                                     alt={`Référence: ${referenceCharm.name}`}
                                     fill
                                     className="object-contain"
+                                    sizes={`${referenceWidthPx}px`}
                                 />
                             </div>
 
@@ -156,6 +157,7 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave
                                     alt={charm.name}
                                     fill
                                     className="object-contain"
+                                    sizes={`${REFERENCE_IMAGE_WIDTH_PX * (charmSizePercentage / 100)}px`}
                                 />
                             </div>
                         </div>
