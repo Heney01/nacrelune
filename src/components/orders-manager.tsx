@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useReducer, useTransition, Fragment, useMemo } from 'react';
+import React, { useState, useReducer, useTransition, Fragment, useMemo, useEffect } from 'react';
 import type { Order, OrderStatus, OrderItem, Charm, MailLog, DeliveryMethod } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from './ui/card';
@@ -576,6 +576,10 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
     const [isShipDialogOpen, setIsShipDialogOpen] = useState(false);
     const [selectedOrderForShipping, setSelectedOrderForShipping] = useState<Order | null>(null);
 
+    useEffect(() => {
+        console.log('[DEBUG] OrdersManager received initialOrders:', initialOrders);
+    }, [initialOrders]);
+
     const toggleOrder = (orderId: string) => {
         setOpenOrders(prev => {
             const newSet = new Set(prev);
@@ -697,7 +701,7 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
         setIsShipDialogOpen(true);
     };
     
-    const OrderTableContent = ({ orders }: { orders: Order[] }) => {
+    const OrderTableContent = ({ ordersToShow }: { ordersToShow: Order[] }) => {
         return (
             <>
                 {/* Desktop Table View */}
@@ -715,8 +719,8 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {orders.length > 0 ? (
-                                orders.map(order => (
+                            {ordersToShow.length > 0 ? (
+                                ordersToShow.map(order => (
                                     <OrderRow 
                                         key={order.id}
                                         order={order}
@@ -743,8 +747,8 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
 
                 {/* Mobile Card View */}
                 <div className="md:hidden space-y-4 mt-4">
-                     {orders.length > 0 ? (
-                        orders.map(order => (
+                     {ordersToShow.length > 0 ? (
+                        ordersToShow.map(order => (
                             <Card key={order.id} className={cn("overflow-hidden", isPending && 'opacity-50')}>
                                 <div className="p-4 cursor-pointer" onClick={() => toggleOrder(order.id)}>
                                     <div className="flex justify-between items-start">
@@ -863,10 +867,10 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
                             <TabsTrigger value="archived">Commandes Terminées</TabsTrigger>
                         </TabsList>
                         <TabsContent value="active">
-                            <OrderTableContent orders={filteredOrders} />
+                            <OrderTableContent ordersToShow={filteredOrders} />
                         </TabsContent>
                          <TabsContent value="archived">
-                            <OrderTableContent orders={filteredOrders} />
+                            <OrderTableContent ordersToShow={filteredOrders} />
                         </TabsContent>
                     </Tabs>
 
@@ -887,5 +891,3 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
     );
 
 }
-
-    
