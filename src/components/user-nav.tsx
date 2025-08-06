@@ -66,7 +66,7 @@ export function UserNav({ locale }: { locale: string }) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                     <Link href={`/${locale}/profil`}>
+                     <Link href={`/${locale}/creators/${firebaseUser.uid}`}>
                         <User className="mr-2 h-4 w-4" />
                         <span>{tAuth('my_creations')}</span>
                     </Link>
@@ -86,3 +86,4 @@ export function UserNav({ locale }: { locale: string }) {
         </DropdownMenu>
     )
 }
+
