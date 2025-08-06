@@ -907,7 +907,41 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
         return { success: false, message: "Une erreur est survenue lors de la validation du code." };
     }
 }
+async function getOrdersForUser(email: string): Promise<Order[]> {
+    if (!email) {
+        return [];
+    }
 
+    try {
+        const q = query(collection(db, 'orders'), where('customerEmail', '==', email), orderBy('createdAt', 'desc'));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            return [];
+        }
+        
+        const orders: Order[] = await Promise.all(querySnapshot.docs.map(async (orderDoc) => {
+            const data = orderDoc.data();
+            return {
+                id: orderDoc.id,
+                orderNumber: data.orderNumber,
+                createdAt: (data.createdAt as Timestamp).toDate(),
+                customerEmail: data.customerEmail,
+                subtotal: data.subtotal,
+                totalPrice: data.totalPrice,
+                items: data.items, // Note: items won't be fully hydrated here for performance.
+                status: data.status,
+                deliveryMethod: data.deliveryMethod || 'home',
+                shippingAddress: data.shippingAddress,
+            };
+        }));
+        return orders;
+
+    } catch (error) {
+        console.error(`Error fetching orders for email ${email}:`, error);
+        return [];
+    }
+}
 
     
 

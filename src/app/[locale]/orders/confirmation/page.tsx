@@ -4,7 +4,7 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter, useParams } from 'next/navigation';
 import { useTranslations } from '@/hooks/use-translations';
-import { createOrder, sendConfirmationEmail } from '@/app/actions/order.actions';
+import { createOrder } from '@/app/actions/order.actions';
 import { useCart } from '@/hooks/use-cart';
 import { Loader2, CheckCircle, AlertCircle, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -63,11 +63,11 @@ function ConfirmationContent() {
                         serializableCart,
                         tempEmail,
                         paymentIntent,
-                        'home' // Defaulting to home, another limitation
+                        'home', // Defaulting to home, another limitation
+                        locale
                     );
 
-                    if (orderResult.success && orderResult.orderId && orderResult.orderNumber) {
-                        await sendConfirmationEmail(orderResult.orderId, locale);
+                    if (orderResult.success && orderResult.orderNumber) {
                         setOrderNumber(orderResult.orderNumber);
                         setStatus('success');
                         clearCart();
@@ -115,7 +115,7 @@ function ConfirmationContent() {
                 <h1 className="text-2xl font-headline">Erreur de commande</h1>
                 <p className="text-destructive max-w-md">{errorMessage || "Une erreur inconnue est survenue."}</p>
                  <p className="text-muted-foreground text-sm max-w-md">
-                   Pas d'inquiétude, votre paiement n'a pas été débité. Veuillez contacter le support si le problème persiste.
+                   Pas d'inquiétude, si votre paiement a été débité, la commande sera traitée manuellement. Veuillez contacter le support si le problème persiste.
                 </p>
                  <Button asChild>
                     <Link href={`/${locale}`}>Retour à l'accueil</Link>
@@ -163,4 +163,3 @@ export default function OrderConfirmationPage() {
         </div>
     );
 }
-

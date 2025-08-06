@@ -46,7 +46,7 @@ export const PaymentProcessor = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
-  const handleConfirmOrder = async () => {
+  const handleFreeOrder = async () => {
     setIsProcessing(true);
     setErrorMessage(null);
 
@@ -66,12 +66,10 @@ export const PaymentProcessor = ({
         creationId: item.creationId,
     }));
     
-    const paymentIntentId = finalTotal > 0 ? (clientSecret ? clientSecret.split('_secret_')[0] : 'error') : 'free_order';
-
     const result = await createOrder(
         serializableCart,
         email,
-        paymentIntentId,
+        'free_order', // Special identifier for free orders
         deliveryMethod,
         locale,
         shippingAddress,
@@ -81,7 +79,6 @@ export const PaymentProcessor = ({
     );
 
     onOrderCreated(result);
-
     setIsProcessing(false);
   }
 
@@ -89,7 +86,7 @@ export const PaymentProcessor = ({
     event.preventDefault();
 
     if (finalTotal <= 0) {
-        await handleConfirmOrder();
+        await handleFreeOrder();
         return;
     }
     
@@ -97,7 +94,6 @@ export const PaymentProcessor = ({
       setErrorMessage(t('payment_error_default'));
       return;
     }
-
 
     setIsProcessing(true);
     setErrorMessage(null);
@@ -109,6 +105,7 @@ export const PaymentProcessor = ({
       return;
     }
 
+    // Redirect to Stripe checkout page
     const { error } = await stripe.confirmPayment({
       elements,
       clientSecret,
@@ -116,14 +113,13 @@ export const PaymentProcessor = ({
         return_url: `${window.location.origin}/${locale}/orders/confirmation`,
         receipt_email: email,
       },
-      redirect: "if_required" 
     });
 
+    // This code will only be executed if there's an immediate error
+    // (e.g., network issue) before redirection.
     if (error) {
       setErrorMessage(error.message || t('payment_error_default'));
       setIsProcessing(false);
-    } else {
-      await handleConfirmOrder();
     }
   };
 
@@ -185,5 +181,3 @@ export const PaymentProcessor = ({
     </form>
   )
 };
-
-    
