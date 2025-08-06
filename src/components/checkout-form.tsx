@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -12,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, AlertCircle, ArrowLeft, Home, Store, Search, CheckCircle, TicketPercent, Award } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { useStripe, useElements, PaymentElement, Elements } from '@stripe/react-stripe-js';
-import type { CreateOrderResult, SerializableCartItem } from '@/app/actions/order.actions';
+import type { CreateOrderResult } from '@/app/actions/order.actions';
 import { useParams, useRouter } from 'next/navigation';
 import { StockErrorState } from './checkout-dialog';
 import type { ShippingAddress, DeliveryMethod, PickupPoint, Coupon, User, StripePromise } from '@/lib/types';
@@ -27,166 +26,8 @@ import { Separator } from './ui/separator';
 import { Slider } from './ui/slider';
 import { Skeleton } from './ui/skeleton';
 import { createOrder, validateCoupon, sendConfirmationEmail, createPaymentIntent } from '@/app/actions/order.actions';
-import { StripeElementsOptions } from '@stripe/stripe-js';
+import { PaymentProcessor } from './payment-processor';
 
-const PaymentProcessor = ({
-  onOrderCreated,
-  email,
-  deliveryMethod,
-  shippingAddress,
-  clientSecret,
-  appliedCoupon,
-  pointsToUse,
-  finalTotal
-}: {
-  onOrderCreated: (result: CreateOrderResult) => void;
-  email: string;
-  deliveryMethod: DeliveryMethod;
-  shippingAddress?: ShippingAddress;
-  clientSecret: string;
-  appliedCoupon: Coupon | null;
-  pointsToUse: number;
-  finalTotal: number;
-}) => {
-  const stripe = useStripe();
-  const elements = useElements();
-  const t = useTranslations('Checkout');
-  const { cart } = useCart();
-  const locale = useParams().locale as string;
-  const { user } = useAuth();
-  
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  
-  const handleConfirmOrder = async () => {
-    setIsProcessing(true);
-    setErrorMessage(null);
-
-    const serializableCart: SerializableCartItem[] = cart.map(item => ({
-        id: item.id,
-        model: item.model,
-        jewelryType: { id: item.jewelryType.id, name: item.jewelryType.name, description: item.jewelryType.description },
-        placedCharms: item.placedCharms.map(pc => ({
-            id: pc.id,
-            charm: pc.charm,
-            position: pc.position,
-            rotation: pc.rotation,
-            withClasp: pc.withClasp
-        })),
-        previewImage: item.previewImage,
-        creator: item.creator,
-        creationId: item.creationId,
-    }));
-    
-    const paymentIntentId = clientSecret.split('_secret_')[0];
-
-    const result = await createOrder(
-        serializableCart,
-        email,
-        paymentIntentId,
-        deliveryMethod,
-        shippingAddress,
-        appliedCoupon || undefined,
-        user?.uid,
-        pointsToUse
-    );
-
-    if (result.success && result.orderId) {
-        await sendConfirmationEmail(result.orderId, locale);
-    }
-
-    onOrderCreated(result);
-
-    setIsProcessing(false);
-  }
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!stripe || !elements) {
-      setErrorMessage(t('payment_error_default'));
-      return;
-    }
-
-    if (finalTotal <= 0) {
-        await handleConfirmOrder();
-        return;
-    }
-
-    setIsProcessing(true);
-    setErrorMessage(null);
-    
-    const { error: submitError } = await elements.submit();
-    if (submitError) {
-      setErrorMessage(submitError.message || t('payment_error_default'));
-      setIsProcessing(false);
-      return;
-    }
-
-    const { error } = await stripe.confirmPayment({
-      elements,
-      clientSecret,
-      confirmParams: {
-        return_url: `${window.location.origin}/${locale}/orders/confirmation`,
-        receipt_email: email,
-      },
-      redirect: "if_required" 
-    });
-
-    if (error) {
-      setErrorMessage(error.message || t('payment_error_default'));
-      setIsProcessing(false);
-    } else {
-      await handleConfirmOrder();
-    }
-  };
-
-  const isStripeLoading = !stripe || !elements;
-
-  return (
-    <form id="payment-form" onSubmit={handleSubmit} className="space-y-4">
-      {errorMessage && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>{t('payment_error_title')}</AlertTitle>
-          <AlertDescription>{errorMessage}</AlertDescription>
-        </Alert>
-      )}
-
-      {finalTotal > 0 ? (
-          <div className="relative">
-            <PaymentElement options={{wallets: {applePay: 'never', googlePay: 'never'}}} className={cn(isStripeLoading && 'opacity-0 h-0')}/>
-            {isStripeLoading && (
-                <div className="space-y-4">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                </div>
-            )}
-          </div>
-      ) : (
-          <Alert>
-              <CheckCircle className="h-4 w-4" />
-              <AlertTitle>{t('free_order_title')}</AlertTitle>
-              <AlertDescription>
-                  {t('free_order_description')}
-              </AlertDescription>
-          </Alert>
-      )}
-      
-       <DialogFooter className="pt-4 pb-6 mt-auto px-0">
-         <Button type="submit" form="payment-form" className="w-full" disabled={isProcessing || isStripeLoading}>
-            {isProcessing ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('processing_button')}</>
-            ) : (
-                finalTotal > 0
-                ? t('confirm_order_button', { total: finalTotal.toFixed(2) })
-                : t('confirm_order_button_no_payment')
-            )}
-         </Button>
-      </DialogFooter>
-    </form>
-  )
-};
 
 type Step = 'customer' | 'shipping' | 'summary' | 'payment';
 
@@ -384,10 +225,6 @@ export const CheckoutForm = ({
   const progressValue = (stepNumber / 4) * 100;
   
   if (currentStep === 'payment') {
-      const stripeOptions: StripeElementsOptions | undefined = clientSecret
-        ? { clientSecret, appearance: { theme: 'stripe', variables: { colorPrimary: '#ef4444', fontFamily: 'Montserrat, sans-serif', borderRadius: '6px' } } }
-        : undefined;
-
       return (
           <div className="flex flex-col h-full">
             <DialogHeader className="p-6 pb-4 flex-shrink-0 relative flex-row items-center justify-center">
