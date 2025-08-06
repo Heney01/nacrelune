@@ -50,7 +50,7 @@ export async function getJewelryTypesAndModels(
                     displayImageUrl: displayImageUrl,
                     editorImageUrl: editorImageUrl,
                     snapPath: data.snapPath || '',
-                    price: 9.90, // Fixed price for all models now
+                    price: data.price || 9.90,
                     purchasePrice: data.purchasePrice || undefined,
                     quantity: data.quantity || 0,
                     width: data.width || null,
@@ -88,7 +88,7 @@ export async function getCharms(): Promise<Charm[]> {
                 imageUrl: imageUrls[index],
                 description: data.description,
                 categoryIds: categoryRefs,
-                price: 4.00, // Fixed price for all charms now
+                price: data.price || 4.00,
                 purchasePrice: data.purchasePrice || undefined,
                 quantity: data.quantity || 0,
                 width: data.width || null,
@@ -162,7 +162,7 @@ export async function getFullCharmData(): Promise<{ charms: (Charm & { categoryN
                 imageUrl: imageUrl,
                 description: data.description,
                 categoryIds: categoryIds,
-                price: 4.00, // Fixed price for all charms now
+                price: data.price || 4.00,
                 purchasePrice: data.purchasePrice || undefined,
                 quantity: data.quantity || 0,
                 width: data.width || null,

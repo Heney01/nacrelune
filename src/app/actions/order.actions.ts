@@ -170,16 +170,19 @@ export async function createOrder(
                 }
                 
                 if (item.creator && item.creator.uid && item.creator.displayName) {
-                    const basePrice = 9.90;
-                    const charmCount = item.placedCharms.length;
+                    const basePrice = item.model.price || 9.90;
                     let charmsPrice = 0;
-                    if (charmCount > 0) {
-                        if (charmCount <= 5) {
-                            charmsPrice = charmCount * 4.00;
+                    const sortedCharms = [...item.placedCharms].sort((a, b) => (a.charm.price || 0) - (b.charm.price || 0));
+                    
+                    sortedCharms.forEach((pc, index) => {
+                        const charmPrice = pc.charm.price || 4.00;
+                        if (index < 5) {
+                            charmsPrice += charmPrice;
                         } else {
-                            charmsPrice = (5 * 4.00) + ((charmCount - 5) * 2.50);
+                            charmsPrice += charmPrice / 2;
                         }
-                    }
+                    });
+
                     const claspsPrice = item.placedCharms.reduce((sum, pc) => sum + (pc.withClasp ? CLASP_PRICE : 0), 0);
                     const itemPrice = basePrice + charmsPrice + claspsPrice;
                     
@@ -245,16 +248,19 @@ export async function createOrder(
             }
 
             const subtotal = cartItems.reduce((sum, item) => {
-                const basePrice = 9.90;
-                const charmCount = item.placedCharms.length;
+                const basePrice = item.model.price || 9.90;
                 let charmsPrice = 0;
-                if (charmCount > 0) {
-                    if (charmCount <= 5) {
-                        charmsPrice = charmCount * 4.00;
+                const sortedCharms = [...item.placedCharms].sort((a, b) => (a.charm.price || 0) - (b.charm.price || 0));
+                
+                sortedCharms.forEach((pc, index) => {
+                    const charmPrice = pc.charm.price || 4.00;
+                    if (index < 5) {
+                        charmsPrice += charmPrice;
                     } else {
-                        charmsPrice = (5 * 4.00) + ((charmCount - 5) * 2.50);
+                        charmsPrice += charmPrice / 2;
                     }
-                }
+                });
+
                 const claspsPrice = item.placedCharms.reduce((claspSum, pc) => claspSum + (pc.withClasp ? CLASP_PRICE : 0), 0);
                 return sum + basePrice + charmsPrice + claspsPrice;
             }, 0);
@@ -278,16 +284,19 @@ export async function createOrder(
             });
 
             const orderItems: Omit<OrderItem, 'modelImageUrl' | 'charms'>[] = cartItems.map((item, index) => {
-                const basePrice = 9.90;
-                const charmCount = item.placedCharms.length;
+                 const basePrice = item.model.price || 9.90;
                 let charmsPrice = 0;
-                if (charmCount > 0) {
-                    if (charmCount <= 5) {
-                        charmsPrice = charmCount * 4.00;
+                const sortedCharms = [...item.placedCharms].sort((a, b) => (a.charm.price || 0) - (b.charm.price || 0));
+                
+                sortedCharms.forEach((pc, index) => {
+                    const charmPrice = pc.charm.price || 4.00;
+                    if (index < 5) {
+                        charmsPrice += charmPrice;
                     } else {
-                        charmsPrice = (5 * 4.00) + ((charmCount - 5) * 2.50);
+                        charmsPrice += charmPrice / 2;
                     }
-                }
+                });
+                
                 const claspsPrice = item.placedCharms.reduce((claspSum, pc) => claspSum + (pc.withClasp ? CLASP_PRICE : 0), 0);
                 const itemPrice = basePrice + charmsPrice + claspsPrice;
 
@@ -622,11 +631,11 @@ export async function getOrders(): Promise<Order[]> {
         });
 
         // Get all unique charm IDs from all orders first
-        const allCharmIds = ordersSnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => (item.charms || []).map((c: any) => c.charmId)) || []);
+        const allCharmIds = ordersSnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => (item.charms || []).map((c: any) => c.id)) || []);
         const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
         // Fetch all required charms in a single query
-        let charmsMap = new Map<string, any>();
+        let charmsMap = new Map<string, Charm>();
         if (uniqueCharmIds.length > 0) {
             // Firestore 'in' query is limited to 30 items, so chunk if necessary
             const charmIdChunks = [];
@@ -638,7 +647,7 @@ export async function getOrders(): Promise<Order[]> {
                 const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', chunk));
                 const charmsSnapshot = await getDocs(charmsQuery);
                 for (const charmDoc of charmsSnapshot.docs) {
-                    const charmData = charmDoc.data() as Omit<any, 'id'>;
+                    const charmData = charmDoc.data() as Omit<Charm, 'id'>;
                     const imageUrl = await getUrl(charmData.imageUrl, 'https://placehold.co/100x100.png');
                     charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id, imageUrl });
                 }
@@ -655,7 +664,7 @@ export async function getOrders(): Promise<Order[]> {
                          if (!charm) return null;
                         return { ...charm, withClasp: charmDetail.withClasp };
                     })
-                    .filter((c): c is any => !!c); // Filter out undefined charms
+                    .filter((c): c is (Charm & { withClasp: boolean }) => !!c); // Filter out undefined charms
 
                 return {
                     ...item,

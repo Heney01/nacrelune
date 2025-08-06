@@ -49,17 +49,19 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
   const CLASP_PRICE = 1.20;
 
   const subtotal = cart.reduce((sum, item) => {
-    const basePrice = 9.90;
-    const charmCount = item.placedCharms.length;
+    const basePrice = item.model.price || 9.90;
+    
     let charmsPrice = 0;
-
-    if (charmCount > 0) {
-      if (charmCount <= 5) {
-        charmsPrice = charmCount * 4.00;
-      } else {
-        charmsPrice = (5 * 4.00) + ((charmCount - 5) * 2.50);
-      }
-    }
+    const sortedCharms = [...item.placedCharms].sort((a, b) => (a.charm.price || 0) - (b.charm.price || 0));
+    
+    sortedCharms.forEach((pc, index) => {
+        const charmPrice = pc.charm.price || 4.00;
+        if (index < 5) {
+            charmsPrice += charmPrice;
+        } else {
+            charmsPrice += charmPrice / 2;
+        }
+    });
 
     const claspsPrice = item.placedCharms.reduce((claspSum, pc) => {
       return claspSum + (pc.withClasp ? CLASP_PRICE : 0);
@@ -106,17 +108,18 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
             <div className="mt-6 flex-grow -mx-6 overflow-y-auto no-scrollbar">
                 <div className="space-y-4 px-6">
                     {cart.map(item => {
-                         const basePrice = 9.90;
-                         const charmCount = item.placedCharms.length;
+                         const basePrice = item.model.price || 9.90;
                          let charmsPrice = 0;
-
-                         if (charmCount > 0) {
-                           if (charmCount <= 5) {
-                             charmsPrice = charmCount * 4.00;
-                           } else {
-                             charmsPrice = (5 * 4.00) + ((charmCount - 5) * 2.50);
-                           }
-                         }
+                         const sortedCharms = [...item.placedCharms].sort((a, b) => (a.charm.price || 0) - (b.charm.price || 0));
+                         
+                         sortedCharms.forEach((pc, index) => {
+                             const charmPrice = pc.charm.price || 4.00;
+                             if (index < 5) {
+                                 charmsPrice += charmPrice;
+                             } else {
+                                 charmsPrice += charmPrice / 2;
+                             }
+                         });
                          
                          const claspsPrice = item.placedCharms.reduce((claspSum, pc) => {
                            return claspSum + (pc.withClasp ? CLASP_PRICE : 0);
