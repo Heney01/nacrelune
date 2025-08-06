@@ -292,7 +292,7 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
             </Tabs>
           </div>
 
-          {sortedCreations.length > 0 || emptySlots > 0 || isOwner ? (
+          {isOwner || sortedCreations.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {sortedCreations.map(creation => (
                 <CreationCard 
@@ -362,8 +362,8 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
             </div>
           ) : (
             <div className="text-center py-16 border border-dashed rounded-lg">
-              <h3 className="text-xl font-semibold">{isOwner ? "Vous n'avez pas encore publié de création." : `${creator.displayName} n'a pas encore publié de création.`}</h3>
-              <p className="text-muted-foreground mt-2">{isOwner ? "Commencez à créer pour la partager ici !" : "Revenez bientôt !"} </p>
+              <h3 className="text-xl font-semibold">{`${creator.displayName} n'a pas encore publié de création.`}</h3>
+              <p className="text-muted-foreground mt-2">Revenez bientôt !</p>
             </div>
           )}
         </div>
