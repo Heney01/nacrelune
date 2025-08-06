@@ -252,7 +252,7 @@ const MailHistoryTab = ({ mailHistory }: { mailHistory: MailLog[] }) => {
                                             </div>
                                         </TooltipTrigger>
                                         <TooltipContent>
-                                            {mail.delivery?.error ? <p className="text-destructive-foreground bg-destructive p-2 rounded-md">{mail.delivery.error}</p> : <p>{mail.delivery?.state}</p>}
+                                            {mail.delivery?.error ? <p className="text-destructive-foreground bg-destructive p-2 rounded-md mt-2">{mail.delivery.error}</p> : <p>{mail.delivery?.state}</p>}
                                         </TooltipContent>
                                     </Tooltip>
                                 </TooltipProvider>
@@ -567,8 +567,7 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
     const [isPending, startTransition] = useTransition();
     const { firebaseUser } = useAuth();
 
-    const [state, dispatch] = useReducer(ordersReducer, initialOrders);
-    const { orders } = { orders: state };
+    const [orders, dispatch] = useReducer(ordersReducer, initialOrders);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [tab, setTab] = useState<'active' | 'archived'>('active');
@@ -888,5 +887,3 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
         )
     }
 }
-
-    
