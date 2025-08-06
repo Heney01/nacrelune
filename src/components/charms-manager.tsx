@@ -594,6 +594,7 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                     isOpen={isSizingToolOpen}
                     onOpenChange={setIsSizingToolOpen}
                     charm={charmToSize}
+                    allCharms={charms}
                     onSave={handleSaveCharm}
                     locale={locale}
                 />

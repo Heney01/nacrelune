@@ -18,6 +18,7 @@ interface CharmSizingToolProps {
     isOpen: boolean;
     onOpenChange: (isOpen: boolean) => void;
     charm: Charm;
+    allCharms: Charm[];
     onSave: (charm: Charm & { categoryName?: string }) => void;
     locale: string;
 }
@@ -34,16 +35,24 @@ function SubmitButton() {
 
 const initialState = { success: false, message: '', charm: undefined };
 
-export function CharmSizingTool({ isOpen, onOpenChange, charm, onSave, locale }: CharmSizingToolProps) {
+export function CharmSizingTool({ isOpen, onOpenChange, charm, allCharms, onSave, locale }: CharmSizingToolProps) {
     const { toast } = useToast();
     const [state, formAction] = useFormState(saveCharm, initialState);
     
+    const [referenceCharm, setReferenceCharm] = useState<Charm | null>(null);
+
     // Constants
-    const REFERENCE_DIAMETER_MM = 23.25; // 1 Euro coin diameter
     const REFERENCE_IMAGE_WIDTH_PX = 100;
 
     const [charmSizePercentage, setCharmSizePercentage] = useState(50);
     const [aspectRatio, setAspectRatio] = useState(1);
+    
+    useEffect(() => {
+        if (allCharms.length > 0) {
+            const firstCharmWithDimensions = allCharms.find(c => c.width && c.height);
+            setReferenceCharm(firstCharmWithDimensions || allCharms[0]);
+        }
+    }, [allCharms]);
 
     useEffect(() => {
         const img = new window.Image();
@@ -52,22 +61,26 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, onSave, locale }:
             setAspectRatio(img.width / img.height);
         };
 
-        if (charm.width) {
-            const initialPercentage = (charm.width / REFERENCE_DIAMETER_MM) * 100;
+        if (charm.width && referenceCharm?.width) {
+            const initialPercentage = (charm.width / referenceCharm.width) * 100;
             setCharmSizePercentage(initialPercentage);
+        } else {
+            setCharmSizePercentage(50); // Default if no dimensions are set
         }
 
-    }, [charm.imageUrl, charm.width]);
+    }, [charm, referenceCharm]);
 
     const calculatedDimensions = useMemo(() => {
-        const charmWidthPx = REFERENCE_IMAGE_WIDTH_PX * (charmSizePercentage / 100);
-        const charmWidthMm = REFERENCE_DIAMETER_MM * (charmSizePercentage / 100);
+        if (!referenceCharm?.width) {
+            return { width: 0, height: 0 };
+        }
+        const charmWidthMm = referenceCharm.width * (charmSizePercentage / 100);
         const charmHeightMm = charmWidthMm / aspectRatio;
         return {
             width: parseFloat(charmWidthMm.toFixed(2)),
             height: parseFloat(charmHeightMm.toFixed(2)),
         }
-    }, [charmSizePercentage, aspectRatio]);
+    }, [charmSizePercentage, aspectRatio, referenceCharm]);
 
     useEffect(() => {
         if (state.success && state.charm) {
@@ -79,7 +92,12 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, onSave, locale }:
         }
     }, [state, onSave, onOpenChange, toast]);
 
-    if (!charm) return null;
+    if (!charm || !referenceCharm) return null;
+
+    const referenceWidthPx = REFERENCE_IMAGE_WIDTH_PX;
+    const referenceHeightPx = referenceCharm.height && referenceCharm.width 
+        ? (referenceCharm.height / referenceCharm.width) * referenceWidthPx 
+        : referenceWidthPx;
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -88,7 +106,7 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, onSave, locale }:
                     <DialogHeader>
                         <DialogTitle>Calibrer la taille de "{charm.name}"</DialogTitle>
                         <DialogDescription>
-                            Ajustez la taille de la breloque par rapport à la pièce de 1 Euro (23.25mm) pour définir ses dimensions réelles.
+                            Ajustez la taille de la breloque par rapport à la breloque de référence "{referenceCharm.name}" ({referenceCharm.width || '?'}mm).
                         </DialogDescription>
                     </DialogHeader>
 
@@ -109,10 +127,17 @@ export function CharmSizingTool({ isOpen, onOpenChange, charm, onSave, locale }:
 
                         <div className="h-40 flex justify-center items-center gap-4 bg-muted/50 rounded-lg p-4 border border-dashed">
                              {/* Reference Object */}
-                            <div style={{ width: `${REFERENCE_IMAGE_WIDTH_PX}px`, height: `${REFERENCE_IMAGE_WIDTH_PX}px` }} className="relative flex-shrink-0">
+                            <div 
+                                style={{ 
+                                    width: `${referenceWidthPx}px`,
+                                    height: `${referenceHeightPx}px`
+                                }} 
+                                className="relative flex-shrink-0"
+                                title={`Référence: ${referenceCharm.name}`}
+                            >
                                  <Image
-                                    src="https://firebasestorage.googleapis.com/v0/b/nacrelune.firebasestorage.app/o/assets%2Feuro-coin.png?alt=media&token=c243859d-6bdb-4f40-8c26-8051a65f97d5"
-                                    alt="Pièce de 1 Euro"
+                                    src={referenceCharm.imageUrl}
+                                    alt={`Référence: ${referenceCharm.name}`}
                                     fill
                                     className="object-contain"
                                 />
