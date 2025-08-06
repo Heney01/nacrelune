@@ -34,8 +34,8 @@ export default function MyOrdersPage({ params }: { params: { locale: string } })
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (firebaseUser) {
-      getOrdersForUser(firebaseUser.uid)
+    if (firebaseUser?.email) {
+      getOrdersForUser(firebaseUser.email)
         .then(setOrders)
         .finally(() => setLoading(false));
     } else if (!authLoading) {

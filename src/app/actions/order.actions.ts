@@ -708,9 +708,13 @@ export async function getOrders(): Promise<Order[]> {
     }
 }
 
-export async function getOrdersForUser(userId: string): Promise<Order[]> {
+export async function getOrdersForUser(email: string): Promise<Order[]> {
+    if (!email) {
+        return [];
+    }
+    
     try {
-        const q = query(collection(db, 'orders'), where('userId', '==', userId), orderBy('createdAt', 'desc'));
+        const q = query(collection(db, 'orders'), where('customerEmail', '==', email), orderBy('createdAt', 'desc'));
         const ordersSnapshot = await getDocs(q);
 
         if (ordersSnapshot.empty) {
@@ -734,7 +738,7 @@ export async function getOrdersForUser(userId: string): Promise<Order[]> {
 
         return orders;
     } catch (error) {
-        console.error(`Error fetching orders for user ${userId}:`, error);
+        console.error(`Error fetching orders for user ${email}:`, error);
         return [];
     }
 }
@@ -943,6 +947,7 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
     
 
     
+
 
 
 
