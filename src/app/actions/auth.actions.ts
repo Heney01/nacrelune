@@ -117,39 +117,9 @@ export async function userLogin(prevState: any, formData: FormData): Promise<{ s
     return { success: false, error: 'Veuillez fournir un email et un mot de passe.' };
   }
 
-  const auth = getAuth(app);
-  try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
-    const idToken = await user.getIdToken();
-    
-    cookies().set('session', idToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24 * 7, // 7 days for users
-      path: '/',
-    });
-    
-    return { success: true, message: `Bienvenue, ${user.displayName || user.email} !` };
-
-  } catch (error: any) {
-    console.error("Auth Error:", error);
-    let errorMessage = "Une erreur inconnue est survenue.";
-    switch (error.code) {
-        case 'auth/invalid-email':
-            errorMessage = "L'adresse e-mail n'est pas valide.";
-            break;
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-            errorMessage = "Email ou mot de passe incorrect.";
-            break;
-        default:
-            errorMessage = `Une erreur est survenue lors de la connexion. Code: ${error.code}`;
-            break;
-    }
-    return { success: false, error: errorMessage };
-  }
+  // For debugging purposes, as requested by the user.
+  console.log(`[SERVER ACTION userLogin] Received login attempt for email: ${email}`);
+  return { success: true, message: `[DEBUG] Server action 'userLogin' was called for email: ${email}` };
 }
 
 export async function signup(prevState: any, formData: FormData): Promise<{ success: boolean; message?: string; error?: string; }> {

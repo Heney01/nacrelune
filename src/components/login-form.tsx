@@ -89,12 +89,20 @@ export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
   });
 
   useEffect(() => {
-    if (state.success) {
+    if (state.success && state.message) {
+      console.log(state.message); // Log debug message to console
       toast({
-        title: 'Connexion réussie',
-        description: state.message,
+        title: 'Info de débogage',
+        description: "La chaîne de caractères du serveur a été affichée dans la console.",
       });
-      onLoginSuccess();
+      // We don't call onLoginSuccess() here for the debug test
+    }
+    if (!state.success && state.error) {
+      toast({
+        variant: 'destructive',
+        title: 'Erreur',
+        description: state.error,
+      });
     }
   }, [state, toast, onLoginSuccess]);
 
