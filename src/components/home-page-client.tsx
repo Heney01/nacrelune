@@ -91,7 +91,7 @@ export function HomePageClient({
 
     if (selectedModel && selectedType) {
       return (
-        <div className="min-h-screen flex flex-col bg-stone-50">
+        <div className="h-screen flex flex-col bg-stone-50">
             <Header />
             <div className="flex-grow flex flex-col min-h-0">
                 <Editor 
