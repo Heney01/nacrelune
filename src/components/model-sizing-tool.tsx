@@ -115,6 +115,8 @@ export function ModelSizingTool({ isOpen, onOpenChange, model, allCharms, onSave
     }, [referenceCharm, calculatedDimensions, viewerRef]);
 
     const handleMouseDown = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
         dragState.current = {
             isDragging: true,
             initialX: e.clientX,
@@ -135,9 +137,7 @@ export function ModelSizingTool({ isOpen, onOpenChange, model, allCharms, onSave
     }, []);
 
     const handleMouseUp = useCallback(() => {
-        if (dragState.current.isDragging) {
-            dragState.current.isDragging = false;
-        }
+        dragState.current.isDragging = false;
     }, []);
 
     useEffect(() => {
@@ -239,8 +239,6 @@ export function ModelSizingTool({ isOpen, onOpenChange, model, allCharms, onSave
                                     style={{
                                         left: `${charmPosition.x}px`,
                                         top: `${charmPosition.y}px`,
-                                        width: `${displayScaling.refWidth}px`,
-                                        height: `${displayScaling.refHeight}px`,
                                     }}
                                     onMouseDown={handleMouseDown}
                                 >
@@ -248,6 +246,10 @@ export function ModelSizingTool({ isOpen, onOpenChange, model, allCharms, onSave
                                         src={referenceCharm.imageUrl}
                                         alt={`Référence: ${referenceCharm.name}`}
                                         className="object-contain border-2 border-dashed border-primary"
+                                        style={{
+                                            width: `${displayScaling.refWidth}px`,
+                                            height: 'auto',
+                                        }}
                                         width={displayScaling.refWidth || 1}
                                         height={displayScaling.refHeight || 1}
                                     />
