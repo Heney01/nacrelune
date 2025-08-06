@@ -4,7 +4,7 @@
 import React, { useState, useReducer, useTransition, useMemo, FormEvent } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Tag, WandSparkles, ZoomIn, AlertTriangle, ShoppingCart, Info, Search, Ruler } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Tag, WandSparkles, ZoomIn, AlertTriangle, ShoppingCart, Info, Search, Ruler, EllipsisVertical } from "lucide-react";
 import type { Charm, CharmCategory, GeneralPreferences } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
@@ -27,6 +27,12 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { CharmCategoryForm } from './charm-category-form';
@@ -133,12 +139,13 @@ function charmsReducer(state: State, action: Action): State {
     }
 }
 
-function ReorderDialog({ charm, locale, onOrder, onRestock, t }: {
+function ReorderDialog({ charm, locale, onOrder, onRestock, t, children }: {
     charm: Charm,
     locale: string,
     onOrder: (formData: FormData) => void,
     onRestock: (formData: FormData) => void,
-    t: (key: string, values?: any) => string
+    t: (key: string, values?: any) => string,
+    children: React.ReactNode,
 }) {
     const [restockedQuantity, setRestockedQuantity] = useState(1);
     const [isOpen, setIsOpen] = useState(false);
@@ -163,13 +170,11 @@ function ReorderDialog({ charm, locale, onOrder, onRestock, t }: {
     }
 
     return (
-        <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-            <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon">
-                    <ShoppingCart className="h-4 w-4" />
-                </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                {children}
+            </DialogTrigger>
+            <DialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>{t('reorder_dialog_title', {itemName: charm.name})}</AlertDialogTitle>
                     <AlertDialogDescription>{t('reorder_dialog_description')}</AlertDialogDescription>
@@ -203,8 +208,8 @@ function ReorderDialog({ charm, locale, onOrder, onRestock, t }: {
                 <AlertDialogFooter>
                     <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
                 </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -458,32 +463,47 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                                                         {charm.quantity}
                                                                     </div>
                                                                 </TableCell>
-                                                                <TableCell className="text-right space-x-1">
-                                                                    <ReorderDialog
-                                                                        charm={charm}
-                                                                        locale={locale}
-                                                                        onOrder={handleOrderAction}
-                                                                        onRestock={handleRestockAction}
-                                                                        t={t}
-                                                                    />
-                                                                    <Button variant="ghost" size="icon" onClick={() => handleSizeCharmClick(charm)}><Ruler className="h-4 w-4" /></Button>
-                                                                    <Button variant="ghost" size="icon" onClick={() => handleEditCharmClick(charm)}><Edit className="h-4 w-4" /></Button>
-                                                                    <AlertDialog>
-                                                                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                                                                        <AlertDialogContent>
-                                                                            <form action={handleDeleteCharmAction}>
-                                                                                <input type="hidden" name="charmId" value={charm.id} /><input type="hidden" name="imageUrl" value={charm.imageUrl} /><input type="hidden" name="locale" value={locale} />
-                                                                                <AlertDialogHeader>
-                                                                                    <AlertDialogTitle>Supprimer la breloque "{charm.name}" ?</AlertDialogTitle>
-                                                                                    <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
-                                                                                </AlertDialogHeader>
-                                                                                <AlertDialogFooter>
-                                                                                    <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
-                                                                                    <AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
-                                                                                </AlertDialogFooter>
-                                                                            </form>
-                                                                        </AlertDialogContent>
-                                                                    </AlertDialog>
+                                                                <TableCell className="text-right">
+                                                                    <DropdownMenu>
+                                                                        <DropdownMenuTrigger asChild>
+                                                                            <Button variant="ghost" size="icon">
+                                                                                <EllipsisVertical className="h-4 w-4" />
+                                                                            </Button>
+                                                                        </DropdownMenuTrigger>
+                                                                        <DropdownMenuContent>
+                                                                            <ReorderDialog charm={charm} locale={locale} onOrder={handleOrderAction} onRestock={handleRestockAction} t={t}>
+                                                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                                                    <ShoppingCart className="mr-2 h-4 w-4" /> Gérer la commande
+                                                                                </DropdownMenuItem>
+                                                                            </ReorderDialog>
+                                                                            <DropdownMenuItem onSelect={() => handleSizeCharmClick(charm)}>
+                                                                                <Ruler className="mr-2 h-4 w-4" /> Calibrer
+                                                                            </DropdownMenuItem>
+                                                                            <DropdownMenuItem onSelect={() => handleEditCharmClick(charm)}>
+                                                                                <Edit className="mr-2 h-4 w-4" /> Modifier
+                                                                            </DropdownMenuItem>
+                                                                            <AlertDialog>
+                                                                                <AlertDialogTrigger asChild>
+                                                                                    <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
+                                                                                        <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                                                                                    </DropdownMenuItem>
+                                                                                </AlertDialogTrigger>
+                                                                                <AlertDialogContent>
+                                                                                    <form action={handleDeleteCharmAction}>
+                                                                                        <input type="hidden" name="charmId" value={charm.id} /><input type="hidden" name="imageUrl" value={charm.imageUrl} /><input type="hidden" name="locale" value={locale} />
+                                                                                        <AlertDialogHeader>
+                                                                                            <AlertDialogTitle>Supprimer la breloque "{charm.name}" ?</AlertDialogTitle>
+                                                                                            <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
+                                                                                        </AlertDialogHeader>
+                                                                                        <AlertDialogFooter>
+                                                                                            <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
+                                                                                            <AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
+                                                                                        </AlertDialogFooter>
+                                                                                    </form>
+                                                                                </AlertDialogContent>
+                                                                            </AlertDialog>
+                                                                        </DropdownMenuContent>
+                                                                    </DropdownMenu>
                                                                 </TableCell>
                                                             </TableRow>
                                                         );
@@ -524,33 +544,46 @@ export function CharmsManager({ initialCharms, initialCharmCategories, locale, p
                                                                     <span>{charm.quantity}</span>
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                        <div className="flex justify-end items-center gap-1 mt-2">
-                                                            <ReorderDialog
-                                                                charm={charm}
-                                                                locale={locale}
-                                                                onOrder={handleOrderAction}
-                                                                onRestock={handleRestockAction}
-                                                                t={t}
-                                                            />
-                                                            <Button variant="ghost" size="icon" onClick={() => handleSizeCharmClick(charm)}><Ruler className="h-4 w-4" /></Button>
-                                                            <Button variant="ghost" size="icon" onClick={() => handleEditCharmClick(charm)}><Edit className="h-4 w-4" /></Button>
-                                                            <AlertDialog>
-                                                                <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                                                                <AlertDialogContent>
-                                                                    <form action={handleDeleteCharmAction}>
-                                                                        <input type="hidden" name="charmId" value={charm.id} /><input type="hidden" name="imageUrl" value={charm.imageUrl} /><input type="hidden" name="locale" value={locale} />
-                                                                        <AlertDialogHeader>
-                                                                            <AlertDialogTitle>Supprimer la breloque "{charm.name}" ?</AlertDialogTitle>
-                                                                            <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
-                                                                        </AlertDialogHeader>
-                                                                        <AlertDialogFooter>
-                                                                            <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
-                                                                            <AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
-                                                                        </AlertDialogFooter>
-                                                                    </form>
-                                                                </AlertDialogContent>
-                                                            </AlertDialog>
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="ghost" size="icon" className="flex-shrink-0">
+                                                                        <EllipsisVertical className="h-4 w-4" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent>
+                                                                    <ReorderDialog charm={charm} locale={locale} onOrder={handleOrderAction} onRestock={handleRestockAction} t={t}>
+                                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                                            <ShoppingCart className="mr-2 h-4 w-4" /> Gérer la commande
+                                                                        </DropdownMenuItem>
+                                                                    </ReorderDialog>
+                                                                    <DropdownMenuItem onSelect={() => handleSizeCharmClick(charm)}>
+                                                                        <Ruler className="mr-2 h-4 w-4" /> Calibrer
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem onSelect={() => handleEditCharmClick(charm)}>
+                                                                        <Edit className="mr-2 h-4 w-4" /> Modifier
+                                                                    </DropdownMenuItem>
+                                                                    <AlertDialog>
+                                                                        <AlertDialogTrigger asChild>
+                                                                            <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
+                                                                                <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                                                                            </DropdownMenuItem>
+                                                                        </AlertDialogTrigger>
+                                                                        <AlertDialogContent>
+                                                                            <form action={handleDeleteCharmAction}>
+                                                                                <input type="hidden" name="charmId" value={charm.id} /><input type="hidden" name="imageUrl" value={charm.imageUrl} /><input type="hidden" name="locale" value={locale} />
+                                                                                <AlertDialogHeader>
+                                                                                    <AlertDialogTitle>Supprimer la breloque "{charm.name}" ?</AlertDialogTitle>
+                                                                                    <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
+                                                                                </AlertDialogHeader>
+                                                                                <AlertDialogFooter>
+                                                                                    <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
+                                                                                    <AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
+                                                                                </AlertDialogFooter>
+                                                                            </form>
+                                                                        </AlertDialogContent>
+                                                                    </AlertDialog>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
                                                         </div>
                                                     </Card>
                                                 )
