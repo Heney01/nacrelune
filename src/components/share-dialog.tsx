@@ -121,7 +121,7 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
                 </DialogHeader>
 
                 <div className="flex justify-center items-center my-4">
-                     <div className="shadow-lg w-full max-w-[200px] bg-white">
+                     <div className="shadow-lg w-full max-w-[250px] bg-white">
                         <div className="p-4">
                             <div className="bg-gray-100 aspect-square relative">
                                 <Image 
@@ -132,9 +132,9 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
                                 />
                             </div>
                             <div className="pt-4 text-center">
-                                <p className="font-headline text-xl text-stone-800 break-words">{creation.name}</p>
-                                <p className="text-sm text-stone-500 mt-1">par {creatorDisplayName}</p>
-                                <p className="text-xs text-stone-400 mt-4">www.atelierabijoux.com</p>
+                                <p className="font-headline text-lg text-stone-800 break-words">{creation.name}</p>
+                                <p className="text-xs text-stone-500 mt-1">par {creatorDisplayName}</p>
+                                <p className="text-[10px] text-stone-400 mt-4">www.atelierabijoux.com</p>
                             </div>
                         </div>
                     </div>
