@@ -42,10 +42,6 @@ const CharmListItem = ({
   t: (key: string, values?: any) => string;
   tCart: (key: string, values?: any) => string;
 }) => {
-    const CLASP_PRICE = 1.20;
-    const basePrice = placedCharm.charm.price || 0;
-    const finalPrice = placedCharm.withClasp ? basePrice + CLASP_PRICE : basePrice;
-
     return (
         <div
             className={cn(
@@ -79,8 +75,7 @@ const CharmListItem = ({
                 />
                 <Label htmlFor={`clasp-${placedCharm.id}`} className="cursor-pointer">Avec fermoir</Label>
             </div>
-            <p className="text-xs font-bold">{tCart('price', { price: finalPrice })}</p>
-
+            
             {!placedCharm.isAvailable && (
             <TooltipProvider>
                 <Tooltip>
@@ -113,7 +108,7 @@ export function PlacedCharmsList({
       <p className="text-muted-foreground text-sm text-center py-4">{t('added_charms_placeholder')}</p>
     ) : (
       <div className={cn(
-        isMobile ? "flex gap-2 pb-4 pt-2 pl-2 flex-wrap" : "flex w-max space-x-2 p-4 flex-nowrap"
+        isMobile ? "flex gap-2 pb-4 pt-2 flex-wrap" : "flex w-max space-x-2 p-4 flex-nowrap"
       )}>
         {placedCharms.map((pc) => (
           <CharmListItem
