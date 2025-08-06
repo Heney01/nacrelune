@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
-import { getOrdersForUser } from '@/app/actions/order.actions';
+import { getOrdersByEmailForUser } from '@/app/actions/order.actions';
 import type { Order } from '@/lib/types';
 import { useTranslations } from '@/hooks/use-translations';
 import { Loader2, ArrowLeft, Package, ChevronDown } from 'lucide-react';
@@ -33,8 +33,8 @@ export function MyOrdersClient({ locale }: { locale: string }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (firebaseUser?.uid) {
-      getOrdersForUser(firebaseUser.uid)
+    if (firebaseUser?.email) {
+      getOrdersByEmailForUser(firebaseUser.email)
         .then(setOrders)
         .finally(() => setLoading(false));
     } else if (!authLoading) {
@@ -155,5 +155,3 @@ export function MyOrdersClient({ locale }: { locale: string }) {
     </div>
   );
 }
-
-    

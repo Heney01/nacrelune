@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { db, storage } from '@/lib/firebase';
 import { doc, addDoc, updateDoc, collection, getDoc, getDocs, runTransaction, query, where, setDoc, serverTimestamp, collectionGroup, documentId, orderBy, DocumentReference, DocumentSnapshot, Timestamp, increment } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
-import type { JewelryModel, PlacedCharm, OrderStatus, Order, OrderItem, ShippingAddress, DeliveryMethod, MailLog, Coupon, User, Charm } from '@/lib/types';
+import type { JewelryModel, PlacedCharm, OrderStatus, Order, OrderItem, ShippingAddress, DeliveryMethod, MailLog, Coupon, User } from '@/lib/types';
 import { toDate } from '@/lib/data';
 import Stripe from 'stripe';
 import { headers } from 'next/headers';
@@ -428,7 +428,7 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
         const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
         // Fetch all required charms in a single query
-        let charmsMap = new Map<string, Charm>();
+        let charmsMap = new Map();
         if (uniqueCharmIds.length > 0) {
             const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', uniqueCharmIds));
             const charmsSnapshot = await getDocs(charmsQuery);
@@ -635,7 +635,7 @@ export async function getOrders(): Promise<Order[]> {
         const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
         // Fetch all required charms in a single query
-        let charmsMap = new Map<string, Charm>();
+        let charmsMap = new Map();
         if (uniqueCharmIds.length > 0) {
             // Firestore 'in' query is limited to 30 items, so chunk if necessary
             const charmIdChunks = [];
@@ -705,13 +705,13 @@ export async function getOrders(): Promise<Order[]> {
     }
 }
 
-export async function getOrdersForUser(userId: string): Promise<Order[]> {
-    if (!userId) {
+export async function getOrdersByEmailForUser(email: string): Promise<Order[]> {
+    if (!email) {
         return [];
     }
     
     try {
-        const q = query(collection(db, 'orders'), where('userId', '==', userId), orderBy('createdAt', 'desc'));
+        const q = query(collection(db, 'orders'), where('customerEmail', '==', email), orderBy('createdAt', 'desc'));
         const ordersSnapshot = await getDocs(q);
 
         if (ordersSnapshot.empty) {
@@ -735,7 +735,7 @@ export async function getOrdersForUser(userId: string): Promise<Order[]> {
 
         return orders;
     } catch (error: any) {
-        console.error(`Error fetching orders for user ${userId}:`, error);
+        console.error(`Error fetching orders for email ${email}:`, error);
         return [];
     }
 }
