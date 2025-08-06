@@ -5,10 +5,17 @@ import React, { createContext, useContext, useState, ReactNode, useCallback } fr
 
 type AuthView = 'login' | 'signup';
 
+interface AuthDialogOptions {
+  onLoginSuccess?: () => void;
+  onSignupSuccess?: () => void;
+  isAdminLogin?: boolean;
+}
+
 interface AuthDialogContextType {
   isOpen: boolean;
   view: AuthView;
-  open: (view: AuthView) => void;
+  options: AuthDialogOptions;
+  open: (view: AuthView, options?: AuthDialogOptions) => void;
   close: () => void;
   setView: (view: AuthView) => void;
 }
@@ -18,9 +25,11 @@ const AuthDialogContext = createContext<AuthDialogContextType | undefined>(undef
 export const AuthDialogProvider = ({ children }: { children: ReactNode }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<AuthView>('login');
+  const [options, setOptions] = useState<AuthDialogOptions>({});
 
-  const open = useCallback((view: AuthView) => {
+  const open = useCallback((view: AuthView, newOptions: AuthDialogOptions = {}) => {
     setView(view);
+    setOptions(newOptions);
     setIsOpen(true);
   }, []);
 
@@ -29,7 +38,7 @@ export const AuthDialogProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <AuthDialogContext.Provider value={{ isOpen, view, open, close, setView }}>
+    <AuthDialogContext.Provider value={{ isOpen, view, options, open, close, setView }}>
       {children}
     </AuthDialogContext.Provider>
   );

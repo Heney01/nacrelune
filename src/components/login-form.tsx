@@ -21,7 +21,6 @@ import { Separator } from './ui/separator';
 import { useGoogleAuth } from '@/hooks/use-google-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthDialog } from '@/hooks/use-auth-dialog';
-import { DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 
@@ -57,7 +56,7 @@ export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
   const locale = params.locale as string;
   const t = useTranslations('Auth');
   const { toast } = useToast();
-  const { setView } = useAuthDialog();
+  const { setView, options } = useAuthDialog();
 
   const [isClientSigningIn, setIsClientSigningIn] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -99,7 +98,6 @@ export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
             onLoginSuccess();
           })
           .catch((clientError) => {
-            // This should rarely happen if server-side login succeeded
             console.error("Client-side sign-in failed after server-side success:", clientError);
             toast({
               variant: 'destructive',
@@ -111,7 +109,6 @@ export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
             setIsClientSigningIn(false);
           });
       } else {
-        // Fallback in case formRef is not available, though unlikely.
         onLoginSuccess();
       }
     } else if (state.error) {
@@ -124,33 +121,31 @@ export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
   }, [state, toast, onLoginSuccess]);
 
   return (
-    <Card className="border-0 shadow-none">
-      <DialogHeader className="text-center pt-6">
-        <DialogTitle>{t('user_login_title')}</DialogTitle>
-        <DialogDescription>{t('user_login_description')}</DialogDescription>
-      </DialogHeader>
-       <CardContent className="space-y-4 pt-6">
-        {(state?.error || error) && (
-            <Alert variant="destructive">
-              <AlertTitle>{t('login_error_title')}</AlertTitle>
-              <AlertDescription>{state?.error || error}</AlertDescription>
-            </Alert>
-          )}
+    <div className="pt-2">
+      {(state?.error || error) && (
+          <Alert variant="destructive">
+            <AlertTitle>{t('login_error_title')}</AlertTitle>
+            <AlertDescription>{state?.error || error}</AlertDescription>
+          </Alert>
+        )}
 
-        <div className="space-y-4">
-             <Button variant="outline" className="w-full" onClick={signInWithGoogle} disabled={isGoogleLoading || isClientSigningIn}>
-                {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
-                {t('google_login_button')}
-            </Button>
-            <div className="relative">
-                <Separator />
-                <span className="absolute left-1/2 -translate-x-1/2 top-[-10px] bg-card px-2 text-xs text-muted-foreground">
-                    {t('or_continue_with')}
-                </span>
-            </div>
+      {!options.isAdminLogin && (
+        <div className="space-y-4 my-4">
+              <Button variant="outline" className="w-full" onClick={signInWithGoogle} disabled={isGoogleLoading || isClientSigningIn}>
+                  {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
+                  {t('google_login_button')}
+              </Button>
+              <div className="relative">
+                  <Separator />
+                  <span className="absolute left-1/2 -translate-x-1/2 top-[-10px] bg-background px-2 text-xs text-muted-foreground">
+                      {t('or_continue_with')}
+                  </span>
+              </div>
         </div>
+      )}
 
-        <form action={formAction} ref={formRef}>
+      <form action={formAction} ref={formRef}>
+        <CardContent className="space-y-4 p-0">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -165,17 +160,19 @@ export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
             <Label htmlFor="password">{t('password_label')}</Label>
             <Input id="password" name="password" type="password" required />
           </div>
-          <CardFooter className="flex-col gap-4 items-stretch p-0 pt-6">
-            <LoginButton />
+        </CardContent>
+        <CardFooter className="flex-col gap-4 items-stretch p-0 pt-6">
+          <LoginButton />
+          {!options.isAdminLogin && (
             <div className="mt-4 text-center text-sm">
               {t('no_account_prompt')}{' '}
               <button type="button" onClick={() => setView('signup')} className="underline">
                 {t('signup_button')}
               </button>
             </div>
-          </CardFooter>
-        </form>
-      </CardContent>
-    </Card>
+          )}
+        </CardFooter>
+      </form>
+    </div>
   );
 }
