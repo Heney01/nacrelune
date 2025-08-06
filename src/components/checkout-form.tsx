@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -183,7 +182,7 @@ const PaymentProcessor = ({
   )
 };
 
-type Step = 'customer' | 'shipping' | 'payment';
+type Step = 'customer' | 'shipping' | 'summary' | 'payment';
 
 export const CheckoutForm = ({
   stripePromise,
@@ -295,24 +294,6 @@ export const CheckoutForm = ({
   const handleProceedToPayment = async () => {
     setErrorMessage(null);
     
-    // Validate current step
-    if (currentStep === 'customer') {
-      if (!shippingAddress.name || !email) {
-        setErrorMessage(t('customer_info_error'));
-        return;
-      }
-    } else if (currentStep === 'shipping') {
-      if (deliveryMethod === 'home' && (!shippingAddress.addressLine1 || !shippingAddress.city || !shippingAddress.postalCode || !shippingAddress.country)) {
-        setErrorMessage(t('shipping_info_error'));
-        return;
-      }
-      if (deliveryMethod === 'pickup' && !selectedPickupPoint) {
-        setErrorMessage(t('pickup_selection_error'));
-        return;
-      }
-    }
-    
-    // Prepare payment
     setIsPreparingPayment(true);
     setPaymentError(null);
     const intentEmail = user?.email || 'customer@example.com';
@@ -357,6 +338,11 @@ export const CheckoutForm = ({
         setErrorMessage(t('pickup_selection_error'));
         return;
       }
+      setCurrentStep('summary');
+      return;
+    }
+
+     if (currentStep === 'summary') {
       handleProceedToPayment();
       return;
     }
@@ -365,12 +351,13 @@ export const CheckoutForm = ({
   const handleBackStep = () => {
     setErrorMessage(null);
     setPaymentError(null);
-    if(currentStep === 'payment') setCurrentStep('shipping');
+    if(currentStep === 'payment') setCurrentStep('summary');
+    if(currentStep === 'summary') setCurrentStep('shipping');
     if(currentStep === 'shipping') setCurrentStep('customer');
   };
   
-  const stepNumber = currentStep === 'customer' ? 1 : currentStep === 'shipping' ? 2 : 3;
-  const progressValue = (stepNumber / 3) * 100;
+  const stepNumber = currentStep === 'customer' ? 1 : currentStep === 'shipping' ? 2 : currentStep === 'summary' ? 3 : 4;
+  const progressValue = (stepNumber / 4) * 100;
   
   if (currentStep === 'payment') {
       const stripeOptions: StripeElementsOptions | undefined = clientSecret
@@ -401,8 +388,8 @@ export const CheckoutForm = ({
                         </Alert>
                     </div>
                   )}
-                  {!isPreparingPayment && !paymentError && stripeOptions && (
-                     <Elements stripe={stripePromise} options={stripeOptions}>
+                  {clientSecret && (
+                     <Elements stripe={stripePromise} options={{clientSecret, appearance: { theme: 'stripe' }}}>
                         <PaymentProcessor
                             onOrderCreated={onOrderCreated}
                             email={email}
@@ -439,7 +426,7 @@ export const CheckoutForm = ({
               <div>
                   <Progress value={progressValue} className="w-full" />
                   <p className="text-xs text-muted-foreground mt-2 text-center">
-                      {t('step_indicator', { step: stepNumber, total: 3 })}
+                      {t('step_indicator', { step: stepNumber, total: 4 })}
                   </p>
               </div>
 
@@ -453,94 +440,97 @@ export const CheckoutForm = ({
                   </div>
               )}
               
-              <div>
-                <div style={{ display: currentStep === 'customer' ? 'block' : 'none' }} className="space-y-4">
-                    <h3 className="text-lg font-medium">{t('customer_info')}</h3>
+              <div style={{ display: currentStep === 'customer' ? 'block' : 'none' }}>
+                  <h3 className="text-lg font-medium mb-4">{t('customer_info')}</h3>
+                  <div className="space-y-4">
+                      <div className="space-y-2">
+                          <Label htmlFor="name">{t('full_name')}</Label>
+                          <Input id="name" value={shippingAddress.name} onChange={(e) => setShippingAddress(prev => ({ ...prev, name: e.target.value }))} placeholder={t('full_name')} required={currentStep === 'customer'} />
+                      </div>
+                      <div className="space-y-2 pb-2">
+                          <Label htmlFor="email-address">{t('email_address')}</Label>
+                          <Input id="email-address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={tStatus('email_placeholder')} required={currentStep === 'customer'} />
+                      </div>
+                  </div>
+              </div>
+
+              <div style={{ display: currentStep === 'shipping' ? 'block' : 'none' }}>
+                <h3 className="text-lg font-medium mb-4">{t('shipping_title')}</h3>
+                <Tabs value={deliveryMethod} onValueChange={(v) => setDeliveryMethod(v as DeliveryMethod)} className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="home"><Home className="mr-2 h-4 w-4"/>{t('delivery_method_home')}</TabsTrigger>
+                    <TabsTrigger value="pickup"><Store className="mr-2 h-4 w-4"/>{t('delivery_method_pickup')}</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="home" className="pt-4 space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="shipping-name">{t('full_name')}</Label>
+                        <Input id="shipping-name" name="name" value={shippingAddress.name} onChange={(e) => setShippingAddress(prev => ({...prev, name: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
+                    </div>
                     <div className="space-y-2">
-                        <Label htmlFor="name">{t('full_name')}</Label>
-                        <Input id="name" value={shippingAddress.name} onChange={(e) => setShippingAddress(prev => ({ ...prev, name: e.target.value }))} placeholder={t('full_name')} required={currentStep === 'customer'} />
+                        <Label htmlFor="addressLine1">{t('address')}</Label>
+                        <Input id="addressLine1" name="addressLine1" placeholder={t('address_line1_placeholder')} value={shippingAddress.addressLine1} onChange={(e) => setShippingAddress(prev => ({...prev, addressLine1: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
                     </div>
-                    <div className="space-y-2 pb-2">
-                        <Label htmlFor="email-address">{t('email_address')}</Label>
-                        <Input id="email-address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={tStatus('email_placeholder')} required={currentStep === 'customer'} />
+                    <div className="space-y-2">
+                        <Input id="addressLine2" name="addressLine2" placeholder={t('address_line2_placeholder')} value={shippingAddress.addressLine2 || ''} onChange={(e) => setShippingAddress(prev => ({...prev, addressLine2: e.target.value}))} />
                     </div>
-                </div>
-
-                <div style={{ display: currentStep === 'shipping' ? 'block' : 'none' }} className="space-y-4">
-                  <h3 className="text-lg font-medium">{t('shipping_title')}</h3>
-                  <Tabs value={deliveryMethod} onValueChange={(v) => setDeliveryMethod(v as DeliveryMethod)} className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="home"><Home className="mr-2 h-4 w-4"/>{t('delivery_method_home')}</TabsTrigger>
-                      <TabsTrigger value="pickup"><Store className="mr-2 h-4 w-4"/>{t('delivery_method_pickup')}</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="home" className="pt-4 space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="shipping-name">{t('full_name')}</Label>
-                          <Input id="shipping-name" name="name" value={shippingAddress.name} onChange={(e) => setShippingAddress(prev => ({...prev, name: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
-                      </div>
-                      <div className="space-y-2">
-                          <Label htmlFor="addressLine1">{t('address')}</Label>
-                          <Input id="addressLine1" name="addressLine1" placeholder={t('address_line1_placeholder')} value={shippingAddress.addressLine1} onChange={(e) => setShippingAddress(prev => ({...prev, addressLine1: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
-                      </div>
-                      <div className="space-y-2">
-                          <Input id="addressLine2" name="addressLine2" placeholder={t('address_line2_placeholder')} value={shippingAddress.addressLine2 || ''} onChange={(e) => setShippingAddress(prev => ({...prev, addressLine2: e.target.value}))} />
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                          <div className="space-y-2 sm:col-span-1">
-                              <Label htmlFor="postalCode">{t('postal_code')}</Label>
-                              <Input id="postalCode" name="postalCode" value={shippingAddress.postalCode} onChange={(e) => setShippingAddress(prev => ({...prev, postalCode: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
-                          </div>
-                          <div className="space-y-2 sm:col-span-2">
-                              <Label htmlFor="city">{t('city')}</Label>
-                              <Input id="city" name="city" value={shippingAddress.city} onChange={(e) => setShippingAddress(prev => ({...prev, city: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
-                          </div>
-                      </div>
-                      <div className="space-y-2">
-                          <Label htmlFor="country">{t('country')}</Label>
-                          <Input id="country" name="country" value={shippingAddress.country} onChange={(e) => setShippingAddress(prev => ({...prev, country: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
-                      </div>
-                    </TabsContent>
-                    <TabsContent value="pickup" className="pt-4 space-y-4">
-                        <div className="flex gap-2">
-                          <div className="flex-grow space-y-2">
-                              <Label htmlFor="postcode">{t('postal_code')}</Label>
-                              <Input id="postcode" value={postcode} onChange={e => setPostcode(e.target.value)} placeholder="e.g. 75001" />
-                          </div>
-                          <Button type="button" onClick={handleFindPickupPoints} disabled={isFindingPoints} className="self-end">
-                              {isFindingPoints ? <Loader2 className="animate-spin" /> : <Search />}
-                          </Button>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="space-y-2 sm:col-span-1">
+                            <Label htmlFor="postalCode">{t('postal_code')}</Label>
+                            <Input id="postalCode" name="postalCode" value={shippingAddress.postalCode} onChange={(e) => setShippingAddress(prev => ({...prev, postalCode: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
                         </div>
-                        {pickupPointError && <Alert variant="destructive"><AlertCircle className="h-4 w-4"/><AlertDescription>{pickupPointError}</AlertDescription></Alert>}
+                        <div className="space-y-2 sm:col-span-2">
+                            <Label htmlFor="city">{t('city')}</Label>
+                            <Input id="city" name="city" value={shippingAddress.city} onChange={(e) => setShippingAddress(prev => ({...prev, city: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="country">{t('country')}</Label>
+                        <Input id="country" name="country" value={shippingAddress.country} onChange={(e) => setShippingAddress(prev => ({...prev, country: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="pickup" className="pt-4 space-y-4">
+                      <div className="flex gap-2">
+                        <div className="flex-grow space-y-2">
+                            <Label htmlFor="postcode">{t('postal_code')}</Label>
+                            <Input id="postcode" value={postcode} onChange={e => setPostcode(e.target.value)} placeholder="e.g. 75001" />
+                        </div>
+                        <Button type="button" onClick={handleFindPickupPoints} disabled={isFindingPoints} className="self-end">
+                            {isFindingPoints ? <Loader2 className="animate-spin" /> : <Search />}
+                        </Button>
+                      </div>
+                      {pickupPointError && <Alert variant="destructive"><AlertCircle className="h-4 w-4"/><AlertDescription>{pickupPointError}</AlertDescription></Alert>}
 
-                        {pickupPoints.length > 0 && (
-                          <div className="space-y-2">
-                              <Label>{t('pickup_select_point')}</Label>
-                              <div className="h-48 rounded-md border overflow-y-auto">
-                                  <div className="p-2 space-y-2">
-                                      {pickupPoints.map(point => (
-                                          <Card 
-                                              key={point.id} 
-                                              className={cn("p-3 cursor-pointer hover:bg-muted/50", selectedPickupPoint?.id === point.id && "bg-muted ring-2 ring-primary")}
-                                              onClick={() => setSelectedPickupPoint(point)}
-                                          >
-                                              <div className="flex justify-between items-start">
-                                                  <div>
-                                                      <p className="font-semibold text-sm">{point.name}</p>
-                                                      <p className="text-xs text-muted-foreground">{point.address}, {point.city}</p>
-                                                  </div>
-                                                  {selectedPickupPoint?.id === point.id && <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />}
-                                              </div>
-                                          </Card>
-                                      ))}
-                                  </div>
-                              </div>
-                          </div>
-                        )}
-                    </TabsContent>
-                  </Tabs>
+                      {pickupPoints.length > 0 && (
+                        <div className="space-y-2">
+                            <Label>{t('pickup_select_point')}</Label>
+                            <div className="h-48 rounded-md border overflow-y-auto">
+                                <div className="p-2 space-y-2">
+                                    {pickupPoints.map(point => (
+                                        <Card 
+                                            key={point.id} 
+                                            className={cn("p-3 cursor-pointer hover:bg-muted/50", selectedPickupPoint?.id === point.id && "bg-muted ring-2 ring-primary")}
+                                            onClick={() => setSelectedPickupPoint(point)}
+                                        >
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <p className="font-semibold text-sm">{point.name}</p>
+                                                    <p className="text-xs text-muted-foreground">{point.address}, {point.city}</p>
+                                                </div>
+                                                {selectedPickupPoint?.id === point.id && <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />}
+                                            </div>
+                                        </Card>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                      )}
+                  </TabsContent>
+                </Tabs>
+              </div>
 
-                  <Separator />
-
+              <div style={{ display: currentStep === 'summary' ? 'block' : 'none' }}>
+                 <h3 className="text-lg font-medium mb-4">{t('order_summary')}</h3>
+                 <div className="space-y-4">
                   {user && availablePoints > 0 && (
                     <div className="p-4 rounded-lg border bg-muted/50 space-y-3">
                           <div className="space-y-0.5">
@@ -590,14 +580,41 @@ export const CheckoutForm = ({
                           )}
                       </div>
                       {couponError && <p className="text-sm text-destructive">{couponError}</p>}
-                  </div>
-                </div>
+                    </div>
+
+                    <Separator className="my-4"/>
+
+                    <div className="space-y-2">
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">{t('subtotal')}</span>
+                            <span>{formatPrice(totalBeforeDiscount)}</span>
+                        </div>
+                        {appliedCoupon && (
+                            <div className="flex justify-between text-green-600">
+                                <span className="text-muted-foreground">{t('discount')} ({appliedCoupon.code})</span>
+                                <span>-{formatPrice(discountAmount)}</span>
+                            </div>
+                        )}
+                        {pointsValue > 0 && (
+                            <div className="flex justify-between text-green-600">
+                                <span className="text-muted-foreground">{t('points_discount')}</span>
+                                <span>-{formatPrice(pointsValue)}</span>
+                            </div>
+                        )}
+                         <div className="flex justify-between font-bold text-lg">
+                            <span>{t('total')}</span>
+                            <span>{formatPrice(finalTotal)}</span>
+                        </div>
+                    </div>
+
+                 </div>
               </div>
+
           </div>
       </div>
       <DialogFooter className="p-6 pt-4 mt-auto border-t">
           <Button type="submit" form="checkout-form" className="w-full">
-              {t('next_step_button')}
+              {currentStep === 'summary' ? t('go_to_payment_button') : t('next_step_button')}
           </Button>
       </DialogFooter>
     </form>

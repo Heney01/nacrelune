@@ -240,7 +240,7 @@
    "Checkout": {
     "title": "Paiement",
     "description": "Veuillez remplir vos informations pour finaliser la commande.",
-    "order_summary": "Résumé de la commande",
+    "order_summary": "Récapitulatif et réductions",
     "shipping_info": "Informations de livraison",
     "shipping_title": "Livraison",
     "payment_info": "Informations de paiement",
@@ -276,6 +276,7 @@
     "payment_intent_error": "Impossible d'initialiser le paiement. Veuillez réessayer.",
     "step_indicator": "Étape {step} sur {total}",
     "next_step_button": "Étape suivante",
+    "go_to_payment_button": "Continuer vers le paiement",
     "back_button": "Retour",
     "customer_info": "Informations client",
     "customer_info_error": "Veuillez renseigner votre nom et votre e-mail.",
