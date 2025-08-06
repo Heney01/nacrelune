@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useAuthDialog } from '@/hooks/use-auth-dialog';
 import { LoginForm } from './login-form';
 import { SignUpForm } from './signup-form';
