@@ -70,17 +70,25 @@ async function uploadProfileImage(imageDataJson: string | null, userId: string, 
 
 // --- Auth Actions ---
 
-async function verifyUser(idToken: string): Promise<{uid: string, email: string | undefined}> {
+async function verifyUser(idToken: string): Promise<{uid: string, email: string | undefined, admin?: boolean}> {
      if (!adminApp) {
         throw new Error("Le module d'administration Firebase n'est pas configuré.");
     }
     try {
         const adminAuth = getAdminAuth(adminApp);
         const decodedToken = await adminAuth.verifyIdToken(idToken, true);
-        return { uid: decodedToken.uid, email: decodedToken.email };
+        return { uid: decodedToken.uid, email: decodedToken.email, admin: decodedToken.admin === true };
     } catch (error: any) {
         throw new Error("Jeton d'authentification invalide.");
     }
+}
+
+export async function verifyAdmin(idToken: string): Promise<{uid: string, email: string | undefined}> {
+    const user = await verifyUser(idToken);
+    if (!user.admin) {
+        throw new Error("Accès non autorisé. Vous n'avez pas les droits d'administrateur.");
+    }
+    return user;
 }
 
 
@@ -383,4 +391,6 @@ export async function deleteUserAccount(idToken: string): Promise<{ success: boo
         return { success: false, error: "Une erreur est survenue lors de la suppression du compte." };
     }
 }
+    
+
     

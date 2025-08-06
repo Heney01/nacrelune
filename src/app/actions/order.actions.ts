@@ -10,7 +10,7 @@ import type { JewelryModel, PlacedCharm, OrderStatus, Order, OrderItem, Shipping
 import { toDate } from '@/lib/data';
 import Stripe from 'stripe';
 import { headers } from 'next/headers';
-import { verifyAdmin } from './auth.actions';
+import { verifyAdmin } from '@/app/actions/auth.actions';
 import { cookies } from 'next/headers';
 
 
@@ -300,7 +300,7 @@ export async function createOrder(
                     modelName: item.model.name,
                     jewelryTypeId: item.jewelryType.id,
                     jewelryTypeName: item.jewelryType.name,
-                    charmIds: item.placedCharms.map(pc => pc.charm.id),
+                    charms: item.placedCharms.map(pc => ({ charmId: pc.charm.id, withClasp: !!pc.withClasp })),
                     price: itemPrice,
                     previewImageUrl: previewImageUrls[index],
                     isCompleted: false,
@@ -381,8 +381,8 @@ export async function sendConfirmationEmail(orderId: string, locale: string): Pr
         const baseUrl = referer ? new URL(referer).origin : (process.env.NEXT_PUBLIC_BASE_URL || 'https://www.atelierabijoux.com');
         const trackingUrl = `${baseUrl}/${locale}/orders/track?orderNumber=${orderNumber}`;
 
-        const mailText = `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.modelName} avec ${item.charmIds?.length || 0} breloque(s)`).join('\\n')}\n\nVous pouvez suivre votre commande ici : ${trackingUrl}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
-        const mailHtml = `<h1>Merci pour votre commande !</h1><p>Bonjour,</p><p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${totalPrice.toFixed(2)}€.</p><h2>Récapitulatif :</h2><ul>${cartItems.map(item => `<li>${item.modelName} avec ${item.charmIds?.length || 0} breloque(s)</li>`).join('')}</ul><p>Vous pouvez suivre l'avancement de votre commande en cliquant sur ce lien : <a href="${trackingUrl}">${trackingUrl}</a>.</p><p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
+        const mailText = `Bonjour,\n\nNous avons bien reçu votre commande n°${orderNumber} d'un montant total de ${totalPrice.toFixed(2)}€.\n\nRécapitulatif :\n${cartItems.map(item => `- ${item.modelName} avec ${item.charms?.length || 0} breloque(s)`).join('\\n')}\n\nVous pouvez suivre votre commande ici : ${trackingUrl}\n\nVous recevrez un autre e-mail lorsque votre commande sera expédiée.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
+        const mailHtml = `<h1>Merci pour votre commande !</h1><p>Bonjour,</p><p>Nous avons bien reçu votre commande n°<strong>${orderNumber}</strong> d'un montant total de ${totalPrice.toFixed(2)}€.</p><h2>Récapitulatif :</h2><ul>${cartItems.map(item => `<li>${item.modelName} avec ${item.charms?.length || 0} breloque(s)</li>`).join('')}</ul><p>Vous pouvez suivre l'avancement de votre commande en cliquant sur ce lien : <a href="${trackingUrl}">${trackingUrl}</a>.</p><p>Vous recevrez un autre e-mail lorsque votre commande sera expédiée.</p><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
         
         await addDoc(collection(db, 'mail'), {
             to: [email],
@@ -416,7 +416,7 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
         const orderData = orderDoc.data();
 
         // Get all unique charm IDs from all items in the order
-        const allCharmIds = orderData.items.flatMap((item: OrderItem) => item.charmIds);
+        const allCharmIds = orderData.items.flatMap((item: OrderItem) => item.charms.map((c: any) => c.charmId));
         const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
         // Fetch all required charms in a single query
@@ -469,9 +469,9 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
         const enrichedItems: OrderItem[] = await Promise.all(orderData.items.map(async (item: OrderItem) => {
             const model = modelsMap.get(item.modelId);
             
-            const enrichedCharms = (item.charmIds || []).map(id => {
-                const charm = charmsMap.get(id);
-                return charm;
+            const enrichedCharms = (item.charms || []).map((charmDetail: any) => {
+                const charm = charmsMap.get(charmDetail.charmId);
+                return charm ? { ...charm, withClasp: charmDetail.withClasp } : null;
             }).filter((c): c is any => !!c);
 
             return {
@@ -622,7 +622,7 @@ export async function getOrders(): Promise<Order[]> {
         });
 
         // Get all unique charm IDs from all orders first
-        const allCharmIds = ordersSnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => item.charmIds) || []);
+        const allCharmIds = ordersSnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => (item.charms || []).map((c: any) => c.charmId)) || []);
         const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
         // Fetch all required charms in a single query
@@ -649,8 +649,12 @@ export async function getOrders(): Promise<Order[]> {
             const data = orderDoc.data();
             
             const enrichedItems: OrderItem[] = await Promise.all((data.items || []).map(async (item: OrderItem) => {
-                const enrichedCharms = (item.charmIds || [])
-                    .map(id => charmsMap.get(id))
+                const enrichedCharms = (item.charms || [])
+                    .map((charmDetail: any) => {
+                        const charm = charmsMap.get(charmDetail.charmId);
+                         if (!charm) return null;
+                        return { ...charm, withClasp: charmDetail.withClasp };
+                    })
                     .filter((c): c is any => !!c); // Filter out undefined charms
 
                 return {
@@ -760,8 +764,8 @@ export async function updateOrderStatus(formData: FormData): Promise<{ success: 
                 for (const item of orderData.items) {
                     const modelPath = doc(db, item.jewelryTypeId, item.modelId).path;
                     stockToRestore.set(modelPath, (stockToRestore.get(modelPath) || 0) + 1);
-                    for (const charmId of item.charmIds) {
-                        const charmPath = doc(db, 'charms', charmId).path;
+                    for (const charmDetail of (item.charms || [])) {
+                        const charmPath = doc(db, 'charms', charmDetail.id).path;
                         stockToRestore.set(charmPath, (stockToRestore.get(charmPath) || 0) + 1);
                     }
                 }
@@ -890,3 +894,6 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
         return { success: false, message: "Une erreur est survenue lors de la validation du code." };
     }
 }
+
+
+    
