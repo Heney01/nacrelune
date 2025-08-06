@@ -30,7 +30,7 @@ import { createOrder, validateCoupon, sendConfirmationEmail, createPaymentIntent
 import { PaymentProcessor } from './payment-processor';
 
 
-type Step = 'customer' | 'shipping' | 'summary' | 'payment';
+type Step = 'shipping' | 'summary' | 'payment';
 
 export const CheckoutForm = ({
   stripePromise,
@@ -48,7 +48,7 @@ export const CheckoutForm = ({
   const { cart } = useCart();
   const CLASP_PRICE = 1.20;
 
-  const [currentStep, setCurrentStep] = useState<Step>('customer');
+  const [currentStep, setCurrentStep] = useState<Step>('shipping');
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('home');
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
     name: '',
@@ -186,16 +186,11 @@ export const CheckoutForm = ({
     event.preventDefault();
     setErrorMessage(null);
 
-    if (currentStep === 'customer') {
-      if (!shippingAddress.name || !email) {
+    if (currentStep === 'shipping') {
+       if (!shippingAddress.name || !email) {
         setErrorMessage(t('customer_info_error'));
         return;
       }
-      setCurrentStep('shipping');
-      return;
-    }
-
-    if (currentStep === 'shipping') {
        if (deliveryMethod === 'home' && (!shippingAddress.addressLine1 || !shippingAddress.city || !shippingAddress.postalCode || !shippingAddress.country)) {
         setErrorMessage(t('shipping_info_error'));
         return;
@@ -219,11 +214,10 @@ export const CheckoutForm = ({
     setPaymentError(null);
     if(currentStep === 'payment') setCurrentStep('summary');
     if(currentStep === 'summary') setCurrentStep('shipping');
-    if(currentStep === 'shipping') setCurrentStep('customer');
   };
   
-  const stepNumber = currentStep === 'customer' ? 1 : currentStep === 'shipping' ? 2 : currentStep === 'summary' ? 3 : 4;
-  const progressValue = (stepNumber / 4) * 100;
+  const stepNumber = currentStep === 'shipping' ? 1 : currentStep === 'summary' ? 2 : 3;
+  const progressValue = (stepNumber / 3) * 100;
   
   if (currentStep === 'payment') {
       return (
@@ -272,7 +266,7 @@ export const CheckoutForm = ({
   return (
     <form id="checkout-form" onSubmit={handleFormSubmit} className="flex flex-col h-full">
       <DialogHeader className="p-6 pb-4 flex-shrink-0 relative flex-row items-center justify-center">
-        {currentStep !== 'customer' && (
+        {currentStep !== 'shipping' && (
           <Button type="button" variant="ghost" size="icon" onClick={handleBackStep} id="checkout-back-button-main" className="absolute left-4 top-4">
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -288,7 +282,7 @@ export const CheckoutForm = ({
               <div>
                   <Progress value={progressValue} className="w-full" />
                   <p className="text-xs text-muted-foreground mt-2 text-center">
-                      {t('step_indicator', { step: stepNumber, total: 4 })}
+                      {t('step_indicator', { step: stepNumber, total: 3 })}
                   </p>
               </div>
 
@@ -302,20 +296,6 @@ export const CheckoutForm = ({
                   </div>
               )}
               
-              <div style={{ display: currentStep === 'customer' ? 'block' : 'none' }}>
-                  <h3 className="text-lg font-medium mb-4">{t('customer_info')}</h3>
-                  <div className="space-y-4">
-                      <div className="space-y-2">
-                          <Label htmlFor="name">{t('full_name')}</Label>
-                          <Input id="name" value={shippingAddress.name} onChange={(e) => setShippingAddress(prev => ({ ...prev, name: e.target.value }))} placeholder={t('full_name')} required={currentStep === 'customer'} />
-                      </div>
-                      <div className="space-y-2 pb-2">
-                          <Label htmlFor="email-address">{t('email_address')}</Label>
-                          <Input id="email-address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={tStatus('email_placeholder')} required={currentStep === 'customer'} />
-                      </div>
-                  </div>
-              </div>
-
               <div style={{ display: currentStep === 'shipping' ? 'block' : 'none' }}>
                 <h3 className="text-lg font-medium mb-4">{t('shipping_title')}</h3>
                 <Tabs value={deliveryMethod} onValueChange={(v) => setDeliveryMethod(v as DeliveryMethod)} className="w-full">
@@ -324,6 +304,11 @@ export const CheckoutForm = ({
                     <TabsTrigger value="pickup"><Store className="mr-2 h-4 w-4"/>{t('delivery_method_pickup')}</TabsTrigger>
                   </TabsList>
                   <TabsContent value="home" className="pt-4 space-y-4">
+                      <div className="space-y-2">
+                          <Label htmlFor="email-address">{t('email_address')}</Label>
+                          <Input id="email-address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={tStatus('email_placeholder')} required={currentStep === 'shipping'} />
+                      </div>
+                      <Separator />
                       <div className="space-y-2">
                         <Label htmlFor="shipping-name">{t('full_name')}</Label>
                         <Input id="shipping-name" name="name" value={shippingAddress.name} onChange={(e) => setShippingAddress(prev => ({...prev, name: e.target.value}))} required={currentStep === 'shipping' && deliveryMethod === 'home'} />
