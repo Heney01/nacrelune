@@ -15,21 +15,21 @@ export function AuthDialog() {
 
   const handleLoginSuccess = () => {
     close();
-    window.location.reload();
   }
   
   const handleSignupSuccess = () => {
     close();
-    window.location.reload();
   }
 
   const descriptionId = view === 'login' ? 'login-dialog-desc' : 'signup-dialog-desc';
+  const titleId = view === 'login' ? 'login-dialog-title' : 'signup-dialog-title';
 
   return (
     <Dialog open={isOpen} onOpenChange={close}>
       <DialogContent 
         className="sm:max-w-md p-0" 
         onOpenAutoFocus={(e) => e.preventDefault()}
+        aria-labelledby={titleId}
         aria-describedby={descriptionId}
       >
         {view === 'login' 
