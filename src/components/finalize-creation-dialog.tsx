@@ -164,42 +164,45 @@ export function FinalizeCreationDialog({
                 <div className="my-4 grid place-items-center">
                     <Image src={previewImage} alt={t('preview_alt')} width={300} height={300} className="rounded-lg border bg-muted/50 max-w-[75%] sm:max-w-full h-auto" />
                 </div>
-                {!firebaseUser ? (
-                    <Alert>
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>{t('publish_login_required_title')}</AlertTitle>
-                        <AlertDescription>
-                            {t('publish_login_required_desc')}{' '}
-                            <Link href={getLoginRedirectUrl()} className="font-bold underline">
-                                {t('publish_login_link')}
-                            </Link>
-                            .
-                        </AlertDescription>
-                    </Alert>
-                ) : (
-                    <div className="space-y-4">
-                       <Accordion type="single" collapsible>
-                            <AccordionItem value="item-1" className="border-b-0">
-                                <AccordionTrigger className="text-sm font-semibold text-primary hover:no-underline [&>svg]:ml-1">
-                                    <div className="flex items-center gap-2">
-                                         <Award className="h-4 w-4"/>
-                                        {t('publish_incentive_title')}
-                                    </div>
-                                </AccordionTrigger>
-                                <AccordionContent>
-                                    <ul className="list-disc pl-5 mt-2 space-y-1 text-xs text-muted-foreground">
-                                        <li>{t('publish_incentive_line1')}</li>
-                                        <li>{t('publish_incentive_line2')}</li>
-                                    </ul>
-                                </AccordionContent>
-                            </AccordionItem>
-                        </Accordion>
+                
+                 <div className="space-y-4">
+                    <Accordion type="single" collapsible className="w-full">
+                        <AccordionItem value="item-1" className="border-b-0">
+                            <AccordionTrigger className="text-sm font-semibold text-primary hover:no-underline [&>svg]:ml-1">
+                                <div className="flex items-center gap-2">
+                                     <Award className="h-4 w-4"/>
+                                    {t('publish_incentive_title')}
+                                </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                                <ul className="list-disc pl-5 mt-2 space-y-1 text-xs text-muted-foreground">
+                                    <li>{t('publish_incentive_line1')}</li>
+                                    <li>{t('publish_incentive_line2')}</li>
+                                </ul>
+                            </AccordionContent>
+                        </AccordionItem>
+                    </Accordion>
+
+                    {!firebaseUser ? (
+                        <Alert>
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>{t('publish_login_required_title')}</AlertTitle>
+                            <AlertDescription>
+                                {t('publish_login_required_desc')}{' '}
+                                <Link href={getLoginRedirectUrl()} className="font-bold underline">
+                                    {t('publish_login_link')}
+                                </Link>
+                                .
+                            </AlertDescription>
+                        </Alert>
+                    ) : (
                          <div className="space-y-2">
                             <Label htmlFor="creationName">{t('creation_name_label')}</Label>
                             <Input id="creationName" value={creationName} onChange={(e) => setCreationName(e.target.value)} placeholder={t('creation_name_placeholder')} />
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
+
                  <DialogFooter className="flex-col gap-2 mt-4">
                      {firebaseUser && (
                         <Button onClick={handlePublishAndContinue} className="w-full" disabled={isPublishing || !creationName.trim()}>
