@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect, Suspense, useMemo, useCallback, useTransition } from 'react';
@@ -92,7 +91,7 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
     }
 
     startLikeTransition(async () => {
-        const initialLiked = data?.isLikedByUser;
+        const initialLiked = data?.isLikedByUser ?? false;
         const initialLikesCount = data?.creator?.likesCount ?? 0;
 
         setData(prev => {
