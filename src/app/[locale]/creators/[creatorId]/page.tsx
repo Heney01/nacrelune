@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { toggleLikeCreator } from '@/app/actions/user.actions';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Card, CardContent } from '@/components/ui/card';
 
 function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: string }) {
   const [data, setData] = useState<{ creator: Creator | null; creations: Creation[], isLikedByUser: boolean } | null>(null);
@@ -215,7 +216,6 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
                                     <li>{tAuth('reward_points_explanation_1')}</li>
                                     <li>{tAuth('reward_points_explanation_2')}</li>
                                     <li>{tAuth('reward_points_explanation_3')}</li>
-                                    <li>{tAuth('reward_points_explanation_4')}</li>
                                 </ul>
                                 <DialogFooter>
                                     <Button type="button" variant="outline" asChild><DialogTrigger>Fermer</DialogTrigger></Button>
@@ -258,11 +258,23 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
                 />
               ))}
               {isOwner && Array.from({ length: emptySlots }).map((_, index) => (
-                  <Link href={`/${locale}`} key={`empty-${index}`}>
-                      <div className="aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center text-muted-foreground hover:bg-muted hover:border-primary hover:text-primary transition-colors">
-                          <PlusCircle className="h-10 w-10" />
-                          <p className="mt-2 font-medium text-sm">Créer</p>
-                      </div>
+                  <Link href={`/${locale}`} key={`empty-${index}`} className="contents">
+                      <Card className="overflow-hidden group flex flex-col h-full">
+                        <div className="bg-muted/50 aspect-square relative overflow-hidden cursor-pointer flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-t-lg group-hover:border-primary group-hover:text-primary transition-colors">
+                            <PlusCircle className="h-10 w-10" />
+                            <p className="mt-2 font-medium text-sm">Créer</p>
+                        </div>
+                         <CardContent className="p-4 flex-grow flex flex-col">
+                           <div className="flex-grow">
+                                <h3 className="font-headline text-lg truncate invisible">Placeholder</h3>
+                            </div>
+                            <div className="flex justify-end items-center mt-auto pt-4 gap-4 invisible">
+                                <div className="h-5 w-5"></div>
+                                <div className="h-5 w-5"></div>
+                                <div className="h-5 w-5"></div>
+                            </div>
+                        </CardContent>
+                      </Card>
                   </Link>
               ))}
             </div>
@@ -288,3 +300,5 @@ export default function CreatorShowcasePage({ params }: { params: { creatorId: s
     </Suspense>
   )
 }
+
+    
