@@ -200,6 +200,7 @@ export const CheckoutForm = ({
 }) => {
   const t = useTranslations('Checkout');
   const tCart = useTranslations('Cart');
+  const tStatus = useTranslations('OrderStatus');
   const { user } = useAuth();
 
   const [currentStep, setCurrentStep] = useState<Step>('customer');
