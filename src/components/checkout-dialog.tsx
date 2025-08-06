@@ -14,9 +14,9 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { loadStripe, Stripe, StripeElementsOptions } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
-import { CreateOrderResult, createPaymentIntent } from '@/app/actions/order.actions';
+import { CreateOrderResult } from '@/app/actions/order.actions';
 import { CheckoutForm } from './checkout-form';
-import type { ShippingAddress, Coupon } from '@/lib/types';
+import type { Coupon } from '@/lib/types';
 import { Button } from './ui/button';
 import { useAuth } from '@/hooks/use-auth';
 
@@ -45,9 +45,6 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
   const { user } = useAuth();
   
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [isPreparingPayment, setIsPreparingPayment] = useState(true);
-  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   const subtotal = cart.reduce((sum, item) => {
     const modelPrice = item.model.price || 0;
@@ -65,54 +62,12 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
   
   const total = Math.max(0, subtotal - discountAmount + shippingCost);
 
-  useEffect(() => {
-    if (isOpen && total > 0) {
-      setIsPreparingPayment(true);
-      setPaymentError(null);
-      
-      const email = user?.email || 'customer@example.com';
-
-      createPaymentIntent(total, email)
-        .then(data => {
-          if (data.clientSecret) {
-            setClientSecret(data.clientSecret);
-          } else {
-            setPaymentError(data.error || t('payment_intent_error'));
-          }
-        })
-        .catch(() => {
-          setPaymentError(t('payment_intent_error'));
-        })
-        .finally(() => {
-          setIsPreparingPayment(false);
-        });
-    } else if (isOpen && total <= 0) {
-        setIsPreparingPayment(false);
-        setClientSecret('free_order'); // Special case for free orders
-    }
-  }, [isOpen, total, user, t]);
-
-  const stripeOptions: StripeElementsOptions | undefined = clientSecret
-    ? {
-        clientSecret,
-        appearance: {
-          theme: 'stripe',
-          variables: {
-            colorPrimary: '#ef4444',
-            fontFamily: 'Montserrat, sans-serif',
-            borderRadius: '6px',
-          },
-        },
-      }
-    : undefined;
-
   const formatPrice = (price: number) => tCart('price', { price });
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
         if (!open) {
           setAppliedCoupon(null);
-          setClientSecret(null);
         }
         onOpenChange(open);
     }}>
@@ -121,33 +76,14 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <div className="flex flex-col h-full max-h-[90vh] md:max-h-none overflow-y-auto no-scrollbar">
-           {isPreparingPayment && (
-             <div className="flex flex-col items-center justify-center h-full">
-                <Loader2 className="h-8 w-8 animate-spin" />
-                <p className="mt-4 text-sm text-muted-foreground">{t('processing_button')}</p>
-             </div>
-           )}
-           {paymentError && (
-             <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-                 <Alert variant="destructive">
-                     <AlertCircle className="h-4 w-4" />
-                     <AlertTitle>{t('payment_error_title')}</AlertTitle>
-                     <AlertDescription>{paymentError}</AlertDescription>
-                 </Alert>
-                  <Button variant="outline" onClick={() => onOpenChange(false)} className="mt-4">
-                      {tCart('close_button')}
-                  </Button>
-             </div>
-           )}
-           {!isPreparingPayment && !paymentError && stripePromise && stripeOptions && (
-             <Elements stripe={stripePromise} options={stripeOptions}>
+           {stripePromise && (
+             <Elements stripe={stripePromise}>
                 <CheckoutForm 
-                    total={subtotal}
+                    totalBeforeDiscount={subtotal}
                     onOrderCreated={onOrderCreated}
                     setStockError={setStockError}
                     appliedCoupon={appliedCoupon}
                     setAppliedCoupon={setAppliedCoupon}
-                    clientSecret={clientSecret!}
                 />
             </Elements>
            )}

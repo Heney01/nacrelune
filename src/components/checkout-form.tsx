@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, AlertCircle, ArrowLeft, Home, Store, Search, CheckCircle, TicketPercent, Award } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
-import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
+import { useStripe, useElements, PaymentElement, Elements } from '@stripe/react-stripe-js';
 import type { CreateOrderResult, SerializableCartItem } from '@/app/actions/order.actions';
 import { useParams, useRouter } from 'next/navigation';
 import { StockErrorState } from './checkout-dialog';
@@ -26,27 +26,26 @@ import { useAuth } from '@/hooks/use-auth';
 import { Separator } from './ui/separator';
 import { Slider } from './ui/slider';
 import { Skeleton } from './ui/skeleton';
-import { createOrder, validateCoupon, sendConfirmationEmail } from '@/app/actions/order.actions';
-
+import { createOrder, validateCoupon, sendConfirmationEmail, createPaymentIntent } from '@/app/actions/order.actions';
 
 const PaymentStep = ({
   onOrderCreated,
-  totalBeforeCoupon,
   email,
   deliveryMethod,
   shippingAddress,
   clientSecret,
   appliedCoupon,
-  setAppliedCoupon,
+  pointsToUse,
+  finalTotal
 }: {
   onOrderCreated: (result: CreateOrderResult) => void;
-  totalBeforeCoupon: number;
   email: string;
   deliveryMethod: DeliveryMethod;
   shippingAddress?: ShippingAddress;
   clientSecret: string;
   appliedCoupon: Coupon | null;
-  setAppliedCoupon: (coupon: Coupon | null) => void;
+  pointsToUse: number;
+  finalTotal: number;
 }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -55,56 +54,10 @@ const PaymentStep = ({
   const { cart } = useCart();
   const locale = useParams().locale as string;
   const { user } = useAuth();
-  const { toast } = useToast();
-
+  
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
-  const [couponCode, setCouponCode] = useState('');
-  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
-  const [couponError, setCouponError] = useState<string | null>(null);
-
-  const discountAmount = appliedCoupon
-    ? appliedCoupon.discountType === 'percentage'
-      ? totalBeforeCoupon * (appliedCoupon.value / 100)
-      : appliedCoupon.value
-    : 0;
-  
-  const totalAfterCoupon = Math.max(0, totalBeforeCoupon - discountAmount);
-
-  const availablePoints = user?.rewardPoints || 0;
-  const maxPointsToUse = Math.min(availablePoints, Math.floor(totalAfterCoupon * 10));
-
-  const [pointsToUse, setPointsToUse] = useState(0);
-  const pointsValue = pointsToUse / 10;
-  
-  const finalTotal = Math.max(0, totalAfterCoupon - pointsValue);
-
-  const formatPrice = (price: number) => tCart('price', { price });
-
-  const handleApplyCoupon = async () => {
-    if (!couponCode) return;
-    setIsApplyingCoupon(true);
-    setCouponError(null);
-    setAppliedCoupon(null);
-
-    const result = await validateCoupon(couponCode);
-    if (result.success && result.coupon) {
-        if (result.coupon.minPurchase && totalBeforeCoupon < result.coupon.minPurchase) {
-            setCouponError(`Le total de la commande doit être d'au moins ${formatPrice(result.coupon.minPurchase)} pour utiliser ce coupon.`);
-        } else {
-            setAppliedCoupon(result.coupon);
-            toast({
-                title: t('coupon_applied_title'),
-                description: t('coupon_applied_description', {code: result.coupon.code}),
-            })
-        }
-    } else {
-        setCouponError(result.message);
-    }
-    setIsApplyingCoupon(false);
-  }
-
   const handleConfirmOrder = async () => {
     setIsProcessing(true);
     setErrorMessage(null);
@@ -195,85 +148,6 @@ const PaymentStep = ({
         </Alert>
       )}
 
-      <div className="md:hidden p-4 rounded-lg border bg-muted/50 space-y-2">
-         <h4 className="font-medium text-center mb-4">{t('order_summary')}</h4>
-         <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">{t('subtotal')}</span>
-              <span>{formatPrice(totalBeforeCoupon)}</span>
-          </div>
-          {appliedCoupon && (
-              <div className="flex justify-between text-sm text-green-600">
-                  <span className="text-muted-foreground">{t('discount')} ({appliedCoupon.code})</span>
-                  <span>-{formatPrice(discountAmount)}</span>
-              </div>
-          )}
-           {pointsValue > 0 && (
-              <div className="flex justify-between text-sm text-green-600">
-                  <span className="text-muted-foreground">{t('points_discount')}</span>
-                  <span>-{formatPrice(pointsValue)}</span>
-              </div>
-          )}
-          <Separator className="my-2"/>
-          <div className="flex justify-between font-bold text-base">
-              <span>{t('total')}</span>
-              <span>{formatPrice(finalTotal)}</span>
-          </div>
-      </div>
-
-
-      {user && availablePoints > 0 && (
-         <div className="p-4 rounded-lg border bg-muted/50 space-y-3">
-              <div className="space-y-0.5">
-                  <Label htmlFor="use-points" className="font-bold flex items-center gap-2">
-                    <Award className="h-5 w-5 text-primary"/>
-                    {t('use_reward_points')}
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                      {t('you_have_points_slider', { count: availablePoints })}
-                  </p>
-              </div>
-               <div className="flex items-center gap-4">
-                  <Slider
-                    id="points-slider"
-                    min={0}
-                    max={maxPointsToUse}
-                    step={10}
-                    value={[pointsToUse]}
-                    onValueChange={(value) => setPointsToUse(value[0])}
-                    className="flex-grow"
-                  />
-                  <div className="w-24 text-center border rounded-md p-2">
-                      <p className="text-sm font-bold text-green-600">- {formatPrice(pointsValue)}</p>
-                      <p className="text-xs text-muted-foreground">{pointsToUse} pts</p>
-                  </div>
-               </div>
-         </div>
-      )}
-
-      <Separator />
-
-       <div className="space-y-2">
-            <Label>{t('coupon_code')}</Label>
-            <div className="flex gap-2">
-                <Input 
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                    placeholder="SUMMER20"
-                    disabled={!!appliedCoupon}
-                />
-                {!appliedCoupon ? (
-                    <Button type="button" variant="outline" onClick={handleApplyCoupon} disabled={isApplyingCoupon || !couponCode}>
-                        {isApplyingCoupon ? <Loader2 className="animate-spin" /> : t('apply_button')}
-                    </Button>
-                ) : (
-                    <Button type="button" variant="ghost" onClick={() => { setAppliedCoupon(null); setCouponCode(''); setCouponError(null); }}>
-                        {t('remove_coupon_button')}
-                    </Button>
-                )}
-            </div>
-            {couponError && <p className="text-sm text-destructive">{couponError}</p>}
-        </div>
-      
       {finalTotal > 0 ? (
           <div className="relative">
             <PaymentElement options={{wallets: {applePay: 'never', googlePay: 'never'}}} className={cn(isStripeLoading && 'opacity-0 h-0')}/>
@@ -312,24 +186,21 @@ const PaymentStep = ({
 type Step = 'customer' | 'shipping' | 'payment';
 
 export const CheckoutForm = ({
-  total,
+  totalBeforeDiscount,
   onOrderCreated,
   setStockError,
   appliedCoupon,
   setAppliedCoupon,
-  clientSecret,
 }: {
-  total: number;
+  totalBeforeDiscount: number;
   onOrderCreated: (result: CreateOrderResult) => void;
   setStockError: (error: StockErrorState) => void;
   appliedCoupon: Coupon | null;
   setAppliedCoupon: (coupon: Coupon | null) => void;
-  clientSecret: string;
 }) => {
   const t = useTranslations('Checkout');
-  const tStatus = useTranslations('OrderStatus');
-  const { user, firebaseUser } = useAuth();
-  const router = useRouter();
+  const tCart = useTranslations('Cart');
+  const { user } = useAuth();
 
   const [currentStep, setCurrentStep] = useState<Step>('customer');
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('home');
@@ -348,6 +219,14 @@ export const CheckoutForm = ({
   const [selectedPickupPoint, setSelectedPickupPoint] = useState<PickupPoint | null>(null);
   const [isFindingPoints, setIsFindingPoints] = useState(false);
   const [pickupPointError, setPickupPointError] = useState<string | null>(null);
+  
+  const [couponCode, setCouponCode] = useState('');
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [isPreparingPayment, setIsPreparingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -356,6 +235,42 @@ export const CheckoutForm = ({
     }
   }, [user]);
 
+  const discountAmount = appliedCoupon
+    ? appliedCoupon.discountType === 'percentage'
+      ? totalBeforeDiscount * (appliedCoupon.value / 100)
+      : appliedCoupon.value
+    : 0;
+  
+  const totalAfterCoupon = Math.max(0, totalBeforeDiscount - discountAmount);
+
+  const availablePoints = user?.rewardPoints || 0;
+  const maxPointsToUse = Math.min(availablePoints, Math.floor(totalAfterCoupon * 10));
+
+  const [pointsToUse, setPointsToUse] = useState(0);
+  const pointsValue = pointsToUse / 10;
+  
+  const finalTotal = Math.max(0, totalAfterCoupon - pointsValue);
+  const formatPrice = (price: number) => tCart('price', { price });
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode) return;
+    setIsApplyingCoupon(true);
+    setCouponError(null);
+    setAppliedCoupon(null);
+
+    const result = await validateCoupon(couponCode);
+    if (result.success && result.coupon) {
+        if (result.coupon.minPurchase && totalBeforeDiscount < result.coupon.minPurchase) {
+            setCouponError(`Le total de la commande doit être d'au moins ${formatPrice(result.coupon.minPurchase)} pour utiliser ce coupon.`);
+        } else {
+            setAppliedCoupon(result.coupon);
+        }
+    } else {
+        setCouponError(result.message);
+    }
+    setIsApplyingCoupon(false);
+  }
+  
   const handleFindPickupPoints = async () => {
     if (!postcode) {
       setPickupPointError(t('pickup_postcode_error'));
@@ -373,6 +288,49 @@ export const CheckoutForm = ({
     }
     setIsFindingPoints(false);
   }
+
+  const handleProceedToPayment = async () => {
+    setErrorMessage(null);
+    
+    // Validate current step
+    if (currentStep === 'customer') {
+      if (!shippingAddress.name || !email) {
+        setErrorMessage(t('customer_info_error'));
+        return;
+      }
+    } else if (currentStep === 'shipping') {
+      if (deliveryMethod === 'home' && (!shippingAddress.addressLine1 || !shippingAddress.city || !shippingAddress.postalCode || !shippingAddress.country)) {
+        setErrorMessage(t('shipping_info_error'));
+        return;
+      }
+      if (deliveryMethod === 'pickup' && !selectedPickupPoint) {
+        setErrorMessage(t('pickup_selection_error'));
+        return;
+      }
+    }
+    
+    // Prepare payment
+    setIsPreparingPayment(true);
+    setPaymentError(null);
+    const intentEmail = user?.email || 'customer@example.com';
+    
+    if (finalTotal > 0) {
+      const intentResult = await createPaymentIntent(finalTotal, intentEmail);
+      if (intentResult.clientSecret) {
+        setClientSecret(intentResult.clientSecret);
+      } else {
+        setPaymentError(intentResult.error || t('payment_intent_error'));
+        setIsPreparingPayment(false);
+        return;
+      }
+    } else {
+      setClientSecret('free_order'); // Special case for free orders
+    }
+
+    setIsPreparingPayment(false);
+    setCurrentStep('payment');
+  }
+
 
   const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -396,13 +354,14 @@ export const CheckoutForm = ({
         setErrorMessage(t('pickup_selection_error'));
         return;
       }
-      setCurrentStep('payment');
+      handleProceedToPayment();
       return;
     }
   };
 
   const handleBackStep = () => {
     setErrorMessage(null);
+    setPaymentError(null);
     if(currentStep === 'payment') setCurrentStep('shipping');
     if(currentStep === 'shipping') setCurrentStep('customer');
   };
@@ -411,6 +370,10 @@ export const CheckoutForm = ({
   const progressValue = (stepNumber / 3) * 100;
   
   if (currentStep === 'payment') {
+      const stripeOptions: StripeElementsOptions | undefined = clientSecret
+        ? { clientSecret, appearance: { theme: 'stripe', variables: { colorPrimary: '#ef4444', fontFamily: 'Montserrat, sans-serif', borderRadius: '6px' } } }
+        : undefined;
+
       return (
           <div className="flex flex-col h-full">
             <DialogHeader className="p-6 pb-4 flex-shrink-0 relative flex-row items-center justify-center">
@@ -420,16 +383,33 @@ export const CheckoutForm = ({
                 <DialogTitle className="text-2xl font-headline">{t('payment_info')}</DialogTitle>
             </DialogHeader>
              <div className="px-6 pb-6 flex-grow overflow-y-auto no-scrollbar">
-                  <PaymentStep
-                      onOrderCreated={onOrderCreated}
-                      totalBeforeCoupon={total}
-                      email={email}
-                      deliveryMethod={deliveryMethod}
-                      shippingAddress={shippingAddress}
-                      clientSecret={clientSecret}
-                      appliedCoupon={appliedCoupon}
-                      setAppliedCoupon={setAppliedCoupon}
-                  />
+                  {isPreparingPayment && (
+                    <div className="flex flex-col items-center justify-center h-full">
+                        <Loader2 className="h-8 w-8 animate-spin" />
+                        <p className="mt-4 text-sm text-muted-foreground">{t('processing_button')}</p>
+                    </div>
+                  )}
+                  {paymentError && (
+                    <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+                        <Alert variant="destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>{t('payment_error_title')}</AlertTitle>
+                            <AlertDescription>{paymentError}</AlertDescription>
+                        </Alert>
+                    </div>
+                  )}
+                  {!isPreparingPayment && !paymentError && stripeOptions && (
+                    <PaymentStep
+                        onOrderCreated={onOrderCreated}
+                        email={email}
+                        deliveryMethod={deliveryMethod}
+                        shippingAddress={shippingAddress}
+                        clientSecret={clientSecret!}
+                        appliedCoupon={appliedCoupon}
+                        pointsToUse={pointsToUse}
+                        finalTotal={finalTotal}
+                    />
+                  )}
              </div>
           </div>
       )
@@ -553,6 +533,59 @@ export const CheckoutForm = ({
                         )}
                     </TabsContent>
                   </Tabs>
+
+                  <Separator />
+
+                  {user && availablePoints > 0 && (
+                    <div className="p-4 rounded-lg border bg-muted/50 space-y-3">
+                          <div className="space-y-0.5">
+                              <Label htmlFor="use-points" className="font-bold flex items-center gap-2">
+                                <Award className="h-5 w-5 text-primary"/>
+                                {t('use_reward_points')}
+                              </Label>
+                              <p className="text-sm text-muted-foreground">
+                                  {t('you_have_points_slider', { count: availablePoints })}
+                              </p>
+                          </div>
+                          <div className="flex items-center gap-4">
+                              <Slider
+                                id="points-slider"
+                                min={0}
+                                max={maxPointsToUse}
+                                step={10}
+                                value={[pointsToUse]}
+                                onValueChange={(value) => setPointsToUse(value[0])}
+                                className="flex-grow"
+                              />
+                              <div className="w-24 text-center border rounded-md p-2">
+                                  <p className="text-sm font-bold text-green-600">- {formatPrice(pointsValue)}</p>
+                                  <p className="text-xs text-muted-foreground">{pointsToUse} pts</p>
+                              </div>
+                          </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                      <Label>{t('coupon_code')}</Label>
+                      <div className="flex gap-2">
+                          <Input 
+                              value={couponCode}
+                              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                              placeholder="SUMMER20"
+                              disabled={!!appliedCoupon}
+                          />
+                          {!appliedCoupon ? (
+                              <Button type="button" variant="outline" onClick={handleApplyCoupon} disabled={isApplyingCoupon || !couponCode}>
+                                  {isApplyingCoupon ? <Loader2 className="animate-spin" /> : t('apply_button')}
+                              </Button>
+                          ) : (
+                              <Button type="button" variant="ghost" onClick={() => { setAppliedCoupon(null); setCouponCode(''); setCouponError(null); }}>
+                                  {t('remove_coupon_button')}
+                              </Button>
+                          )}
+                      </div>
+                      {couponError && <p className="text-sm text-destructive">{couponError}</p>}
+                  </div>
                 </div>
               </div>
           </div>
