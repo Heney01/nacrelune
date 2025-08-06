@@ -300,7 +300,7 @@ export async function getOrders(): Promise<Order[]> {
         });
 
         // Get all unique charm IDs from all orders first
-        const allCharmIds = ordersSnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => item.charms.map(c => c.charmId)) || []);
+        const allCharmIds = ordersSnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => (item.charms || []).map((c: any) => c.charmId)) || []);
         const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
 
         // Fetch all required charms in a single query
@@ -328,12 +328,12 @@ export async function getOrders(): Promise<Order[]> {
             
             const enrichedItems: OrderItem[] = await Promise.all((data.items || []).map(async (item: OrderItem) => {
                 const enrichedCharms = (item.charms || [])
-                    .map(charmDetail => {
+                    .map((charmDetail: any) => {
                         const charm = charmsMap.get(charmDetail.charmId);
                         if (!charm) return null;
                         return { ...charm, withClasp: charmDetail.withClasp };
                     })
-                    .filter((c): c is (Charm & { withClasp: boolean }) => !!c);
+                    .filter((c): c is (Charm & { withClasp: boolean }) => !!c); // Filter out undefined charms
 
                 return {
                     ...item,
