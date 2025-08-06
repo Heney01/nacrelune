@@ -17,13 +17,14 @@ import { GoogleIcon } from '@/components/icons';
 import { signup, userLoginWithGoogle } from '@/app/actions/auth.actions';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from '@/hooks/use-translations';
 import { useGoogleAuth } from '@/hooks/use-google-auth';
 import { Separator } from './ui/separator';
 import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthDialog } from '@/hooks/use-auth-dialog';
+import { DialogHeader } from './ui/dialog';
 
 
 type State = {
@@ -52,6 +53,7 @@ function SignUpButton() {
 
 export function SignUpForm({ onSignupSuccess }: { onSignupSuccess: () => void }) {
   const [state, formAction] = useFormState(signup, initialState);
+  const router = useRouter();
   const params = useParams();
   const locale = params.locale as string;
   const t = useTranslations('Auth');
@@ -94,11 +96,15 @@ export function SignUpForm({ onSignupSuccess }: { onSignupSuccess: () => void })
         });
         onSignupSuccess();
     }
-  }, [state.success, state.message, toast, onSignupSuccess]);
+  }, [state, toast, onSignupSuccess]);
 
 
   return (
     <Card className="border-0 shadow-none">
+       <DialogHeader>
+        <DialogTitle>{t('user_signup_title')}</DialogTitle>
+        <DialogDescription>{t('user_signup_description')}</DialogDescription>
+      </DialogHeader>
        <CardContent className="space-y-4 pt-6">
           {(state?.error || googleError) && (
             <Alert variant="destructive">

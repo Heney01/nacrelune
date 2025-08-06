@@ -52,6 +52,7 @@ function LoginButton() {
 
 export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
   const [state, formAction] = useFormState(userLogin, initialState);
+  const router = useRouter();
   const params = useParams();
   const locale = params.locale as string;
   const t = useTranslations('Auth');
@@ -98,6 +99,10 @@ export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
 
   return (
     <Card className="border-0 shadow-none">
+      <DialogHeader>
+        <DialogTitle>{t('user_login_title')}</DialogTitle>
+        <DialogDescription>{t('user_login_description')}</DialogDescription>
+      </DialogHeader>
        <CardContent className="space-y-4 pt-6">
         {(state?.error || error) && (
             <Alert variant="destructive">
