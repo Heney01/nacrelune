@@ -10,7 +10,8 @@ import type { JewelryModel, PlacedCharm, OrderStatus, Order, OrderItem, Shipping
 import { toDate } from '@/lib/data';
 import Stripe from 'stripe';
 import { headers } from 'next/headers';
-import { verifyAdmin } from '@/app/actions/auth.actions';
+import { getAuth as getAdminAuth } from 'firebase-admin/auth';
+import { adminApp } from '@/lib/firebase-admin';
 
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -71,8 +72,7 @@ async function refundStripePayment(paymentIntentId: string): Promise<{ success: 
              return { success: false, message: `Le remboursement a échoué avec le statut : ${refund.status}.` };
         }
     } catch (error: any) {
-        console.error("Error creating Stripe refund:", error);
-         if (error.code === 'charge_already_refunded') {
+        if (error.code === 'charge_already_refunded') {
             return { success: true, message: 'La commande a été déjà remboursée sur Stripe.' };
         }
         return { success: false, message: error.message || "Une erreur est survenue lors du remboursement Stripe." };
@@ -595,6 +595,22 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
 
 // --- Admin Order Actions ---
 
+async function verifyAdmin(idToken: string): Promise<{uid: string, email: string | undefined}> {
+    if (!adminApp) {
+        throw new Error("Le module d'administration Firebase n'est pas configuré.");
+    }
+    try {
+        const adminAuth = getAdminAuth(adminApp);
+        const decodedToken = await adminAuth.verifyIdToken(idToken, true);
+        if (decodedToken.admin !== true) {
+            throw new Error("Accès non autorisé. Vous n'avez pas les droits d'administrateur.");
+        }
+        return { uid: decodedToken.uid, email: decodedToken.email };
+    } catch (error: any) {
+        throw new Error(error.message || "Jeton d'authentification invalide.");
+    }
+}
+
 export async function getOrders(): Promise<Order[]> {
     try {
         const [ordersSnapshot, mailSnapshot] = await Promise.all([
@@ -707,6 +723,38 @@ export async function getOrders(): Promise<Order[]> {
         return [];
     }
 }
+
+export async function getOrdersForUser(userId: string): Promise<Order[]> {
+    try {
+        const q = query(collection(db, 'orders'), where('userId', '==', userId), orderBy('createdAt', 'desc'));
+        const ordersSnapshot = await getDocs(q);
+
+        if (ordersSnapshot.empty) {
+            return [];
+        }
+
+        const orders: Order[] = await Promise.all(ordersSnapshot.docs.map(async(orderDoc) => {
+            const data = orderDoc.data();
+            return {
+                id: orderDoc.id,
+                orderNumber: data.orderNumber,
+                createdAt: (data.createdAt as Timestamp).toDate(),
+                customerEmail: data.customerEmail,
+                subtotal: data.subtotal ?? data.totalPrice,
+                totalPrice: data.totalPrice,
+                status: data.status,
+                items: data.items,
+                deliveryMethod: data.deliveryMethod || 'home',
+            } as Order;
+        }));
+
+        return orders;
+    } catch (error) {
+        console.error(`Error fetching orders for user ${userId}:`, error);
+        return [];
+    }
+}
+
 
 export async function updateOrderStatus(formData: FormData): Promise<{ success: boolean; message: string }> {
      try {
@@ -911,3 +959,4 @@ export async function validateCoupon(code: string): Promise<{ success: boolean; 
     
 
     
+
