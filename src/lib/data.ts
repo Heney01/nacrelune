@@ -517,10 +517,18 @@ export async function getAllCreations(): Promise<Creation[]> {
 }
 
 
-export async function getCreatorShowcaseData(creatorId: string): Promise<{ creator: User | null, creations: Creation[] }> {
+export async function getCreatorShowcaseData(creatorId: string, likingUserId?: string): Promise<{ creator: User | null, creations: Creation[], isLikedByUser?: boolean }> {
     try {
+        const creatorDocRef = doc(db, 'users', creatorId);
+
+        let likeDoc;
+        if (likingUserId) {
+            const likeDocRef = doc(db, 'users', creatorId, 'likes', likingUserId);
+            likeDoc = await getDoc(likeDocRef);
+        }
+
         const [userDoc, creationsSnapshot, allCharms] = await Promise.all([
-            getDoc(doc(db, 'users', creatorId)),
+            getDoc(creatorDocRef),
             getDocs(query(collection(db, 'creations'), where('creatorId', '==', creatorId), orderBy('createdAt', 'desc'))),
             getCharms()
         ]);
@@ -533,6 +541,7 @@ export async function getCreatorShowcaseData(creatorId: string): Promise<{ creat
                 displayName: data.displayName,
                 email: data.email,
                 photoURL: data.photoURL,
+                likesCount: data.likesCount || 0,
             };
         }
 
@@ -541,7 +550,11 @@ export async function getCreatorShowcaseData(creatorId: string): Promise<{ creat
         // Manually assign the fetched creator to each creation to ensure consistency
         const finalCreations = hydratedCreations.map(c => ({ ...c, creator }));
 
-        return { creator: creator || null, creations: finalCreations };
+        return { 
+            creator: creator || null, 
+            creations: finalCreations,
+            isLikedByUser: likeDoc?.exists()
+        };
     } catch (error) {
         console.error(`Error fetching showcase data for creator ${creatorId}:`, error);
         return { creator: null, creations: [] };

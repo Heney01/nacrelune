@@ -9,6 +9,7 @@ export interface User {
   photoURL?: string | null;
   rewardPoints?: number;
   searchableTerms?: string[];
+  likesCount?: number;
 }
 
 export interface CharmCategory {

@@ -1,13 +1,16 @@
 
+
 'use server';
 
 import { cookies } from 'next/headers';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, getDoc, query, where, getDocs, collection, limit, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, query, where, getDocs, collection, limit, updateDoc, runTransaction, increment } from 'firebase/firestore';
 import { db, app, storage } from '@/lib/firebase';
 import { ref, deleteObject, uploadString, getDownloadURL } from 'firebase/storage';
 import type { User } from '@/lib/types';
 import { redirect } from 'next/navigation';
+import { getAuth as getAdminAuth } from 'firebase-admin/auth';
+import { adminApp } from '@/lib/firebase-admin';
 
 
 // --- Helper Functions ---
@@ -194,6 +197,7 @@ export async function signup(prevState: any, formData: FormData): Promise<{ succ
             photoURL: user.photoURL,
             rewardPoints: 0,
             searchableTerms,
+            likesCount: 0,
         };
         await setDoc(doc(db, 'users', user.uid), userData);
 
@@ -251,6 +255,7 @@ export async function userLoginWithGoogle(formData: FormData): Promise<{ success
         photoURL,
         rewardPoints: 0,
         searchableTerms,
+        likesCount: 0,
       };
       await setDoc(userDocRef, newUser);
     }
@@ -323,5 +328,4 @@ export async function updateUserProfile(prevState: any, formData: FormData): Pro
         return { success: false, error: "Une erreur est survenue lors de la mise à jour du profil." };
     }
 }
-
     

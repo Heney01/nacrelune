@@ -2,13 +2,13 @@
 
 'use client';
 
-import { useState, useEffect, Suspense, useMemo, useCallback } from 'react';
+import { useState, useEffect, Suspense, useMemo, useCallback, useTransition } from 'react';
 import { getCreatorShowcaseData } from '@/lib/data';
 import { CreationCard } from '@/components/creation-card';
 import { notFound, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Heart, Clock, Settings, Award } from 'lucide-react';
+import { ArrowLeft, User, Heart, Clock, Settings, Award, Loader2 } from 'lucide-react';
 import { BrandLogo } from '@/components/icons';
 import { CartWidget } from '@/components/cart-widget';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -20,27 +20,32 @@ import { useAuth } from '@/hooks/use-auth';
 import { UserNav } from '@/components/user-nav';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useTranslations } from '@/hooks/use-translations';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import { toggleLikeCreator } from '@/app/actions/user.actions';
 
 function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: string }) {
-  const [data, setData] = useState<{ creator: Creator | null; creations: Creation[] } | null>(null);
+  const [data, setData] = useState<{ creator: Creator | null; creations: Creation[], isLikedByUser: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<'date' | 'likes'>('date');
   const searchParams = useSearchParams();
   const creationIdFromUrl = searchParams.get('creation');
   const { user, firebaseUser } = useAuth();
   const tAuth = useTranslations('Auth');
-  
+  const { toast } = useToast();
+  const [isLikePending, startLikeTransition] = useTransition();
+
   const isOwner = firebaseUser?.uid === creatorId;
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const result = await getCreatorShowcaseData(creatorId);
+      const result = await getCreatorShowcaseData(creatorId, firebaseUser?.uid);
       setData(result);
       setLoading(false);
     };
     fetchData();
-  }, [creatorId]);
+  }, [creatorId, firebaseUser?.uid]);
   
   const sortedCreations = useMemo(() => {
     if (!data?.creations) return [];
@@ -77,6 +82,53 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
     });
   }, []);
 
+  const handleLikeCreator = () => {
+    if (!firebaseUser) {
+        toast({ variant: 'destructive', title: "Connexion requise", description: "Vous devez être connecté pour aimer un créateur." });
+        return;
+    }
+
+    startLikeTransition(async () => {
+        const initialLiked = data?.isLikedByUser;
+        const initialLikesCount = data?.creator?.likesCount ?? 0;
+
+        setData(prev => {
+            if (!prev || !prev.creator) return prev;
+            return {
+                ...prev,
+                isLikedByUser: !prev.isLikedByUser,
+                creator: {
+                    ...prev.creator,
+                    likesCount: prev.isLikedByUser ? initialLikesCount - 1 : initialLikesCount + 1,
+                }
+            };
+        });
+
+        try {
+            const idToken = await firebaseUser.getIdToken();
+            const result = await toggleLikeCreator(creatorId, idToken);
+            if (!result.success) {
+                 setData(prev => {
+                    if (!prev || !prev.creator) return prev;
+                    return { ...prev, isLikedByUser: initialLiked, creator: { ...prev.creator, likesCount: initialLikesCount } };
+                });
+                toast({ variant: 'destructive', title: "Erreur", description: result.message });
+            } else if (result.newLikesCount !== undefined && data?.creator) {
+                 setData(prev => {
+                    if (!prev || !prev.creator) return prev;
+                    return { ...prev, creator: { ...prev.creator, likesCount: result.newLikesCount! } };
+                });
+            }
+        } catch (e) {
+            setData(prev => {
+                if (!prev || !prev.creator) return prev;
+                return { ...prev, isLikedByUser: initialLiked, creator: { ...prev.creator, likesCount: initialLikesCount } };
+            });
+            toast({ variant: 'destructive', title: "Erreur", description: "Une erreur inattendue est survenue." });
+        }
+    });
+  };
+
   if (loading) {
     return <Loading />;
   }
@@ -85,7 +137,7 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
     notFound();
   }
 
-  const { creator, creations } = data;
+  const { creator, creations, isLikedByUser } = data;
   const fallbackDisplayName = creator.displayName?.charAt(0) || creator.email?.charAt(0) || '?';
 
   return (
@@ -120,7 +172,23 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
             </Avatar>
             <div className="flex-grow text-center sm:text-left">
               <p className="text-sm text-muted-foreground">{isOwner ? "Votre vitrine publique" : `Vitrine de`}</p>
-              <h1 className="text-3xl font-headline">{creator.displayName}</h1>
+              <div className="flex items-center gap-4 justify-center sm:justify-start">
+                  <h1 className="text-3xl font-headline">{creator.displayName}</h1>
+                  {!isOwner && (
+                       <button
+                          onClick={handleLikeCreator}
+                          disabled={isLikePending || !firebaseUser}
+                          className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors disabled:cursor-not-allowed"
+                      >
+                          {isLikePending ? (
+                              <Loader2 className="h-5 w-5 animate-spin" />
+                          ) : (
+                              <Heart className={cn("h-6 w-6", isLikedByUser && "text-primary fill-current")} />
+                          )}
+                          <span className="text-base font-medium">{creator.likesCount ?? 0}</span>
+                      </button>
+                  )}
+              </div>
             </div>
              {isOwner && (
                 <div className="flex items-center gap-4 self-center">
@@ -204,7 +272,3 @@ export default function CreatorShowcasePage({ params }: { params: { creatorId: s
     </Suspense>
   )
 }
-
-
-
-    
