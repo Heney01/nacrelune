@@ -4,7 +4,7 @@
 import React, { useState, useReducer, useTransition, useMemo, FormEvent } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, ZoomIn, AlertTriangle, ShoppingCart, Info, Search, Gem, Ruler } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ZoomIn, AlertTriangle, ShoppingCart, Info, Search, Gem, Ruler, EllipsisVertical } from "lucide-react";
 import type { JewelryType, JewelryModel, GeneralPreferences, Charm } from "@/lib/types";
 import { ModelForm } from './model-form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -28,6 +28,12 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { deleteModel, markAsOrdered, markAsRestocked } from '@/app/actions/admin.actions';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -101,13 +107,14 @@ function jewelryTypesReducer(state: State, action: OptimisticUpdate): State {
     });
 }
 
-function ReorderDialog({ model, jewelryTypeId, locale, onOrder, onRestock, t }: {
+function ReorderDialog({ model, jewelryTypeId, locale, onOrder, onRestock, t, children }: {
     model: JewelryModel,
     jewelryTypeId: string,
     locale: string,
     onOrder: (formData: FormData) => void,
     onRestock: (formData: FormData) => void,
-    t: (key: string, values?: any) => string
+    t: (key: string, values?: any) => string,
+    children: React.ReactNode,
 }) {
     const [restockedQuantity, setRestockedQuantity] = useState(1);
     const [isOpen, setIsOpen] = useState(false);
@@ -132,13 +139,11 @@ function ReorderDialog({ model, jewelryTypeId, locale, onOrder, onRestock, t }: 
     }
 
     return (
-        <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-            <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon">
-                    <ShoppingCart className="h-4 w-4" />
-                </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                {children}
+            </DialogTrigger>
+            <DialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>{t('reorder_dialog_title', {itemName: model.name})}</AlertDialogTitle>
                     <AlertDialogDescription>{t('reorder_dialog_description')}</AlertDialogDescription>
@@ -176,8 +181,8 @@ function ReorderDialog({ model, jewelryTypeId, locale, onOrder, onRestock, t }: 
                 <AlertDialogFooter>
                     <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
                 </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -401,43 +406,48 @@ export function ModelsManager({ initialJewelryTypes, allCharms, locale, preferen
                                                                     {model.quantity}
                                                                 </div>
                                                             </TableCell>
-                                                            <TableCell className="text-right space-x-1">
-                                                                 <Button variant="ghost" size="icon" onClick={() => handleSizeModelClick(jewelryType, model)}><Ruler className="h-4 w-4" /></Button>
-                                                                <ReorderDialog 
-                                                                    model={model}
-                                                                    jewelryTypeId={jewelryType.id}
-                                                                    locale={locale}
-                                                                    onOrder={handleOrderAction}
-                                                                    onRestock={handleRestockAction}
-                                                                    t={t}
-                                                                />
-                                                                <Button variant="ghost" size="icon" onClick={() => handleEditModelClick(jewelryType, model)}>
-                                                                    <Edit className="h-4 w-4" />
-                                                                </Button>
-                                                                <AlertDialog>
-                                                                    <AlertDialogTrigger asChild>
-                                                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                                                            <Trash2 className="h-4 w-4" />
+                                                            <TableCell className="text-right">
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild>
+                                                                        <Button variant="ghost" size="icon">
+                                                                            <EllipsisVertical className="h-4 w-4" />
                                                                         </Button>
-                                                                    </AlertDialogTrigger>
-                                                                    <AlertDialogContent>
-                                                                        <form action={handleDeleteAction}>
-                                                                            <input type="hidden" name="modelId" value={model.id} />
-                                                                            <input type="hidden" name="jewelryTypeId" value={jewelryType.id} />
-                                                                            <input type="hidden" name="displayImageUrl" value={model.displayImageUrl} />
-                                                                            <input type="hidden" name="editorImageUrl" value={model.editorImageUrl} />
-                                                                            <input type="hidden" name="locale" value={locale} />
-                                                                            <AlertDialogHeader>
-                                                                                <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-                                                                                <AlertDialogDescription>Cette action est irréversible. Le modèle "{model.name}" sera définitivement supprimé.</AlertDialogDescription>
-                                                                            </AlertDialogHeader>
-                                                                            <AlertDialogFooter>
-                                                                                <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
-                                                                                <AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
-                                                                            </AlertDialogFooter>
-                                                                        </form>
-                                                                    </AlertDialogContent>
-                                                                </AlertDialog>
+                                                                    </DropdownMenuTrigger>
+                                                                    <DropdownMenuContent>
+                                                                        <DropdownMenuItem onSelect={() => handleSizeModelClick(jewelryType, model)}>
+                                                                            <Ruler className="mr-2 h-4 w-4" />Calibrer
+                                                                        </DropdownMenuItem>
+                                                                        <ReorderDialog model={model} jewelryTypeId={jewelryType.id} locale={locale} onOrder={handleOrderAction} onRestock={handleRestockAction} t={t}>
+                                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                                                <ShoppingCart className="mr-2 h-4 w-4" />Gérer commande
+                                                                            </DropdownMenuItem>
+                                                                        </ReorderDialog>
+                                                                        <DropdownMenuItem onSelect={() => handleEditModelClick(jewelryType, model)}>
+                                                                            <Edit className="mr-2 h-4 w-4" />Modifier
+                                                                        </DropdownMenuItem>
+                                                                        <AlertDialog>
+                                                                            <AlertDialogTrigger asChild>
+                                                                                <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={e => e.preventDefault()}>
+                                                                                    <Trash2 className="mr-2 h-4 w-4" />Supprimer
+                                                                                </DropdownMenuItem>
+                                                                            </AlertDialogTrigger>
+                                                                            <AlertDialogContent>
+                                                                                <form action={handleDeleteAction}>
+                                                                                    <input type="hidden" name="modelId" value={model.id} />
+                                                                                    <input type="hidden" name="jewelryTypeId" value={jewelryType.id} />
+                                                                                    <input type="hidden" name="displayImageUrl" value={model.displayImageUrl} />
+                                                                                    <input type="hidden" name="editorImageUrl" value={model.editorImageUrl} />
+                                                                                    <input type="hidden" name="locale" value={locale} />
+                                                                                    <AlertDialogHeader>
+                                                                                        <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                                                                                        <AlertDialogDescription>Cette action est irréversible. Le modèle "{model.name}" sera définitivement supprimé.</AlertDialogDescription>
+                                                                                    </AlertDialogHeader>
+                                                                                    <AlertDialogFooter><AlertDialogCancel type="button">Annuler</AlertDialogCancel><AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction></AlertDialogFooter>
+                                                                                </form>
+                                                                            </AlertDialogContent>
+                                                                        </AlertDialog>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
                                                             </TableCell>
                                                         </TableRow>
                                                     )
@@ -485,44 +495,47 @@ export function ModelsManager({ initialJewelryTypes, allCharms, locale, preferen
                                                                 <span>{model.quantity}</span>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                    <div className="flex justify-end items-center gap-1 mt-2">
-                                                         <Button variant="ghost" size="icon" onClick={() => handleSizeModelClick(jewelryType, model)}><Ruler className="h-4 w-4" /></Button>
-                                                        <ReorderDialog 
-                                                            model={model}
-                                                            jewelryTypeId={jewelryType.id}
-                                                            locale={locale}
-                                                            onOrder={handleOrderAction}
-                                                            onRestock={handleRestockAction}
-                                                            t={t}
-                                                        />
-                                                        <Button variant="ghost" size="icon" onClick={() => handleEditModelClick(jewelryType, model)}>
-                                                            <Edit className="h-4 w-4" />
-                                                        </Button>
-                                                        <AlertDialog>
-                                                            <AlertDialogTrigger asChild>
-                                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                                                    <Trash2 className="h-4 w-4" />
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="flex-shrink-0">
+                                                                    <EllipsisVertical className="h-4 w-4" />
                                                                 </Button>
-                                                            </AlertDialogTrigger>
-                                                            <AlertDialogContent>
-                                                                <form action={handleDeleteAction}>
-                                                                    <input type="hidden" name="modelId" value={model.id} />
-                                                                    <input type="hidden" name="jewelryTypeId" value={jewelryType.id} />
-                                                                    <input type="hidden" name="displayImageUrl" value={model.displayImageUrl} />
-                                                                    <input type="hidden" name="editorImageUrl" value={model.editorImageUrl} />
-                                                                    <input type="hidden" name="locale" value={locale} />
-                                                                    <AlertDialogHeader>
-                                                                        <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-                                                                        <AlertDialogDescription>Cette action est irréversible. Le modèle "{model.name}" sera définitivement supprimé.</AlertDialogDescription>
-                                                                    </AlertDialogHeader>
-                                                                    <AlertDialogFooter>
-                                                                        <AlertDialogCancel type="button">Annuler</AlertDialogCancel>
-                                                                        <AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
-                                                                    </AlertDialogFooter>
-                                                                </form>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent>
+                                                                <DropdownMenuItem onSelect={() => handleSizeModelClick(jewelryType, model)}>
+                                                                    <Ruler className="mr-2 h-4 w-4" />Calibrer
+                                                                </DropdownMenuItem>
+                                                                 <ReorderDialog model={model} jewelryTypeId={jewelryType.id} locale={locale} onOrder={handleOrderAction} onRestock={handleRestockAction} t={t}>
+                                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                                        <ShoppingCart className="mr-2 h-4 w-4" />Gérer commande
+                                                                    </DropdownMenuItem>
+                                                                </ReorderDialog>
+                                                                <DropdownMenuItem onSelect={() => handleEditModelClick(jewelryType, model)}>
+                                                                    <Edit className="mr-2 h-4 w-4" />Modifier
+                                                                </DropdownMenuItem>
+                                                                <AlertDialog>
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={e => e.preventDefault()}>
+                                                                            <Trash2 className="mr-2 h-4 w-4" />Supprimer
+                                                                        </DropdownMenuItem>
+                                                                    </AlertDialogTrigger>
+                                                                    <AlertDialogContent>
+                                                                        <form action={handleDeleteAction}>
+                                                                            <input type="hidden" name="modelId" value={model.id} />
+                                                                            <input type="hidden" name="jewelryTypeId" value={jewelryType.id} />
+                                                                            <input type="hidden" name="displayImageUrl" value={model.displayImageUrl} />
+                                                                            <input type="hidden" name="editorImageUrl" value={model.editorImageUrl} />
+                                                                            <input type="hidden" name="locale" value={locale} />
+                                                                            <AlertDialogHeader>
+                                                                                <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                                                                                <AlertDialogDescription>Cette action est irréversible. Le modèle "{model.name}" sera définitivement supprimé.</AlertDialogDescription>
+                                                                            </AlertDialogHeader>
+                                                                            <AlertDialogFooter><AlertDialogCancel type="button">Annuler</AlertDialogCancel><AlertDialogAction type="submit" className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction></AlertDialogFooter>
+                                                                        </form>
+                                                                    </AlertDialogContent>
+                                                                </AlertDialog>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
                                                     </div>
                                                 </Card>
                                             );
