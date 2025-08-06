@@ -8,7 +8,7 @@ import { useCart } from '@/hooks/use-cart';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, ShoppingCart, PlusCircle, Loader2, User, Send } from 'lucide-react';
+import { Trash2, ShoppingCart, PlusCircle, Loader2, User, Send, Edit } from 'lucide-react';
 import React, { ReactNode, useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
@@ -169,9 +169,9 @@ export function CartSheet({ children, open, onOpenChange }: {
 
                     const itemPrice = basePrice + charmsPrice + claspsPrice;
                     const editUrl = `/${locale}/?type=${item.jewelryType.id}&model=${item.model.id}&cartItemId=${item.id}`;
-                    const isCreatorItem = !!item.creator;
-                    const isAlreadyPublished = !!item.creationId;
-                    const canPublish = !isCreatorItem && !isAlreadyPublished;
+                    
+                    const isFromAnotherCreator = !!item.creator;
+                    const isPublished = !!item.creationId;
 
                     const descriptionId = `item-description-${item.id}`;
                     const titleId = `item-title-${item.id}`;
@@ -260,30 +260,34 @@ export function CartSheet({ children, open, onOpenChange }: {
                         </AccordionItem>
                       </Accordion>
                       
-                       <CardFooter className="p-2 bg-muted/30 border-t grid gap-2 grid-cols-2">
-                           {canPublish ? (
-                            <Button variant="outline" size="sm" className="text-xs" onClick={() => setItemToPublish(item)}>
-                                <Send className="mr-2 h-3.5 w-3.5"/> {tEditor('publish_button')}
-                            </Button>
-                           ) : !isCreatorItem ? (
-                             <SheetClose asChild>
-                                <Button variant="outline" size="sm" asChild className="text-xs">
-                                  <Link href={editUrl}>
-                                    {t('edit_item_button')}
-                                  </Link>
-                                </Button>
-                              </SheetClose>
-                           ) : (
-                             <div></div> // Placeholder to keep grid layout
-                           )}
-                           <Button
+                       <CardFooter className={cn("p-2 bg-muted/30 border-t grid gap-2", isFromAnotherCreator ? 'grid-cols-1' : 'grid-cols-3')}>
+                          {!isFromAnotherCreator && (
+                              <>
+                                <SheetClose asChild>
+                                    <Button variant="outline" size="sm" asChild className="text-xs">
+                                        <Link href={editUrl}>
+                                            <Edit className="mr-1.5 h-3 w-3"/>{t('edit_item_button')}
+                                        </Link>
+                                    </Button>
+                                </SheetClose>
+                                {!isPublished && (
+                                    <Button variant="outline" size="sm" className="text-xs" onClick={() => setItemToPublish(item)}>
+                                        <Send className="mr-1.5 h-3 w-3"/> {tEditor('publish_button')}
+                                    </Button>
+                                )}
+                              </>
+                          )}
+                          <Button
                             variant="outline"
                             size="sm"
-                            className="text-destructive hover:text-destructive text-xs"
+                            className={cn(
+                                "text-destructive hover:text-destructive text-xs",
+                                !isFromAnotherCreator && isPublished && "col-start-2 col-span-2" // Take full width if only this and delete are shown
+                            )}
                             onClick={() => removeFromCart(item.id)}
                             disabled={isProcessing}
                           >
-                            {t('remove_item')}
+                            <Trash2 className="mr-1.5 h-3 w-3"/>{t('remove_item')}
                           </Button>
                         </CardFooter>
                     </Card>
