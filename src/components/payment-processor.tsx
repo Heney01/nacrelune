@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState } from 'react';
@@ -66,7 +67,7 @@ export const PaymentProcessor = ({
         creationId: item.creationId,
     }));
     
-    const paymentIntentId = finalTotal > 0 ? clientSecret.split('_secret_')[0] : 'free_order';
+    const paymentIntentId = finalTotal > 0 ? (clientSecret ? clientSecret.split('_secret_')[0] : 'error') : 'free_order';
 
     const result = await createOrder(
         serializableCart,
@@ -91,15 +92,16 @@ export const PaymentProcessor = ({
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
+    if (finalTotal <= 0) {
+        await handleConfirmOrder();
+        return;
+    }
+    
     if (!stripe || !elements) {
       setErrorMessage(t('payment_error_default'));
       return;
     }
 
-    if (finalTotal <= 0) {
-        await handleConfirmOrder();
-        return;
-    }
 
     setIsProcessing(true);
     setErrorMessage(null);
@@ -129,9 +131,10 @@ export const PaymentProcessor = ({
     }
   };
 
-  const isStripeLoading = clientSecret !== 'free_order' && (!stripe || !elements);
+  const isFreeOrder = finalTotal <= 0;
+  const isStripeLoading = !isFreeOrder && (!stripe || !elements);
 
-  if (clientSecret === 'free_order') {
+  if (isFreeOrder) {
     return (
         <form id="payment-form" onSubmit={handleSubmit} className="space-y-4">
             <Alert>
@@ -179,9 +182,7 @@ export const PaymentProcessor = ({
             {isProcessing ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('processing_button')}</>
             ) : (
-                finalTotal > 0
-                ? t('confirm_order_button', { total: finalTotal.toFixed(2) })
-                : t('confirm_order_button_no_payment')
+                t('confirm_order_button', { total: finalTotal.toFixed(2) })
             )}
          </Button>
       </DialogFooter>

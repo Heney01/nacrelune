@@ -250,19 +250,8 @@ export const CheckoutForm = ({
                         </Alert>
                     </div>
                   )}
-                  {clientSecret === 'free_order' ? (
-                     <PaymentProcessor
-                            onOrderCreated={onOrderCreated}
-                            email={email}
-                            deliveryMethod={deliveryMethod}
-                            shippingAddress={shippingAddress}
-                            clientSecret={clientSecret}
-                            appliedCoupon={appliedCoupon}
-                            pointsToUse={pointsToUse}
-                            finalTotal={finalTotal}
-                        />
-                  ) : clientSecret ? (
-                     <Elements stripe={stripePromise} options={{clientSecret, appearance: { theme: 'stripe' }}}>
+                  {clientSecret && (
+                     <Elements stripe={stripePromise} options={clientSecret !== 'free_order' ? {clientSecret, appearance: { theme: 'stripe' }} : undefined}>
                         <PaymentProcessor
                             onOrderCreated={onOrderCreated}
                             email={email}
@@ -274,7 +263,7 @@ export const CheckoutForm = ({
                             finalTotal={finalTotal}
                         />
                     </Elements>
-                  ) : null}
+                  )}
              </div>
           </div>
       )
