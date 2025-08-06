@@ -125,7 +125,7 @@ export function LoginForm({ onLoginSuccess }: { onLoginSuccess: () => void }) {
 
   return (
     <Card className="border-0 shadow-none">
-      <DialogHeader>
+      <DialogHeader className="text-center">
         <DialogTitle>{t('user_login_title')}</DialogTitle>
         <DialogDescription>{t('user_login_description')}</DialogDescription>
       </DialogHeader>
