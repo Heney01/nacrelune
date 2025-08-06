@@ -452,6 +452,12 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
       );
     }, 500);
   };
+
+  const handleToggleClasp = (charmId: string, withClasp: boolean) => {
+    setPlacedCharms(prev => prev.map(pc =>
+        pc.id === charmId ? { ...pc, withClasp } : pc
+    ));
+  };
   
   const handleFinalize = () => {
     setIsFinalizeOpen(true);
@@ -756,6 +762,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                     selectedPlacedCharmId={selectedPlacedCharmId}
                     onCharmClick={handleCharmListClick}
                     onCharmDelete={removeCharm}
+                    onToggleClasp={handleToggleClasp}
                     isMobile={false}
                 />
             </div>
@@ -827,6 +834,7 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                                             selectedPlacedCharmId={selectedPlacedCharmId}
                                             onCharmClick={handleCharmListClick}
                                             onCharmDelete={removeCharm}
+                                            onToggleClasp={handleToggleClasp}
                                             isMobile={true}
                                         />
                                   </TabsContent>
