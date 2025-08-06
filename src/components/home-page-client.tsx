@@ -5,10 +5,10 @@ import React, { useEffect, useState } from 'react';
 import Editor from '@/components/editor';
 import { BrandLogo } from '@/components/icons';
 import { useTranslations } from '@/hooks/use-translations';
-import { Gem, HandMetal, Ear, Truck, UserCircle, LogOut } from 'lucide-react';
+import { Gem, HandMetal, Ear, Truck } from 'lucide-react';
 import { TypeSelection } from '@/components/type-selection';
 import { ModelSelection } from '@/components/model-selection';
-import type { JewelryType, Charm, CharmCategory, Creation } from '@/lib/types';
+import type { JewelryType, Charm, CharmCategory, Creation, PlacedCharm } from '@/lib/types';
 import Link from 'next/link';
 import { CartWidget } from './cart-widget';
 import { Button } from './ui/button';
@@ -20,13 +20,22 @@ import { CreatorSearch } from './creator-search';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useRouter } from 'next/navigation';
 
-export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes, allCharms, charmCategories, recentCreations, locale }: {
+export function HomePageClient({ 
+    searchParams, 
+    jewelryTypes: initialJewelryTypes, 
+    allCharms, 
+    charmCategories, 
+    recentCreations, 
+    locale,
+    editorInitialState
+}: {
     searchParams: { [key:string]: string | string[] | undefined };
     jewelryTypes: Omit<JewelryType, 'icon'>[];
     allCharms: Charm[];
     charmCategories: CharmCategory[];
     recentCreations: Creation[];
     locale: string;
+    editorInitialState: { placedCharms: PlacedCharm[] } | null;
 }) {
     const t = useTranslations('HomePage');
     const isMobile = useIsMobile();
@@ -55,7 +64,13 @@ export function HomePageClient({ searchParams, jewelryTypes: initialJewelryTypes
     }, [searchParams, locale, router]);
     
     if (selectedModel && selectedType) {
-      return <Editor model={selectedModel} jewelryType={selectedType} allCharms={allCharms} charmCategories={charmCategories} />;
+      return <Editor 
+                model={selectedModel} 
+                jewelryType={selectedType} 
+                allCharms={allCharms} 
+                charmCategories={charmCategories} 
+                editorInitialState={editorInitialState}
+             />;
     }
   
     return (
