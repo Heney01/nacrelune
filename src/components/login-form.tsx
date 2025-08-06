@@ -24,6 +24,7 @@ import { Separator } from './ui/separator';
 import { useGoogleAuth } from '@/hooks/use-google-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthDialog } from '@/hooks/use-auth-dialog';
+import { DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 
 type State = {
