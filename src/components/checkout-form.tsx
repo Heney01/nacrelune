@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -50,7 +51,6 @@ const PaymentProcessor = ({
   const stripe = useStripe();
   const elements = useElements();
   const t = useTranslations('Checkout');
-  const tCart = useTranslations('Cart');
   const { cart } = useCart();
   const locale = useParams().locale as string;
   const { user } = useAuth();
@@ -66,7 +66,13 @@ const PaymentProcessor = ({
         id: item.id,
         model: item.model,
         jewelryType: { id: item.jewelryType.id, name: item.jewelryType.name, description: item.jewelryType.description },
-        placedCharms: item.placedCharms,
+        placedCharms: item.placedCharms.map(pc => ({
+            id: pc.id,
+            charm: pc.charm,
+            position: pc.position,
+            rotation: pc.rotation,
+            withClasp: pc.withClasp
+        })),
         previewImage: item.previewImage,
         creator: item.creator,
         creationId: item.creationId,
@@ -186,23 +192,19 @@ type Step = 'customer' | 'shipping' | 'summary' | 'payment';
 
 export const CheckoutForm = ({
   stripePromise,
-  totalBeforeDiscount,
   onOrderCreated,
   setStockError,
-  appliedCoupon,
-  setAppliedCoupon,
 }: {
   stripePromise: StripePromise;
-  totalBeforeDiscount: number;
   onOrderCreated: (result: CreateOrderResult) => void;
   setStockError: (error: StockErrorState) => void;
-  appliedCoupon: Coupon | null;
-  setAppliedCoupon: (coupon: Coupon | null) => void;
 }) => {
   const t = useTranslations('Checkout');
   const tCart = useTranslations('Cart');
   const tStatus = useTranslations('OrderStatus');
   const { user } = useAuth();
+  const { cart } = useCart();
+  const CLASP_PRICE = 1.20;
 
   const [currentStep, setCurrentStep] = useState<Step>('customer');
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('home');
@@ -225,6 +227,7 @@ export const CheckoutForm = ({
   const [couponCode, setCouponCode] = useState('');
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [isPreparingPayment, setIsPreparingPayment] = useState(false);
@@ -236,6 +239,16 @@ export const CheckoutForm = ({
         setEmail(user.email || '');
     }
   }, [user]);
+
+  const totalBeforeDiscount = cart.reduce((sum, item) => {
+    const modelPrice = item.model.price || 0;
+    const charmsPrice = item.placedCharms.reduce((charmSum, pc) => {
+        const charmPrice = pc.charm.price || 0;
+        const claspPrice = pc.withClasp ? CLASP_PRICE : 0;
+        return charmSum + charmPrice + claspPrice;
+    }, 0);
+    return sum + modelPrice + charmsPrice;
+  }, 0);
 
   const discountAmount = appliedCoupon
     ? appliedCoupon.discountType === 'percentage'

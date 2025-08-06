@@ -1,4 +1,5 @@
 
+
 {
   "HomePage": {
     "title": "Commencez Votre Création",
@@ -173,7 +174,8 @@
     "checkout_error_title": "Erreur de commande",
     "sold_out": "Épuisé",
     "creator_badge": "Création de {name}",
-    "edit_disabled_tooltip": "Les créations des autres ne sont pas modifiables."
+    "edit_disabled_tooltip": "Les créations des autres ne sont pas modifiables.",
+    "clasp_label": "fermoir"
   },
   "CharmsPanel": {
     "title": "Breloques",

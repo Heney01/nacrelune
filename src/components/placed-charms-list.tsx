@@ -13,12 +13,15 @@ import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/comp
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { Checkbox } from './ui/checkbox';
+import { Label } from './ui/label';
 
 interface PlacedCharmsListProps {
   placedCharms: (PlacedCharm & { isAvailable: boolean })[];
   selectedPlacedCharmId: string | null;
   onCharmClick: (charmId: string) => void;
   onCharmDelete: (charmId: string) => void;
+  onToggleClasp: (charmId: string, withClasp: boolean) => void;
   isMobile: boolean;
 }
 
@@ -27,57 +30,83 @@ const CharmListItem = ({
   isSelected,
   onClick,
   onDelete,
+  onToggleClasp,
   t,
+  tCart,
 }: {
   placedCharm: PlacedCharm & { isAvailable: boolean };
   isSelected: boolean;
   onClick: () => void;
   onDelete: (e: React.MouseEvent) => void;
+  onToggleClasp: (withClasp: boolean) => void;
   t: (key: string, values?: any) => string;
-}) => (
-  <div
-    className={cn(
-      "p-2 rounded-md border flex flex-col items-center gap-1 cursor-pointer w-20 relative group",
-      isSelected ? 'ring-2 ring-primary' : 'hover:bg-muted/50',
-      !placedCharm.isAvailable && "bg-destructive/10"
-    )}
-    onClick={onClick}
-  >
-     <Button
-        variant="ghost"
-        size="icon"
-        className="absolute top-0 right-0 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-20 text-destructive hover:text-destructive"
-        onClick={onDelete}
-        aria-label="Supprimer la breloque"
-    >
-        <Trash2 className="h-3.5 w-3.5" />
-    </Button>
+  tCart: (key: string, values?: any) => string;
+}) => {
+    const CLASP_PRICE = 1.20;
+    const basePrice = placedCharm.charm.price || 0;
+    const finalPrice = placedCharm.withClasp ? basePrice + CLASP_PRICE : basePrice;
 
-    <Image src={placedCharm.charm.imageUrl} alt={placedCharm.charm.name} width={32} height={32} className="w-8 h-8 object-contain" />
-    <span className="text-xs text-center font-medium truncate w-full">{placedCharm.charm.name}</span>
-    {!placedCharm.isAvailable && (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger className="absolute inset-0 z-10">
-            <span className="sr-only">Stock issue</span>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{t('stock_issue_tooltip')}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    )}
-  </div>
-);
+    return (
+        <div
+            className={cn(
+            "p-2 rounded-md border flex flex-col items-center gap-2 cursor-pointer w-32 relative group text-center",
+            isSelected ? 'ring-2 ring-primary' : 'hover:bg-muted/50',
+            !placedCharm.isAvailable && "bg-destructive/10"
+            )}
+            onClick={onClick}
+        >
+            <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-0 right-0 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-20 text-destructive hover:text-destructive"
+                onClick={onDelete}
+                aria-label="Supprimer la breloque"
+            >
+                <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+
+            <Image src={placedCharm.charm.imageUrl} alt={placedCharm.charm.name} width={40} height={40} className="w-10 h-10 object-contain" />
+            <span className="text-xs font-medium truncate w-full">{placedCharm.charm.name}</span>
+            
+            <div 
+                className="flex items-center space-x-2 text-xs" 
+                onClick={(e) => e.stopPropagation()}
+            >
+                <Checkbox 
+                    id={`clasp-${placedCharm.id}`} 
+                    checked={placedCharm.withClasp}
+                    onCheckedChange={(checked) => onToggleClasp(!!checked)}
+                />
+                <Label htmlFor={`clasp-${placedCharm.id}`} className="cursor-pointer">Avec fermoir</Label>
+            </div>
+            <p className="text-xs font-bold">{tCart('price', { price: finalPrice })}</p>
+
+            {!placedCharm.isAvailable && (
+            <TooltipProvider>
+                <Tooltip>
+                <TooltipTrigger className="absolute inset-0 z-10">
+                    <span className="sr-only">Stock issue</span>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>{t('stock_issue_tooltip')}</p>
+                </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+            )}
+        </div>
+    )
+};
 
 export function PlacedCharmsList({
   placedCharms,
   selectedPlacedCharmId,
   onCharmClick,
   onCharmDelete,
+  onToggleClasp,
   isMobile,
 }: PlacedCharmsListProps) {
   const t = useTranslations('Editor');
+  const tCart = useTranslations('Cart');
 
   const charmListContent = (
     placedCharms.length === 0 ? (
@@ -96,7 +125,9 @@ export function PlacedCharmsList({
               e.stopPropagation();
               onCharmDelete(pc.id);
             }}
+            onToggleClasp={(withClasp) => onToggleClasp(pc.id, withClasp)}
             t={t}
+            tCart={tCart}
           />
         ))}
       </div>
@@ -112,7 +143,7 @@ export function PlacedCharmsList({
   }
 
   return (
-    <Accordion type="single" collapsible className="w-full">
+    <Accordion type="single" collapsible className="w-full" defaultValue="item-1">
       <AccordionItem value="item-1">
         <Card>
           <AccordionTrigger className="p-6 hover:no-underline">

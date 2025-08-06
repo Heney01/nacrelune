@@ -49,12 +49,16 @@ export function CartSheet({ children, open, onOpenChange }: {
   const [stockError, setStockError] = useState<StockErrorState | null>(null);
   const [sharingItem, setSharingItem] = useState<CartItem | null>(null);
 
-
+  const CLASP_PRICE = 1.20;
   const totalItems = cart.length;
   
   const totalPrice = cart.reduce((sum, item) => {
     const modelPrice = item.model.price || 0;
-    const charmsPrice = item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+    const charmsPrice = item.placedCharms.reduce((charmSum, pc) => {
+      const charmPrice = pc.charm.price || 0;
+      const claspPrice = pc.withClasp ? CLASP_PRICE : 0;
+      return charmSum + charmPrice + claspPrice;
+    }, 0);
     return sum + modelPrice + charmsPrice;
   }, 0);
 
@@ -120,7 +124,11 @@ export function CartSheet({ children, open, onOpenChange }: {
             <ScrollArea className="flex-grow my-4 pr-4">
               <div className="space-y-4">
                 {cart.map((item) => {
-                  const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+                   const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => {
+                        const charmPrice = pc.charm.price || 0;
+                        const claspPrice = pc.withClasp ? CLASP_PRICE : 0;
+                        return charmSum + charmPrice + claspPrice;
+                    }, 0);
                   const editUrl = `/${locale}/?type=${item.jewelryType.id}&model=${item.model.id}&cartItemId=${item.id}`;
                   const isCreatorItem = !!item.creator;
                   const descriptionId = `item-description-${item.id}`;
@@ -193,15 +201,17 @@ export function CartSheet({ children, open, onOpenChange }: {
                           <AccordionContent className="p-4 pt-0">
                             {item.placedCharms.length > 0 ? (
                               <ul className="space-y-2">
-                                {item.placedCharms.map(pc => (
+                                {item.placedCharms.map(pc => {
+                                    const charmPrice = (pc.charm.price || 0) + (pc.withClasp ? CLASP_PRICE : 0);
+                                    return (
                                   <li key={pc.id} className="flex items-center justify-between gap-2 text-sm">
                                     <div className="flex items-center gap-2">
                                       <Image src={pc.charm.imageUrl} alt={pc.charm.name} width={24} height={24} className="rounded-sm border" data-ai-hint="jewelry charm" />
-                                      <span>{pc.charm.name}</span>
+                                      <span>{pc.charm.name} {pc.withClasp && `(+ ${t('clasp_label')})`}</span>
                                     </div>
-                                    <span className="text-muted-foreground">{formatPrice(pc.charm.price || 0)}</span>
+                                    <span className="text-muted-foreground">{formatPrice(charmPrice)}</span>
                                   </li>
-                                ))}
+                                )})}
                               </ul>
                             ) : (
                                <p className="text-sm text-muted-foreground text-center py-2">{t('no_charms_for_item')}</p>

@@ -82,6 +82,7 @@ export interface PlacedCharm {
   position: { x: number; y: number }; 
   rotation: number;
   animation?: string;
+  withClasp?: boolean;
 }
 
 // PlacedCharm as stored within a Creation document
@@ -91,6 +92,7 @@ export interface PlacedCreationCharm {
   // (0,0) is top-left, (1,1) is bottom-right.
   position: { x: number; y: number };
   rotation: number;
+  withClasp?: boolean;
 }
 
 
@@ -112,18 +114,22 @@ export interface GeneralPreferences {
 
 export type OrderStatus = 'commandée' | 'en cours de préparation' | 'expédiée' | 'livrée' | 'annulée';
 
+export interface OrderCharmDetail {
+    charmId: string;
+    withClasp: boolean;
+}
 export interface OrderItem {
     modelId: string;
     modelName: string;
     jewelryTypeId: string;
     jewelryTypeName: string;
-    charmIds: string[];
+    charms: OrderCharmDetail[];
     price: number;
     previewImageUrl: string;
     isCompleted: boolean;
     // Enriched data on the client:
     modelImageUrl?: string;
-    charms?: Charm[];
+    hydratedCharms?: (Charm & { withClasp: boolean })[];
     // For creations bought from other users
     creationId?: string;
     creatorId?: string;

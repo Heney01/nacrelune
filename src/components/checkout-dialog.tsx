@@ -46,9 +46,15 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
   
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
 
+  const CLASP_PRICE = 1.20;
+
   const subtotal = cart.reduce((sum, item) => {
     const modelPrice = item.model.price || 0;
-    const charmsPrice = item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+    const charmsPrice = item.placedCharms.reduce((charmSum, pc) => {
+        const charmPrice = pc.charm.price || 0;
+        const claspPrice = pc.withClasp ? CLASP_PRICE : 0;
+        return charmSum + charmPrice + claspPrice;
+    }, 0);
     return sum + modelPrice + charmsPrice;
   }, 0);
 
@@ -79,11 +85,8 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
            {stripePromise && (
             <CheckoutForm 
                 stripePromise={stripePromise}
-                totalBeforeDiscount={subtotal}
                 onOrderCreated={onOrderCreated}
                 setStockError={setStockError}
-                appliedCoupon={appliedCoupon}
-                setAppliedCoupon={setAppliedCoupon}
             />
            )}
         </div>
@@ -93,7 +96,11 @@ export function CheckoutDialog({ isOpen, onOpenChange, onOrderCreated, stockErro
             <div className="mt-6 flex-grow -mx-6 overflow-y-auto no-scrollbar">
                 <div className="space-y-4 px-6">
                     {cart.map(item => {
-                         const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => charmSum + (pc.charm.price || 0), 0);
+                         const itemPrice = (item.model.price || 0) + item.placedCharms.reduce((charmSum, pc) => {
+                            const charmPrice = pc.charm.price || 0;
+                            const claspPrice = pc.withClasp ? CLASP_PRICE : 0;
+                            return charmSum + charmPrice + claspPrice;
+                        }, 0);
                          const isModelOutOfStock = stockError?.unavailableModelIds.has(item.model.id);
 
                         return (
