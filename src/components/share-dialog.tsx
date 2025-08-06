@@ -121,7 +121,7 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
                 </DialogHeader>
 
                 <div className="flex justify-center items-center my-4">
-                     <div className="shadow-lg w-full max-w-[250px] bg-white">
+                     <div className="shadow-lg w-full max-w-[200px] bg-white">
                         <div className="p-4">
                             <div className="bg-gray-100 aspect-square relative">
                                 <Image 
