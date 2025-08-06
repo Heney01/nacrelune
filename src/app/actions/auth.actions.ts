@@ -133,6 +133,7 @@ export async function userLogin(prevState: any, formData: FormData): Promise<{ s
     return { success: true, message: `Bienvenue, ${user.displayName || user.email} !` };
 
   } catch (error: any) {
+    console.error("Auth Error:", error);
     let errorMessage = "Une erreur inconnue est survenue.";
     switch (error.code) {
         case 'auth/invalid-email':
@@ -144,7 +145,7 @@ export async function userLogin(prevState: any, formData: FormData): Promise<{ s
             errorMessage = "Email ou mot de passe incorrect.";
             break;
         default:
-            errorMessage = "Une erreur est survenue lors de la connexion.";
+            errorMessage = `Une erreur est survenue lors de la connexion. Code: ${error.code}`;
             break;
     }
     return { success: false, error: errorMessage };

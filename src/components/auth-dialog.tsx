@@ -14,15 +14,12 @@ export function AuthDialog() {
 
   const handleLoginSuccess = () => {
     close();
-    // Force a full page reload to ensure auth state is re-evaluated correctly.
     router.refresh();
-    window.location.reload();
   }
   
   const handleSignupSuccess = () => {
     close();
     router.refresh();
-    window.location.reload();
   }
 
   return (
