@@ -198,6 +198,7 @@ export async function signup(prevState: any, formData: FormData): Promise<{ succ
             rewardPoints: 0,
             searchableTerms,
             likesCount: 0,
+            creationSlots: 5, // Default slots
         };
         await setDoc(doc(db, 'users', user.uid), userData);
 
@@ -256,6 +257,7 @@ export async function userLoginWithGoogle(formData: FormData): Promise<{ success
         rewardPoints: 0,
         searchableTerms,
         likesCount: 0,
+        creationSlots: 5, // Default slots
       };
       await setDoc(userDocRef, newUser);
     }

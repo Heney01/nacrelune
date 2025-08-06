@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -13,6 +14,7 @@ import { Input } from './ui/input';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { saveCreation } from '@/app/actions/creation.actions';
+import { purchaseCreationSlot } from '@/app/actions/user.actions';
 import { JewelryModel, PlacedCreationCharm, JewelryType, Creation } from '@/lib/types';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { useAuthDialog } from '@/hooks/use-auth-dialog';
@@ -53,6 +55,8 @@ export function FinalizeCreationDialog({
     const [isLoadingPreview, setIsLoadingPreview] = useState(true);
     const [publishedCreation, setPublishedCreation] = useState<Creation | null>(null);
     const [isShareOpen, setIsShareOpen] = useState(false);
+    const [publishError, setPublishError] = useState<{message: string, reason?: string} | null>(null);
+    const [isBuyingSlot, setIsBuyingSlot] = useState(false);
 
     const resetState = () => {
         setStep(isEditing ? 'confirm' : 'publish');
@@ -61,6 +65,8 @@ export function FinalizeCreationDialog({
         setIsPublishing(false);
         setIsLoadingPreview(true);
         setPublishedCreation(null);
+        setPublishError(null);
+        setIsBuyingSlot(false);
     }
     
     useEffect(() => {
@@ -94,6 +100,7 @@ export function FinalizeCreationDialog({
         }
 
         setIsPublishing(true);
+        setPublishError(null);
 
         const creationPayload = {
             jewelryTypeId: jewelryType.id,
@@ -132,6 +139,7 @@ export function FinalizeCreationDialog({
                 });
                 setStep('confirm');
             } else {
+                setPublishError({message: result.message, reason: result.reason});
                 toast({ variant: 'destructive', title: "Erreur de publication", description: result.message });
             }
         } catch (error: any) {
@@ -140,6 +148,25 @@ export function FinalizeCreationDialog({
 
         setIsPublishing(false);
     };
+
+    const handlePurchaseSlot = async () => {
+        if (!firebaseUser) return;
+        setIsBuyingSlot(true);
+        try {
+            const idToken = await firebaseUser.getIdToken();
+            const result = await purchaseCreationSlot(idToken);
+            if(result.success) {
+                toast({ title: "Succès", description: "Nouvel emplacement débloqué ! Vous pouvez maintenant publier votre création."});
+                setPublishError(null); // Clear the error to allow publishing again
+            } else {
+                toast({ variant: 'destructive', title: "Erreur", description: result.message});
+            }
+        } catch (error: any) {
+             toast({ variant: 'destructive', title: "Erreur", description: "Une erreur inattendue est survenue."});
+        } finally {
+            setIsBuyingSlot(false);
+        }
+    }
 
     const handleSkipToPurchase = () => {
         setStep('confirm');
@@ -205,6 +232,20 @@ export function FinalizeCreationDialog({
                                     .
                                 </AlertDescription>
                             </Alert>
+                        ) : publishError?.reason === 'limit_reached' ? (
+                             <Alert variant="destructive">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertTitle>{t('creation_limit_title')}</AlertTitle>
+                                <AlertDescription>
+                                    {t('creation_limit_description')}
+                                    {(user?.rewardPoints || 0) >= 50 && (
+                                        <Button size="sm" className="mt-2 w-full" onClick={handlePurchaseSlot} disabled={isBuyingSlot}>
+                                            {isBuyingSlot ? <Loader2 className="animate-spin mr-2"/> : <Award className="mr-2 h-4 w-4"/>}
+                                            {t('unlock_slot_button')}
+                                        </Button>
+                                    )}
+                                </AlertDescription>
+                            </Alert>
                         ) : (
                             <div className="space-y-2">
                                 <Label htmlFor="creationName">{t('creation_name_label')}</Label>
@@ -214,7 +255,7 @@ export function FinalizeCreationDialog({
                     </div>
                 </div>
                  <DialogFooter className="flex-col gap-2 pt-0 flex-shrink-0">
-                     <Button onClick={handlePublishAndContinue} className="w-full" disabled={isPublishing || (!firebaseUser && !creationName.trim())}>
+                     <Button onClick={handlePublishAndContinue} className="w-full" disabled={isPublishing || !firebaseUser || !creationName.trim() || !!publishError}>
                         {isPublishing && <Loader2 className="animate-spin mr-2" />}
                         <Send className="mr-2 h-4 w-4" />
                         {t('publish_button')}

@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { db } from '@/lib/firebase';
@@ -62,5 +63,65 @@ export async function toggleLikeCreator(
     } catch (error: any) {
         console.error("Error toggling creator like:", error);
         return { success: false, message: "Une erreur est survenue lors de l'opération." };
+    }
+}
+
+export async function purchaseCreationSlot(idToken: string): Promise<{ success: boolean; message: string; newSlotCount?: number }> {
+    if (!idToken) {
+        return { success: false, message: "Utilisateur non authentifié." };
+    }
+    
+    if (!adminApp) {
+        return { success: false, message: "Le module d'administration Firebase n'est pas configuré." };
+    }
+
+    const SLOT_COST = 50;
+    const MAX_SLOTS = 20;
+
+    let userAuth;
+    try {
+        const adminAuth = getAdminAuth(adminApp);
+        userAuth = await adminAuth.verifyIdToken(idToken, true);
+    } catch (error: any) {
+        return { success: false, message: "Jeton d'authentification invalide." };
+    }
+
+    const userRef = doc(db, 'users', userAuth.uid);
+
+    try {
+        const newSlotCount = await runTransaction(db, async (transaction) => {
+            const userDoc = await transaction.get(userRef);
+
+            if (!userDoc.exists()) {
+                throw new Error("L'utilisateur n'existe pas.");
+            }
+
+            const userData = userDoc.data();
+            const currentPoints = userData.rewardPoints || 0;
+            const currentSlots = userData.creationSlots || 5;
+
+            if (currentSlots >= MAX_SLOTS) {
+                throw new Error("Vous avez déjà atteint le nombre maximum d'emplacements de création.");
+            }
+
+            if (currentPoints < SLOT_COST) {
+                throw new Error(`Vous avez besoin de ${SLOT_COST} points pour débloquer un nouvel emplacement. Vous n'en avez que ${currentPoints}.`);
+            }
+
+            const newSlots = currentSlots + 1;
+            const newPoints = currentPoints - SLOT_COST;
+
+            transaction.update(userRef, { 
+                creationSlots: newSlots,
+                rewardPoints: newPoints 
+            });
+
+            return newSlots;
+        });
+
+        return { success: true, message: "Emplacement de création débloqué avec succès !", newSlotCount };
+    } catch (error: any) {
+        console.error("Error purchasing creation slot:", error);
+        return { success: false, message: error.message || "Une erreur est survenue lors de l'achat." };
     }
 }

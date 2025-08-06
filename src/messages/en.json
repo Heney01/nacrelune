@@ -103,9 +103,9 @@
     "editor_disclaimer": "This editor is a faithful representation, but final colors and dimensions may vary slightly. Some charm images may be AI-enhanced for better integration. To see the original photo of a charm, click the magnifying glass icon at the top right of its card in the charm selection panel.",
     "editor_disclaimer_title": "Editor Disclaimer",
     "share_button": "Share",
-    "share_polaroid_button": "Share Polaroid",
+    "share_polaroid_button": "Download Polaroid",
     "share_creation_title": "Share your creation",
-    "share_creation_description": "Give your creation a name and share it!",
+    "share_creation_description": "Share your design with your friends!",
     "share_title_label": "Title of your creation",
     "share_title_placeholder": "e.g., My summer necklace",
     "share_error_image": "Could not load the image of your creation.",
@@ -141,7 +141,10 @@
     "exit_confirmation_title": "Are you sure you want to leave?",
     "exit_confirmation_description": "Your current creation will be lost. If you want to keep it, please add it to your cart or publish it.",
     "exit_confirmation_cancel": "Stay",
-    "exit_confirmation_confirm": "Leave"
+    "exit_confirmation_confirm": "Leave",
+    "creation_limit_title": "Creation Limit Reached",
+    "creation_limit_description": "You have reached the maximum number of published creations. Unlock a new slot to continue.",
+    "unlock_slot_button": "Unlock for 50 points"
   },
   "Cart": {
     "title": "Your Cart",

@@ -10,6 +10,7 @@ export interface User {
   rewardPoints?: number;
   searchableTerms?: string[];
   likesCount?: number;
+  creationSlots?: number;
 }
 
 export interface CharmCategory {

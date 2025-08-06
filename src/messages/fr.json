@@ -100,9 +100,9 @@
     "editor_disclaimer": "Cet éditeur est une représentation fidèle, mais les couleurs et dimensions finales peuvent légèrement varier. Certaines images de breloques peuvent être optimisées par IA pour une meilleure intégration. Pour voir la photo originale d'une breloque, cliquez sur l'icône loupe en haut à droite de sa carte dans le panneau de sélection.",
     "editor_disclaimer_title": "Avertissement de l'éditeur",
     "share_button": "Partager",
-    "share_polaroid_button": "Partager le polaroïd",
+    "share_polaroid_button": "Télécharger le polaroïd",
     "share_creation_title": "Partager votre création",
-    "share_creation_description": "Donnez un nom à votre création et partagez-la !",
+    "share_creation_description": "Partagez votre design avec vos amis !",
     "share_title_label": "Titre de votre création",
     "share_title_placeholder": "ex: Mon collier d'été",
     "share_error_image": "Impossible de charger l'image de votre création.",
@@ -138,7 +138,10 @@
     "exit_confirmation_title": "Êtes-vous sûr de vouloir quitter ?",
     "exit_confirmation_description": "Votre création en cours sera perdue. Si vous souhaitez la conserver, veuillez l'ajouter au panier ou la publier.",
     "exit_confirmation_cancel": "Rester",
-    "exit_confirmation_confirm": "Quitter"
+    "exit_confirmation_confirm": "Quitter",
+    "creation_limit_title": "Limite de créations atteinte",
+    "creation_limit_description": "Vous avez atteint le nombre maximum de créations publiées. Débloquez un nouvel emplacement pour continuer.",
+    "unlock_slot_button": "Débloquer pour 50 points"
   },
   "Cart": {
     "title": "Votre Panier",
