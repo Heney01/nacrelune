@@ -25,7 +25,7 @@ import { CharmSuggestionOutput } from '@/ai/flows/charm-placement-suggestions';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { FinalizeCreationDialog } from './finalize-creation-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { useEditorCanvas } from '@/hooks/use-editor-canvas';
 import {
   Dialog,
@@ -92,8 +92,8 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, pixe
         return {
             left: `${left}px`,
             top: `${top}px`,
-            width: pixelSize.width,
-            height: 'auto',
+            width: `${pixelSize.width}px`,
+            height: `${pixelSize.height}px`,
             transform: `translate(-50%, -50%) rotate(${placed.rotation}deg)`,
             animation: placed.animation,
             touchAction: 'none',
@@ -107,7 +107,7 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, pixe
             ref={charmRef}
             onMouseDown={(e) => onDragStart(e, placed.id)}
             className={cn(
-                "absolute group charm-on-canvas cursor-pointer select-none flex items-center justify-center border border-red-500",
+                "absolute group charm-on-canvas cursor-pointer select-none flex items-center justify-center",
                 {
                     'z-10': isSelected,
                     'outline-2 outline-primary outline-dashed': isSelected,
@@ -125,7 +125,7 @@ const PlacedCharmComponent = React.memo(({ placed, isSelected, onDragStart, pixe
                 src={placed.charm.imageUrl}
                 alt={placed.charm.name}
                 className={cn(
-                    "pointer-events-none select-none object-contain w-full h-auto",
+                    "pointer-events-none select-none object-contain w-full h-full",
                     isImageLoading && "opacity-0"
                 )}
                 data-ai-hint="jewelry charm"
@@ -778,9 +778,9 @@ export default function Editor({ model, jewelryType, allCharms: initialAllCharms
                         </div>
                         
                         {pixelsPerMm && modelImageRect && sortedPlacedCharms.map((placed) => {
-                            const pixelSize = {
-                            width: (placed.charm.width ?? 20) * pixelsPerMm,
-                            height: (placed.charm.height ?? 20) * pixelsPerMm,
+                             const pixelSize = {
+                                width: (placed.charm.width ?? 20) * pixelsPerMm,
+                                height: (placed.charm.height ?? 20) * pixelsPerMm,
                             };
                             return (
                             <PlacedCharmComponent
