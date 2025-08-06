@@ -8,7 +8,7 @@ import { useCart } from '@/hooks/use-cart';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, ShoppingCart, PlusCircle, Loader2, User } from 'lucide-react';
+import { Trash2, ShoppingCart, PlusCircle, Loader2, User, Send } from 'lucide-react';
 import React, { ReactNode, useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
@@ -30,6 +30,7 @@ import type { CartItem, Creation } from '@/lib/types';
 import { Badge } from './ui/badge';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { cn } from '@/lib/utils';
+import { FinalizeCreationDialog } from './finalize-creation-dialog';
 
 
 export function CartSheet({ children, open, onOpenChange }: {
@@ -37,7 +38,7 @@ export function CartSheet({ children, open, onOpenChange }: {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
-  const { cart, removeFromCart, clearCart } = useCart();
+  const { cart, removeFromCart, clearCart, updateCartItem } = useCart();
   const t = useTranslations('Cart');
   const tEditor = useTranslations('Editor');
   const params = useParams();
@@ -47,7 +48,7 @@ export function CartSheet({ children, open, onOpenChange }: {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [successData, setSuccessData] = useState<{orderNumber: string, email: string} | null>(null);
   const [stockError, setStockError] = useState<StockErrorState | null>(null);
-  const [sharingItem, setSharingItem] = useState<CartItem | null>(null);
+  const [itemToPublish, setItemToPublish] = useState<CartItem | null>(null);
 
   const CLASP_PRICE = 1.20;
   const totalItems = cart.length;
@@ -61,9 +62,9 @@ export function CartSheet({ children, open, onOpenChange }: {
     sortedCharms.forEach((pc, index) => {
         const charmPrice = pc.charm.price || 4.00;
         if (index < 5) {
-            charmsPrice += charmPrice; // Full price for the first 5
+            charmsPrice += charmPrice;
         } else {
-            charmsPrice += charmPrice / 2; // 50% off for the 6th and subsequent charms
+            charmsPrice += charmPrice / 2;
         }
     });
 
@@ -99,6 +100,17 @@ export function CartSheet({ children, open, onOpenChange }: {
         });
       }
   }
+  
+  const handlePublishSuccess = (publishedCreationId: string) => {
+    if (itemToPublish) {
+      updateCartItem(itemToPublish.id, {
+        ...itemToPublish,
+        creationId: publishedCreationId,
+      });
+      setItemToPublish(null); // Close the dialog
+    }
+  };
+
 
   return (
     <>
@@ -158,6 +170,9 @@ export function CartSheet({ children, open, onOpenChange }: {
                     const itemPrice = basePrice + charmsPrice + claspsPrice;
                     const editUrl = `/${locale}/?type=${item.jewelryType.id}&model=${item.model.id}&cartItemId=${item.id}`;
                     const isCreatorItem = !!item.creator;
+                    const isAlreadyPublished = !!item.creationId;
+                    const canPublish = !isCreatorItem && !isAlreadyPublished;
+
                     const descriptionId = `item-description-${item.id}`;
                     const titleId = `item-title-${item.id}`;
 
@@ -246,15 +261,21 @@ export function CartSheet({ children, open, onOpenChange }: {
                       </Accordion>
                       
                        <CardFooter className="p-2 bg-muted/30 border-t grid gap-2 grid-cols-2">
-                          {!isCreatorItem && (
-                            <SheetClose asChild>
-                              <Button variant="outline" size="sm" asChild className="text-xs">
-                                <Link href={editUrl}>
-                                  {t('edit_item_button')}
-                                </Link>
-                              </Button>
-                            </SheetClose>
-                          )}
+                           {canPublish ? (
+                            <Button variant="outline" size="sm" className="text-xs" onClick={() => setItemToPublish(item)}>
+                                <Send className="mr-2 h-3.5 w-3.5"/> {tEditor('publish_button')}
+                            </Button>
+                           ) : !isCreatorItem ? (
+                             <SheetClose asChild>
+                                <Button variant="outline" size="sm" asChild className="text-xs">
+                                  <Link href={editUrl}>
+                                    {t('edit_item_button')}
+                                  </Link>
+                                </Button>
+                              </SheetClose>
+                           ) : (
+                             <div></div> // Placeholder to keep grid layout
+                           )}
                            <Button
                             variant="outline"
                             size="sm"
@@ -300,6 +321,25 @@ export function CartSheet({ children, open, onOpenChange }: {
             onOpenChange={() => setSuccessData(null)}
             orderNumber={successData.orderNumber}
             email={successData.email}
+        />
+    )}
+    {itemToPublish && (
+       <FinalizeCreationDialog
+            isOpen={!!itemToPublish}
+            onOpenChange={() => setItemToPublish(null)}
+            getCanvasDataUri={() => Promise.resolve(itemToPublish.previewImage)}
+            onConfirmAddToCart={() => { /* Not used here */ }}
+            isEditing={false} // Always a new publication
+            placedCharms={itemToPublish.placedCharms.map(pc => ({
+                charmId: pc.charm.id,
+                position: pc.position,
+                rotation: pc.rotation,
+            }))}
+            jewelryType={itemToPublish.jewelryType}
+            model={itemToPublish.model}
+            locale={locale}
+            onPublishSuccess={handlePublishSuccess} // New prop to handle success
+            fromCart={true} // New prop
         />
     )}
     </>

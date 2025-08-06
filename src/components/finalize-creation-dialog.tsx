@@ -30,6 +30,8 @@ interface FinalizeCreationDialogProps {
     jewelryType: Omit<JewelryType, 'models' | 'icon'>;
     model: JewelryModel;
     locale: string;
+    onPublishSuccess?: (creationId: string) => void;
+    fromCart?: boolean;
 }
 
 export function FinalizeCreationDialog({ 
@@ -42,13 +44,15 @@ export function FinalizeCreationDialog({
     jewelryType,
     model,
     locale,
+    onPublishSuccess,
+    fromCart = false,
 }: FinalizeCreationDialogProps) {
     const t = useTranslations('Editor');
     const { user, firebaseUser } = useAuth();
     const { open: openAuthDialog } = useAuthDialog();
     const { toast } = useToast();
 
-    const [step, setStep] = useState<'publish' | 'confirm'>(isEditing ? 'confirm' : 'publish');
+    const [step, setStep] = useState<'publish' | 'confirm'>(isEditing || fromCart ? 'confirm' : 'publish');
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [creationName, setCreationName] = useState('');
     const [isPublishing, setIsPublishing] = useState(false);
@@ -59,7 +63,7 @@ export function FinalizeCreationDialog({
     const [isBuyingSlot, setIsBuyingSlot] = useState(false);
 
     const resetState = () => {
-        setStep(isEditing ? 'confirm' : 'publish');
+        setStep(isEditing || fromCart ? 'confirm' : 'publish');
         setPreviewImage(null);
         setCreationName('');
         setIsPublishing(false);
@@ -72,22 +76,31 @@ export function FinalizeCreationDialog({
     useEffect(() => {
         if (isOpen) {
             setIsLoadingPreview(true);
-            getCanvasDataUri()
-                .then(setPreviewImage)
-                .catch(error => {
-                    console.error(error);
-                    toast({
-                        variant: "destructive",
-                        title: "Erreur",
-                        description: "Impossible de générer l'aperçu de la création.",
-                    });
-                    onOpenChange(false);
-                })
-                .finally(() => setIsLoadingPreview(false));
+            // If we are in the cart, the image is already a URL, no need to capture.
+            if(fromCart) {
+                getCanvasDataUri().then(url => {
+                    setPreviewImage(url);
+                    setIsLoadingPreview(false);
+                    setStep('publish'); // Force publish step for cart items
+                });
+            } else {
+                 getCanvasDataUri()
+                    .then(setPreviewImage)
+                    .catch(error => {
+                        console.error(error);
+                        toast({
+                            variant: "destructive",
+                            title: "Erreur",
+                            description: "Impossible de générer l'aperçu de la création.",
+                        });
+                        onOpenChange(false);
+                    })
+                    .finally(() => setIsLoadingPreview(false));
+            }
         } else {
            setTimeout(resetState, 300);
         }
-    }, [isOpen, getCanvasDataUri, onOpenChange, toast, isEditing]);
+    }, [isOpen, getCanvasDataUri, onOpenChange, toast, isEditing, fromCart]);
 
     const handlePublishAndContinue = async () => {
         if (!previewImage || !firebaseUser) {
@@ -123,6 +136,13 @@ export function FinalizeCreationDialog({
 
             if (result.success && result.creationId) {
                 toast({ title: "Publication réussie !", description: result.message });
+                
+                if (onPublishSuccess) {
+                    onPublishSuccess(result.creationId);
+                    onOpenChange(false);
+                    return;
+                }
+
                 setPublishedCreation({
                     id: result.creationId,
                     name: creationName,
@@ -260,9 +280,11 @@ export function FinalizeCreationDialog({
                         <Send className="mr-2 h-4 w-4" />
                         {t('publish_button')}
                     </Button>
-                    <Button variant="outline" onClick={handleSkipToPurchase} className="w-full">
-                       {t('skip_publish_button')}
-                   </Button>
+                    {!fromCart && (
+                        <Button variant="outline" onClick={handleSkipToPurchase} className="w-full">
+                            {t('skip_publish_button')}
+                        </Button>
+                    )}
                 </DialogFooter>
                 </>
             )
