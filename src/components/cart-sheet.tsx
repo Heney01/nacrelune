@@ -266,14 +266,16 @@ export function CartSheet({ children, open, onOpenChange }: {
                                 <SheetClose asChild>
                                     <Button variant="outline" size="sm" asChild className="text-xs">
                                         <Link href={editUrl}>
-                                            <Edit className="mr-1.5 h-3 w-3"/>{t('edit_item_button')}
+                                            {t('edit_item_button')}
                                         </Link>
                                     </Button>
                                 </SheetClose>
-                                {!isPublished && (
+                                {!isPublished ? (
                                     <Button variant="outline" size="sm" className="text-xs" onClick={() => setItemToPublish(item)}>
                                         <Send className="mr-1.5 h-3 w-3"/> {tEditor('publish_button')}
                                     </Button>
+                                ) : (
+                                  <div></div> // Placeholder to keep grid alignment
                                 )}
                               </>
                           )}
@@ -282,7 +284,8 @@ export function CartSheet({ children, open, onOpenChange }: {
                             size="sm"
                             className={cn(
                                 "text-destructive hover:text-destructive text-xs",
-                                !isFromAnotherCreator && isPublished && "col-start-2 col-span-2" // Take full width if only this and delete are shown
+                                isFromAnotherCreator && "col-span-3",
+                                !isFromAnotherCreator && isPublished && "col-start-3"
                             )}
                             onClick={() => removeFromCart(item.id)}
                             disabled={isProcessing}
