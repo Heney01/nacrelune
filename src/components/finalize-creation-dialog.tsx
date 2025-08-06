@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -27,7 +26,7 @@ interface FinalizeCreationDialogProps {
     onConfirmAddToCart: (previewImage: string) => void;
     isEditing: boolean;
     placedCharms: PlacedCreationCharm[];
-    jewelryType: Omit<JewelryType, 'models', 'icon'>;
+    jewelryType: Omit<JewelryType, 'models' | 'icon'>;
     model: JewelryModel;
     locale: string;
     onPublishSuccess?: (creationId: string) => void;
