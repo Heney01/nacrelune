@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { useTranslations } from '@/hooks/use-translations';
-import { Loader2, Check, Send, ShoppingCart, AlertCircle, Award } from 'lucide-react';
+import { Loader2, Check, Send, ShoppingCart, AlertCircle, Award, Share2 } from 'lucide-react';
 import Image from 'next/image';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Label } from './ui/label';
@@ -13,9 +13,10 @@ import { Input } from './ui/input';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { saveCreation } from '@/app/actions/creation.actions';
-import { JewelryModel, PlacedCreationCharm, JewelryType } from '@/lib/types';
+import { JewelryModel, PlacedCreationCharm, JewelryType, Creation } from '@/lib/types';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { useAuthDialog } from '@/hooks/use-auth-dialog';
+import { ShareDialog } from './share-dialog';
 
 interface FinalizeCreationDialogProps {
     isOpen: boolean;
@@ -41,7 +42,7 @@ export function FinalizeCreationDialog({
     locale,
 }: FinalizeCreationDialogProps) {
     const t = useTranslations('Editor');
-    const { firebaseUser } = useAuth();
+    const { user, firebaseUser } = useAuth();
     const { open: openAuthDialog } = useAuthDialog();
     const { toast } = useToast();
 
@@ -50,7 +51,8 @@ export function FinalizeCreationDialog({
     const [creationName, setCreationName] = useState('');
     const [isPublishing, setIsPublishing] = useState(false);
     const [isLoadingPreview, setIsLoadingPreview] = useState(true);
-    const [wasPublished, setWasPublished] = useState(false);
+    const [publishedCreation, setPublishedCreation] = useState<Creation | null>(null);
+    const [isShareOpen, setIsShareOpen] = useState(false);
 
     const resetState = () => {
         setStep(isEditing ? 'confirm' : 'publish');
@@ -58,7 +60,7 @@ export function FinalizeCreationDialog({
         setCreationName('');
         setIsPublishing(false);
         setIsLoadingPreview(true);
-        setWasPublished(false);
+        setPublishedCreation(null);
     }
     
     useEffect(() => {
@@ -112,9 +114,22 @@ export function FinalizeCreationDialog({
                 JSON.stringify(creationPayload)
             );
 
-            if (result.success) {
+            if (result.success && result.creationId) {
                 toast({ title: "Publication réussie !", description: result.message });
-                setWasPublished(true);
+                setPublishedCreation({
+                    id: result.creationId,
+                    name: creationName,
+                    creatorId: firebaseUser.uid,
+                    previewImageUrl: previewImage,
+                    creator: user,
+                    // Add other necessary fields with default/dummy values
+                    jewelryTypeId: jewelryType.id,
+                    modelId: model.id,
+                    placedCharms: [], 
+                    createdAt: new Date(),
+                    salesCount: 0,
+                    likesCount: 0,
+                });
                 setStep('confirm');
             } else {
                 toast({ variant: 'destructive', title: "Erreur de publication", description: result.message });
@@ -217,18 +232,21 @@ export function FinalizeCreationDialog({
                 <>
                 <DialogHeader>
                     <DialogTitle>{isEditing ? t('confirm_update_title') : t('buy_title')}</DialogTitle>
-                    {wasPublished && <DialogDescription>{t('publish_success_message')}</DialogDescription>}
+                    {publishedCreation && <DialogDescription>{t('publish_success_message')}</DialogDescription>}
                 </DialogHeader>
                 <div className="my-4 grid place-items-center flex-grow overflow-y-auto">
                     <Image src={previewImage} alt={t('preview_alt')} width={300} height={300} className="rounded-lg border bg-muted/50 max-w-full h-auto max-h-full object-contain" />
                 </div>
-                <DialogFooter className="flex-col gap-2 pt-4 flex-shrink-0">
+                <DialogFooter className="flex-col sm:flex-row gap-2 pt-4 flex-shrink-0">
+                    {publishedCreation && (
+                        <Button variant="secondary" onClick={() => setIsShareOpen(true)} className="w-full">
+                            <Share2 className="mr-2 h-4 w-4" />
+                            {t('share_button')}
+                        </Button>
+                    )}
                     <Button onClick={handleAddToCartClick} className="w-full" disabled={!previewImage}>
                         <ShoppingCart className="mr-2 h-4 w-4" />
                         {isEditing ? t('update_item_button') : t('add_to_cart_button')}
-                    </Button>
-                    <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full">
-                        {t('close_button')}
                     </Button>
                 </DialogFooter>
                 </>
@@ -237,10 +255,20 @@ export function FinalizeCreationDialog({
     }
 
     return (
-        <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="flex flex-col max-h-[90vh]">
-                {renderContent()}
-            </DialogContent>
-        </Dialog>
+        <>
+            <Dialog open={isOpen} onOpenChange={onOpenChange}>
+                <DialogContent className="flex flex-col max-h-[90vh]">
+                    {renderContent()}
+                </DialogContent>
+            </Dialog>
+            {isShareOpen && publishedCreation && (
+                <ShareDialog
+                    isOpen={isShareOpen}
+                    onOpenChange={setIsShareOpen}
+                    creation={publishedCreation}
+                    locale={locale}
+                />
+            )}
+        </>
     );
 }

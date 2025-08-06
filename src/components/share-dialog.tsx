@@ -27,7 +27,7 @@ export function ShareDialog({ isOpen, onOpenChange, creation, locale }: ShareDia
 
     useEffect(() => {
         if (creation.creatorId) {
-            setShareUrl(`https://www.atelierabijoux.com/${locale}/creators/${creation.creatorId}?creation=${creation.id}`);
+            setShareUrl(`${window.location.origin}/${locale}/creators/${creation.creatorId}?creation=${creation.id}`);
         }
     }, [locale, creation]);
     
