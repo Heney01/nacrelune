@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect, Suspense, useMemo } from 'react';
+import { useState, useEffect, Suspense, useMemo, useCallback } from 'react';
 import { getCreatorShowcaseData } from '@/lib/data';
 import { CreationCard } from '@/components/creation-card';
 import { notFound, useSearchParams } from 'next/navigation';
@@ -54,6 +54,28 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
     // Default to date sort
     return creationsCopy.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [data?.creations, sortBy]);
+
+  const handleUpdateCreation = useCallback((updatedCreation: Partial<Creation>) => {
+    setData(prevData => {
+      if (!prevData) return null;
+      return {
+        ...prevData,
+        creations: prevData.creations.map(c => 
+          c.id === updatedCreation.id ? { ...c, ...updatedCreation } : c
+        )
+      };
+    });
+  }, []);
+
+  const handleDeleteCreation = useCallback((creationId: string) => {
+    setData(prevData => {
+      if (!prevData) return null;
+      return {
+        ...prevData,
+        creations: prevData.creations.filter(c => c.id !== creationId)
+      };
+    });
+  }, []);
 
   if (loading) {
     return <Loading />;
@@ -155,13 +177,15 @@ function CreatorShowcase({ creatorId, locale }: { creatorId: string; locale: str
                   locale={locale}
                   openOnLoad={creation.id === creationIdFromUrl}
                   showCreator={false}
+                  onUpdate={isOwner ? handleUpdateCreation : undefined}
+                  onDelete={isOwner ? handleDeleteCreation : undefined}
                 />
               ))}
             </div>
           ) : (
             <div className="text-center py-16 border border-dashed rounded-lg">
-              <h3 className="text-xl font-semibold">{creator.displayName} n'a pas encore publié de création.</h3>
-              <p className="text-muted-foreground mt-2">Revenez bientôt !</p>
+              <h3 className="text-xl font-semibold">{isOwner ? "Vous n'avez pas encore publié de création." : `${creator.displayName} n'a pas encore publié de création.`}</h3>
+              <p className="text-muted-foreground mt-2">{isOwner ? "Commencez à créer pour la partager ici !" : "Revenez bientôt !"}</p>
             </div>
           )}
         </div>
@@ -181,3 +205,6 @@ export default function CreatorShowcasePage({ params }: { params: { creatorId: s
   )
 }
 
+
+
+    
