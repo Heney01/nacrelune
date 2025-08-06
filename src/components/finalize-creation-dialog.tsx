@@ -178,9 +178,9 @@ export function FinalizeCreationDialog({
                     </Alert>
                 ) : (
                     <div className="space-y-4">
-                        <Accordion type="single" collapsible>
-                            <AccordionItem value="item-1">
-                                <AccordionTrigger className="text-sm font-semibold text-primary hover:no-underline">
+                       <Accordion type="single" collapsible>
+                            <AccordionItem value="item-1" className="border-b-0">
+                                <AccordionTrigger className="text-sm font-semibold text-primary hover:no-underline [&>svg]:ml-1">
                                     <div className="flex items-center gap-2">
                                          <Award className="h-4 w-4"/>
                                         {t('publish_incentive_title')}
@@ -208,7 +208,7 @@ export function FinalizeCreationDialog({
                             {t('publish_button')}
                         </Button>
                      )}
-                     <Button variant="ghost" onClick={handleSkipToPurchase} className="w-full text-sm">
+                     <Button variant="outline" onClick={handleSkipToPurchase} className="w-full">
                         {t('skip_publish_button')}
                     </Button>
                 </DialogFooter>
