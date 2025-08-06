@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -249,20 +250,31 @@ export const CheckoutForm = ({
                         </Alert>
                     </div>
                   )}
-                  {clientSecret && (
+                  {clientSecret === 'free_order' ? (
+                     <PaymentProcessor
+                            onOrderCreated={onOrderCreated}
+                            email={email}
+                            deliveryMethod={deliveryMethod}
+                            shippingAddress={shippingAddress}
+                            clientSecret={clientSecret}
+                            appliedCoupon={appliedCoupon}
+                            pointsToUse={pointsToUse}
+                            finalTotal={finalTotal}
+                        />
+                  ) : clientSecret ? (
                      <Elements stripe={stripePromise} options={{clientSecret, appearance: { theme: 'stripe' }}}>
                         <PaymentProcessor
                             onOrderCreated={onOrderCreated}
                             email={email}
                             deliveryMethod={deliveryMethod}
                             shippingAddress={shippingAddress}
-                            clientSecret={clientSecret!}
+                            clientSecret={clientSecret}
                             appliedCoupon={appliedCoupon}
                             pointsToUse={pointsToUse}
                             finalTotal={finalTotal}
                         />
                     </Elements>
-                  )}
+                  ) : null}
              </div>
           </div>
       )

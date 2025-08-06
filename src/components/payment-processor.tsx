@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { DialogFooter } from '@/components/ui/dialog';
 import { Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
-import { useStripe, useElements, PaymentElement, Elements } from '@stripe/react-stripe-js';
+import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
 import type { CreateOrderResult, SerializableCartItem } from '@/app/actions/order.actions';
 import { useParams } from 'next/navigation';
 import type { ShippingAddress, DeliveryMethod, Coupon } from '@/lib/types';
@@ -66,7 +66,7 @@ export const PaymentProcessor = ({
         creationId: item.creationId,
     }));
     
-    const paymentIntentId = clientSecret.split('_secret_')[0];
+    const paymentIntentId = finalTotal > 0 ? clientSecret.split('_secret_')[0] : 'free_order';
 
     const result = await createOrder(
         serializableCart,
@@ -129,7 +129,30 @@ export const PaymentProcessor = ({
     }
   };
 
-  const isStripeLoading = !stripe || !elements;
+  const isStripeLoading = clientSecret !== 'free_order' && (!stripe || !elements);
+
+  if (clientSecret === 'free_order') {
+    return (
+        <form id="payment-form" onSubmit={handleSubmit} className="space-y-4">
+            <Alert>
+                <CheckCircle className="h-4 w-4" />
+                <AlertTitle>{t('free_order_title')}</AlertTitle>
+                <AlertDescription>
+                    {t('free_order_description')}
+                </AlertDescription>
+            </Alert>
+            <DialogFooter className="pt-4 pb-6 mt-auto px-0">
+                <Button type="submit" form="payment-form" className="w-full" disabled={isProcessing}>
+                    {isProcessing ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('processing_button')}</>
+                    ) : (
+                        t('confirm_order_button_no_payment')
+                    )}
+                </Button>
+            </DialogFooter>
+        </form>
+    );
+  }
 
   return (
     <form id="payment-form" onSubmit={handleSubmit} className="space-y-4">
@@ -141,25 +164,15 @@ export const PaymentProcessor = ({
         </Alert>
       )}
 
-      {finalTotal > 0 ? (
-          <div className="relative">
-            <PaymentElement options={{wallets: {applePay: 'never', googlePay: 'never'}}} className={cn(isStripeLoading && 'opacity-0 h-0')}/>
-            {isStripeLoading && (
-                <div className="space-y-4">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                </div>
-            )}
-          </div>
-      ) : (
-          <Alert>
-              <CheckCircle className="h-4 w-4" />
-              <AlertTitle>{t('free_order_title')}</AlertTitle>
-              <AlertDescription>
-                  {t('free_order_description')}
-              </AlertDescription>
-          </Alert>
-      )}
+      <div className="relative">
+        <PaymentElement options={{wallets: {applePay: 'never', googlePay: 'never'}}} className={cn(isStripeLoading && 'opacity-0 h-0')}/>
+        {isStripeLoading && (
+            <div className="space-y-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+            </div>
+        )}
+      </div>
       
        <DialogFooter className="pt-4 pb-6 mt-auto px-0">
          <Button type="submit" form="payment-form" className="w-full" disabled={isProcessing || isStripeLoading}>
