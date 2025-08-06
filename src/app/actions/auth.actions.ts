@@ -330,4 +330,44 @@ export async function updateUserProfile(prevState: any, formData: FormData): Pro
         return { success: false, error: "Une erreur est survenue lors de la mise à jour du profil." };
     }
 }
+
+export async function deleteUserAccount(idToken: string): Promise<{ success: boolean; message?: string; error?: string; }> {
+    if (!idToken) {
+        return { success: false, error: "Utilisateur non authentifié." };
+    }
+    
+    if (!adminApp) {
+        return { success: false, error: "Le module d'administration Firebase n'est pas configuré." };
+    }
+    
+    let user;
+    try {
+        const adminAuth = getAdminAuth(adminApp);
+        user = await adminAuth.verifyIdToken(idToken, true);
+    } catch (error: any) {
+        return { success: false, message: "Jeton d'authentification invalide." };
+    }
+
+    try {
+        const adminAuth = getAdminAuth(adminApp);
+        const userDocRef = doc(db, 'users', user.uid);
+
+        // Mark user as deleted in Firestore
+        await updateDoc(userDocRef, {
+            deleted: true
+        });
+
+        // Delete user from Firebase Authentication
+        await adminAuth.deleteUser(user.uid);
+
+        // Clear session cookie
+        cookies().delete('session');
+        
+        return { success: true, message: "Votre compte a été supprimé avec succès." };
+
+    } catch (error: any) {
+        console.error("Error deleting user account:", error);
+        return { success: false, error: "Une erreur est survenue lors de la suppression du compte." };
+    }
+}
     

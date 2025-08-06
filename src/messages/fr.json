@@ -67,7 +67,14 @@
     "edit_creation_description": "Mettez à jour le nom de votre création.",
     "save_changes_button": "Enregistrer",
     "edit_creation_success_title": "Succès",
-    "edit_creation_error_title": "Erreur"
+    "edit_creation_error_title": "Erreur",
+    "danger_zone_title": "Zone de Danger",
+    "danger_zone_description": "Gérez les actions irréversibles pour votre compte.",
+    "delete_account_button": "Supprimer mon compte",
+    "delete_account_explanation": "Supprimez définitivement votre compte et toutes les données associées. Cette action n'est pas réversible.",
+    "delete_account_confirm_title": "Êtes-vous absolument certain(e) ?",
+    "delete_account_confirm_description": "Cette action ne peut pas être annulée. Cela supprimera définitivement votre compte et retirera vos données de nos serveurs.",
+    "delete_account_confirm_button": "Oui, supprimer mon compte"
   },
   "Editor": {
     "charms_title": "Breloques",

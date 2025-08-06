@@ -11,6 +11,7 @@ export interface User {
   searchableTerms?: string[];
   likesCount?: number;
   creationSlots?: number;
+  deleted?: boolean;
 }
 
 export interface CharmCategory {
