@@ -2,74 +2,83 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // --- Utility Functions ---
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    function isUpdatingStock(itemData) {
-      return request.resource.data.keys().hasAll(['quantity']) && request.resource.data.quantity == itemData.quantity - 1;
-    }
-    
-    // --- Collections ---
-
-    // Users: Publicly readable, but only the user can write to their own document. Admins can update reward points.
+    // Users: Publicly readable. Users can update their own data.
+    // The server-side order transaction can update reward points.
     match /users/{userId} {
       allow read: if true;
-      allow create: if isOwner(userId);
-      // Allow user to update their own profile, or server to update points/slots.
-      allow update: if isOwner(userId) || 
-                      (request.auth == null && request.resource.data.keys().hasAny(['rewardPoints', 'creationSlots', 'salesCount']));
-      allow delete: if false; // Deletions handled by server action
-      
+      allow create: if request.auth.uid == userId;
+      allow update: if request.auth.uid == userId || (request.auth == null && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rewardPoints']));
+      allow delete: if false;
+
       // Likes on creators
       match /likes/{likerId} {
         allow read: if true;
-        allow create, delete: if isOwner(likerId);
+        allow create, delete: if request.auth.uid == likerId;
       }
     }
 
-    // Creations: Publicly readable. Writable only by creator. Updatable for sales count by server.
+    // Creations: Publicly readable. Creators can manage them.
+    // The server-side order transaction can update sales count.
     match /creations/{creationId} {
       allow read: if true;
-      allow create: if isOwner(request.resource.data.creatorId);
-      // Allow creator to update, or server to increment salesCount
-      allow update: if isOwner(resource.data.creatorId) ||
-                      (request.auth == null && request.resource.data.keys().hasAll(['salesCount']));
-      allow delete: if isOwner(resource.data.creatorId);
+      allow create: if request.auth.uid == request.resource.data.creatorId;
+      allow update: if (request.auth.uid == resource.data.creatorId) || 
+                      (request.auth == null && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['salesCount']));
+      allow delete: if request.auth.uid == resource.data.creatorId;
       
       // Likes on creations
       match /likes/{userId} {
         allow read: if true;
-        allow create, delete: if isOwner(userId);
+        allow create, delete: if request.auth.uid == userId;
       }
     }
-    
-    // Read-only collections for clients
-    match /necklace/{docId} { allow read: if true; }
-    match /bracelet/{docId} { allow read: if true; }
-    match /earring/{docId} { allow read: if true; }
-    match /charmCategories/{categoryId} { allow read: if true; }
-    match /preferences/general { allow read: if true; }
-    match /coupons/{couponId} { allow read: if true; }
-    
-    // Charms can be read by anyone, but only updated by server for stock changes
+
+    // --- Read-only collections for clients ---
+    // The server-side order transaction can update quantity on these.
+    function canUpdateStock() {
+      return request.auth == null && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quantity']);
+    }
+
+    match /necklace/{docId} {
+      allow read: if true;
+      allow write: if canUpdateStock();
+    }
+    match /bracelet/{docId} {
+      allow read: if true;
+      allow write: if canUpdateStock();
+    }
+    match /earring/{docId} {
+      allow read: if true;
+      allow write: if canUpdateStock();
+    }
     match /charms/{charmId} {
       allow read: if true;
-      allow update: if request.auth == null && isUpdatingStock(resource.data);
+      allow write: if canUpdateStock();
     }
-    
-    // Orders: Readable by anyone with the ID. Creatable by anyone. No client-side updates/deletes.
-    match /orders/{orderId} {
+    match /charmCategories/{categoryId} {
       allow read: if true;
+      allow write: if false;
+    }
+    match /preferences/general {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /coupons/{couponId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Orders: Writable by anyone (server-side action handles validation). Not updatable/deletable from client.
+    match /orders/{orderId} {
+      allow read: if false; // Should only be read via server actions for security.
       allow create: if true;
       allow update, delete: if false;
     }
-
-    // Mail: Write-only for server-side actions. Not readable by clients.
+    
+    // Mail: Write-only for server-side actions.
     match /mail/{mailId} {
       allow read: if false;
-      allow create: if request.auth == null; // Allow server-side creation
+      allow create: if true;
       allow update, delete: if false;
     }
   }
