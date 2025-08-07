@@ -64,7 +64,8 @@ export default function AdminDashboardPage({ params }: { params: { locale: strin
 
         const currentTab = tabs.find(t => t.id === activeTab);
 
-        const ordersCommandees = data.orders.filter(o => o.status === 'commandée').length;
+        console.log(data.orders);
+        /*const ordersCommandees = data.orders.filter(o => o.status === 'commandée').length;
         const ordersEnPreparation = data.orders.filter(o => o.status === 'en cours de préparation').length;
         
         return (
@@ -147,7 +148,7 @@ export default function AdminDashboardPage({ params }: { params: { locale: strin
                     }
                 })()}
             </div>
-        )
+        )*/
     }
 
     if (loading) {

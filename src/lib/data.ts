@@ -263,10 +263,12 @@ export async function getMailLogs(): Promise<MailLog[]> {
 
 export async function getOrders(): Promise<Order[]> {
     try {
+        console.log("Attempting to fetch orders and mail...");
         const [ordersSnapshot, mailSnapshot] = await Promise.all([
-            getDocs(query(collection(db, 'orders'), orderBy('createdAt', 'desc'))),
+            getDocs(collection(db, 'orders')), // Removed orderBy for debugging
             getDocs(collection(db, 'mail'))
         ]);
+        console.log(`Successfully fetched ${ordersSnapshot.docs.length} orders and ${mailSnapshot.docs.length} mail logs.`);
 
         if (ordersSnapshot.empty) {
             return [];
@@ -369,8 +371,9 @@ export async function getOrders(): Promise<Order[]> {
                 pointsValue: data.pointsValue
             };
         }));
-
-        return orders;
+        
+        // Manual sort as a fallback since orderBy was removed
+        return orders.sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime());
     } catch (error) {
         console.error("Error fetching orders:", error);
         return [];
