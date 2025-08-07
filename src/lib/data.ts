@@ -265,7 +265,7 @@ export async function getOrders(): Promise<Order[]> {
     try {
         console.log("Attempting to fetch orders and mail...");
         const [ordersSnapshot, mailSnapshot] = await Promise.all([
-            getDocs(collection(db, 'orders')), // Removed orderBy for debugging
+            getDocs(query(collection(db, 'orders'), orderBy('createdAt', 'desc'))),
             getDocs(collection(db, 'mail'))
         ]);
         console.log(`Successfully fetched ${ordersSnapshot.docs.length} orders and ${mailSnapshot.docs.length} mail logs.`);
@@ -372,8 +372,7 @@ export async function getOrders(): Promise<Order[]> {
             };
         }));
         
-        // Manual sort as a fallback since orderBy was removed
-        return orders.sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime());
+        return orders;
     } catch (error) {
         console.error("Error fetching orders:", error);
         return [];
@@ -581,3 +580,4 @@ export async function getCreatorShowcaseData(creatorId: string, likingUserId?: s
         return { creator: null, creations: [], isLikedByUser: false };
     }
 }
+
