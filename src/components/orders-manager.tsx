@@ -1,8 +1,7 @@
 
-
 'use client';
 
-import React, { useState, useReducer, useTransition, Fragment, useMemo } from 'react';
+import React, { useState, useReducer, useTransition, Fragment, useMemo, useEffect } from 'react';
 import type { Order, OrderStatus, OrderItem, Charm, MailLog, DeliveryMethod } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from './ui/card';
@@ -252,7 +251,7 @@ const MailHistoryTab = ({ mailHistory }: { mailHistory: MailLog[] }) => {
                                             </div>
                                         </TooltipTrigger>
                                         <TooltipContent>
-                                            {mail.delivery?.error ? <p className="text-destructive-foreground bg-destructive p-2 rounded-md">{mail.delivery.error}</p> : <p>{mail.delivery?.state}</p>}
+                                            {mail.delivery?.error ? <p className="text-destructive-foreground bg-destructive p-2 rounded-md mt-2">{mail.delivery.error}</p> : <p>{mail.delivery?.state}</p>}
                                         </TooltipContent>
                                     </Tooltip>
                                 </TooltipProvider>
@@ -567,16 +566,19 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
     const [isPending, startTransition] = useTransition();
     const { firebaseUser } = useAuth();
 
-    const [state, dispatch] = useReducer(ordersReducer, initialOrders);
-    const { orders } = { orders: state };
+    const [orders, dispatch] = useReducer(ordersReducer, initialOrders);
 
     const [searchTerm, setSearchTerm] = useState('');
-    const [tab, setTab] = useState<'active' | 'archived'>('active');
+    const [statusFilter, setStatusFilter] = useState<'active' | 'archived'>('active');
     const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
     const [openOrders, setOpenOrders] = useState<Set<string>>(new Set());
 
     const [isShipDialogOpen, setIsShipDialogOpen] = useState(false);
     const [selectedOrderForShipping, setSelectedOrderForShipping] = useState<Order | null>(null);
+
+    useEffect(() => {
+        console.log('[DEBUG] OrdersManager received initialOrders:', initialOrders);
+    }, [initialOrders]);
 
     const toggleOrder = (orderId: string) => {
         setOpenOrders(prev => {
@@ -656,16 +658,16 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
             });
         });
     }
-    
-    const processedOrders = useMemo(() => {
+
+    const filteredOrders = useMemo(() => {
         const activeStatuses: OrderStatus[] = ['commandée', 'en cours de préparation', 'expédiée'];
         const archivedStatuses: OrderStatus[] = ['livrée', 'annulée'];
         
-        const statusFilter = tab === 'active' ? activeStatuses : archivedStatuses;
+        const currentStatusFilter = statusFilter === 'active' ? activeStatuses : archivedStatuses;
         
         return orders
             .filter(order => {
-                if (!statusFilter.includes(order.status)) {
+                if (!currentStatusFilter.includes(order.status)) {
                     return false;
                 }
                 if (searchTerm && !order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) && !order.customerEmail.toLowerCase().includes(searchTerm.toLowerCase())) {
@@ -678,7 +680,7 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
                 const dateB = new Date(b.createdAt).getTime();
                 return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
             });
-    }, [orders, searchTerm, tab, sortOrder]);
+    }, [orders, searchTerm, statusFilter, sortOrder]);
     
     const handleCopyEmail = (email: string) => {
         navigator.clipboard.writeText(email);
@@ -698,69 +700,8 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
         setSelectedOrderForShipping(order);
         setIsShipDialogOpen(true);
     };
-
-    return (
-        <>
-            <Card>
-                <CardHeader>
-                     <CardTitle className="text-xl font-headline flex items-center gap-2">
-                        <Package /> {t('orders_title')}
-                    </CardTitle>
-                    <CardDescription>
-                        {t('orders_description')}
-                    </CardDescription>
-                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 pt-4">
-                        <div className="relative w-full md:w-auto md:flex-grow md:max-w-xs">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder={t('search_placeholder')}
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-9"
-                            />
-                        </div>
-                        <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as any)}>
-                            <SelectTrigger className="w-full sm:w-[180px]">
-                                <SelectValue placeholder={t('sort_by_date')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="desc">{t('sort_newest')}</SelectItem>
-                                <SelectItem value="asc">{t('sort_oldest')}</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <Tabs value={tab} onValueChange={(value) => setTab(value as any)} className="w-full">
-                        <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="active">Commandes Actives</TabsTrigger>
-                            <TabsTrigger value="archived">Commandes Terminées</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="active">
-                            <OrderTableContent orders={processedOrders} />
-                        </TabsContent>
-                         <TabsContent value="archived">
-                            <OrderTableContent orders={processedOrders} />
-                        </TabsContent>
-                    </Tabs>
-
-                </CardContent>
-            </Card>
-            {selectedOrderForShipping && (
-                <ShipOrderDialog
-                    order={selectedOrderForShipping}
-                    onConfirm={handleShipConfirm}
-                    t={t}
-                    isOpen={isShipDialogOpen}
-                    onOpenChange={setIsShipDialogOpen}
-                >
-                    <button className="hidden"></button>
-                </ShipOrderDialog>
-            )}
-        </>
-    );
-
-    function OrderTableContent({ orders }: { orders: Order[] }) {
+    
+    const OrderTableContent = ({ ordersToShow }: { ordersToShow: Order[] }) => {
         return (
             <>
                 {/* Desktop Table View */}
@@ -778,8 +719,8 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {orders.length > 0 ? (
-                                orders.map(order => (
+                            {ordersToShow.length > 0 ? (
+                                ordersToShow.map(order => (
                                     <OrderRow 
                                         key={order.id}
                                         order={order}
@@ -806,8 +747,8 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
 
                 {/* Mobile Card View */}
                 <div className="md:hidden space-y-4 mt-4">
-                     {orders.length > 0 ? (
-                        orders.map(order => (
+                     {ordersToShow.length > 0 ? (
+                        ordersToShow.map(order => (
                             <Card key={order.id} className={cn("overflow-hidden", isPending && 'opacity-50')}>
                                 <div className="p-4 cursor-pointer" onClick={() => toggleOrder(order.id)}>
                                     <div className="flex justify-between items-start">
@@ -887,6 +828,66 @@ export function OrdersManager({ initialOrders, locale }: OrdersManagerProps) {
             </>
         )
     }
-}
 
-    
+    return (
+        <>
+            <Card>
+                <CardHeader>
+                     <CardTitle className="text-xl font-headline flex items-center gap-2">
+                        <Package /> {t('orders_title')}
+                    </CardTitle>
+                    <CardDescription>
+                        {t('orders_description')}
+                    </CardDescription>
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 pt-4">
+                        <div className="relative w-full md:w-auto md:flex-grow md:max-w-xs">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder={t('search_placeholder')}
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-9"
+                            />
+                        </div>
+                        <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as any)}>
+                            <SelectTrigger className="w-full sm:w-[180px]">
+                                <SelectValue placeholder={t('sort_by_date')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="desc">{t('sort_newest')}</SelectItem>
+                                <SelectItem value="asc">{t('sort_oldest')}</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <Tabs value={statusFilter} onValueChange={(value) => setStatusFilter(value as any)} className="w-full">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="active">Commandes Actives</TabsTrigger>
+                            <TabsTrigger value="archived">Commandes Terminées</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="active">
+                            <OrderTableContent ordersToShow={filteredOrders} />
+                        </TabsContent>
+                         <TabsContent value="archived">
+                            <OrderTableContent ordersToShow={filteredOrders} />
+                        </TabsContent>
+                    </Tabs>
+
+                </CardContent>
+            </Card>
+            {selectedOrderForShipping && (
+                <ShipOrderDialog
+                    order={selectedOrderForShipping}
+                    onConfirm={handleShipConfirm}
+                    t={t}
+                    isOpen={isShipDialogOpen}
+                    onOpenChange={setIsShipDialogOpen}
+                >
+                    <button className="hidden"></button>
+                </ShipOrderDialog>
+            )}
+        </>
+    );
+
+}

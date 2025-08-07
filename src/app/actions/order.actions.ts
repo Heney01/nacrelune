@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -519,19 +520,23 @@ export async function getOrderDetailsByNumber(prevState: any, formData: FormData
     }
 }
 
-export async function getOrdersByEmail(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; }> {
+export async function getOrdersByEmail(prevState: any, formData: FormData): Promise<{ success: boolean; message: string; traces?: string[] }> {
+    const traces: string[] = [];
     const email = formData.get('email') as string;
     const locale = formData.get('locale') as string || 'fr';
     
+    traces.push(`[SERVER] Action getOrdersByEmail started for email: ${email} and locale: ${locale}`);
+
     if (!email) {
-        return { success: false, message: "Veuillez fournir une adresse e-mail." };
+        traces.push('[SERVER] Email not provided.');
+        return { success: false, message: "Veuillez fournir une adresse e-mail.", traces };
     }
     
     try {
-        console.log(`[SERVER] Searching for orders with email: ${email}`);
+        traces.push(`[SERVER] Searching for orders with email: ${email.trim()}`);
         const q = query(collection(db, 'orders'), where('customerEmail', '==', email.trim()));
         const querySnapshot = await getDocs(q);
-        console.log(`[SERVER] Found ${querySnapshot.docs.length} orders for ${email}`);
+        traces.push(`[SERVER] Found ${querySnapshot.docs.length} orders for ${email}`);
 
         const orders = querySnapshot.docs.map(doc => {
             const data = doc.data();
@@ -554,7 +559,7 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
         let returnMessage: string;
         
         if (orders.length > 0) {
-            console.log('[SERVER] Orders found, preparing email.');
+            traces.push('[SERVER] Orders found, preparing email.');
             returnMessage = `Email sent. ${orders.length} order(s) found.`;
             const ordersListText = orders.map(o => 
                 `- Commande ${o.orderNumber} (du ${o.createdAt}) - Statut : ${o.status}`
@@ -566,7 +571,7 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
             mailText = `Bonjour,\n\nVoici la liste de vos commandes récentes passées avec cette adresse e-mail :\n\n${ordersListText}\n\nVous pouvez cliquer sur le lien de chaque commande pour voir son statut.\n\nL'équipe Atelier à bijoux${emailFooterText}`;
             mailHtml = `<h1>Vos commandes Atelier à bijoux</h1><p>Bonjour,</p><p>Voici la liste de vos commandes récentes passées avec cette adresse e-mail :</p><ul>${ordersListHtml}</ul><p>L'équipe Atelier à bijoux</p>${emailFooterHtml}`;
         } else {
-            console.log('[SERVER] No orders found, preparing notification email.');
+            traces.push('[SERVER] No orders found, preparing notification email.');
             returnMessage = "Email sent. No orders found.";
             mailText = `Bonjour,\n\nVous avez récemment demandé à retrouver vos commandes. Aucune commande n'est associée à cette adresse e-mail (${email}).\n\nSi vous pensez qu'il s'agit d'une erreur, veuillez vérifier l'adresse e-mail ou contacter notre support.${emailFooterText}`;
             mailHtml = `<h1>Vos commandes Atelier à bijoux</h1><p>Bonjour,</p><p>Vous avez récemment demandé à retrouver vos commandes. Aucune commande n'est associée à cette adresse e-mail (${email}).</p><p>Si vous pensez qu'il s'agit d'une erreur, veuillez vérifier l'adresse e-mail ou contacter notre support.</p>${emailFooterHtml}`;
@@ -581,133 +586,17 @@ export async function getOrdersByEmail(prevState: any, formData: FormData): Prom
             },
         };
         
-        console.log('[SERVER] Creating mail document in Firestore.');
+        traces.push('[SERVER] Creating mail document in Firestore.');
         const mailRef = doc(collection(db, 'mail'));
         await setDoc(mailRef, mailDocData);
-        console.log('[SERVER] Mail document created successfully.');
+        traces.push(`[SERVER] Mail document created successfully. ID: ${mailRef.id}`);
         
-        return { success: true, message: returnMessage };
+        return { success: true, message: returnMessage, traces };
 
     } catch (error: any) {
+        traces.push(`[SERVER] Error in getOrdersByEmail for ${email}: ${error.message}`);
         console.error(`[SERVER] Error in getOrdersByEmail for ${email}:`, error);
-        return { success: false, message: error.message };
-    }
-}
-
-
-// --- Admin Order Actions ---
-
-
-export async function getOrders(): Promise<Order[]> {
-    try {
-        const [ordersSnapshot, mailSnapshot] = await Promise.all([
-            getDocs(query(collection(db, 'orders'), orderBy('createdAt', 'desc'))),
-            getDocs(collection(db, 'mail'))
-        ]);
-
-        if (ordersSnapshot.empty) {
-            return [];
-        }
-
-        const mailLogsByOrderNumber = new Map<string, MailLog[]>();
-        mailSnapshot.docs.forEach(doc => {
-            const data = doc.data();
-            const subject = data.message?.subject || '';
-            const orderNumberMatch = subject.match(/n°\s*([A-Z0-9-]+)/);
-            if (orderNumberMatch && orderNumberMatch[1]) {
-                const orderNumber = orderNumberMatch[1];
-                const delivery = data.delivery;
-                const log: MailLog = {
-                    id: doc.id,
-                    to: data.to,
-                    subject: subject,
-                    delivery: delivery ? {
-                        state: delivery.state,
-                        startTime: toDate(delivery.startTime),
-                        endTime: toDate(delivery.endTime),
-                        error: delivery.error,
-                        attempts: delivery.attempts
-                    } : null
-                };
-                if (!mailLogsByOrderNumber.has(orderNumber)) {
-                    mailLogsByOrderNumber.set(orderNumber, []);
-                }
-                mailLogsByOrderNumber.get(orderNumber)!.push(log);
-            }
-        });
-
-        // Get all unique charm IDs from all orders first
-        const allCharmIds = ordersSnapshot.docs.flatMap(doc => doc.data().items?.flatMap((item: OrderItem) => (item.charms || []).map((c: any) => c.charmId)) || []);
-        const uniqueCharmIds = Array.from(new Set(allCharmIds)).filter(id => id);
-
-        // Fetch all required charms in a single query
-        let charmsMap = new Map<string, any>();
-        if (uniqueCharmIds.length > 0) {
-            // Firestore 'in' query is limited to 30 items, so chunk if necessary
-            const charmIdChunks = [];
-            for (let i = 0; i < uniqueCharmIds.length; i += 30) {
-                charmIdChunks.push(uniqueCharmIds.slice(i, i + 30));
-            }
-            
-            for (const chunk of charmIdChunks) {
-                const charmsQuery = query(collection(db, 'charms'), where(documentId(), 'in', chunk));
-                const charmsSnapshot = await getDocs(charmsQuery);
-                for (const charmDoc of charmsSnapshot.docs) {
-                    const charmData = charmDoc.data() as Omit<any, 'id'>;
-                    const imageUrl = await getUrl(charmData.imageUrl, 'https://placehold.co/100x100.png');
-                    charmsMap.set(charmDoc.id, { ...charmData, id: charmDoc.id, imageUrl });
-                }
-            }
-        }
-        
-        const orders: Order[] = await Promise.all(ordersSnapshot.docs.map(async(orderDoc) => {
-            const data = orderDoc.data();
-            
-            const enrichedItems: OrderItem[] = await Promise.all((data.items || []).map(async (item: OrderItem) => {
-                const enrichedCharms = (item.charms || [])
-                    .map((charmDetail: any) => {
-                        const charm = charmsMap.get(charmDetail.charmId);
-                         if (!charm) return null;
-                        return { ...charm, withClasp: charmDetail.withClasp };
-                    })
-                    .filter((c): c is (any & { withClasp: boolean }) => !!c); // Filter out undefined charms
-
-                return {
-                    ...item,
-                    charms: enrichedCharms,
-                    previewImageUrl: await getUrl(item.previewImageUrl, 'https://placehold.co/400x400.png'),
-                };
-            }));
-            
-            const orderNumber = data.orderNumber;
-            const mailHistory = mailLogsByOrderNumber.get(orderNumber) || [];
-
-            return {
-                id: orderDoc.id,
-                orderNumber,
-                createdAt: (data.createdAt as Timestamp).toDate(),
-                customerEmail: data.customerEmail,
-                subtotal: data.subtotal ?? data.totalPrice, // Fallback for old orders
-                totalPrice: data.totalPrice,
-                status: data.status,
-                items: enrichedItems,
-                deliveryMethod: data.deliveryMethod || 'home',
-                shippingAddress: data.shippingAddress,
-                shippingCarrier: data.shippingCarrier,
-                trackingNumber: data.trackingNumber,
-                cancellationReason: data.cancellationReason,
-                mailHistory: mailHistory,
-                paymentIntentId: data.paymentIntentId,
-                couponCode: data.couponCode,
-                pointsUsed: data.pointsUsed,
-                pointsValue: data.pointsValue
-            };
-        }));
-
-        return orders;
-    } catch (error) {
-        console.error("Error fetching orders:", error);
-        return [];
+        return { success: false, message: error.message, traces };
     }
 }
 
